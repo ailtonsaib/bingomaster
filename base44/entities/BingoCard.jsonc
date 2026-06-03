@@ -18,6 +18,18 @@
       "type": "string",
       "description": "Nome do jogador/dono da cartela"
     },
+    "player_phone": {
+      "type": "string",
+      "description": "Telefone do jogador"
+    },
+    "player_city": {
+      "type": "string",
+      "description": "Cidade do jogador"
+    },
+    "player_state": {
+      "type": "string",
+      "description": "Estado do jogador"
+    },
     "chances": {
       "type": "number",
       "enum": [

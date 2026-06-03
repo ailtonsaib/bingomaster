@@ -13,12 +13,16 @@ import { generateBingoGrid } from "@/lib/bingoUtils";
 import BingoGrid from "@/components/bingo/BingoGrid";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
 import CardHeader from "@/components/bingo/CardHeader";
+import CardFooter from "@/components/bingo/CardFooter";
 import { motion } from "framer-motion";
 
 export default function GameCards() {
   const { gameId } = useParams();
   const queryClient = useQueryClient();
   const [playerName, setPlayerName] = useState("");
+  const [playerPhone, setPlayerPhone] = useState("");
+  const [playerCity, setPlayerCity] = useState("");
+  const [playerState, setPlayerState] = useState("");
   const [chances, setChances] = useState("1");
   const [quantity, setQuantity] = useState("1");
   const [generating, setGenerating] = useState(false);
@@ -47,6 +51,9 @@ export default function GameCards() {
       const cardData = {
         game_id: String(gameId),
         player_name: playerName.trim(),
+        player_phone: playerPhone.trim(),
+        player_city: playerCity.trim(),
+        player_state: playerState.trim(),
         chances: chancesNum,
         grid_1: generateBingoGrid(),
         card_number: nextNum + i,
@@ -60,6 +67,9 @@ export default function GameCards() {
     await base44.entities.BingoCard.bulkCreate(newCards);
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
     setPlayerName("");
+    setPlayerPhone("");
+    setPlayerCity("");
+    setPlayerState("");
     setGenerating(false);
   };
 
@@ -140,6 +150,37 @@ export default function GameCards() {
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <Label className="text-sm">Telefone</Label>
+                <Input
+                  placeholder="(00) 00000-0000"
+                  value={playerPhone}
+                  onChange={(e) => setPlayerPhone(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">Cidade</Label>
+                <Input
+                  placeholder="Cidade"
+                  value={playerCity}
+                  onChange={(e) => setPlayerCity(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">Estado</Label>
+                <Input
+                  placeholder="UF"
+                  maxLength={2}
+                  value={playerState}
+                  onChange={(e) => setPlayerState(e.target.value.toUpperCase())}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-4 items-end mt-4">
+              <div className="md:col-span-1" />
               <div className="space-y-1.5">
                 <Label className="text-sm">Chances</Label>
                 <RadioGroup value={chances} onValueChange={setChances} className="flex gap-4 pt-1">
@@ -234,6 +275,7 @@ export default function GameCards() {
                         />
                       )}
                     </div>
+                    <CardFooter card={card} />
                   </CardContent>
                 </Card>
               </motion.div>
