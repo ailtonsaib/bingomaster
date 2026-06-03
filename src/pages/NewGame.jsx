@@ -14,6 +14,9 @@ export default function NewGame() {
   const [name, setName] = useState("");
   const [prizes, setPrizes] = useState([{ name: "", description: "", awarded: false }]);
   const [saving, setSaving] = useState(false);
+  const [eventLocation, setEventLocation] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventPrice, setEventPrice] = useState("");
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -24,6 +27,9 @@ export default function NewGame() {
       drawn_numbers: [],
       max_number: 75,
       prizes: prizes.filter((p) => p.name.trim()),
+      event_location: eventLocation.trim() || undefined,
+      event_date: eventDate || undefined,
+      event_price: eventPrice.trim() || undefined,
     });
     navigate(`/game/${game.id}`);
   };
@@ -51,6 +57,37 @@ export default function NewGame() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Dados do Evento</h3>
+              <div className="space-y-2">
+                <Label htmlFor="location">Local do Evento</Label>
+                <Input
+                  id="location"
+                  placeholder="Ex: Salão Paroquial, Rua das Flores 123"
+                  value={eventLocation}
+                  onChange={(e) => setEventLocation(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eventDate">Data e Hora do Evento</Label>
+                <Input
+                  id="eventDate"
+                  type="datetime-local"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Valor da Cartela (R$)</Label>
+                <Input
+                  id="price"
+                  placeholder="Ex: 10,00"
+                  value={eventPrice}
+                  onChange={(e) => setEventPrice(e.target.value)}
+                />
+              </div>
             </div>
 
             <PrizeForm prizes={prizes} onChange={setPrizes} />

@@ -45,6 +45,18 @@
         }
       },
       "description": "Pr\u00eamios do jogo (at\u00e9 5)"
+    },
+    "event_location": {
+      "type": "string",
+      "description": "Local do evento"
+    },
+    "event_date": {
+      "type": "string",
+      "description": "Data e hora do evento (ISO string)"
+    },
+    "event_price": {
+      "type": "string",
+      "description": "Valor da cartela/evento"
     }
   },
   "required": [

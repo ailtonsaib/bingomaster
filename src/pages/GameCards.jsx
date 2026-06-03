@@ -5,13 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Trash2, User, Zap } from "lucide-react";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BingoGrid from "@/components/bingo/BingoGrid";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
+import CardHeader from "@/components/bingo/CardHeader";
 import { motion } from "framer-motion";
 
 export default function GameCards() {
@@ -123,11 +124,11 @@ export default function GameCards() {
 
         {/* Generate form */}
         <Card className="mb-8">
-          <CardHeader className="pb-3">
+          <UiCardHeader className="pb-3">
             <CardTitle className="text-lg font-heading flex items-center gap-2">
               <Plus className="w-5 h-5 text-primary" /> Gerar Cartelas
             </CardTitle>
-          </CardHeader>
+          </UiCardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-4 items-end">
               <div className="space-y-1.5">
@@ -192,7 +193,7 @@ export default function GameCards() {
                 transition={{ delay: idx * 0.03 }}
               >
                 <Card className="overflow-hidden">
-                  <CardHeader className="pb-2">
+                  <UiCardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
@@ -214,8 +215,9 @@ export default function GameCards() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                  </CardHeader>
+                  </UiCardHeader>
                   <CardContent>
+                    <CardHeader game={game} card={card} />
                     <div className={`flex ${card.chances === 2 ? "gap-3 justify-center" : "justify-center"}`}>
                       <BingoGrid
                         numbers={card.grid_1}
