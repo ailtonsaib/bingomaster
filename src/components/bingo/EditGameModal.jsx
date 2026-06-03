@@ -9,6 +9,7 @@ import PrizeForm from "@/components/bingo/PrizeForm";
 export default function EditGameModal({ game, onClose, onSaved }) {
   const [name, setName] = useState(game.name || "");
   const [eventLocation, setEventLocation] = useState(game.event_location || "");
+  const [eventAddress, setEventAddress] = useState(game.event_address || "");
   const [eventDate, setEventDate] = useState(
     game.event_date ? game.event_date.slice(0, 16) : ""
   );
@@ -26,6 +27,7 @@ export default function EditGameModal({ game, onClose, onSaved }) {
     await base44.entities.BingoGame.update(game.id, {
       name: name.trim(),
       event_location: eventLocation.trim() || undefined,
+      event_address: eventAddress.trim() || undefined,
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
       prizes: prizes.filter((p) => p.name.trim()),
@@ -68,7 +70,15 @@ export default function EditGameModal({ game, onClose, onSaved }) {
               <Input
                 value={eventLocation}
                 onChange={(e) => setEventLocation(e.target.value)}
-                placeholder="Ex: Salão Paroquial, Rua das Flores 123"
+                placeholder="Ex: Salão Paroquial"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Endereço</Label>
+              <Input
+                value={eventAddress}
+                onChange={(e) => setEventAddress(e.target.value)}
+                placeholder="Ex: Rua das Flores, 123 - Centro"
               />
             </div>
             <div className="space-y-2">

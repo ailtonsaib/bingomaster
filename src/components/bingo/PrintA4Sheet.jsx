@@ -55,17 +55,18 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
     }}>
 
       {/* ── HEADER ── */}
-      <div style={{ border: "2px solid #000", padding: "5px 8px", marginBottom: 0 }}>
+      <div style={{ border: "2px solid #000", padding: "5px 8px 3px 8px", marginBottom: 0 }}>
+        {/* Game name centered */}
+        <div style={{ textAlign: "center", fontWeight: "900", fontSize: 18, fontFamily: "'Arial Black', Arial, sans-serif", letterSpacing: 1, marginBottom: 4 }}>
+          {game?.name || "BINGO"}
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ fontSize: 10, lineHeight: 1.5 }}>
-            <div style={{ fontWeight: "900", fontSize: 14, fontFamily: "'Arial Black', Arial, sans-serif", marginBottom: 2 }}>
-              {game?.name || "BINGO"}
-            </div>
             {game?.event_location && (
-              <>
-                <div>Local: {game.event_location}</div>
-                <div>Endereço: {game.event_location}</div>
-              </>
+              <div>Local: {game.event_location}</div>
+            )}
+            {game?.event_address && (
+              <div>Endereço: {game.event_address}</div>
             )}
           </div>
           <div style={{ textAlign: "right", fontSize: 10, fontWeight: "bold", lineHeight: 1.8 }}>

@@ -26,18 +26,22 @@ export default function CardHeader({ game, card }) {
 
   return (
     <div className="border-2 border-gray-700 mb-2 text-[11px] font-sans">
+      {/* Title centered */}
+      <div className="text-center px-2 pt-2 pb-1">
+        <p className="font-black text-[18px] leading-tight text-gray-900 uppercase tracking-wide">
+          {game.name}
+        </p>
+      </div>
+
       {/* Top section */}
-      <div className="flex items-start px-2 pt-2 pb-1">
-        {/* Left: title + location */}
+      <div className="flex items-start px-2 pb-1">
+        {/* Left: location + address */}
         <div className="flex-1 pr-4">
-          <p className="font-black text-[14px] leading-tight text-gray-900 mb-1">
-            {game.name}
-          </p>
           {game.event_location && (
             <p className="text-gray-800">Local: {game.event_location}</p>
           )}
-          {game.event_location && (
-            <p className="text-gray-800">Endereço: {game.event_location}</p>
+          {game.event_address && (
+            <p className="text-gray-800">Endereço: {game.event_address}</p>
           )}
         </div>
 

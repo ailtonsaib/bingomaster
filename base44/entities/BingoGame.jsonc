@@ -48,7 +48,11 @@
     },
     "event_location": {
       "type": "string",
-      "description": "Local do evento"
+      "description": "Local do evento (ex: nome do sal\u00e3o)"
+    },
+    "event_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do evento (rua, n\u00famero, bairro)"
     },
     "event_date": {
       "type": "string",

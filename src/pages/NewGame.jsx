@@ -15,6 +15,7 @@ export default function NewGame() {
   const [prizes, setPrizes] = useState([{ name: "", description: "", awarded: false }]);
   const [saving, setSaving] = useState(false);
   const [eventLocation, setEventLocation] = useState("");
+  const [eventAddress, setEventAddress] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventPrice, setEventPrice] = useState("");
 
@@ -28,6 +29,7 @@ export default function NewGame() {
       max_number: 75,
       prizes: prizes.filter((p) => p.name.trim()),
       event_location: eventLocation.trim() || undefined,
+      event_address: eventAddress.trim() || undefined,
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
     });
@@ -65,9 +67,18 @@ export default function NewGame() {
                 <Label htmlFor="location">Local do Evento</Label>
                 <Input
                   id="location"
-                  placeholder="Ex: Salão Paroquial, Rua das Flores 123"
+                  placeholder="Ex: Salão Paroquial"
                   value={eventLocation}
                   onChange={(e) => setEventLocation(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  placeholder="Ex: Rua das Flores, 123 - Centro"
+                  value={eventAddress}
+                  onChange={(e) => setEventAddress(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
