@@ -1,10 +1,6 @@
 import PrintBingoGrid from "./PrintBingoGrid";
 import Barcode from "react-barcode";
 
-// One A4 page sheet rendering up to 3 cards.
-// Layout: header info → "PRIMEIRA CHANCE" (3 grids) → "SEGUNDA CHANCE" (3 grids, if applicable)
-// Matches the style in the reference image.
-
 export default function PrintA4Sheet({ cards, game, prizes = [] }) {
   const formatDate = (iso) => {
     if (!iso) return "";
@@ -27,53 +23,102 @@ export default function PrintA4Sheet({ cards, game, prizes = [] }) {
 
   const hasSecondChance = cards.some((c) => c.chances === 2 && c.grid_2);
 
+  // Use first card number for the sheet identifier (all cards share same number in the PDF model)
+  const sheetCard = cards[0];
+  const cardNum = String(sheetCard?.card_number || 1).padStart(6, "0");
+
   return (
     <div style={{
       width: "210mm",
       minHeight: "297mm",
-      padding: "10mm 8mm",
+      padding: "6mm 8mm 4mm 8mm",
       background: "#fff",
       fontFamily: "Arial, sans-serif",
       boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
     }}>
-      {/* Page header */}
-      {game && (
-        <div style={{ marginBottom: 8, borderBottom: "1px solid #ccc", paddingBottom: 4 }}>
-          <div style={{ fontSize: 13, fontWeight: "bold", textAlign: "center", color: "#111" }}>
-            {game.name}
+
+      {/* ── TOP HEADER ── */}
+      <div style={{ border: "2px solid #000", padding: "4px 8px", marginBottom: 0 }}>
+        {/* Title */}
+        <div style={{ textAlign: "center", fontSize: 18, fontWeight: "900", fontFamily: "'Arial Black', Arial, sans-serif", marginBottom: 4 }}>
+          {game?.name || "BINGO"}
+        </div>
+
+        {/* Local + Data row */}
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 2 }}>
+          <div>
+            {game?.event_location && (
+              <>
+                <div>Local: {game.event_location}</div>
+                <div>Endereço: {game.event_location}</div>
+              </>
+            )}
           </div>
-          <div style={{ fontSize: 9, textAlign: "center", color: "#555", marginTop: 2 }}>
-            {[
-              game.event_location && `Local: ${game.event_location}`,
-              game.event_date && `Data: ${formatDate(game.event_date)} às ${formatTime(game.event_date)}`,
-              game.event_price && `Valor: ${formatPrice(game.event_price)}`,
-            ].filter(Boolean).join("   |   ")}
+          <div style={{ textAlign: "right", fontWeight: "bold" }}>
+            {game?.event_date && (
+              <>
+                <div>DATA: {formatDate(game.event_date)}</div>
+                <div>HORAS: {formatTime(game.event_date)}</div>
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* PRIMEIRA CHANCE */}
-      <ChanceSection
-        title="PRIMEIRA CHANCE"
-        cards={cards}
-        getGrid={(c) => c.grid_1}
-        prizes={prizes}
-      />
+      {/* ── CARTELA BAR ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", background: "#ccc", borderLeft: "2px solid #000", borderRight: "2px solid #000" }}>
+        <div style={{ background: "#888" }} />
+        <div style={{ background: "#fff", textAlign: "center", padding: "3px 16px", fontWeight: "bold", fontSize: 11, borderLeft: "1px solid #888", borderRight: "1px solid #888" }}>
+          Cartela: &nbsp;<span style={{ fontWeight: "900", fontSize: 13 }}>{cardNum}</span>
+        </div>
+        <div style={{ background: "#888", textAlign: "right", padding: "3px 8px", color: "#fff", fontWeight: "bold", fontSize: 11 }}>
+          VALOR: {game?.event_price ? formatPrice(game.event_price) : ""}
+        </div>
+      </div>
 
-      {/* SEGUNDA CHANCE */}
+      {/* ── BARCODE (centered) ── */}
+      <div style={{ textAlign: "center", borderLeft: "2px solid #000", borderRight: "2px solid #000", padding: "4px 0 0 0" }}>
+        <Barcode value={cardNum} width={1.4} height={32} displayValue={false} margin={0} />
+      </div>
+
+      {/* ── PRIMEIRA CHANCE ── */}
+      <ChanceSection title="PRIMEIRA CHANCE" cards={cards} getGrid={(c) => c.grid_1} prizes={prizes} />
+
+      {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
-        <ChanceSection
-          title="SEGUNDA CHANCE"
-          cards={cards}
-          getGrid={(c) => c.grid_2 || c.grid_1}
-          prizes={prizes}
-          topMargin={14}
-        />
+        <ChanceSection title="SEGUNDA CHANCE" cards={cards} getGrid={(c) => c.grid_2 || c.grid_1} prizes={prizes} topMargin={10} />
       )}
 
-      {/* Footer */}
-      <div style={{ marginTop: "auto", paddingTop: 8, borderTop: "1px solid #ccc", fontSize: 8, color: "#888", textAlign: "center" }}>
-        {cards.map((c) => `Cartela ${String(c.card_number || "").padStart(6, "0")} — ${c.player_name}`).join("   |   ")}
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
+      {/* ── FOOTER ── */}
+      <div style={{ borderTop: "1.5px dashed #555", marginTop: 8, paddingTop: 6 }}>
+        {/* N° CARTELA + barcode on the right */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: "bold" }}>
+            N° CARTELA:
+            <Barcode value={cardNum} width={1} height={22} displayValue={true} margin={0} fontSize={9} />
+          </div>
+        </div>
+
+        {/* COLABORADOR */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10, marginBottom: 4 }}>
+          <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>COLABORADOR:</span>
+          <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;{cards[0]?.player_name || ""}</div>
+        </div>
+
+        {/* ENDEREÇO + CIDADE + FONE */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 6, fontSize: 10 }}>
+          <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>ENDEREÇO:</span>
+          <div style={{ flex: 2, borderBottom: "1px solid #000" }}>&nbsp;{cards[0]?.player_city && cards[0]?.player_state ? `${cards[0].player_city} - ${cards[0].player_state}` : cards[0]?.player_city || ""}</div>
+          <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>CIDADE:</span>
+          <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;{cards[0]?.player_city || ""}</div>
+          <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>FONE: ( )</span>
+          <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;{cards[0]?.player_phone || ""}</div>
+        </div>
       </div>
     </div>
   );
@@ -81,45 +126,23 @@ export default function PrintA4Sheet({ cards, game, prizes = [] }) {
 
 function ChanceSection({ title, cards, getGrid, prizes, topMargin = 0 }) {
   return (
-    <div style={{ marginTop: topMargin }}>
+    <div style={{ marginTop: topMargin, borderLeft: "2px solid #000", borderRight: "2px solid #000", padding: "4px 6px 6px 6px" }}>
       {/* Section title */}
-      <div style={{
-        textAlign: "center",
-        fontSize: 13,
-        fontWeight: "bold",
-        letterSpacing: 1,
-        marginBottom: 6,
-        color: "#111",
-      }}>
+      <div style={{ textAlign: "center", fontSize: 14, fontWeight: "bold", letterSpacing: 2, marginBottom: 6 }}>
         {title}
       </div>
 
-      {/* 3 cards side by side */}
-      <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+      {/* 3 grids side by side */}
+      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         {cards.map((card, cIdx) => {
           const grid = getGrid(card);
           if (!grid) return null;
-          const cardNum = String(card.card_number || 1).padStart(6, "0");
-          const prizeLabel = prizes[cIdx]?.name || card.player_name || "";
+          const prizeLabel = prizes[cIdx]?.name || "";
 
           return (
             <div key={card.id + "_" + title} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              {/* Barcode header */}
-              <div style={{ marginBottom: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                <Barcode
-                  value={cardNum}
-                  width={0.9}
-                  height={18}
-                  displayValue={false}
-                  margin={0}
-                />
-              </div>
-
-              {/* Bingo grid */}
               <PrintBingoGrid numbers={grid} />
-
-              {/* Prize / player label */}
-              <div style={{ fontSize: 9, color: "#444", marginTop: 3, textAlign: "center", maxWidth: 150 }}>
+              <div style={{ fontSize: 9, color: "#333", marginTop: 3, textAlign: "center" }}>
                 {cIdx + 1}) {prizeLabel}
               </div>
             </div>

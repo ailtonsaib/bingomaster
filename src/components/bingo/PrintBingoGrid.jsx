@@ -1,58 +1,62 @@
 const HEADERS = ["S", "O", "R", "T", "E"];
 
-// Print-optimized bingo grid matching the image style:
-// square cells with rounded borders, 2-digit numbers, no colors.
+// Print grid matching the PDF model:
+// - Circular bordered cells
+// - Bold headers S O R T E
+// - 4 rows × 5 cols (no free space)
+// - 2-digit zero-padded numbers
 export default function PrintBingoGrid({ numbers }) {
+  // numbers is a flat array of 20 (4 rows) or 25 (5 rows with free center)
+  // We always render what we get, row by row in groups of 5
+  const totalRows = Math.ceil(numbers.length / 5);
   const rows = [];
-  for (let r = 0; r < 5; r++) {
+  for (let r = 0; r < totalRows; r++) {
     rows.push(numbers.slice(r * 5, r * 5 + 5));
   }
 
-  const cellStyle = {
-    width: 28,
-    height: 24,
-    border: "1.5px solid #555",
-    borderRadius: 3,
-    textAlign: "center",
-    verticalAlign: "middle",
-    fontSize: 11,
+  const size = 32;
+
+  const circleStyle = {
+    width: size,
+    height: size,
+    border: "2px solid #000",
+    borderRadius: "50%",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
     fontWeight: "bold",
     fontFamily: "Arial, sans-serif",
     background: "#fff",
-    padding: 0,
+    margin: 1,
+    boxSizing: "border-box",
+    flexShrink: 0,
   };
 
-  const headerCellStyle = {
-    ...cellStyle,
-    fontSize: 13,
+  const headerCircleStyle = {
+    ...circleStyle,
+    fontSize: 14,
     fontWeight: "900",
-    height: 22,
-    borderRadius: 3,
   };
 
   return (
-    <table style={{ borderCollapse: "separate", borderSpacing: 2 }}>
-      <thead>
-        <tr>
-          {HEADERS.map((h) => (
-            <th key={h} style={headerCellStyle}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, rIdx) => (
-          <tr key={rIdx}>
-            {row.map((num, cIdx) => {
-              const isFree = rIdx === 2 && cIdx === 2;
-              return (
-                <td key={cIdx} style={cellStyle}>
-                  {isFree ? "★" : String(num).padStart(2, "0")}
-                </td>
-              );
-            })}
-          </tr>
+    <div style={{ display: "inline-block" }}>
+      {/* Header row S O R T E */}
+      <div style={{ display: "flex", marginBottom: 0 }}>
+        {HEADERS.map((h) => (
+          <div key={h} style={headerCircleStyle}>{h}</div>
         ))}
-      </tbody>
-    </table>
+      </div>
+      {/* Number rows */}
+      {rows.map((row, rIdx) => (
+        <div key={rIdx} style={{ display: "flex" }}>
+          {row.map((num, cIdx) => (
+            <div key={cIdx} style={circleStyle}>
+              {String(num).padStart(2, "0")}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
