@@ -1,12 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Download } from "lucide-react";
 import PrintA4Sheet from "@/components/bingo/PrintA4Sheet";
 
-// Groups cards into sets of 3 for each A4 page
+const BATCH_SIZE = 300; // cards per PDF export batch (100 A4 pages)
+
 function chunkArray(arr, size) {
   const chunks = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -18,6 +19,7 @@ function chunkArray(arr, size) {
 export default function PrintCards() {
   const { gameId } = useParams();
   const printRef = useRef();
+  const [exportBatch, setExportBatch] = useState(null); // null = show all, number = batch index
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -30,14 +32,24 @@ export default function PrintCards() {
     queryFn: () => base44.entities.BingoCard.filter({ game_id: String(gameId) }),
   });
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = () => window.print();
+
+  const handleExportBatch = (batchIdx) => {
+    setExportBatch(batchIdx);
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setExportBatch(null), 1000);
+    }, 300);
   };
 
-  // Each A4 sheet holds 3 cards (one row per sheet)
+  // Each A4 sheet holds 3 cards
   const CARDS_PER_PAGE = 3;
-  const pages = chunkArray(cards, CARDS_PER_PAGE);
   const prizes = game?.prizes || [];
+
+  // Which cards to show: all or just the selected batch
+  const batches = chunkArray(cards, BATCH_SIZE);
+  const displayCards = exportBatch !== null ? batches[exportBatch] || [] : cards;
+  const pages = chunkArray(displayCards, CARDS_PER_PAGE);
 
   return (
     <>
@@ -51,12 +63,31 @@ export default function PrintCards() {
             <ArrowLeft className="w-4 h-4" /> Voltar às Cartelas
           </Link>
           <span className="text-sm font-semibold">
-            Impressão A4 — {cards.length} cartelas / {pages.length} folhas
+            Impressão A4 — {cards.length} cartelas / {chunkArray(cards, CARDS_PER_PAGE).length} folhas
           </span>
         </div>
-        <Button onClick={handlePrint} className="gap-2">
-          <Printer className="w-4 h-4" /> Imprimir
-        </Button>
+        <div className="flex items-center gap-2">
+          {batches.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Exportar lote:</span>
+              {batches.map((_, idx) => (
+                <Button
+                  key={idx}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs h-8"
+                  onClick={() => handleExportBatch(idx)}
+                >
+                  <Download className="w-3 h-3" />
+                  {idx * BATCH_SIZE + 1}–{Math.min((idx + 1) * BATCH_SIZE, cards.length)}
+                </Button>
+              ))}
+            </div>
+          )}
+          <Button onClick={handlePrint} className="gap-2">
+            <Printer className="w-4 h-4" /> Imprimir Tudo
+          </Button>
+        </div>
       </div>
 
       {/* Print area */}
@@ -66,6 +97,11 @@ export default function PrintCards() {
         </div>
       ) : (
         <div ref={printRef} id="print-area">
+          {exportBatch !== null && (
+            <div className="no-print text-center py-2 text-sm text-muted-foreground bg-yellow-50 border-b">
+              Modo exportação: lote {exportBatch + 1} ({exportBatch * BATCH_SIZE + 1}–{Math.min((exportBatch + 1) * BATCH_SIZE, cards.length)})
+            </div>
+          )}
           {pages.map((pageCards, pageIdx) => (
             <div
               key={pageIdx}
