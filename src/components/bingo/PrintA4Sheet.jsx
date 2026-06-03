@@ -88,7 +88,7 @@ export default function PrintA4Sheet({ cards, game, prizes = [] }) {
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
-        <ChanceSection title="SEGUNDA CHANCE" cards={cards} getGrid={(c) => c.grid_2 || c.grid_1} prizes={prizes} topMargin={10} />
+        <ChanceSection title="SEGUNDA CHANCE" cards={cards} getGrid={(c) => c.grid_2 || c.grid_1} prizes={prizes} />
       )}
 
       {/* Spacer */}
@@ -124,26 +124,30 @@ export default function PrintA4Sheet({ cards, game, prizes = [] }) {
   );
 }
 
-function ChanceSection({ title, cards, getGrid, prizes, topMargin = 0 }) {
+function ChanceSection({ title, cards, getGrid, prizes }) {
   return (
-    <div style={{ marginTop: topMargin, borderLeft: "2px solid #000", borderRight: "2px solid #000", padding: "4px 6px 6px 6px" }}>
+    <div style={{ borderLeft: "2px solid #000", borderRight: "2px solid #000", padding: "4px 6px 6px 6px" }}>
       {/* Section title */}
       <div style={{ textAlign: "center", fontSize: 14, fontWeight: "bold", letterSpacing: 2, marginBottom: 6 }}>
         {title}
       </div>
 
-      {/* 3 grids side by side */}
+      {/* 3 grids side by side, each with its own prize list */}
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        {cards.map((card, cIdx) => {
+        {cards.map((card) => {
           const grid = getGrid(card);
           if (!grid) return null;
-          const prizeLabel = prizes[cIdx]?.name || "";
 
           return (
             <div key={card.id + "_" + title} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <PrintBingoGrid numbers={grid} />
-              <div style={{ fontSize: 9, color: "#333", marginTop: 3, textAlign: "center" }}>
-                {cIdx + 1}) {prizeLabel}
+              {/* All prizes listed below each card's grid */}
+              <div style={{ fontSize: 8, color: "#333", marginTop: 4, textAlign: "left", width: "100%" }}>
+                {prizes.map((prize, pIdx) => (
+                  <div key={pIdx} style={{ whiteSpace: "nowrap" }}>
+                    {pIdx + 1}) {prize.name || ""}
+                  </div>
+                ))}
               </div>
             </div>
           );
