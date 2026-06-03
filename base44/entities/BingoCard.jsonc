@@ -4,11 +4,19 @@
   "properties": {
     "game_id": {
       "type": "string",
-      "description": "ID do jogo de bingo"
+      "description": "ID do jogo de bingo associado"
+    },
+    "card_identifier": {
+      "type": "string",
+      "description": "Identificador \u00fanico leg\u00edvel da cartela (ex: CARD-001)"
+    },
+    "card_number": {
+      "type": "number",
+      "description": "N\u00famero sequencial da cartela dentro do jogo"
     },
     "player_name": {
       "type": "string",
-      "description": "Nome do jogador"
+      "description": "Nome do jogador/dono da cartela"
     },
     "chances": {
       "type": "number",
@@ -17,25 +25,51 @@
         2
       ],
       "default": 1,
-      "description": "N\u00famero de chances (1 ou 2 grids)"
+      "description": "Dificuldade de chances: 1 (normal) ou 2 (dupla chance)"
     },
     "grid_1": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "N\u00fameros da primeira cartela (25 n\u00fameros)"
+      "description": "N\u00fameros da primeira cartela (25 n\u00fameros em ordem de grid 5x5)"
     },
     "grid_2": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "N\u00fameros da segunda cartela (apenas se 2 chances)"
+      "description": "N\u00fameros da segunda cartela (apenas se chances = 2)"
     },
-    "card_number": {
-      "type": "number",
-      "description": "N\u00famero sequencial da cartela"
+    "won_prizes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "prize_index": {
+            "type": "number",
+            "description": "\u00cdndice do pr\u00eamio no jogo (0-4)"
+          },
+          "prize_name": {
+            "type": "string",
+            "description": "Nome do pr\u00eamio ganho"
+          },
+          "won_at_draw": {
+            "type": "number",
+            "description": "N\u00famero sorteado que completou o bingo"
+          },
+          "won_at": {
+            "type": "string",
+            "description": "Data/hora em que o pr\u00eamio foi ganho"
+          }
+        }
+      },
+      "description": "Pr\u00eamios ganhos por esta cartela"
+    },
+    "is_winner": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se esta cartela j\u00e1 ganhou algum pr\u00eamio"
     }
   },
   "required": [
