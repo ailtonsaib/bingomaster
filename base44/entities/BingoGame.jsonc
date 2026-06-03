@@ -1,0 +1,53 @@
+{
+  "name": "BingoGame",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do jogo de bingo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "waiting",
+        "in_progress",
+        "finished"
+      ],
+      "default": "waiting",
+      "description": "Status do jogo"
+    },
+    "drawn_numbers": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "N\u00fameros j\u00e1 sorteados"
+    },
+    "max_number": {
+      "type": "number",
+      "default": 75,
+      "description": "N\u00famero m\u00e1ximo (ex: 75 ou 90)"
+    },
+    "prizes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "awarded": {
+            "type": "boolean"
+          }
+        }
+      },
+      "description": "Pr\u00eamios do jogo (at\u00e9 5)"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

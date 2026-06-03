@@ -1,0 +1,45 @@
+{
+  "name": "BingoCard",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "ID do jogo de bingo"
+    },
+    "player_name": {
+      "type": "string",
+      "description": "Nome do jogador"
+    },
+    "chances": {
+      "type": "number",
+      "enum": [
+        1,
+        2
+      ],
+      "default": 1,
+      "description": "N\u00famero de chances (1 ou 2 grids)"
+    },
+    "grid_1": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "N\u00fameros da primeira cartela (25 n\u00fameros)"
+    },
+    "grid_2": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "N\u00fameros da segunda cartela (apenas se 2 chances)"
+    },
+    "card_number": {
+      "type": "number",
+      "description": "N\u00famero sequencial da cartela"
+    }
+  },
+  "required": [
+    "game_id",
+    "player_name"
+  ]
+}
