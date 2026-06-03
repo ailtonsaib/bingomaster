@@ -38,9 +38,9 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
     card.grid_2c || card.grid_2 || [],
   ];
 
-  // Prizes split: first 3 for primeira chance, next 3 for segunda chance
+  // Prizes: first 3 for primeira chance; next 3 for segunda chance (fallback to first 3 if not set)
   const prizes1 = prizes.slice(0, 3);
-  const prizes2 = prizes.slice(3, 6);
+  const prizes2 = prizes.slice(3, 6).length > 0 ? prizes.slice(3, 6) : prizes.slice(0, 3);
 
   return (
     <div style={{
