@@ -11,6 +11,7 @@ import NewGame from '@/pages/NewGame';
 import GamePlay from '@/pages/GamePlay';
 import GameCards from '@/pages/GameCards';
 import GameDisplay from '@/pages/GameDisplay';
+import PrintCards from '@/pages/PrintCards';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
         <Route path="/game/:gameId" element={<GamePlay />} />
         <Route path="/cards/:gameId" element={<GameCards />} />
         <Route path="/display/:gameId" element={<GameDisplay />} />
+        <Route path="/print/:gameId" element={<PrintCards />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

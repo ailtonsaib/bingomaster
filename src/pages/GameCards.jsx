@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, User, Zap } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Trash2, User, Zap } from "lucide-react";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BingoGrid from "@/components/bingo/BingoGrid";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
@@ -124,6 +124,13 @@ export default function GameCards() {
             >
               <Zap className="w-4 h-4 text-primary" /> Geração em Lote
             </Button>
+            {cards.length > 0 && (
+              <Link to={`/print/${gameId}`}>
+                <Button variant="outline" className="gap-2">
+                  <Printer className="w-4 h-4 text-primary" /> Imprimir A4
+                </Button>
+              </Link>
+            )}
             <Badge variant="outline" className="text-sm">
               {cards.length} cartelas
             </Badge>
