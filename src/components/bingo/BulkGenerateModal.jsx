@@ -10,7 +10,7 @@ export default function BulkGenerateModal({ open, onClose, onGenerate, generatin
   const [chances, setChances] = useState("1");
   const [prefix, setPrefix] = useState("Cartela");
 
-  const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), 200);
+  const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), 8000);
 
   const handleSubmit = () => {
     onGenerate({ quantity: qty, chances: parseInt(chances), prefix: prefix.trim() || "Cartela" });
@@ -57,11 +57,11 @@ export default function BulkGenerateModal({ open, onClose, onGenerate, generatin
             <div className="space-y-5">
               {/* Quantity */}
               <div className="space-y-1.5">
-                <Label>Quantidade de cartelas <span className="text-muted-foreground">(máx. 200)</span></Label>
+                <Label>Quantidade de cartelas <span className="text-muted-foreground">(máx. 8.000)</span></Label>
                 <Input
                   type="number"
                   min="1"
-                  max="200"
+                  max="8000"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   className="text-lg font-semibold"

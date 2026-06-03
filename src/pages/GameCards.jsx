@@ -76,19 +76,24 @@ export default function GameCards() {
   const handleBulkGenerate = async ({ quantity, chances, prefix }) => {
     setGenerating(true);
     const nextNum = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) + 1 : 1;
-    const newCards = [];
-    for (let i = 0; i < quantity; i++) {
-      const cardData = {
-        game_id: String(gameId),
-        player_name: `${prefix} ${nextNum + i}`,
-        chances,
-        grid_1: generateBingoGrid(),
-        card_number: nextNum + i,
-      };
-      if (chances === 2) cardData.grid_2 = generateBingoGrid();
-      newCards.push(cardData);
+    const BATCH_SIZE = 200;
+    for (let batch = 0; batch < quantity; batch += BATCH_SIZE) {
+      const batchCount = Math.min(BATCH_SIZE, quantity - batch);
+      const newCards = [];
+      for (let i = 0; i < batchCount; i++) {
+        const idx = batch + i;
+        const cardData = {
+          game_id: String(gameId),
+          player_name: `${prefix} ${nextNum + idx}`,
+          chances,
+          grid_1: generateBingoGrid(),
+          card_number: nextNum + idx,
+        };
+        if (chances === 2) cardData.grid_2 = generateBingoGrid();
+        newCards.push(cardData);
+      }
+      await base44.entities.BingoCard.bulkCreate(newCards);
     }
-    await base44.entities.BingoCard.bulkCreate(newCards);
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
     setGenerating(false);
     setBulkOpen(false);
