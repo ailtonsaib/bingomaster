@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const HEADERS = ["B", "I", "N", "G", "O"];
+const HEADERS = ["S", "O", "R", "T", "E"];
 
 const headerColors = {
   B: "bg-violet-600",
