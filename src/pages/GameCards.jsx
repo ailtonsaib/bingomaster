@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Printer, Trash2, User } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, User, Zap } from "lucide-react";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BingoGrid from "@/components/bingo/BingoGrid";
+import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
 import { motion } from "framer-motion";
 
 export default function GameCards() {
@@ -20,6 +21,7 @@ export default function GameCards() {
   const [chances, setChances] = useState("1");
   const [quantity, setQuantity] = useState("1");
   const [generating, setGenerating] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -60,6 +62,27 @@ export default function GameCards() {
     setGenerating(false);
   };
 
+  const handleBulkGenerate = async ({ quantity, chances, prefix }) => {
+    setGenerating(true);
+    const nextNum = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) + 1 : 1;
+    const newCards = [];
+    for (let i = 0; i < quantity; i++) {
+      const cardData = {
+        game_id: String(gameId),
+        player_name: `${prefix} ${nextNum + i}`,
+        chances,
+        grid_1: generateBingoGrid(),
+        card_number: nextNum + i,
+      };
+      if (chances === 2) cardData.grid_2 = generateBingoGrid();
+      newCards.push(cardData);
+    }
+    await base44.entities.BingoCard.bulkCreate(newCards);
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+    setGenerating(false);
+    setBulkOpen(false);
+  };
+
   const handleDelete = async (id) => {
     await base44.entities.BingoCard.delete(id);
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
@@ -77,10 +100,26 @@ export default function GameCards() {
               Cartelas {game ? `- ${game.name}` : ""}
             </h1>
           </div>
-          <Badge variant="outline" className="text-sm">
-            {cards.length} cartelas
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setBulkOpen(true)}
+            >
+              <Zap className="w-4 h-4 text-primary" /> Geração em Lote
+            </Button>
+            <Badge variant="outline" className="text-sm">
+              {cards.length} cartelas
+            </Badge>
+          </div>
         </div>
+
+        <BulkGenerateModal
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          onGenerate={handleBulkGenerate}
+          generating={generating}
+        />
 
         {/* Generate form */}
         <Card className="mb-8">
