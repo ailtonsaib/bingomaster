@@ -1,60 +1,69 @@
-import { QRCodeSVG } from "qrcode.react";
+import Barcode from "react-barcode";
 
 export default function CardHeader({ game, card }) {
   if (!game) return null;
 
-  const qrData = JSON.stringify({
-    cartela: card.card_number,
-    evento_id: game.id,
-    data: game.event_date || "",
-  });
-
   const formatDate = (iso) => {
     if (!iso) return "—";
     const d = new Date(iso);
-    return d.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+
+  const formatTime = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   };
 
   const formatPrice = (val) => {
     if (!val) return "—";
-    const num = parseFloat(val.replace(",", "."));
+    const num = parseFloat(String(val).replace(",", "."));
     if (isNaN(num)) return val;
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
+  const cardNum = String(card.card_number || 1).padStart(6, "0");
+
   return (
-    <div className="flex items-start justify-between gap-3 border-b-2 border-primary/20 pb-3 mb-3">
-      {/* Event info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-base font-bold font-heading text-foreground leading-tight truncate">
-          {game.name}
-        </p>
-        {game.event_location && (
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-            📍 {game.event_location}
+    <div className="border-2 border-gray-700 mb-2 text-[11px] font-sans">
+      {/* Top section */}
+      <div className="flex items-start px-2 pt-2 pb-1">
+        {/* Left: title + location */}
+        <div className="flex-1 pr-4">
+          <p className="font-black text-[14px] leading-tight text-gray-900 mb-1">
+            {game.name}
           </p>
-        )}
-        <p className="text-xs text-muted-foreground mt-0.5">
-          🗓 {formatDate(game.event_date)}
-        </p>
-        <p className="text-xs font-semibold text-primary mt-0.5">
-          💰 {formatPrice(game.event_price)}
-        </p>
-        <p className="text-xs font-bold text-foreground mt-1">
-          Cartela #{card.card_number}
-        </p>
+          {game.event_location && (
+            <p className="text-gray-800">Local: {game.event_location}</p>
+          )}
+          {game.event_location && (
+            <p className="text-gray-800">Endereço: {game.event_location}</p>
+          )}
+        </div>
+
+        {/* Right: date, time, barcode */}
+        <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
+          <p className="text-gray-800">DATA: {formatDate(game.event_date)}</p>
+          <p className="text-gray-800">HORAS: {formatTime(game.event_date)}</p>
+          <Barcode
+            value={cardNum}
+            width={1.2}
+            height={30}
+            displayValue={false}
+            margin={0}
+          />
+        </div>
       </div>
 
-      {/* QR Code */}
-      <div className="flex flex-col items-center gap-1 shrink-0">
-        <QRCodeSVG value={qrData} size={72} level="M" />
-        <span className="text-[9px] text-muted-foreground text-center">#{card.card_number}</span>
+      {/* Bottom bar */}
+      <div className="grid grid-cols-3 bg-gray-400 text-white text-center text-[11px]">
+        <div className="bg-gray-500 py-1" />
+        <div className="py-1 bg-white text-gray-900 font-bold border-x border-gray-600">
+          Cartela: <span className="text-blue-700">{cardNum}</span>
+        </div>
+        <div className="py-1 text-white font-bold bg-gray-500">
+          VALOR: {formatPrice(game.event_price)}
+        </div>
       </div>
     </div>
   );
