@@ -100,7 +100,11 @@ export default function GameCards() {
   };
 
   const handleDelete = async (id) => {
-    await base44.entities.BingoCard.delete(id);
+    try {
+      await base44.entities.BingoCard.delete(id);
+    } catch (e) {
+      // Card may already be deleted; ignore and refresh
+    }
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
   };
 
