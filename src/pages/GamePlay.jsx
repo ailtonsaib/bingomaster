@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor } from "lucide-react";
 import { drawNumber } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -87,6 +87,11 @@ export default function GamePlay() {
             <Link to={`/cards/${game.id}`}>
               <Button variant="outline" size="sm" className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20">
                 <Users className="w-4 h-4" /> {cards.length} Cartelas
+              </Button>
+            </Link>
+            <Link to={`/display/${game.id}`} target="_blank">
+              <Button variant="outline" size="sm" className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20">
+                <Monitor className="w-4 h-4" /> Painel
               </Button>
             </Link>
             <Badge
