@@ -32,6 +32,48 @@ function pickRandom(min, max, count) {
   return nums.slice(0, count).sort((a, b) => a - b);
 }
 
+// Check if a grid has bingo (complete row, column, or diagonal)
+// grid is 25 numbers in row-major order (index 12 = free space = 0)
+export function checkBingo(grid, drawnSet) {
+  if (!grid || grid.length !== 25) return false;
+
+  const marked = grid.map((n, i) => i === 12 || n === 0 || drawnSet.has(n));
+
+  // rows
+  for (let r = 0; r < 5; r++) {
+    if ([0,1,2,3,4].every(c => marked[r * 5 + c])) return true;
+  }
+  // columns
+  for (let c = 0; c < 5; c++) {
+    if ([0,1,2,3,4].every(r => marked[r * 5 + c])) return true;
+  }
+  // diagonals
+  if ([0,6,12,18,24].every(i => marked[i])) return true;
+  if ([4,8,12,16,20].every(i => marked[i])) return true;
+
+  return false;
+}
+
+// Check all cards against drawn numbers and return winners for the next unaided prize
+// Returns array of { card, prizeIndex, prizeName }
+export function checkAllCardsForBingo(cards, drawnNumbers, prizes) {
+  const drawnSet = new Set(drawnNumbers);
+  const awardedCount = prizes.filter(p => p.awarded).length;
+  const nextPrize = prizes[awardedCount];
+  if (!nextPrize || nextPrize.awarded) return [];
+
+  const winners = [];
+  for (const card of cards) {
+    if (card.is_winner) continue; // already won the next prize? skip
+    const grid1Wins = card.grid_1 && checkBingo(card.grid_1, drawnSet);
+    const grid2Wins = card.grid_2 && checkBingo(card.grid_2, drawnSet);
+    if (grid1Wins || grid2Wins) {
+      winners.push({ card, prizeIndex: awardedCount, prizeName: nextPrize.name });
+    }
+  }
+  return winners;
+}
+
 // Draw a random number not yet drawn
 export function drawNumber(drawnNumbers, maxNumber = 75) {
   const available = [];

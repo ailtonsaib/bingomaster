@@ -5,16 +5,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor } from "lucide-react";
-import { drawNumber } from "@/lib/bingoUtils";
+import { drawNumber, checkAllCardsForBingo } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
 import PrizesPanel from "@/components/bingo/PrizesPanel";
 import GameProgressBar from "@/components/bingo/GameProgressBar";
+import BingoWinnerAlert from "@/components/bingo/BingoWinnerAlert";
 
 export default function GamePlay() {
   const { gameId } = useParams();
   const queryClient = useQueryClient();
   const [drawing, setDrawing] = useState(false);
+  const [winners, setWinners] = useState([]);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -40,9 +42,42 @@ export default function GamePlay() {
     setDrawing(true);
     const num = drawNumber(game.drawn_numbers || [], game.max_number || 75);
     if (num !== null) {
-      await updateGame({ drawn_numbers: [...(game.drawn_numbers || []), num] });
+      const newDrawn = [...(game.drawn_numbers || []), num];
+      await updateGame({ drawn_numbers: newDrawn });
+
+      // Check all cards for bingo after the new number
+      const found = checkAllCardsForBingo(cards, newDrawn, game.prizes || []);
+      if (found.length > 0) {
+        setWinners(found);
+      }
     }
     setTimeout(() => setDrawing(false), 800);
+  };
+
+  const handleConfirmWinners = async () => {
+    if (winners.length === 0) return;
+    const { prizeIndex, prizeName } = winners[0];
+    const now = new Date().toISOString();
+    const lastDrawn = (game.drawn_numbers || []).slice(-1)[0];
+
+    // Mark prize as awarded in game
+    const prizes = [...(game.prizes || [])];
+    prizes[prizeIndex] = { ...prizes[prizeIndex], awarded: true };
+    await updateGame({ prizes });
+
+    // Mark each winning card
+    for (const { card } of winners) {
+      const wonPrizes = [...(card.won_prizes || []), {
+        prize_index: prizeIndex,
+        prize_name: prizeName,
+        won_at_draw: lastDrawn,
+        won_at: now,
+      }];
+      await base44.entities.BingoCard.update(card.id, { is_winner: true, won_prizes: wonPrizes });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+    setWinners([]);
   };
 
   const handleFinish = () => updateGame({ status: "finished" });
@@ -73,6 +108,11 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
+      <BingoWinnerAlert
+        winners={winners}
+        onClose={() => setWinners([])}
+        onConfirm={handleConfirmWinners}
+      />
       <div className="max-w-7xl mx-auto px-4 py-5">
 
         {/* Header */}
