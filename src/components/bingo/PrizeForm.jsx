@@ -1,16 +1,14 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 export default function PrizeForm({ prizes, onChange }) {
-  const addPrize = () => {
-    if (prizes.length >= 5) return;
-    onChange([...prizes, { name: "", description: "", awarded: false }]);
-  };
-
-  const removePrize = (idx) => {
-    onChange(prizes.filter((_, i) => i !== idx));
+  const setCount = (count) => {
+    const newPrizes = Array.from({ length: count }, (_, i) =>
+      prizes[i] || { name: "", description: "", awarded: false }
+    );
+    onChange(newPrizes);
   };
 
   const updatePrize = (idx, field, value) => {
@@ -24,13 +22,25 @@ export default function PrizeForm({ prizes, onChange }) {
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold flex items-center gap-2">
           <Trophy className="w-4 h-4 text-accent" />
-          Prêmios (até 5)
+          Prêmios
         </Label>
-        {prizes.length < 5 && (
-          <Button type="button" variant="outline" size="sm" onClick={addPrize}>
-            <Plus className="w-3 h-3 mr-1" /> Adicionar
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground mr-1">Quantidade:</span>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setCount(n)}
+              className={`w-7 h-7 rounded-md text-xs font-bold border transition-colors ${
+                prizes.length === n
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-input hover:bg-muted"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
       </div>
 
       {prizes.length === 0 && (
@@ -59,15 +69,6 @@ export default function PrizeForm({ prizes, onChange }) {
                 className="h-8 text-sm"
               />
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="shrink-0 text-destructive hover:text-destructive h-7 w-7"
-              onClick={() => removePrize(idx)}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
           </div>
         ))}
       </div>
