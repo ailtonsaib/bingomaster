@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { generateBingoGrid } from "@/lib/bingoUtils";
+import { generateBingoGrid, generateThreeGrids } from "@/lib/bingoUtils";
 import BingoGrid from "@/components/bingo/BingoGrid";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
 import CardHeader from "@/components/bingo/CardHeader";
@@ -54,6 +54,7 @@ export default function GameCards() {
 
     const newCards = [];
     for (let i = 0; i < qty; i++) {
+      const [g1a, g1b, g1c] = generateThreeGrids();
       const cardData = {
         game_id: String(gameId),
         player_name: playerName.trim(),
@@ -61,11 +62,14 @@ export default function GameCards() {
         player_city: playerCity.trim(),
         player_state: playerState.trim(),
         chances: chancesNum,
-        grid_1: generateBingoGrid(),
+        grid_1a: g1a, grid_1b: g1b, grid_1c: g1c,
+        grid_1: g1a, // legacy compat
         card_number: nextNum + i,
       };
       if (chancesNum === 2) {
-        cardData.grid_2 = generateBingoGrid();
+        const [g2a, g2b, g2c] = generateThreeGrids();
+        cardData.grid_2a = g2a; cardData.grid_2b = g2b; cardData.grid_2c = g2c;
+        cardData.grid_2 = g2a; // legacy compat
       }
       newCards.push(cardData);
     }
@@ -88,14 +92,20 @@ export default function GameCards() {
       const newCards = [];
       for (let i = 0; i < batchCount; i++) {
         const idx = batch + i;
+        const [g1a, g1b, g1c] = generateThreeGrids();
         const cardData = {
           game_id: String(gameId),
           player_name: `${prefix} ${nextNum + idx}`,
           chances,
-          grid_1: generateBingoGrid(),
+          grid_1a: g1a, grid_1b: g1b, grid_1c: g1c,
+          grid_1: g1a,
           card_number: nextNum + idx,
         };
-        if (chances === 2) cardData.grid_2 = generateBingoGrid();
+        if (chances === 2) {
+          const [g2a, g2b, g2c] = generateThreeGrids();
+          cardData.grid_2a = g2a; cardData.grid_2b = g2b; cardData.grid_2c = g2c;
+          cardData.grid_2 = g2a;
+        }
         newCards.push(cardData);
       }
       await base44.entities.BingoCard.bulkCreate(newCards);

@@ -39,19 +39,61 @@
       "default": 1,
       "description": "Dificuldade de chances: 1 (normal) ou 2 (dupla chance)"
     },
+    "grid_1a": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Primeira chance - grid 1 (25 n\u00fameros, centro=0)"
+    },
+    "grid_1b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Primeira chance - grid 2 (25 n\u00fameros, centro=0)"
+    },
+    "grid_1c": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Primeira chance - grid 3 (25 n\u00fameros, centro=0)"
+    },
+    "grid_2a": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Segunda chance - grid 1 (25 n\u00fameros, centro=0)"
+    },
+    "grid_2b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Segunda chance - grid 2 (25 n\u00fameros, centro=0)"
+    },
+    "grid_2c": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Segunda chance - grid 3 (25 n\u00fameros, centro=0)"
+    },
     "grid_1": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "N\u00fameros da primeira cartela (25 n\u00fameros em ordem de grid 5x5)"
+      "description": "Legacy: primeira cartela (compatibilidade)"
     },
     "grid_2": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "N\u00fameros da segunda cartela (apenas se chances = 2)"
+      "description": "Legacy: segunda cartela (compatibilidade)"
     },
     "won_prizes": {
       "type": "array",
@@ -59,20 +101,16 @@
         "type": "object",
         "properties": {
           "prize_index": {
-            "type": "number",
-            "description": "\u00cdndice do pr\u00eamio no jogo (0-4)"
+            "type": "number"
           },
           "prize_name": {
-            "type": "string",
-            "description": "Nome do pr\u00eamio ganho"
+            "type": "string"
           },
           "won_at_draw": {
-            "type": "number",
-            "description": "N\u00famero sorteado que completou o bingo"
+            "type": "number"
           },
           "won_at": {
-            "type": "string",
-            "description": "Data/hora em que o pr\u00eamio foi ganho"
+            "type": "string"
           }
         }
       },

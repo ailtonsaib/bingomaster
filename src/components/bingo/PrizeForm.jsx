@@ -26,7 +26,7 @@ export default function PrizeForm({ prizes, onChange }) {
         </Label>
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground mr-1">Quantidade:</span>
-          {[1, 2, 3, 4, 5].map((n) => (
+          {[1, 2, 3, 4, 5, 6].map((n) => (
             <button
               key={n}
               type="button"
@@ -56,6 +56,9 @@ export default function PrizeForm({ prizes, onChange }) {
               {idx + 1}
             </div>
             <div className="flex-1 space-y-1.5">
+              <div className="text-xs text-muted-foreground font-medium">
+                {idx < 3 ? `1ª Chance — Grid ${idx + 1}` : `2ª Chance — Grid ${idx - 2}`}
+              </div>
               <Input
                 placeholder={`Nome do ${idx + 1}º prêmio`}
                 value={prize.name}

@@ -24,9 +24,23 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
   };
 
   const cardNum = String(card.card_number || 1).padStart(6, "0");
-  const hasSecondChance = card.chances === 2 && card.grid_2;
-  const grid1 = card.grid_1 || [];
-  const grid2 = card.grid_2 || [];
+  const hasSecondChance = card.chances === 2;
+
+  // 3 grids per chance — use new fields if available, fallback to legacy
+  const grids1 = [
+    card.grid_1a || card.grid_1 || [],
+    card.grid_1b || card.grid_1 || [],
+    card.grid_1c || card.grid_1 || [],
+  ];
+  const grids2 = [
+    card.grid_2a || card.grid_2 || [],
+    card.grid_2b || card.grid_2 || [],
+    card.grid_2c || card.grid_2 || [],
+  ];
+
+  // Prizes split: first 3 for primeira chance, next 3 for segunda chance
+  const prizes1 = prizes.slice(0, 3);
+  const prizes2 = prizes.slice(3, 6);
 
   return (
     <div style={{
@@ -41,9 +55,8 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
     }}>
 
       {/* ── HEADER ── */}
-      <div style={{ border: "2px solid #000", padding: "5px 8px 5px 8px", marginBottom: 0 }}>
+      <div style={{ border: "2px solid #000", padding: "5px 8px", marginBottom: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          {/* Left: game name + location */}
           <div style={{ fontSize: 10, lineHeight: 1.5 }}>
             <div style={{ fontWeight: "900", fontSize: 14, fontFamily: "'Arial Black', Arial, sans-serif", marginBottom: 2 }}>
               {game?.name || "BINGO"}
@@ -55,7 +68,6 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
               </>
             )}
           </div>
-          {/* Right: date + time */}
           <div style={{ textAlign: "right", fontSize: 10, fontWeight: "bold", lineHeight: 1.8 }}>
             {game?.event_date && (
               <>
@@ -111,11 +123,11 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       </div>
 
       {/* ── PRIMEIRA CHANCE ── */}
-      <ChanceSection title="PRIMEIRA CHANCE" grid={grid1} prizes={prizes} />
+      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} />
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
-        <ChanceSection title="SEGUNDA CHANCE" grid={grid2} prizes={prizes} />
+        <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} />
       )}
 
       {/* Spacer */}
@@ -123,7 +135,6 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 
       {/* ── FOOTER ── */}
       <div style={{ borderTop: "1.5px dashed #666", marginTop: 10, paddingTop: 6 }}>
-        {/* N° CARTELA barcode on the right */}
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: "bold" }}>
             N° CARTELA:
@@ -131,13 +142,11 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
           </div>
         </div>
 
-        {/* COLABORADOR */}
         <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10, marginBottom: 4 }}>
           <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>COLABORADOR:</span>
           <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;{card.player_name || ""}</div>
         </div>
 
-        {/* ENDEREÇO + CIDADE + FONE */}
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6, fontSize: 10 }}>
           <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>ENDEREÇO:</span>
           <div style={{ flex: 2, borderBottom: "1px solid #000" }}>
@@ -153,10 +162,8 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
   );
 }
 
-// Renders a chance section: title + 3 identical grids side by side + prizes below
-function ChanceSection({ title, grid, prizes }) {
-  if (!grid || grid.length === 0) return null;
-
+// 3 distinct grids side by side, each with its own prize below
+function ChanceSection({ title, grids, prizes }) {
   return (
     <div style={{
       borderLeft: "2px solid #000",
@@ -173,22 +180,24 @@ function ChanceSection({ title, grid, prizes }) {
         {title}
       </div>
 
-      {/* 3 identical grids */}
       <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-        {[0, 1, 2].map((i) => (
-          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <PrintBingoGrid numbers={grid} />
-            {/* Prizes below each grid */}
-            <div style={{ fontSize: 8, color: "#333", marginTop: 5, textAlign: "left", width: "100%" }}>
-              {prizes.map((prize, pIdx) => (
-                <div key={pIdx} style={{ whiteSpace: "nowrap" }}>
-                  {pIdx + 1}) {prize.name || ""}
-                  {prize.description ? ` (${prize.description})` : ""}
+        {grids.map((grid, i) => {
+          const prize = prizes[i];
+          return (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <PrintBingoGrid numbers={grid} />
+              {/* Prize for this specific grid */}
+              {prize && (
+                <div style={{ fontSize: 8, color: "#333", marginTop: 5, textAlign: "left", width: "100%", maxWidth: 170 }}>
+                  <div style={{ whiteSpace: "normal" }}>
+                    {i + 1}) {prize.name || ""}
+                    {prize.description ? ` (${prize.description})` : ""}
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

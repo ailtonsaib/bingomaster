@@ -1,5 +1,5 @@
-// Generate a valid bingo grid (25 numbers)
-// B: 1-15, I: 16-30, N: 31-45, G: 46-60, O: 61-75
+// Generate a valid bingo grid (25 cells, 24 unique numbers + FREE CENTER)
+// S: 1-15, O: 16-30, R: 31-45, T: 46-60, E: 61-75
 export function generateBingoGrid() {
   const columns = [
     pickRandom(1, 15, 5),
@@ -19,6 +19,11 @@ export function generateBingoGrid() {
   // Center is free space (index 12)
   grid[12] = 0;
   return grid;
+}
+
+// Generate 3 distinct grids for one chance section
+export function generateThreeGrids() {
+  return [generateBingoGrid(), generateBingoGrid(), generateBingoGrid()];
 }
 
 function pickRandom(min, max, count) {

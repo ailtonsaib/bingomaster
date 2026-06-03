@@ -1,13 +1,8 @@
 const HEADERS = ["S", "O", "R", "T", "E"];
 
-// Print grid matching the PDF model:
-// - Circular bordered cells
-// - Bold headers S O R T E
-// - 4 rows × 5 cols (no free space)
-// - 2-digit zero-padded numbers
 export default function PrintBingoGrid({ numbers }) {
-  // numbers is a flat array of 20 (4 rows) or 25 (5 rows with free center)
-  // We always render what we get, row by row in groups of 5
+  if (!numbers || numbers.length === 0) return null;
+
   const totalRows = Math.ceil(numbers.length / 5);
   const rows = [];
   for (let r = 0; r < totalRows; r++) {
@@ -39,6 +34,16 @@ export default function PrintBingoGrid({ numbers }) {
     fontWeight: "900",
   };
 
+  const freeStyle = {
+    ...circleStyle,
+    background: "#f8a0a0",
+    borderColor: "#c00",
+    color: "#c00",
+  };
+
+  // flat index in the grid
+  let flatIndex = 0;
+
   return (
     <div style={{ display: "inline-block" }}>
       {/* Header row S O R T E */}
@@ -50,11 +55,15 @@ export default function PrintBingoGrid({ numbers }) {
       {/* Number rows */}
       {rows.map((row, rIdx) => (
         <div key={rIdx} style={{ display: "flex" }}>
-          {row.map((num, cIdx) => (
-            <div key={cIdx} style={circleStyle}>
-              {String(num).padStart(2, "0")}
-            </div>
-          ))}
+          {row.map((num, cIdx) => {
+            const isFree = num === 0;
+            flatIndex++;
+            return (
+              <div key={cIdx} style={isFree ? freeStyle : circleStyle}>
+                {isFree ? "00" : String(num).padStart(2, "0")}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
