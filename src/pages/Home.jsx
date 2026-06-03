@@ -5,9 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import EditGameModal from "@/components/bingo/EditGameModal";
 
 const statusLabels = {
   waiting: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -20,6 +21,7 @@ export default function Home() {
     queryKey: ["bingo-games"],
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
   });
+  const [editingGame, setEditingGame] = useState(null);
 
   const handleDelete = async (id) => {
     // Delete cards first, then game
@@ -132,6 +134,14 @@ export default function Home() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => setEditingGame(game)}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-destructive hover:text-destructive"
                           onClick={() => handleDelete(game.id)}
                         >
@@ -146,6 +156,13 @@ export default function Home() {
           </div>
         )}
       </div>
+      {editingGame && (
+        <EditGameModal
+          game={editingGame}
+          onClose={() => setEditingGame(null)}
+          onSaved={refetch}
+        />
+      )}
     </div>
   );
 }
