@@ -17,6 +17,7 @@ export default function GamePlay() {
   const queryClient = useQueryClient();
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState([]);
+  const [drawType, setDrawType] = useState("horizontal");
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -46,7 +47,7 @@ export default function GamePlay() {
       await updateGame({ drawn_numbers: newDrawn });
 
       // Check all cards for bingo after the new number
-      const found = checkAllCardsForBingo(cards, newDrawn, game.prizes || []);
+      const found = checkAllCardsForBingo(cards, newDrawn, game.prizes || [], drawType);
       if (found.length > 0) {
         setWinners(found);
       }
@@ -159,6 +160,37 @@ export default function GamePlay() {
             {/* Last drawn number - big display */}
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-6 flex flex-col items-center gap-4">
               <LastNumberDisplay number={drawnNumbers[drawnNumbers.length - 1]} drawing={drawing} />
+
+              {/* Draw type selector */}
+              <div className="w-full">
+                <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Tipo de Sorteio</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { value: "horizontal", label: "Horizontal", icon: "↔" },
+                    { value: "vertical",   label: "Vertical",   icon: "↕" },
+                    { value: "diagonal",   label: "Diagonal",   icon: "⤢" },
+                    { value: "full",       label: "Cartela Cheia", icon: "▦" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => !isPlaying && setDrawType(opt.value)}
+                      disabled={isPlaying}
+                      className={`rounded-xl px-3 py-2 text-sm font-semibold transition-all border ${
+                        drawType === opt.value
+                          ? "bg-primary border-primary text-white shadow-lg shadow-primary/30"
+                          : "bg-white/10 border-white/10 text-violet-300 hover:bg-white/20"
+                      } disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      <span className="text-base mr-1">{opt.icon}</span> {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {isPlaying && (
+                  <p className="text-xs text-violet-400 text-center mt-1">
+                    Encerre o jogo para alterar o tipo de sorteio.
+                  </p>
+                )}
+              </div>
 
               {/* Control buttons */}
               <div className="flex flex-wrap gap-3 justify-center mt-2">
