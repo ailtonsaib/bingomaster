@@ -42,8 +42,8 @@ export default function PrintCards() {
     }, 300);
   };
 
-  // Each A4 sheet holds 3 cards
-  const CARDS_PER_PAGE = 3;
+  // 1 card per A4 sheet (3 identical grids side by side per chance)
+  const CARDS_PER_PAGE = 1;
   const prizes = game?.prizes || [];
 
   // Which cards to show: all or just the selected batch
@@ -111,7 +111,7 @@ export default function PrintCards() {
                 breakAfter: pageIdx < pages.length - 1 ? "page" : "auto",
               }}
             >
-              <PrintA4Sheet cards={pageCards} game={game} prizes={prizes} />
+              <PrintA4Sheet card={pageCards[0]} game={game} prizes={prizes} />
             </div>
           ))}
         </div>
