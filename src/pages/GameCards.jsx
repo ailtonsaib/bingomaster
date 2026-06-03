@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Printer, Trash2, User, Zap } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BingoGrid from "@/components/bingo/BingoGrid";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
@@ -27,6 +28,11 @@ export default function GameCards() {
   const [quantity, setQuantity] = useState("1");
   const [generating, setGenerating] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const [showRangeDelete, setShowRangeDelete] = useState(false);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -103,8 +109,45 @@ export default function GameCards() {
     try {
       await base44.entities.BingoCard.delete(id);
     } catch (e) {
-      // Card may already be deleted; ignore and refresh
+      // ignore
     }
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(cards.map((c) => c.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    for (const id of selectedIds) {
+      try { await base44.entities.BingoCard.delete(id); } catch (e) { /* ignore */ }
+    }
+    setSelectedIds(new Set());
+    setDeleting(false);
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+  };
+
+  const handleDeleteRange = async () => {
+    const from = parseInt(rangeFrom);
+    const to = parseInt(rangeTo);
+    if (isNaN(from) || isNaN(to) || from > to) return;
+    setDeleting(true);
+    const toDelete = cards.filter((c) => c.card_number >= from && c.card_number <= to);
+    for (const card of toDelete) {
+      try { await base44.entities.BingoCard.delete(card.id); } catch (e) { /* ignore */ }
+    }
+    setRangeFrom(""); setRangeTo("");
+    setShowRangeDelete(false);
+    setDeleting(false);
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
   };
 
@@ -229,6 +272,67 @@ export default function GameCards() {
           </CardContent>
         </Card>
 
+        {/* Selection toolbar */}
+        {cards.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={selectedIds.size === cards.length ? clearSelection : selectAll}>
+              {selectedIds.size === cards.length ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+              {selectedIds.size === cards.length ? "Desmarcar todas" : "Selecionar todas"}
+            </Button>
+
+            {selectedIds.size > 0 && (
+              <>
+                <span className="text-sm text-muted-foreground">{selectedIds.size} selecionada(s)</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={handleDeleteSelected}
+                  disabled={deleting}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleting ? "Excluindo..." : `Excluir ${selectedIds.size} selecionada(s)`}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  <XCircle className="w-4 h-4" /> Limpar seleção
+                </Button>
+              </>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 ml-auto"
+              onClick={() => setShowRangeDelete((v) => !v)}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" /> Excluir por intervalo
+            </Button>
+          </div>
+        )}
+
+        {/* Range delete */}
+        {showRangeDelete && (
+          <div className="flex items-end gap-3 mb-4 p-4 border rounded-xl bg-muted/40">
+            <div className="space-y-1">
+              <Label className="text-xs">Cartela nº (de)</Label>
+              <Input type="number" min="1" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} className="w-28" placeholder="Ex: 1" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Cartela nº (até)</Label>
+              <Input type="number" min="1" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} className="w-28" placeholder="Ex: 100" />
+            </div>
+            <Button variant="destructive" size="sm" onClick={handleDeleteRange} disabled={deleting || !rangeFrom || !rangeTo}>
+              {deleting ? "Excluindo..." : "Excluir intervalo"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowRangeDelete(false)}>Cancelar</Button>
+            {rangeFrom && rangeTo && !isNaN(parseInt(rangeFrom)) && !isNaN(parseInt(rangeTo)) && (
+              <span className="text-xs text-muted-foreground self-center">
+                {cards.filter((c) => c.card_number >= parseInt(rangeFrom) && c.card_number <= parseInt(rangeTo)).length} cartelas serão excluídas
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Cards list */}
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -249,10 +353,15 @@ export default function GameCards() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
               >
-                <Card className="overflow-hidden">
+                <Card className={`overflow-hidden transition-all ${selectedIds.has(card.id) ? "ring-2 ring-primary" : ""}`}>
                   <UiCardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedIds.has(card.id)}
+                          onCheckedChange={() => toggleSelect(card.id)}
+                          className="shrink-0"
+                        />
                         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                           <User className="w-3.5 h-3.5 text-primary" />
                         </div>
