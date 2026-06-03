@@ -1,4 +1,4 @@
-import SimpleBarcode from "./SimpleBarcode";
+import Barcode from "react-barcode";
 
 export default function CardHeader({ game, card }) {
   if (!game) return null;
@@ -45,12 +45,12 @@ export default function CardHeader({ game, card }) {
         <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
           <p className="text-gray-800">DATA: {formatDate(game.event_date)}</p>
           <p className="text-gray-800">HORAS: {formatTime(game.event_date)}</p>
-          <SimpleBarcode value={cardNum} height={30} />
+          <Barcode value={cardNum} width={1.2} height={30} displayValue={false} margin={0} />
         </div>
       </div>
 
       {/* Bottom bar */}
-      <div className="grid grid-cols-3 bg-gray-400 text-white text-center text-[11px]">
+      <div className="grid grid-cols-3 text-center text-[11px]">
         <div className="bg-gray-500 py-1" />
         <div className="py-1 bg-white text-gray-900 font-bold border-x border-gray-600">
           Cartela: <span className="text-blue-700">{cardNum}</span>
