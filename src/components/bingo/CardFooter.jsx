@@ -1,4 +1,4 @@
-import Barcode from "react-barcode";
+import SimpleBarcode from "./SimpleBarcode";
 
 export default function CardFooter({ card }) {
   const cardNum = String(card.card_number || 1).padStart(6, "0");
@@ -18,13 +18,7 @@ export default function CardFooter({ card }) {
           <span className="text-blue-700 font-bold border-b border-gray-700 pb-px min-w-[40px]">
             {cardNum}
           </span>
-          <Barcode
-            value={cardNum}
-            width={1}
-            height={24}
-            displayValue={false}
-            margin={0}
-          />
+          <SimpleBarcode value={cardNum} height={24} />
         </div>
       </div>
 
