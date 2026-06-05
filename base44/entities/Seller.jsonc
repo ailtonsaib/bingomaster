@@ -1,0 +1,38 @@
+{
+  "name": "Seller",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome completo do vendedor"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone / WhatsApp do vendedor"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o do vendedor"
+    },
+    "city": {
+      "type": "string",
+      "description": "Cidade do vendedor"
+    },
+    "state": {
+      "type": "string",
+      "description": "Estado (UF) do vendedor"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o vendedor"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o vendedor est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

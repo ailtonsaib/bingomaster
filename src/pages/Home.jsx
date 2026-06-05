@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import EditGameModal from "@/components/bingo/EditGameModal";
@@ -51,11 +51,18 @@ export default function Home() {
             <p className="mt-3 text-lg text-muted-foreground max-w-lg mx-auto">
               Crie jogos, gere cartelas e sorteie números com um sistema completo e elegante.
             </p>
-            <Link to="/new-game">
-              <Button size="lg" className="mt-6 gap-2 text-base px-8">
-                <Plus className="w-5 h-5" /> Novo Jogo
-              </Button>
-            </Link>
+            <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
+              <Link to="/new-game">
+                <Button size="lg" className="gap-2 text-base px-8">
+                  <Plus className="w-5 h-5" /> Novo Jogo
+                </Button>
+              </Link>
+              <Link to="/sellers">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8">
+                  <UserCheck className="w-5 h-5" /> Vendedores
+                </Button>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </div>
