@@ -9,9 +9,10 @@ import {
   Link2, Users, Layers, AlertCircle
 } from "lucide-react";
 
-function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, existingCards }) {
+function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, existingCards, onDelete }) {
   const assignment = allAssignments[seller.id] || { from: "", to: "" };
   const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const from = parseInt(assignment.from) || null;
   const to = parseInt(assignment.to) || null;
@@ -70,6 +71,25 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, e
     window.open(url, "_blank");
   };
 
+  const handleDeleteDistribution = async () => {
+    if (!window.confirm(`Deseja excluir as cartelas distribuídas para ${seller.name}?`)) return;
+    
+    setDeleting(true);
+    try {
+      const cardsToDelete = existingCards.filter((c) => c.player_name === seller.name || c.player_phone === seller.phone);
+      if (cardsToDelete.length > 0) {
+        await Promise.all(cardsToDelete.map((c) => base44.entities.BingoCard.delete(c.id)));
+      }
+      onChange(seller.id, "from", "");
+      onChange(seller.id, "to", "");
+      await onDelete();
+    } catch (error) {
+      console.error("Erro ao deletar distribuição:", error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="border rounded-xl p-4 space-y-3 bg-card">
       <div className="flex items-center justify-between">
@@ -126,15 +146,16 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, e
       )}
 
       {valid && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full h-8 text-xs text-destructive hover:text-destructive"
-          onClick={() => { onChange(seller.id, "from", ""); onChange(seller.id, "to", ""); }}
-        >
-          <Trash2 className="w-3 h-3" /> Limpar distribuição deste vendedor
-        </Button>
-      )}
+         <Button
+           variant="ghost"
+           size="sm"
+           className="w-full h-8 text-xs text-destructive hover:text-destructive"
+           onClick={handleDeleteDistribution}
+           disabled={deleting}
+         >
+           <Trash2 className="w-3 h-3" /> {deleting ? "Deletando..." : "Excluir distribuição"}
+         </Button>
+       )}
 
       <div className="flex gap-2">
         <Button
@@ -397,6 +418,7 @@ export default function DistributeCardsModal({ onClose }) {
                       allAssignments={assignments}
                       onChange={handleChange}
                       existingCards={cards}
+                      onDelete={() => queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] })}
                     />
                   ))}
                 </div>
