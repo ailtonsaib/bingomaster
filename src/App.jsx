@@ -14,6 +14,7 @@ import GameDisplay from '@/pages/GameDisplay';
 import PrintCards from '@/pages/PrintCards';
 import Sellers from '@/pages/Sellers';
 import SellApp from '@/pages/SellApp';
+import ValidateCards from '@/pages/ValidateCards';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
         <Route path="/print/:gameId" element={<PrintCards />} />
         <Route path="/sellers" element={<Sellers />} />
         <Route path="/sell" element={<SellApp />} />
+        <Route path="/validate" element={<ValidateCards />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

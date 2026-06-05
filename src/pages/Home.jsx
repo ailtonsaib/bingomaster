@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import EditGameModal from "@/components/bingo/EditGameModal";
@@ -77,6 +77,11 @@ export default function Home() {
               >
                 <Layers className="w-5 h-5" /> Distribuir Cartelas
               </Button>
+              <Link to="/validate">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
+                  <CheckSquare className="w-5 h-5" /> Validar Cartelas
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
