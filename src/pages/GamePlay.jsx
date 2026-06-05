@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize } from "lucide-react";
 import { drawNumber, checkAllCardsForBingo } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -13,7 +13,7 @@ import PrizesPanel from "@/components/bingo/PrizesPanel";
 import GameProgressBar from "@/components/bingo/GameProgressBar";
 import BingoWinnerAlert from "@/components/bingo/BingoWinnerAlert";
 import DrawStatistics from "@/components/bingo/DrawStatistics";
-import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
+import FullScreenDraw from "@/components/bingo/FullScreenDraw";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -27,6 +27,7 @@ export default function GamePlay() {
   const [autoInterval, setAutoInterval] = useState(5); // segundos
   const [autoDrawing, setAutoDrawing] = useState(false);
   const [autoTimer, setAutoTimer] = useState(null);
+  const [showFullScreen, setShowFullScreen] = useState(false);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -176,6 +177,13 @@ export default function GamePlay() {
         onClose={() => setWinners([])}
         onConfirm={handleConfirmWinners}
       />
+      {showFullScreen && (
+        <FullScreenDraw
+          game={game}
+          cards={cards}
+          onClose={() => setShowFullScreen(false)}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 py-5">
 
         {/* Header */}
@@ -197,6 +205,14 @@ export default function GamePlay() {
                 <Monitor className="w-4 h-4" /> Painel
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFullScreen(true)}
+              className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20"
+            >
+              <Maximize className="w-4 h-4" /> Tela Cheia
+            </Button>
             <Badge
               className={
                 isPlaying
