@@ -205,7 +205,7 @@ function ChanceSection({ title, grids, prizes }) {
               <PrintBingoGrid numbers={grid} />
               {/* Prize for this specific grid */}
               {prize && (
-                <div style={{ fontSize: 8, color: "#333", marginTop: 5, textAlign: "left", width: "100%", maxWidth: 170 }}>
+                <div style={{ fontSize: 11, color: "#000", fontWeight: "bold", marginTop: 5, textAlign: "left", width: "100%", maxWidth: 170 }}>
                   <div style={{ whiteSpace: "normal" }}>
                     {i + 1}) {prize.name || ""}
                     {prize.description ? ` (${prize.description})` : ""}
