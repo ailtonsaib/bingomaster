@@ -240,6 +240,24 @@ export default function DistributeCardsModal({ onClose }) {
     }
   };
 
+  const handleDeleteSoldOnly = async () => {
+    if (!selectedGame || !window.confirm(`Deseja excluir apenas as ${distributedNumbers.length} cartelas vendidas? Esta ação não pode ser desfeita.`)) return;
+    
+    setClearing(true);
+    try {
+      const soldCards = cards.filter((c) => c.player_phone || c.player_city);
+      if (soldCards.length > 0) {
+        await Promise.all(soldCards.map((c) => base44.entities.BingoCard.delete(c.id)));
+      }
+      setAssignments({});
+      await queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] });
+    } catch (error) {
+      console.error("Erro ao deletar vendidas:", error);
+    } finally {
+      setClearing(false);
+    }
+  };
+
   // Auto-distribute: starting from autoFrom, give autoQty to each seller in order, skipping distributed numbers
   const handleAutoDistribute = () => {
     const start = parseInt(autoFrom) || minCard;
@@ -349,16 +367,28 @@ export default function DistributeCardsModal({ onClose }) {
                   )}
                 </div>
                 {distributedNumbers.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="w-full gap-2"
-                    onClick={handleClearAll}
-                    disabled={clearing}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {clearing ? "Limpando..." : `Limpar todas as ${distributedNumbers.length} distribuições`}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="w-full gap-2"
+                      onClick={handleDeleteSoldOnly}
+                      disabled={clearing}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {clearing ? "Excluindo..." : `Excluir apenas ${distributedNumbers.length} vendidas`}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={handleClearAll}
+                      disabled={clearing}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {clearing ? "Limpando..." : `Limpar todas as ${distributedNumbers.length} distribuições`}
+                    </Button>
+                  </div>
                 )}
               </div>
 

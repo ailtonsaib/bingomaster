@@ -181,6 +181,17 @@ export default function GameCards() {
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
   };
 
+  const handleDeleteSold = async () => {
+    if (!window.confirm(`Deseja excluir ${cards.filter((c) => c.player_phone || c.player_city).length} cartela(s) vendida(s)?`)) return;
+    setDeleting(true);
+    const toDelete = cards.filter((c) => c.player_phone || c.player_city);
+    for (const card of toDelete) {
+      try { await base44.entities.BingoCard.delete(card.id); } catch (e) { /* ignore */ }
+    }
+    setDeleting(false);
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+  };
+
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -446,6 +457,15 @@ export default function GameCards() {
               </>
             )}
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleDeleteSold}
+              disabled={deleting || cards.filter((c) => c.player_phone || c.player_city).length === 0}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" /> Excluir vendidas ({cards.filter((c) => c.player_phone || c.player_city).length})
+            </Button>
             <Button
               variant="outline"
               size="sm"
