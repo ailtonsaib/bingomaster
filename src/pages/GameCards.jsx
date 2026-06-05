@@ -67,9 +67,9 @@ export default function GameCards() {
         card_number: nextNum + i,
       };
       if (chancesNum === 2) {
-        const [g2a, g2b, g2c] = generateThreeGrids();
-        cardData.grid_2a = g2a; cardData.grid_2b = g2b; cardData.grid_2c = g2c;
-        cardData.grid_2 = g2a; // legacy compat
+        // 2ª chance usa os mesmos números da 1ª chance
+        cardData.grid_2a = g1a; cardData.grid_2b = g1b; cardData.grid_2c = g1c;
+        cardData.grid_2 = g1a; // legacy compat
       }
       newCards.push(cardData);
     }
@@ -102,9 +102,9 @@ export default function GameCards() {
           card_number: nextNum + idx,
         };
         if (chances === 2) {
-          const [g2a, g2b, g2c] = generateThreeGrids();
-          cardData.grid_2a = g2a; cardData.grid_2b = g2b; cardData.grid_2c = g2c;
-          cardData.grid_2 = g2a;
+          // 2ª chance usa os mesmos números da 1ª chance
+          cardData.grid_2a = g1a; cardData.grid_2b = g1b; cardData.grid_2c = g1c;
+          cardData.grid_2 = g1a;
         }
         newCards.push(cardData);
       }
