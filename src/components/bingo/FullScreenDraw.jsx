@@ -4,19 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BingoNumberBall from "./BingoNumberBall";
 import BingoGrid from "./BingoGrid";
-
-
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
-  // Variáveis derivadas do game (devem vir primeiro)
-  const maxNumber = game?.max_number || 75;
-  const drawnNumbers = game?.drawn_numbers || [];
+  // Busca dados sempre atualizados do banco
+  const { data: freshGame } = useQuery({
+    queryKey: ["game", game?.id],
+    queryFn: () => base44.entities.BingoGame.get(game?.id),
+    enabled: !!game?.id,
+    refetchInterval: 500, // Atualiza a cada 500ms
+  });
+  
+  const currentGame = freshGame || game;
+  const maxNumber = currentGame?.max_number || 75;
+  const drawnNumbers = currentGame?.drawn_numbers || [];
   const lastNumber = drawnNumbers[drawnNumbers.length - 1];
-  const isPlaying = game?.status === "in_progress";
-  const isWaiting = game?.status === "waiting";
-  const isFinished = game?.status === "finished";
+  const isPlaying = currentGame?.status === "in_progress";
+  const isWaiting = currentGame?.status === "waiting";
+  const isFinished = currentGame?.status === "finished";
   const allDrawn = drawnNumbers.length >= maxNumber;
   
   const [winnerCards, setWinnerCards] = useState([]);
@@ -27,10 +35,9 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
   const [autoInterval, setAutoInterval] = useState(5000); // 5 segundos
 
   const handleDraw = async () => {
-    if (!game || drawing) return;
+    if (!currentGame || drawing) return;
     setDrawing(true);
     
-    // Sortear número aleatório não sorteado
     const available = Array.from({ length: maxNumber }, (_, i) => i + 1)
       .filter(n => !drawnNumbers.includes(n));
     
@@ -39,9 +46,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
       return;
     }
 
-    const randomIndex = Math.floor(Math.random() * available.length);
-    const num = available[randomIndex];
-    
+    const num = available[Math.floor(Math.random() * available.length)];
     const newDrawn = [...drawnNumbers, num];
     await updateGame({ drawn_numbers: newDrawn });
     
@@ -54,48 +59,51 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
     updateGame({
       status: "waiting",
       drawn_numbers: [],
-      prizes: (game.prizes || []).map(p => ({ ...p, awarded: false }))
+      prizes: (currentGame.prizes || []).map(p => ({ ...p, awarded: false }))
     });
   const handleClearDraw = () => updateGame({ drawn_numbers: [] });
 
   // Sorteio automático
   useEffect(() => {
     if (!isPlaying || drawMode !== "auto" || allDrawn) return;
+    if (!updateGame) {
+      console.error("[Auto] updateGame não fornecido!");
+      return;
+    }
 
     const drawNumber = async () => {
       try {
         const currentDrawn = drawnNumbers;
         const currentMax = maxNumber;
         
-        // Sortear número aleatório não sorteado
         const available = Array.from({ length: currentMax }, (_, i) => i + 1)
           .filter(n => !currentDrawn.includes(n));
         
-        if (available.length === 0) {
-          return;
-        }
+        if (available.length === 0) return;
 
-        const randomIndex = Math.floor(Math.random() * available.length);
-        const num = available[randomIndex];
-        
+        const num = available[Math.floor(Math.random() * available.length)];
         const newDrawn = [...currentDrawn, num];
         
-        // Atualiza no banco de dados
+        console.log("[Auto] Sorteando:", num, "Total:", newDrawn.length);
         await updateGame({ drawn_numbers: newDrawn });
       } catch (error) {
-        console.error("Erro no sorteio automático:", error);
+        console.error("[Auto] ERRO:", error);
       }
     };
 
-    const interval = setInterval(drawNumber, autoInterval);
+    console.log("[Auto] Iniciando intervalo:", autoInterval, "ms");
+    const intervalId = setInterval(drawNumber, autoInterval);
 
-    return () => clearInterval(interval);
-  }, [isPlaying, drawMode, autoInterval, game?.id, allDrawn]);
+    return () => {
+      console.log("[Auto] Limpando intervalo");
+      clearInterval(intervalId);
+    };
+  }, [isPlaying, drawMode, autoInterval, allDrawn, drawnNumbers, maxNumber, updateGame]);
 
   useEffect(() => {
-    if (!game?.drawn_numbers) return;
+    if (!currentGame?.drawn_numbers) return;
 
-    const drawnSet = new Set(game.drawn_numbers);
+    const drawnSet = new Set(currentGame.drawn_numbers);
     const stats = {};
     const winners = [];
 
@@ -165,7 +173,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
       {/* Header */}
       <div className="sticky top-0 bg-violet-950/90 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold font-heading text-white">{game?.name}</h1>
+          <h1 className="text-2xl font-bold font-heading text-white">{currentGame?.name}</h1>
           <Badge className="bg-emerald-500 text-white border-0">
             {drawnNumbers.length}/{maxNumber} Números
           </Badge>
@@ -489,7 +497,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold font-heading flex items-center gap-2">
               <Trophy className="w-8 h-8 text-green-500" />
-              🎉 Cartelas Vencedoras - {game?.name}
+              🎉 Cartelas Vencedoras - {currentGame?.name}
             </DialogTitle>
             <DialogDescription className="text-base">
               {winnerCards.length} cartela(s) completou(aram) todos os 20 pontos!
