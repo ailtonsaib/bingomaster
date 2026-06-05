@@ -81,7 +81,7 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       </div>
 
       {/* ── WRAPPER LATERAL BORDERS ── */}
-      <div style={{ borderLeft: "2px solid #000", borderRight: "2px solid #000", borderBottom: "2px solid #000" }}>
+      <div style={{ borderLeft: "2px solid #000", borderRight: "2px solid #000", borderBottom: "2px solid #000", display: "flex", flexDirection: "column", flex: 1 }}>
 
       {/* ── CARTELA BAR ── */}
       <div style={{
@@ -141,13 +141,16 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
         </div>
       )}
 
+      {/* Spacer inside border */}
+      <div style={{ flex: 1, minHeight: 8 }} />
+
       </div>{/* end lateral borders wrapper */}
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      {/* Gap between border and footer dashed line */}
+      <div style={{ height: 8 }} />
 
       {/* ── FOOTER ── */}
-      <div style={{ borderTop: "1.5px dashed #666", marginTop: 10, paddingTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ borderTop: "1.5px dashed #666", paddingTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: "flex", justifyContent: "center" }}>
