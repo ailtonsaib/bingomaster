@@ -119,6 +119,8 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
         borderLeft: "2px solid #000",
         borderRight: "2px solid #000",
         padding: "4px 0 0 0",
+        display: "flex",
+        justifyContent: "center",
       }}>
         <Barcode value={cardNum} width={1.5} height={34} displayValue={false} margin={0} />
       </div>
@@ -136,10 +138,12 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 
       {/* ── FOOTER ── */}
       <div style={{ borderTop: "1.5px dashed #666", marginTop: 10, paddingTop: 6 }}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: "bold" }}>
-            N° CARTELA:
-            <Barcode value={cardNum} width={1} height={24} displayValue={true} margin={0} fontSize={9} />
+        <div style={{ textAlign: "center", marginBottom: 4 }}>
+          <div style={{ fontSize: 10, fontWeight: "bold", marginBottom: 3 }}>
+            N° CARTELA: {cardNum}
+          </div>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Barcode value={cardNum} width={1} height={24} displayValue={false} margin={0} />
           </div>
         </div>
 
