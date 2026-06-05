@@ -24,6 +24,7 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange })
   params.set("seller_name", seller.name);
   params.set("seller_phone", seller.phone || "");
   params.set("seller_id", seller.id);
+  params.set("game_id", game.id);
   if (valid) {
     params.set("range_from", from);
     params.set("range_to", to);

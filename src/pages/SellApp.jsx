@@ -554,11 +554,11 @@ export default function SellApp() {
   const urlSellerName = urlParams.get("seller_name");
   const urlSellerPhone = urlParams.get("seller_phone");
   const urlSellerId = urlParams.get("seller_id");
+  const urlGameId = urlParams.get("game_id");
   const urlRangeFrom = urlParams.get("range_from");
   const urlRangeTo = urlParams.get("range_to");
 
   const [seller, setSeller] = useState(() => {
-    // If URL has seller info, use it and persist
     if (urlSellerName) {
       localStorage.setItem("seller_name", urlSellerName);
       localStorage.setItem("seller_phone", urlSellerPhone || "");
@@ -576,14 +576,23 @@ export default function SellApp() {
     ? { from: parseInt(urlRangeFrom) || null, to: parseInt(urlRangeTo) || null }
     : null;
 
+  const [cardRange, setCardRange] = useState(urlRange);
+
+  // If URL has game_id, load that game directly
+  const { data: preloadedGame } = useQuery({
+    queryKey: ["sell-preloaded-game", urlGameId],
+    queryFn: () => base44.entities.BingoGame.filter({ id: urlGameId }).then((r) => r[0] || null),
+    enabled: !!urlGameId,
+  });
+
   const [game, setGame] = useState(null);
-  const [cardRange, setCardRange] = useState(urlRange); // null = show range step, defined = skip it
+  const resolvedGame = game || (urlGameId ? preloadedGame : null);
 
   if (!seller) {
     return <SellerStep onEnter={setSeller} />;
   }
 
-  if (!game) {
+  if (!resolvedGame) {
     return (
       <GamePickStep
         seller={seller}
@@ -602,7 +611,7 @@ export default function SellApp() {
     return (
       <CardRangeStep
         seller={seller}
-        game={game}
+        game={resolvedGame}
         onConfirm={(range) => setCardRange(range)}
         onBack={() => setGame(null)}
       />
@@ -612,7 +621,7 @@ export default function SellApp() {
   return (
     <SellStep
       seller={seller}
-      game={game}
+      game={resolvedGame}
       cardRange={cardRange}
       onBack={() => { setGame(null); setCardRange(urlRange); }}
     />
