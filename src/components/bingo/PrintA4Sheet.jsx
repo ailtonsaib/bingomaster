@@ -92,16 +92,20 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       }}>
         {/* Background image */}
         {game?.card_bg_image_url && (
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url(${game.card_bg_image_url})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            opacity: 0.15,
-            zIndex: 0,
-          }} />
+          <img
+            src={game.card_bg_image_url}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: 0.15,
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          />
         )}
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
 
