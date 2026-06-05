@@ -18,6 +18,7 @@ export default function GamePlay() {
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState([]);
   const [drawType, setDrawType] = useState("horizontal");
+  const [cardFilter, setCardFilter] = useState("all"); // "all" ou "sold"
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -46,8 +47,11 @@ export default function GamePlay() {
       const newDrawn = [...(game.drawn_numbers || []), num];
       await updateGame({ drawn_numbers: newDrawn });
 
-      // Check all cards for bingo after the new number
-      const found = checkAllCardsForBingo(cards, newDrawn, game.prizes || [], drawType);
+      // Check all cards for bingo after the new number (apply filter)
+      const filteredCards = cardFilter === "sold"
+        ? cards.filter((c) => c.player_phone || c.player_city)
+        : cards;
+      const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
       if (found.length > 0) {
         setWinners(found);
       }
@@ -192,6 +196,35 @@ export default function GamePlay() {
                 )}
               </div>
 
+              {/* Card filter selector */}
+              <div className="w-full mt-3">
+                <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Cartelas no Sorteio</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "all", label: "Todas as Cartelas", count: cards.length, icon: "📋" },
+                    { value: "sold", label: "Apenas Vendidas", count: cards.filter((c) => c.player_phone || c.player_city).length, icon: "✅" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => !isPlaying && setCardFilter(opt.value)}
+                      disabled={isPlaying}
+                      className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
+                        cardFilter === opt.value
+                          ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                          : "bg-white/10 border-white/10 text-violet-300 hover:bg-white/20"
+                      } disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      <span className="text-base mr-1">{opt.icon}</span> {opt.label} ({opt.count})
+                    </button>
+                  ))}
+                </div>
+                {isPlaying && (
+                  <p className="text-xs text-violet-400 text-center mt-1">
+                    Encerre o jogo para alterar o filtro.
+                  </p>
+                )}
+              </div>
+
               {/* Control buttons */}
               <div className="flex flex-wrap gap-3 justify-center mt-2">
                 {isWaiting && (
@@ -254,7 +287,10 @@ export default function GamePlay() {
               <div className="grid grid-cols-2 gap-3">
                 <StatBox label="Sorteados" value={drawnNumbers.length} />
                 <StatBox label="Restantes" value={maxNumber - drawnNumbers.length} />
-                <StatBox label="Cartelas" value={cards.length} />
+                <StatBox
+                  label={cardFilter === "sold" ? "Cartelas (Vendidas)" : "Cartelas (Todas)"}
+                  value={cardFilter === "sold" ? cards.filter((c) => c.player_phone || c.player_city).length : cards.length}
+                />
                 <StatBox label="Prêmios Restantes" value={(game.prizes || []).filter(p => !p.awarded).length} />
               </div>
             </div>
