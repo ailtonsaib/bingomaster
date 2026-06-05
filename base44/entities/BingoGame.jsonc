@@ -64,7 +64,11 @@
     },
     "card_image_url": {
       "type": "string",
-      "description": "URL da imagem que aparece nas cartelas impressas"
+      "description": "URL da imagem que aparece nas cartelas impressas (logo/\u00edcone)"
+    },
+    "card_bg_image_url": {
+      "type": "string",
+      "description": "URL da imagem de fundo das cartelas impressas"
     }
   },
   "required": [

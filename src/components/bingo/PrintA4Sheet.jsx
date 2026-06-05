@@ -81,7 +81,29 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       </div>
 
       {/* ── WRAPPER LATERAL BORDERS ── */}
-      <div style={{ borderLeft: "2px solid #000", borderRight: "2px solid #000", borderBottom: "2px solid #000", display: "flex", flexDirection: "column", flex: 1 }}>
+      <div style={{
+        borderLeft: "2px solid #000",
+        borderRight: "2px solid #000",
+        borderBottom: "2px solid #000",
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        position: "relative",
+      }}>
+        {/* Background image */}
+        {game?.card_bg_image_url && (
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${game.card_bg_image_url})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            opacity: 0.15,
+            zIndex: 0,
+          }} />
+        )}
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
 
       {/* ── CARTELA BAR ── */}
       <div style={{
@@ -144,6 +166,7 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       {/* Spacer inside border */}
       <div style={{ flex: 1, minHeight: 8 }} />
 
+        </div>{/* end inner zIndex wrapper */}
       </div>{/* end lateral borders wrapper */}
 
       {/* Gap between border and footer dashed line */}
