@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand, Eraser } from "lucide-react";
+import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand, Eraser, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BingoNumberBall from "./BingoNumberBall";
@@ -113,6 +113,29 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
       return "****" + clean.slice(-4);
     }
     return phone;
+  };
+
+  const handleSendWhatsApp = (winner) => {
+    const phone = winner.card.player_phone || winner.playerPhone;
+    if (!phone) return;
+
+    const cleanPhone = phone.replace(/\D/g, "");
+    const winnerName = winner.card.player_name || winner.playerName || "Ganhador(a)";
+    const gameName = currentGame?.name || "Bingo";
+    const drawnNumbers = (currentGame?.drawn_numbers || []).length;
+
+    const message = `🎉 *BINGO! VOCÊ GANHOU!* 🎉\n\n` +
+      `Olá ${winnerName}, parabéns!\n\n` +
+      `🏆 *Prêmio:* Cartela Completa (20 pontos)\n` +
+      `🎮 *Jogo:* ${gameName}\n` +
+      `🔢 *Números sorteados:* ${drawnNumbers}\n\n` +
+      `Compareça ao local do evento para receber seu prêmio!\n\n` +
+      `Boa sorte! 🍀`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, "_blank");
   };
 
   const columns = useMemo(() => {
@@ -368,6 +391,13 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
                           <span>{formatPhone(w.playerPhone)}</span>
                         </div>
                       )}
+                      <Button
+                        size="sm"
+                        className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs gap-1"
+                        onClick={() => handleSendWhatsApp(w)}
+                      >
+                        <Send className="w-3 h-3" /> Enviar WhatsApp
+                      </Button>
                     </div>
                   ) : (
                     <p className="text-sm text-white/70">Sem informações do comprador</p>
@@ -500,6 +530,13 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
                             <span>{formatPhone(w.playerPhone)}</span>
                           </div>
                         )}
+                        <Button
+                          size="sm"
+                          className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs gap-1"
+                          onClick={() => handleSendWhatsApp(w)}
+                        >
+                          <Send className="w-3 h-3" /> Enviar WhatsApp
+                        </Button>
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">Sem informações do comprador</p>

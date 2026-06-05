@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, X, Star, Sparkles } from "lucide-react";
+import { Trophy, X, Star, Sparkles, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import confetti from "canvas-confetti";
 import { useEffect, useRef } from "react";
@@ -140,6 +140,30 @@ export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
 
   const prize = winners[0];
 
+  const handleSendWhatsApp = (winner) => {
+    const phone = winner.card.player_phone;
+    if (!phone) return;
+
+    const cleanPhone = phone.replace(/\D/g, "");
+    const winnerName = winner.card.player_name || "Ganhador(a)";
+    const gameName = winner.gameName || "Bingo";
+    const prizeName = winner.prizeName || "Prêmio";
+    const drawnNumbers = winner.drawnNumbers || 0;
+
+    const message = `🎉 *BINGO! VOCÊ GANHOU!* 🎉\n\n` +
+      `Olá ${winnerName}, parabéns!\n\n` +
+      `🏆 *Prêmio:* ${prizeName}\n` +
+      `🎮 *Jogo:* ${gameName}\n` +
+      `🔢 *Números sorteados:* ${drawnNumbers}\n\n` +
+      `Compareça ao local do evento para receber seu prêmio!\n\n` +
+      `Boa sorte! 🍀`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, "_blank");
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -275,6 +299,24 @@ export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Botão WhatsApp para múltiplos ganhadores */}
+          {winners.length > 0 && winners[0].card.player_phone && (
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="mb-3"
+            >
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold text-sm h-11 border-0"
+                onClick={() => handleSendWhatsApp(prize)}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Enviar Resumo no WhatsApp
+              </Button>
+            </motion.div>
           )}
 
           <motion.div

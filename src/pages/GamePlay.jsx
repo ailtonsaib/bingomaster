@@ -177,7 +177,11 @@ export default function GamePlay() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
       <BingoWinnerAlert
-        winners={winners}
+        winners={winners.map(w => ({
+          ...w,
+          gameName: game.name,
+          drawnNumbers: (game.drawn_numbers || []).length
+        }))}
         onClose={() => setWinners([])}
         onConfirm={handleConfirmWinners}
       />
