@@ -19,9 +19,19 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   const [autoInterval, setAutoInterval] = useState(5000); // 5 segundos
 
   const updateGame = async (updates) => {
-    if (!game) return;
-    await base44.entities.BingoGame.update(game.id, updates);
-    queryClient.invalidateQueries({ queryKey: ["game", game.id] });
+    if (!game) return null;
+    try {
+      const result = await base44.entities.BingoGame.update(game.id, updates);
+      // Atualiza o cache diretamente com os novos dados
+      queryClient.setQueryData(["game", game.id], (old) => ({
+        ...old,
+        ...updates
+      }));
+      return result;
+    } catch (error) {
+      console.error("Erro ao atualizar jogo:", error);
+      return null;
+    }
   };
 
   const handleDraw = async () => {
@@ -56,27 +66,34 @@ export default function FullScreenDraw({ game, cards, onClose }) {
     });
   const handleClearDraw = () => updateGame({ drawn_numbers: [] });
 
-  // Sorteio automático
+  // Sorteio automático - usa referência atualizada via callback
   useEffect(() => {
     if (!isPlaying || drawMode !== "auto" || allDrawn) return;
 
     const drawNumber = async () => {
-      // Pega os números mais recentes diretamente do query client
-      const currentGame = queryClient.getQueryData(["game", game.id]);
-      const currentDrawn = currentGame?.drawn_numbers || [];
-      const currentMax = currentGame?.max_number || 75;
-      
-      // Sortear número aleatório não sorteado
-      const available = Array.from({ length: currentMax }, (_, i) => i + 1)
-        .filter(n => !currentDrawn.includes(n));
-      
-      if (available.length === 0) return;
+      // Usa functional update para garantir que pegamos os dados mais recentes
+      queryClient.setQueryData(["game", game.id], (currentGame) => {
+        const currentDrawn = currentGame?.drawn_numbers || [];
+        const currentMax = currentGame?.max_number || 75;
+        
+        // Sortear número aleatório não sorteado
+        const available = Array.from({ length: currentMax }, (_, i) => i + 1)
+          .filter(n => !currentDrawn.includes(n));
+        
+        if (available.length === 0) return currentGame;
 
-      const randomIndex = Math.floor(Math.random() * available.length);
-      const num = available[randomIndex];
-      
-      const newDrawn = [...currentDrawn, num];
-      await updateGame({ drawn_numbers: newDrawn });
+        const randomIndex = Math.floor(Math.random() * available.length);
+        const num = available[randomIndex];
+        
+        const newDrawn = [...currentDrawn, num];
+        
+        // Atualiza no banco de dados
+        base44.entities.BingoGame.update(game.id, { drawn_numbers: newDrawn })
+          .catch(err => console.error("Erro ao salvar:", err));
+        
+        // Retorna novo estado
+        return { ...currentGame, drawn_numbers: newDrawn };
+      });
     };
 
     const interval = setInterval(drawNumber, autoInterval);
