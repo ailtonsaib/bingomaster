@@ -97,6 +97,11 @@ export default function Home() {
                   <Trophy className="w-5 h-5" /> Jogos Anteriores
                 </Button>
               </Link>
+              <Link to="/game-analytics">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
+                  <Trophy className="w-5 h-5" /> Analytics
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
