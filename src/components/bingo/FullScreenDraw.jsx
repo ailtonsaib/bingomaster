@@ -272,7 +272,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
                   onClick={handleClearDraw}
                   disabled={drawnNumbers.length === 0}
                 >
-                  <Eraser className="w-4 h-4" /> Zerar Sorteio
+                  <RotateCcw className="w-4 h-4" /> Zerar Sorteio
                 </Button>
                 <Button
                   size="lg"

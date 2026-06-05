@@ -150,6 +150,8 @@ export default function GamePlay() {
 
   const handleFinish = () => updateGame({ status: "finished" });
 
+  const handleClearDraw = () => updateGame({ drawn_numbers: [] });
+
   const handleReset = () =>
     updateGame({ status: "waiting", drawn_numbers: [], prizes: (game.prizes || []).map(p => ({ ...p, awarded: false })) });
 
@@ -427,6 +429,15 @@ export default function GamePlay() {
                         {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : "Sortear Número"}
                       </Button>
                     )}
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="gap-2 border-white/30 text-white hover:bg-white/10"
+                      onClick={handleClearDraw}
+                      disabled={drawnNumbers.length === 0}
+                    >
+                      <RotateCcw className="w-4 h-4" /> Zerar Sorteio
+                    </Button>
                     <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={handleFinish}>
                       <Square className="w-4 h-4" /> Encerrar
                     </Button>
