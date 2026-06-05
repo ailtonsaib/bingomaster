@@ -81,24 +81,40 @@ export default function FullScreenDraw({ game, cards, onClose }) {
     if (!isPlaying || drawMode !== "auto" || allDrawn) return;
 
     const drawNumber = async () => {
-      // Busca o estado mais recente do cache
-      const currentGame = queryClient.getQueryData(["game", game.id]);
-      const currentDrawn = currentGame?.drawn_numbers || [];
-      const currentMax = currentGame?.max_number || 75;
-      
-      // Sortear número aleatório não sorteado
-      const available = Array.from({ length: currentMax }, (_, i) => i + 1)
-        .filter(n => !currentDrawn.includes(n));
-      
-      if (available.length === 0) return;
+      try {
+        // Busca o estado mais recente do cache
+        const currentGame = queryClient.getQueryData(["game", game.id]);
+        const currentDrawn = currentGame?.drawn_numbers || [];
+        const currentMax = currentGame?.max_number || 75;
+        
+        console.log("Sorteio automático - Estado atual:", {
+          drawn: currentDrawn,
+          count: currentDrawn.length,
+          max: currentMax
+        });
+        
+        // Sortear número aleatório não sorteado
+        const available = Array.from({ length: currentMax }, (_, i) => i + 1)
+          .filter(n => !currentDrawn.includes(n));
+        
+        if (available.length === 0) {
+          console.log("Todos os números já foram sorteados");
+          return;
+        }
 
-      const randomIndex = Math.floor(Math.random() * available.length);
-      const num = available[randomIndex];
-      
-      const newDrawn = [...currentDrawn, num];
-      
-      // Atualiza no banco de dados e no cache
-      await updateGame({ drawn_numbers: newDrawn });
+        const randomIndex = Math.floor(Math.random() * available.length);
+        const num = available[randomIndex];
+        
+        const newDrawn = [...currentDrawn, num];
+        
+        console.log("Sorteando número:", num, "Total após sorteio:", newDrawn.length);
+        
+        // Atualiza no banco de dados e no cache
+        const result = await updateGame({ drawn_numbers: newDrawn });
+        console.log("Atualização concluída:", result);
+      } catch (error) {
+        console.error("Erro no sorteio automático:", error);
+      }
     };
 
     const interval = setInterval(drawNumber, autoInterval);
