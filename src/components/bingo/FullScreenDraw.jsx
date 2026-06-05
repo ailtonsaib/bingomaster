@@ -58,24 +58,28 @@ export default function FullScreenDraw({ game, cards, onClose }) {
 
   // Sorteio automático
   useEffect(() => {
-    if (!isPlaying || drawMode !== "auto" || drawing || allDrawn) return;
+    if (!isPlaying || drawMode !== "auto" || allDrawn) return;
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      // Pega os números atuais do game
+      const currentDrawn = game?.drawn_numbers || [];
+      const currentMax = game?.max_number || 75;
+      
       // Sortear número aleatório não sorteado
-      const available = Array.from({ length: maxNumber }, (_, i) => i + 1)
-        .filter(n => !drawnNumbers.includes(n));
+      const available = Array.from({ length: currentMax }, (_, i) => i + 1)
+        .filter(n => !currentDrawn.includes(n));
       
       if (available.length === 0) return;
 
       const randomIndex = Math.floor(Math.random() * available.length);
       const num = available[randomIndex];
       
-      const newDrawn = [...drawnNumbers, num];
-      updateGame({ drawn_numbers: newDrawn });
+      const newDrawn = [...currentDrawn, num];
+      await updateGame({ drawn_numbers: newDrawn });
     }, autoInterval);
 
     return () => clearInterval(interval);
-  }, [isPlaying, drawMode, autoInterval, drawing, allDrawn, drawnNumbers, maxNumber]);
+  }, [isPlaying, drawMode, autoInterval, game, allDrawn]);
 
   useEffect(() => {
     if (!game?.drawn_numbers) return;
