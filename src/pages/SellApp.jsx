@@ -365,7 +365,9 @@ function SellStep({ seller, game, cardRange, onBack }) {
 
   const openCard = (card) => {
     setSelectedCard(card);
-    setBuyerName(card.player_name || "");
+    // Não pré-preenche o nome da cartela — só mostra se já foi registrado um comprador real (junto com telefone/cidade)
+    const hasBuyer = !!(card.player_phone || card.player_city);
+    setBuyerName(hasBuyer ? (card.player_name || "") : "");
     setBuyerPhone(card.player_phone || "");
     setBuyerAddress(card.player_city || "");
   };
@@ -463,9 +465,9 @@ function SellStep({ seller, game, cardRange, onBack }) {
                     <span className="text-sm font-bold leading-none">
                       {String(card.card_number || "").padStart(4, "0")}
                     </span>
-                    {isSold && (
+                    {isSold && card.player_name && (
                       <span className="text-[9px] mt-0.5 opacity-70 truncate w-full">
-                        {card.player_name?.split(" ")[0]}
+                        {card.player_name.split(" ")[0]}
                       </span>
                     )}
                   </button>
