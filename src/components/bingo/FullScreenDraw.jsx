@@ -1,15 +1,56 @@
 import { useState, useEffect } from "react";
-import { Minimize, Trophy, Users, Hash } from "lucide-react";
+import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BingoNumberBall from "./BingoNumberBall";
+import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function FullScreenDraw({ game, cards, onClose }) {
+  const queryClient = useQueryClient();
   const [winnerCards, setWinnerCards] = useState([]);
   const [cardStats, setCardStats] = useState({});
+  const [drawing, setDrawing] = useState(false);
+
+  const updateGame = async (updates) => {
+    if (!game) return;
+    await base44.entities.BingoGame.update(game.id, updates);
+    queryClient.invalidateQueries({ queryKey: ["game", game.id] });
+  };
+
+  const handleDraw = async () => {
+    if (!game || drawing) return;
+    setDrawing(true);
+    
+    // Sortear número aleatório não sorteado
+    const available = Array.from({ length: maxNumber }, (_, i) => i + 1)
+      .filter(n => !drawnNumbers.includes(n));
+    
+    if (available.length === 0) {
+      setDrawing(false);
+      return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * available.length);
+    const num = available[randomIndex];
+    
+    const newDrawn = [...drawnNumbers, num];
+    await updateGame({ drawn_numbers: newDrawn });
+    
+    setTimeout(() => setDrawing(false), 800);
+  };
+
+  const handleStart = () => updateGame({ status: "in_progress" });
+  const handleFinish = () => updateGame({ status: "finished" });
+  const handleReset = () =>
+    updateGame({
+      status: "waiting",
+      drawn_numbers: [],
+      prizes: (game.prizes || []).map(p => ({ ...p, awarded: false }))
+    });
 
   useEffect(() => {
-    if (!game?.drawn_numbers || game.drawn_numbers.length === 0) return;
+    if (!game?.drawn_numbers) return;
 
     const drawnSet = new Set(game.drawn_numbers);
     const stats = {};
@@ -29,11 +70,9 @@ export default function FullScreenDraw({ game, cards, onClose }) {
 
       const points = Array.from(allNumbers).filter(n => drawnSet.has(n)).length;
       
-      // Agrupar por quantidade de pontos
       if (!stats[points]) stats[points] = 0;
       stats[points]++;
 
-      // Cartelas com 20 pontos (vencedoras)
       if (points === 20) {
         winners.push({
           card,
@@ -61,6 +100,10 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   const maxNumber = game?.max_number || 75;
   const drawnNumbers = game?.drawn_numbers || [];
   const lastNumber = drawnNumbers[drawnNumbers.length - 1];
+  const isPlaying = game?.status === "in_progress";
+  const isWaiting = game?.status === "waiting";
+  const isFinished = game?.status === "finished";
+  const allDrawn = drawnNumbers.length >= maxNumber;
 
   // Gerar colunas B-I-N-G-O
   const columns = {
@@ -108,7 +151,7 @@ export default function FullScreenDraw({ game, cards, onClose }) {
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Último número sorteado */}
+        {/* Último número sorteado + Controles */}
         <div className="flex flex-col items-center gap-4">
           <div className="text-center">
             <p className="text-violet-300 text-sm uppercase tracking-wider mb-2">Último Número</p>
@@ -122,6 +165,61 @@ export default function FullScreenDraw({ game, cards, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Controles de Sorteio */}
+          <div className="flex flex-wrap gap-3 justify-center mt-2">
+            {isWaiting && (
+              <Button
+                size="lg"
+                className="gap-2 px-10 bg-emerald-500 hover:bg-emerald-600 text-white border-0 text-lg font-bold"
+                onClick={handleStart}
+              >
+                <Play className="w-5 h-5" /> Iniciar Jogo
+              </Button>
+            )}
+            {isPlaying && (
+              <>
+                <Button
+                  size="lg"
+                  className="gap-2 px-10 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold min-w-52"
+                  onClick={handleDraw}
+                  disabled={drawing || allDrawn}
+                >
+                  <Shuffle className="w-5 h-5" />
+                  {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : "Sortear Número"}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 border-white/30 text-white hover:bg-white/10"
+                  onClick={handleFinish}
+                >
+                  <Square className="w-4 h-4" /> Encerrar
+                </Button>
+              </>
+            )}
+            {isFinished && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 border-white/30 text-white hover:bg-white/10"
+                onClick={handleReset}
+              >
+                <RotateCcw className="w-4 h-4" /> Novo Jogo
+              </Button>
+            )}
+          </div>
+
+          {isWaiting && (
+            <p className="text-violet-300 text-sm text-center">
+              Clique em "Iniciar Jogo" para começar o sorteio.
+            </p>
+          )}
+          {isFinished && (
+            <p className="text-violet-300 text-sm text-center">
+              Jogo encerrado. {drawnNumbers.length} números foram sorteados.
+            </p>
+          )}
         </div>
 
         {/* Estatísticas principais */}
