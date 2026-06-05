@@ -7,19 +7,42 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
-  ChevronRight, ArrowLeft, Search, TicketCheck, X
+  ChevronRight, ArrowLeft, Search, TicketCheck, X,
+  ChevronDown, UserCheck, Hash
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
 function SellerStep({ onEnter }) {
   const [name, setName] = useState(() => localStorage.getItem("seller_name") || "");
   const [phone, setPhone] = useState(() => localStorage.getItem("seller_phone") || "");
+  const [sellerId, setSellerId] = useState(() => localStorage.getItem("seller_id") || "");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: sellers = [] } = useQuery({
+    queryKey: ["sell-sellers"],
+    queryFn: () => base44.entities.Seller.filter({ is_active: true }, "name"),
+  });
+
+  const filtered = sellers.filter((s) =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    s.phone?.includes(search)
+  );
+
+  const selectSeller = (s) => {
+    setName(s.name);
+    setPhone(s.phone || "");
+    setSellerId(s.id);
+    setShowDropdown(false);
+    setSearch("");
+  };
 
   const handleContinue = () => {
     if (!name.trim()) return;
     localStorage.setItem("seller_name", name.trim());
     localStorage.setItem("seller_phone", phone.trim());
-    onEnter({ name: name.trim(), phone: phone.trim() });
+    localStorage.setItem("seller_id", sellerId);
+    onEnter({ name: name.trim(), phone: phone.trim(), id: sellerId });
   };
 
   return (
@@ -34,6 +57,59 @@ function SellerStep({ onEnter }) {
         </div>
 
         <div className="space-y-4 bg-card rounded-2xl p-5 shadow-md border">
+          {/* Seller picker */}
+          {sellers.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Selecionar vendedor cadastrado</Label>
+              <div className="relative">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between h-12 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
+                  onClick={() => setShowDropdown((v) => !v)}
+                >
+                  <span className={name ? "text-foreground" : "text-muted-foreground"}>
+                    {name || "Escolha um vendedor..."}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </button>
+
+                {showDropdown && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg max-h-56 overflow-auto">
+                    <div className="p-2 border-b sticky top-0 bg-background">
+                      <Input
+                        placeholder="Buscar vendedor..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="h-9 text-sm"
+                        autoFocus
+                      />
+                    </div>
+                    {filtered.length === 0 ? (
+                      <div className="text-xs text-muted-foreground text-center py-4">Nenhum vendedor encontrado</div>
+                    ) : (
+                      filtered.map((s) => (
+                        <button
+                          key={s.id}
+                          className="w-full text-left px-3 py-2.5 hover:bg-muted text-sm flex flex-col"
+                          onClick={() => selectSeller(s)}
+                        >
+                          <span className="font-medium">{s.name}</span>
+                          {s.phone && <span className="text-xs text-muted-foreground">{s.phone}</span>}
+                        </button>
+                      ))
+                    )}
+                    <button
+                      className="w-full text-left px-3 py-2.5 text-xs text-primary border-t hover:bg-muted"
+                      onClick={() => { setName(""); setPhone(""); setSellerId(""); setShowDropdown(false); }}
+                    >
+                      + Digitar manualmente
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Seu nome</Label>
             <div className="relative">
@@ -42,7 +118,7 @@ function SellerStep({ onEnter }) {
                 className="pl-9 h-12 text-base"
                 placeholder="Nome completo"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); setSellerId(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleContinue()}
               />
             </div>
@@ -132,8 +208,126 @@ function GamePickStep({ seller, onPick, onBack }) {
   );
 }
 
+// --- Step 2.5: Configure seller card range ---
+function CardRangeStep({ seller, game, onConfirm, onBack }) {
+  const [rangeFrom, setRangeFrom] = useState(() => localStorage.getItem(`range_from_${game.id}_${seller.id || seller.name}`) || "");
+  const [rangeTo, setRangeTo] = useState(() => localStorage.getItem(`range_to_${game.id}_${seller.id || seller.name}`) || "");
+
+  const { data: cards = [], isLoading } = useQuery({
+    queryKey: ["sell-cards-range", game.id],
+    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }),
+  });
+
+  const totalCards = cards.length;
+  const maxCard = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) : 0;
+  const minCard = cards.length > 0 ? Math.min(...cards.map((c) => c.card_number || 0)) : 1;
+
+  const handleConfirm = () => {
+    const from = parseInt(rangeFrom) || null;
+    const to = parseInt(rangeTo) || null;
+    const key = seller.id || seller.name;
+    if (from) localStorage.setItem(`range_from_${game.id}_${key}`, from);
+    if (to) localStorage.setItem(`range_to_${game.id}_${key}`, to);
+    onConfirm({ from, to });
+  };
+
+  const handleSkip = () => {
+    onConfirm({ from: null, to: null });
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-background">
+      <div className="bg-primary text-primary-foreground px-4 pt-10 pb-5">
+        <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-3">
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </button>
+        <h1 className="text-xl font-bold font-heading">{game.name}</h1>
+        <p className="text-primary-foreground/80 text-sm mt-0.5">Defina seu intervalo de cartelas</p>
+      </div>
+
+      <div className="flex-1 px-4 py-6 max-w-sm mx-auto w-full space-y-5">
+
+        {isLoading ? (
+          <div className="h-16 rounded-xl bg-muted animate-pulse" />
+        ) : (
+          <div className="bg-card border rounded-xl p-4 text-sm text-muted-foreground space-y-1">
+            <div className="flex items-center gap-2">
+              <Hash className="w-4 h-4" />
+              <span>Total de cartelas no jogo: <strong className="text-foreground">{totalCards}</strong></span>
+            </div>
+            <div className="text-xs">
+              Numeração: <strong className="text-foreground">{String(minCard).padStart(4, "0")}</strong> até <strong className="text-foreground">{String(maxCard).padStart(4, "0")}</strong>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-card border rounded-2xl p-5 space-y-4 shadow-sm">
+          <div>
+            <p className="font-semibold font-heading text-base">Suas cartelas</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ex: de 0001 a 0300 — deixe em branco para ver todas
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Cartela inicial</Label>
+              <Input
+                className="h-12 text-base text-center font-bold"
+                type="number"
+                inputMode="numeric"
+                placeholder="0001"
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Cartela final</Label>
+              <Input
+                className="h-12 text-base text-center font-bold"
+                type="number"
+                inputMode="numeric"
+                placeholder={String(maxCard || 300).padStart(4, "0")}
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {rangeFrom && rangeTo && parseInt(rangeFrom) <= parseInt(rangeTo) && (
+            <div className="bg-primary/10 rounded-lg p-3 text-center text-sm">
+              <span className="font-semibold text-primary">
+                {parseInt(rangeTo) - parseInt(rangeFrom) + 1} cartelas
+              </span>{" "}
+              <span className="text-muted-foreground">
+                ({String(parseInt(rangeFrom)).padStart(4, "0")} a {String(parseInt(rangeTo)).padStart(4, "0")})
+              </span>
+            </div>
+          )}
+
+          <Button
+            className="w-full h-12 text-base gap-2"
+            onClick={handleConfirm}
+            disabled={rangeFrom && rangeTo && parseInt(rangeFrom) > parseInt(rangeTo)}
+          >
+            <ChevronRight className="w-4 h-4" />
+            {rangeFrom || rangeTo ? "Confirmar intervalo" : "Ver todas as cartelas"}
+          </Button>
+        </div>
+
+        <button
+          className="w-full text-center text-sm text-muted-foreground underline underline-offset-2"
+          onClick={handleSkip}
+        >
+          Pular — ver todas as cartelas
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // --- Step 3: Card selection & sale ---
-function SellStep({ seller, game, onBack }) {
+function SellStep({ seller, game, cardRange, onBack }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
@@ -148,10 +342,19 @@ function SellStep({ seller, game, onBack }) {
     queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }),
   });
 
-  const available = cards.filter((c) => !c.player_phone && !c.player_city);
-  const sold = cards.filter((c) => c.player_phone || c.player_city);
+  // Apply range filter
+  const rangeCards = cards.filter((c) => {
+    if (!cardRange?.from && !cardRange?.to) return true;
+    const n = c.card_number || 0;
+    if (cardRange.from && n < cardRange.from) return false;
+    if (cardRange.to && n > cardRange.to) return false;
+    return true;
+  });
 
-  const filtered = cards.filter((c) => {
+  const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
+  const sold = rangeCards.filter((c) => c.player_phone || c.player_city);
+
+  const filtered = rangeCards.filter((c) => {
     const q = search.toLowerCase();
     return (
       String(c.card_number).includes(q) ||
@@ -182,6 +385,10 @@ function SellStep({ seller, game, onBack }) {
     setTimeout(() => setSavedCard(null), 3000);
   };
 
+  const rangeLabel = cardRange?.from || cardRange?.to
+    ? `${String(cardRange.from || "").padStart(4, "0")}–${String(cardRange.to || "").padStart(4, "0")}`
+    : null;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
@@ -190,8 +397,13 @@ function SellStep({ seller, game, onBack }) {
           <ArrowLeft className="w-4 h-4" /> Trocar evento
         </button>
         <h1 className="text-lg font-bold font-heading leading-tight">{game.name}</h1>
-        <div className="flex gap-3 mt-2 text-sm text-primary-foreground/80">
-          <span>{cards.length} cartelas</span>
+        <div className="flex flex-wrap gap-2 mt-2 text-sm text-primary-foreground/80 items-center">
+          {rangeLabel && (
+            <Badge className="bg-white/20 text-white border-0 text-xs gap-1">
+              <Hash className="w-3 h-3" /> {rangeLabel}
+            </Badge>
+          )}
+          <span>{rangeCards.length} cartelas</span>
           <span>•</span>
           <span className="text-green-300 font-medium">{sold.length} vendidas</span>
           <span>•</span>
@@ -216,7 +428,7 @@ function SellStep({ seller, game, onBack }) {
       {savedCard && (
         <div className="mx-4 mt-3 bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2 text-green-700 text-sm">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Cartela #{String(savedCard.card_number).padStart(3, "0")} vendida com sucesso!
+          Cartela #{String(savedCard.card_number).padStart(4, "0")} vendida com sucesso!
         </div>
       )}
 
@@ -236,7 +448,7 @@ function SellStep({ seller, game, onBack }) {
               </p>
             )}
             <div className="grid grid-cols-5 gap-2">
-              {(search ? filtered : cards).map((card) => {
+              {(search ? filtered : rangeCards).map((card) => {
                 const isSold = !!(card.player_phone || card.player_city);
                 return (
                   <button
@@ -249,7 +461,7 @@ function SellStep({ seller, game, onBack }) {
                       }`}
                   >
                     <span className="text-sm font-bold leading-none">
-                      {String(card.card_number || "").padStart(3, "0")}
+                      {String(card.card_number || "").padStart(4, "0")}
                     </span>
                     {isSold && (
                       <span className="text-[9px] mt-0.5 opacity-70 truncate w-full">
@@ -277,7 +489,7 @@ function SellStep({ seller, game, onBack }) {
             <div className="flex items-center justify-between mb-1">
               <div>
                 <h2 className="font-bold text-lg font-heading">
-                  Cartela #{String(selectedCard.card_number || "").padStart(3, "0")}
+                  Cartela #{String(selectedCard.card_number || "").padStart(4, "0")}
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   {selectedCard.player_phone || selectedCard.player_city ? "Editar comprador" : "Registrar venda"}
@@ -340,9 +552,11 @@ export default function SellApp() {
   const [seller, setSeller] = useState(() => {
     const name = localStorage.getItem("seller_name");
     const phone = localStorage.getItem("seller_phone");
-    return name ? { name, phone: phone || "" } : null;
+    const id = localStorage.getItem("seller_id");
+    return name ? { name, phone: phone || "", id: id || "" } : null;
   });
   const [game, setGame] = useState(null);
+  const [cardRange, setCardRange] = useState(null); // null = not configured yet
 
   if (!seller) {
     return <SellerStep onEnter={setSeller} />;
@@ -352,15 +566,34 @@ export default function SellApp() {
     return (
       <GamePickStep
         seller={seller}
-        onPick={setGame}
+        onPick={(g) => { setGame(g); setCardRange(null); }}
         onBack={() => {
           localStorage.removeItem("seller_name");
           localStorage.removeItem("seller_phone");
+          localStorage.removeItem("seller_id");
           setSeller(null);
         }}
       />
     );
   }
 
-  return <SellStep seller={seller} game={game} onBack={() => setGame(null)} />;
+  if (cardRange === null) {
+    return (
+      <CardRangeStep
+        seller={seller}
+        game={game}
+        onConfirm={(range) => setCardRange(range)}
+        onBack={() => setGame(null)}
+      />
+    );
+  }
+
+  return (
+    <SellStep
+      seller={seller}
+      game={game}
+      cardRange={cardRange}
+      onBack={() => { setGame(null); setCardRange(null); }}
+    />
+  );
 }
