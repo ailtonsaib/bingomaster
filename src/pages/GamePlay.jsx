@@ -182,6 +182,7 @@ export default function GamePlay() {
           game={game}
           cards={cards}
           onClose={() => setShowFullScreen(false)}
+          updateGame={updateGame}
         />
       )}
       <div className="max-w-7xl mx-auto px-4 py-5">

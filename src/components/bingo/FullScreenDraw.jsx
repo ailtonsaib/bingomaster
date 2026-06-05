@@ -4,14 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BingoNumberBall from "./BingoNumberBall";
 import BingoGrid from "./BingoGrid";
-import { base44 } from "@/api/base44Client";
-import { useQueryClient } from "@tanstack/react-query";
+
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function FullScreenDraw({ game, cards, onClose }) {
-  const queryClient = useQueryClient();
-  
+export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
   // Variáveis derivadas do game (devem vir primeiro)
   const maxNumber = game?.max_number || 75;
   const drawnNumbers = game?.drawn_numbers || [];
@@ -27,22 +25,6 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   const [showWinningCardsModal, setShowWinningCardsModal] = useState(false);
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [autoInterval, setAutoInterval] = useState(5000); // 5 segundos
-
-  const updateGame = async (updates) => {
-    if (!game) return null;
-    try {
-      const result = await base44.entities.BingoGame.update(game.id, updates);
-      // Atualiza o cache diretamente com os novos dados
-      queryClient.setQueryData(["game", game.id], (old) => ({
-        ...old,
-        ...updates
-      }));
-      return result;
-    } catch (error) {
-      console.error("Erro ao atualizar jogo:", error);
-      return null;
-    }
-  };
 
   const handleDraw = async () => {
     if (!game || drawing) return;
@@ -82,23 +64,14 @@ export default function FullScreenDraw({ game, cards, onClose }) {
 
     const drawNumber = async () => {
       try {
-        // Busca o estado mais recente do cache
-        const currentGame = queryClient.getQueryData(["game", game.id]);
-        const currentDrawn = currentGame?.drawn_numbers || [];
-        const currentMax = currentGame?.max_number || 75;
-        
-        console.log("Sorteio automático - Estado atual:", {
-          drawn: currentDrawn,
-          count: currentDrawn.length,
-          max: currentMax
-        });
+        const currentDrawn = drawnNumbers;
+        const currentMax = maxNumber;
         
         // Sortear número aleatório não sorteado
         const available = Array.from({ length: currentMax }, (_, i) => i + 1)
           .filter(n => !currentDrawn.includes(n));
         
         if (available.length === 0) {
-          console.log("Todos os números já foram sorteados");
           return;
         }
 
@@ -107,11 +80,8 @@ export default function FullScreenDraw({ game, cards, onClose }) {
         
         const newDrawn = [...currentDrawn, num];
         
-        console.log("Sorteando número:", num, "Total após sorteio:", newDrawn.length);
-        
-        // Atualiza no banco de dados e no cache
-        const result = await updateGame({ drawn_numbers: newDrawn });
-        console.log("Atualização concluída:", result);
+        // Atualiza no banco de dados
+        await updateGame({ drawn_numbers: newDrawn });
       } catch (error) {
         console.error("Erro no sorteio automático:", error);
       }
