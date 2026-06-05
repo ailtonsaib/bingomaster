@@ -12,6 +12,8 @@ import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
 import PrizesPanel from "@/components/bingo/PrizesPanel";
 import GameProgressBar from "@/components/bingo/GameProgressBar";
 import BingoWinnerAlert from "@/components/bingo/BingoWinnerAlert";
+import DrawStatistics from "@/components/bingo/DrawStatistics";
+import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -423,7 +425,6 @@ export default function GamePlay() {
               onAwardPrize={handleAwardPrize}
             />
 
-            {/* Stats */}
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4 space-y-3">
               <h3 className="font-semibold text-sm text-violet-200 uppercase tracking-wider flex items-center gap-2">
                 📊 Estatísticas
