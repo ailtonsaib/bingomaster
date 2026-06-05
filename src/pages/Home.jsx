@@ -92,6 +92,11 @@ export default function Home() {
                   <CheckSquare className="w-5 h-5" /> Validar Cartelas
                 </Button>
               </Link>
+              <Link to="/past-games">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-amber-300 text-amber-700 hover:bg-amber-50">
+                  <Trophy className="w-5 h-5" /> Jogos Anteriores
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
