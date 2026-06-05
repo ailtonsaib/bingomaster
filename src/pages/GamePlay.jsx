@@ -14,6 +14,7 @@ import GameProgressBar from "@/components/bingo/GameProgressBar";
 import BingoWinnerAlert from "@/components/bingo/BingoWinnerAlert";
 import DrawStatistics from "@/components/bingo/DrawStatistics";
 import FullScreenDraw from "@/components/bingo/FullScreenDraw";
+import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -29,6 +30,7 @@ export default function GamePlay() {
   const [autoDrawing, setAutoDrawing] = useState(false);
   const [autoTimer, setAutoTimer] = useState(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const [showWinnerCards, setShowWinnerCards] = useState(false);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -179,6 +181,14 @@ export default function GamePlay() {
         onClose={() => setWinners([])}
         onConfirm={handleConfirmWinners}
       />
+      {showWinnerCards && (
+        <WinnerCardsModal
+          game={game}
+          cards={cards}
+          drawnNumbers={drawnNumbers}
+          onClose={() => setShowWinnerCards(false)}
+        />
+      )}
       {showFullScreen && (
         <FullScreenDraw
           game={game}
@@ -435,6 +445,17 @@ export default function GamePlay() {
                   Jogo encerrado. {drawnNumbers.length} números foram sorteados.
                 </p>
               )}
+              
+              {isPlaying && drawnNumbers.length > 0 && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 border-white/30 text-white hover:bg-white/10 mt-2"
+                  onClick={() => setShowWinnerCards(true)}
+                >
+                  <Trophy className="w-5 h-5" /> Verificar Cartelas Próximas
+                </Button>
+              )}
             </div>
 
             {/* Full number board */}
@@ -461,6 +482,18 @@ export default function GamePlay() {
                   value={cardFilter === "sold" ? cards.filter((c) => c.player_phone || c.player_city).length : cards.length}
                 />
                 <StatBox label="Prêmios Restantes" value={(game.prizes || []).filter(p => !p.awarded).length} />
+                <button
+                  onClick={() => setShowWinnerCards(true)}
+                  className="bg-white/10 rounded-xl p-3 text-center hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  <div className="text-2xl font-bold font-heading text-green-400">
+                    {cards.filter((c) => {
+                      const allNums = new Set([...(c.grid_1 || []), ...(c.grid_2 || []), ...(c.grid_1a || []), ...(c.grid_1b || []), ...(c.grid_1c || []), ...(c.grid_2a || []), ...(c.grid_2b || []), ...(c.grid_2c || [])].filter(n => n !== 0));
+                      return Array.from(allNums).filter(n => drawnNumbers.includes(n)).length === 20;
+                    }).length}
+                  </div>
+                  <div className="text-xs text-violet-300 mt-0.5">Vencedoras</div>
+                </button>
               </div>
             </div>
           </div>
