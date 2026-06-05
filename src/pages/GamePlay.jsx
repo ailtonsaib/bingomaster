@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +24,7 @@ export default function GamePlay() {
   const [cardFilter, setCardFilter] = useState("all"); // "all" ou "sold"
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
+  const manualInputRef = useRef(null);
   const [autoInterval, setAutoInterval] = useState(5); // segundos
   const [autoDrawing, setAutoDrawing] = useState(false);
   const [autoTimer, setAutoTimer] = useState(null);
@@ -89,6 +90,7 @@ export default function GamePlay() {
     if (!manualNumber.trim()) return;
     handleDraw(manualNumber);
     setManualNumber("");
+    setTimeout(() => manualInputRef.current?.focus(), 100);
   };
 
   const toggleAutoDraw = () => {
@@ -352,6 +354,7 @@ export default function GamePlay() {
                     {drawMode === "manual" && (
                       <div className="flex gap-2 w-full max-w-xs">
                         <Input
+                          ref={manualInputRef}
                           type="number"
                           min="1"
                           max={maxNumber}
