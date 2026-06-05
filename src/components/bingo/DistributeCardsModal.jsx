@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  X, Copy, Check, MessageCircle, ChevronDown, Hash,
+  X, Copy, Check, CheckCircle2, MessageCircle, ChevronDown, Hash,
   Link2, Users, Layers, AlertCircle
 } from "lucide-react";
 
@@ -35,8 +35,8 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, e
     return false;
   })();
 
-  // Check which numbers in this range are already assigned
-  const assignedInThisRange = valid
+  // Check which numbers in this range are already distributed (have player info)
+  const distributedInThisRange = valid
     ? existingCards.filter((c) => {
         const num = c.card_number;
         return num >= from && num <= to && (c.player_phone || c.player_city);
@@ -119,9 +119,9 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, e
           <AlertCircle className="w-3 h-3" /> Intervalo sobreposto com outro vendedor
         </p>
       )}
-      {assignedInThisRange > 0 && (
+      {distributedInThisRange > 0 && (
         <p className="text-xs text-amber-600 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" /> {assignedInThisRange} cartela(s) já vendida(s) neste intervalo
+          <AlertCircle className="w-3 h-3" /> {distributedInThisRange} cartela(s) já distribuída(s) neste intervalo
         </p>
       )}
 
@@ -174,8 +174,8 @@ export default function DistributeCardsModal({ onClose }) {
   const maxCard = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) : 999;
   const minCard = cards.length > 0 ? Math.min(...cards.map((c) => c.card_number || 0)) : 1;
 
-  // Calculate which numbers are already distributed/sold
-  const soldCardNumbers = cards
+  // Calculate which numbers are already distributed (assigned to sellers)
+  const distributedNumbers = cards
     .filter((c) => c.player_phone || c.player_city)
     .map((c) => c.card_number);
 
@@ -186,7 +186,7 @@ export default function DistributeCardsModal({ onClose }) {
     }));
   };
 
-  // Auto-distribute: starting from autoFrom, give autoQty to each seller in order, skipping sold numbers
+  // Auto-distribute: starting from autoFrom, give autoQty to each seller in order, skipping distributed numbers
   const handleAutoDistribute = () => {
     const start = parseInt(autoFrom) || minCard;
     const qty = parseInt(autoQty);
@@ -196,12 +196,12 @@ export default function DistributeCardsModal({ onClose }) {
     let currentStart = start;
     
     sellers.forEach((s, i) => {
-      // Find next available range (skip sold numbers)
+      // Find next available range (skip distributed numbers)
       let from = currentStart;
       let to = from + qty - 1;
       
-      // Adjust if range overlaps with sold numbers
-      while (soldCardNumbers.some(num => num >= from && num <= to)) {
+      // Adjust if range overlaps with distributed numbers
+      while (distributedNumbers.some(num => num >= from && num <= to)) {
         from = to + 1;
         to = from + qty - 1;
       }
@@ -271,7 +271,7 @@ export default function DistributeCardsModal({ onClose }) {
           {selectedGame && (
             <>
               {/* Info */}
-              <div className="flex gap-3 text-xs text-muted-foreground">
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Hash className="w-3.5 h-3.5" />
                   {cards.length} cartelas ({String(minCard).padStart(4,"0")}–{String(maxCard).padStart(4,"0")})
@@ -280,10 +280,16 @@ export default function DistributeCardsModal({ onClose }) {
                   <Users className="w-3.5 h-3.5" />
                   {sellers.length} vendedores ativos
                 </span>
-                {soldCardNumbers.length > 0 && (
+                {distributedNumbers.length > 0 && (
                   <span className="flex items-center gap-1 text-amber-600">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    {soldCardNumbers.length} já vendidas
+                    {distributedNumbers.length} já distribuídas/vendidas
+                  </span>
+                )}
+                {cards.length - distributedNumbers.length > 0 && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {cards.length - distributedNumbers.length} disponíveis
                   </span>
                 )}
               </div>
