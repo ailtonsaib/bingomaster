@@ -55,16 +55,29 @@ export default function Home() {
       // Delete all cards first
       const allCards = await base44.entities.BingoCard.filter({});
       if (allCards.length > 0) {
-        await Promise.all(allCards.map((c) => base44.entities.BingoCard.delete(c.id)));
+        for (const card of allCards) {
+          try {
+            await base44.entities.BingoCard.delete(card.id);
+          } catch (e) {
+            console.warn(`Erro ao deletar cartela ${card.id}:`, e);
+          }
+        }
       }
       // Delete all games
       const allGames = await base44.entities.BingoGame.filter({});
       if (allGames.length > 0) {
-        await Promise.all(allGames.map((g) => base44.entities.BingoGame.delete(g.id)));
+        for (const game of allGames) {
+          try {
+            await base44.entities.BingoGame.delete(game.id);
+          } catch (e) {
+            console.warn(`Erro ao deletar jogo ${game.id}:`, e);
+          }
+        }
       }
       await queryClient.invalidateQueries({ queryKey: ["bingo-games"] });
       refetch();
       setShowResetDialog(false);
+      alert("Reset concluído com sucesso!");
     } catch (error) {
       console.error("Erro ao resetar:", error);
       alert("Erro ao resetar. Tente novamente.");
