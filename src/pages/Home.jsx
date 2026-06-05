@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import EditGameModal from "@/components/bingo/EditGameModal";
 import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -24,10 +25,30 @@ export default function Home() {
     queryKey: ["bingo-games"],
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
   });
+  const { data: sellers = [] } = useQuery({
+    queryKey: ["sellers-stats"],
+    queryFn: () => base44.entities.Seller.list(),
+  });
+  const { data: allCards = [] } = useQuery({
+    queryKey: ["all-cards-stats"],
+    queryFn: () => base44.entities.BingoCard.filter({}),
+  });
   const [editingGame, setEditingGame] = useState(null);
   const [showDistribute, setShowDistribute] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  const sellerStats = useMemo(() => {
+    return sellers.map((seller) => {
+      const soldCards = allCards.filter(
+        (c) => (c.player_phone === seller.phone || c.player_city === seller.city) && c.player_name && c.player_name.trim() !== ''
+      );
+      return {
+        name: seller.name,
+        vendidas: soldCards.length,
+      };
+    }).sort((a, b) => b.vendidas - a.vendidas);
+  }, [sellers, allCards]);
 
   const handleDelete = async (id) => {
     try {
@@ -156,9 +177,39 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Games list */}
+      {/* Stats Chart */}
       <div className="max-w-5xl mx-auto px-4 py-10">
-        <h2 className="text-xl font-bold font-heading mb-6">Seus Jogos</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" /> Cartelas Vendidas por Vendedor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {sellerStats.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum vendedor cadastrado</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={sellerStats} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    cursor={{ fill: 'hsl(var(--muted))' }}
+                  />
+                  <Bar dataKey="vendidas" radius={[6, 6, 0, 0]}>
+                    {sellerStats.map((entry, index) => (
+                      <Cell key={index} fill={entry.vendidas > 0 ? 'hsl(var(--primary))' : 'hsl(var(--muted))'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <h2 className="text-xl font-bold font-heading mb-6 mt-10">Seus Jogos</h2>
 
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2">
