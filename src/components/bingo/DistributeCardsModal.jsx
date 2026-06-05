@@ -9,7 +9,7 @@ import {
   Link2, Users, Layers, AlertCircle
 } from "lucide-react";
 
-function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange }) {
+function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, existingCards }) {
   const assignment = allAssignments[seller.id] || { from: "", to: "" };
   const [copied, setCopied] = useState(false);
 
@@ -17,6 +17,31 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange })
   const to = parseInt(assignment.to) || null;
   const valid = from && to && from <= to;
   const count = valid ? to - from + 1 : 0;
+
+  // Check for overlap with other sellers
+  const hasOverlap = (() => {
+    if (!valid) return false;
+    for (const [otherId, other] of Object.entries(allAssignments)) {
+      if (otherId === seller.id) continue;
+      const otherFrom = parseInt(other.from);
+      const otherTo = parseInt(other.to);
+      if (otherFrom && otherTo && otherFrom <= otherTo) {
+        // Check overlap: ranges overlap if one starts before the other ends
+        if (from <= otherTo && to >= otherFrom) {
+          return true;
+        }
+      }
+    }
+    return false;
+  })();
+
+  // Check which numbers in this range are already assigned
+  const assignedInThisRange = valid
+    ? existingCards.filter((c) => {
+        const num = c.card_number;
+        return num >= from && num <= to && (c.player_phone || c.player_city);
+      }).length
+    : 0;
 
   // Build the pre-filled link
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -89,6 +114,16 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange })
           <AlertCircle className="w-3 h-3" /> Cartela inicial deve ser menor que a final
         </p>
       )}
+      {hasOverlap && (
+        <p className="text-xs text-destructive flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" /> Intervalo sobreposto com outro vendedor
+        </p>
+      )}
+      {assignedInThisRange > 0 && (
+        <p className="text-xs text-amber-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" /> {assignedInThisRange} cartela(s) já vendida(s) neste intervalo
+        </p>
+      )}
 
       <div className="flex gap-2">
         <Button
@@ -139,6 +174,11 @@ export default function DistributeCardsModal({ onClose }) {
   const maxCard = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) : 999;
   const minCard = cards.length > 0 ? Math.min(...cards.map((c) => c.card_number || 0)) : 1;
 
+  // Calculate which numbers are already distributed/sold
+  const soldCardNumbers = cards
+    .filter((c) => c.player_phone || c.player_city)
+    .map((c) => c.card_number);
+
   const handleChange = (sellerId, field, value) => {
     setAssignments((prev) => ({
       ...prev,
@@ -146,17 +186,30 @@ export default function DistributeCardsModal({ onClose }) {
     }));
   };
 
-  // Auto-distribute: starting from autoFrom, give autoQty to each seller in order
+  // Auto-distribute: starting from autoFrom, give autoQty to each seller in order, skipping sold numbers
   const handleAutoDistribute = () => {
     const start = parseInt(autoFrom) || minCard;
     const qty = parseInt(autoQty);
     if (!qty || sellers.length === 0) return;
+    
     const newAssignments = {};
+    let currentStart = start;
+    
     sellers.forEach((s, i) => {
-      const from = start + i * qty;
-      const to = from + qty - 1;
+      // Find next available range (skip sold numbers)
+      let from = currentStart;
+      let to = from + qty - 1;
+      
+      // Adjust if range overlaps with sold numbers
+      while (soldCardNumbers.some(num => num >= from && num <= to)) {
+        from = to + 1;
+        to = from + qty - 1;
+      }
+      
       newAssignments[s.id] = { from: String(from), to: String(to) };
+      currentStart = to + 1;
     });
+    
     setAssignments(newAssignments);
   };
 
@@ -227,6 +280,12 @@ export default function DistributeCardsModal({ onClose }) {
                   <Users className="w-3.5 h-3.5" />
                   {sellers.length} vendedores ativos
                 </span>
+                {soldCardNumbers.length > 0 && (
+                  <span className="flex items-center gap-1 text-amber-600">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {soldCardNumbers.length} já vendidas
+                  </span>
+                )}
               </div>
 
               {/* Auto-distribute */}
@@ -284,6 +343,7 @@ export default function DistributeCardsModal({ onClose }) {
                       minCard={minCard}
                       allAssignments={assignments}
                       onChange={handleChange}
+                      existingCards={cards}
                     />
                   ))}
                 </div>
