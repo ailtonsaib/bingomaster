@@ -14,7 +14,7 @@ export default function PrintBingoGrid({ numbers }) {
   const circleStyle = {
     width: size,
     height: size,
-    border: "none",
+    border: "2px solid #000",
     borderRadius: "50%",
     display: "inline-flex",
     alignItems: "center",
@@ -37,6 +37,7 @@ export default function PrintBingoGrid({ numbers }) {
   const freeStyle = {
     ...circleStyle,
     background: "#f8a0a0",
+    borderColor: "#c00",
     color: "#c00",
   };
 
