@@ -61,6 +61,10 @@
     "event_price": {
       "type": "string",
       "description": "Valor da cartela/evento"
+    },
+    "card_image_url": {
+      "type": "string",
+      "description": "URL da imagem que aparece nas cartelas impressas"
     }
   },
   "required": [

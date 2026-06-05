@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
+import { X, ImagePlus } from "lucide-react";
 import PrizeForm from "@/components/bingo/PrizeForm";
 
 export default function EditGameModal({ game, onClose, onSaved }) {
@@ -20,6 +20,17 @@ export default function EditGameModal({ game, onClose, onSaved }) {
       : [{ name: "", description: "", awarded: false }]
   );
   const [saving, setSaving] = useState(false);
+  const [cardImageUrl, setCardImageUrl] = useState(game.card_image_url || "");
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    const result = await base44.integrations.Core.UploadFile({ file });
+    setCardImageUrl(result.file_url);
+    setUploadingImage(false);
+  };
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -31,6 +42,7 @@ export default function EditGameModal({ game, onClose, onSaved }) {
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
       prizes: prizes.filter((p) => p.name.trim()),
+      card_image_url: cardImageUrl || undefined,
     });
     setSaving(false);
     onSaved();
@@ -100,6 +112,29 @@ export default function EditGameModal({ game, onClose, onSaved }) {
           </div>
 
           <PrizeForm prizes={prizes} onChange={setPrizes} />
+
+          <div className="space-y-2">
+            <Label>Imagem da Cartela (opcional)</Label>
+            {cardImageUrl ? (
+              <div className="relative inline-block">
+                <img src={cardImageUrl} alt="Imagem da cartela" className="h-24 rounded-lg border object-contain" />
+                <button
+                  onClick={() => setCardImageUrl("")}
+                  className="absolute -top-2 -right-2 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-lg p-4 hover:bg-muted/50 transition-colors w-full">
+                <ImagePlus className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {uploadingImage ? "Enviando..." : "Clique para anexar uma imagem"}
+                </span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+              </label>
+            )}
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={onClose}>
