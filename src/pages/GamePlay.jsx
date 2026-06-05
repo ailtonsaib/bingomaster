@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History } from "lucide-react";
 import { drawNumber, checkAllCardsForBingo } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -15,6 +15,7 @@ import BingoWinnerAlert from "@/components/bingo/BingoWinnerAlert";
 import DrawStatistics from "@/components/bingo/DrawStatistics";
 import FullScreenDraw from "@/components/bingo/FullScreenDraw";
 import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
+import DrawHistoryModal from "@/components/bingo/DrawHistoryModal";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -31,6 +32,7 @@ export default function GamePlay() {
   const [autoTimer, setAutoTimer] = useState(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showWinnerCards, setShowWinnerCards] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -207,6 +209,12 @@ export default function GamePlay() {
           setAutoInterval={setAutoInterval}
         />
       )}
+      {showHistory && (
+        <DrawHistoryModal
+          drawnNumbers={drawnNumbers}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 py-5">
 
         {/* Header */}
@@ -235,6 +243,15 @@ export default function GamePlay() {
               className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20"
             >
               <Maximize className="w-4 h-4" /> Tela Cheia
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHistory(true)}
+              className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20"
+              disabled={drawnNumbers.length === 0}
+            >
+              <History className="w-4 h-4" /> Histórico
             </Button>
             <Badge
               className={
