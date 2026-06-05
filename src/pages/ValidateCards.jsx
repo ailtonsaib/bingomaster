@@ -1,21 +1,93 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Search, ChevronDown, Hash, User, Phone, CheckCircle2,
-  XCircle, ArrowLeft, Eye, EyeOff
+  Search, ChevronDown, User, Phone, CheckCircle2,
+  XCircle, ArrowLeft, Eye, EyeOff, ShoppingCart, Undo2, X
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+// Modal para registrar/editar venda
+function SellModal({ card, onClose, onSaved }) {
+  const [buyerName, setBuyerName] = useState(card.player_name || "");
+  const [buyerPhone, setBuyerPhone] = useState(card.player_phone || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!buyerPhone.trim()) return;
+    setSaving(true);
+    await base44.entities.BingoCard.update(card.id, {
+      player_name: buyerName.trim() || card.player_name,
+      player_phone: buyerPhone.trim(),
+    });
+    setSaving(false);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-background rounded-t-2xl w-full max-w-md p-5 pb-10 space-y-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-lg font-heading">
+              Cartela #{String(card.card_number || "").padStart(4, "0")}
+            </h2>
+            <p className="text-xs text-muted-foreground">Registrar venda</p>
+          </div>
+          <button onClick={onClose}><X className="w-5 h-5 text-muted-foreground" /></button>
+        </div>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Nome do Comprador</label>
+            <Input
+              className="h-12 text-base"
+              value={buyerName}
+              onChange={(e) => setBuyerName(e.target.value)}
+              placeholder="Nome completo (opcional)"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Telefone / WhatsApp *</label>
+            <Input
+              className="h-12 text-base"
+              type="tel"
+              value={buyerPhone}
+              onChange={(e) => setBuyerPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+        </div>
+
+        <Button
+          className="w-full h-12 text-base gap-2"
+          onClick={handleSave}
+          disabled={!buyerPhone.trim() || saving}
+        >
+          <ShoppingCart className="w-5 h-5" />
+          {saving ? "Registrando..." : "Confirmar Venda"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function ValidateCards() {
+  const queryClient = useQueryClient();
   const [selectedGame, setSelectedGame] = useState(null);
   const [showGamePicker, setShowGamePicker] = useState(false);
   const [search, setSearch] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [sellCard, setSellCard] = useState(null);
 
   const { data: games = [] } = useQuery({
     queryKey: ["validate-games"],
@@ -28,6 +100,12 @@ export default function ValidateCards() {
     enabled: !!selectedGame,
   });
 
+  // "vendida" = tem player_phone preenchido
+  const isSold = (card) => !!card.player_phone;
+
+  const sold = cards.filter(isSold);
+  const available = cards.filter((c) => !isSold(c));
+
   const filtered = cards.filter((c) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -38,8 +116,17 @@ export default function ValidateCards() {
     );
   });
 
-  const sold = cards.filter((c) => c.player_name);
-  const available = cards.filter((c) => !c.player_name);
+  const handleUnmark = async (card) => {
+    await base44.entities.BingoCard.update(card.id, {
+      player_phone: "",
+      player_city: "",
+    });
+    queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+  };
+
+  const handleSaved = () => {
+    queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,7 +137,7 @@ export default function ValidateCards() {
         </Link>
         <h1 className="text-2xl font-bold font-heading">Validação de Cartelas</h1>
         <p className="text-primary-foreground/80 text-sm mt-1">
-          Consulte todas as cartelas geradas e seus compradores
+          Consulte e gerencie as cartelas do jogo
         </p>
       </div>
 
@@ -120,7 +207,7 @@ export default function ValidateCards() {
                 onClick={() => setShowDetails((v) => !v)}
               >
                 {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showDetails ? "Ocultar dados" : "Dados do comprador"}
+                <span className="hidden sm:inline">{showDetails ? "Ocultar" : "Dados"}</span>
               </Button>
             </div>
 
@@ -138,37 +225,37 @@ export default function ValidateCards() {
             ) : (
               <div className="space-y-2">
                 {filtered.map((card) => {
-                  const isSold = !!card.player_name;
+                  const sold = isSold(card);
                   return (
                     <Card
                       key={card.id}
-                      className={`border transition-all ${isSold ? "border-green-200 bg-green-50/50" : "border-border bg-card"}`}
+                      className={`border transition-all ${sold ? "border-green-200 bg-green-50/50" : "border-border bg-card"}`}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
+                        {/* Status icon */}
+                        {sold
+                          ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                          : <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+                        }
+
                         {/* Card number */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {isSold
-                            ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            : <XCircle className="w-4 h-4 text-muted-foreground" />
-                          }
-                          <span className={`font-bold font-heading text-base ${isSold ? "text-green-800" : "text-foreground"}`}>
-                            {String(card.card_number || "").padStart(4, "0")}
-                          </span>
-                        </div>
+                        <span className={`font-bold font-heading text-base shrink-0 ${sold ? "text-green-800" : "text-foreground"}`}>
+                          {String(card.card_number || "").padStart(4, "0")}
+                        </span>
 
                         {/* Status badge */}
                         <Badge
                           variant="outline"
-                          className={`text-xs shrink-0 ${isSold
+                          className={`text-xs shrink-0 ${sold
                             ? "bg-green-100 text-green-700 border-green-200"
                             : "text-muted-foreground"
                           }`}
                         >
-                          {isSold ? "Vendida" : "Disponível"}
+                          {sold ? "Vendida" : "Disponível"}
                         </Badge>
 
-                        {/* Buyer info — only shown when toggle is ON and card is sold */}
-                        {showDetails && isSold && (
+                        {/* Buyer info */}
+                        {showDetails && sold && (
                           <div className="flex-1 min-w-0 flex flex-wrap gap-x-4 gap-y-0.5">
                             {card.player_name && (
                               <span className="flex items-center gap-1 text-sm text-green-800 truncate">
@@ -185,11 +272,35 @@ export default function ValidateCards() {
                           </div>
                         )}
 
-                        {/* Placeholder when details hidden */}
-                        {!showDetails && isSold && (
+                        {!showDetails && sold && (
                           <span className="flex-1 text-xs text-muted-foreground italic">
-                            Dados ocultos — clique em "Dados do comprador" para ver
+                            Ative "Dados" para ver o comprador
                           </span>
+                        )}
+
+                        {!sold && <div className="flex-1" />}
+
+                        {/* Action buttons */}
+                        {sold ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50 gap-1 text-xs"
+                            onClick={() => handleUnmark(card)}
+                          >
+                            <Undo2 className="w-3.5 h-3.5" />
+                            Desmarcar
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 text-green-700 border-green-300 hover:bg-green-50 gap-1 text-xs"
+                            onClick={() => setSellCard(card)}
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                            Vender
+                          </Button>
                         )}
                       </CardContent>
                     </Card>
@@ -200,6 +311,14 @@ export default function ValidateCards() {
           </>
         )}
       </div>
+
+      {sellCard && (
+        <SellModal
+          card={sellCard}
+          onClose={() => setSellCard(null)}
+          onSaved={handleSaved}
+        />
+      )}
     </div>
   );
 }
