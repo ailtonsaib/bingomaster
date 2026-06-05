@@ -39,11 +39,10 @@ export default function BingoGrid({ numbers, drawnNumbers = [], label, compact =
           ))}
         </div>
 
-        {/* Grid */}
+        {/* Grid — 4 rows x 5 cols = 20 cells */}
         <div className="grid grid-cols-5 gap-px bg-border/50 p-px">
           {numbers.map((num, idx) => {
-            const isFree = idx === 12;
-            const isMarked = drawn.has(num) || isFree;
+            const isMarked = drawn.has(num);
 
             return (
               <div
@@ -51,14 +50,12 @@ export default function BingoGrid({ numbers, drawnNumbers = [], label, compact =
                 className={cn(
                   "flex items-center justify-center font-semibold font-heading transition-all duration-300",
                   cellSize,
-                  isFree
-                    ? "bg-accent text-accent-foreground"
-                    : isMarked
-                      ? "bg-primary text-primary-foreground scale-105"
-                      : "bg-card text-card-foreground hover:bg-muted"
+                  isMarked
+                    ? "bg-primary text-primary-foreground scale-105"
+                    : "bg-card text-card-foreground hover:bg-muted"
                 )}
               >
-                {isFree ? "★" : num}
+                {num}
               </div>
             );
           })}
