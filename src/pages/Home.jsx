@@ -26,13 +26,23 @@ export default function Home() {
   const [showDistribute, setShowDistribute] = useState(false);
 
   const handleDelete = async (id) => {
-    // Delete cards first, then game
-    const cards = await base44.entities.BingoCard.filter({ game_id: String(id) });
-    for (const card of cards) {
-      await base44.entities.BingoCard.delete(card.id);
+    try {
+      // Delete cards first, then game
+      const cards = await base44.entities.BingoCard.filter({ game_id: String(id) });
+      for (const card of cards) {
+        await base44.entities.BingoCard.delete(card.id);
+      }
+      await base44.entities.BingoGame.delete(id);
+      refetch();
+    } catch (error) {
+      if (error.message?.includes("not found")) {
+        // Jogo já foi deletado, apenas atualiza a lista
+        refetch();
+      } else {
+        console.error("Erro ao deletar jogo:", error);
+        alert("Erro ao deletar jogo. Tente novamente.");
+      }
     }
-    await base44.entities.BingoGame.delete(id);
-    refetch();
   };
 
   return (
