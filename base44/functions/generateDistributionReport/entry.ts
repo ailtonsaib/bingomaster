@@ -116,16 +116,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Convert to blob and return
+    // Convert to base64 for JSON response
     const pdfBytes = doc.output('arraybuffer');
+    const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
 
-    return new Response(pdfBytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=relatorio_distribuicao_${new Date().toISOString().split('T')[0]}.pdf`
-      }
-    });
+    return Response.json({ pdf: pdfBase64 });
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
     return Response.json({ error: error.message }, { status: 500 });
