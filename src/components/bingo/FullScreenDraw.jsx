@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand } from "lucide-react";
+import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BingoNumberBall from "./BingoNumberBall";
@@ -54,6 +54,7 @@ export default function FullScreenDraw({ game, cards, onClose }) {
       drawn_numbers: [],
       prizes: (game.prizes || []).map(p => ({ ...p, awarded: false }))
     });
+  const handleClearDraw = () => updateGame({ drawn_numbers: [] });
 
   // Sorteio automático
   useEffect(() => {
@@ -264,6 +265,15 @@ export default function FullScreenDraw({ game, cards, onClose }) {
                   {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : drawMode === "auto" ? "Automático" : "Sortear Número"}
                 </Button>
 
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 border-white/30 text-white hover:bg-white/10"
+                  onClick={handleClearDraw}
+                  disabled={drawnNumbers.length === 0}
+                >
+                  <Eraser className="w-4 h-4" /> Zerar Sorteio
+                </Button>
                 <Button
                   size="lg"
                   variant="outline"
