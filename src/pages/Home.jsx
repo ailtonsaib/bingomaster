@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import EditGameModal from "@/components/bingo/EditGameModal";
@@ -60,6 +60,11 @@ export default function Home() {
               <Link to="/sellers">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8">
                   <UserCheck className="w-5 h-5" /> Vendedores
+                </Button>
+              </Link>
+              <Link to="/sell">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-300 text-green-700 hover:bg-green-50">
+                  <ShoppingCart className="w-5 h-5" /> App de Vendas
                 </Button>
               </Link>
             </div>
