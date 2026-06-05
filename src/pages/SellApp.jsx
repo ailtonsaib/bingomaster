@@ -549,14 +549,35 @@ function SellStep({ seller, game, cardRange, onBack }) {
 
 // --- Main orchestrator ---
 export default function SellApp() {
+  // Read URL params (pre-filled link from DistributeCardsModal)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSellerName = urlParams.get("seller_name");
+  const urlSellerPhone = urlParams.get("seller_phone");
+  const urlSellerId = urlParams.get("seller_id");
+  const urlRangeFrom = urlParams.get("range_from");
+  const urlRangeTo = urlParams.get("range_to");
+
   const [seller, setSeller] = useState(() => {
+    // If URL has seller info, use it and persist
+    if (urlSellerName) {
+      localStorage.setItem("seller_name", urlSellerName);
+      localStorage.setItem("seller_phone", urlSellerPhone || "");
+      localStorage.setItem("seller_id", urlSellerId || "");
+      return { name: urlSellerName, phone: urlSellerPhone || "", id: urlSellerId || "" };
+    }
     const name = localStorage.getItem("seller_name");
     const phone = localStorage.getItem("seller_phone");
     const id = localStorage.getItem("seller_id");
     return name ? { name, phone: phone || "", id: id || "" } : null;
   });
+
+  // If URL has range, skip the range step
+  const urlRange = urlRangeFrom || urlRangeTo
+    ? { from: parseInt(urlRangeFrom) || null, to: parseInt(urlRangeTo) || null }
+    : null;
+
   const [game, setGame] = useState(null);
-  const [cardRange, setCardRange] = useState(null); // null = not configured yet
+  const [cardRange, setCardRange] = useState(urlRange); // null = show range step, defined = skip it
 
   if (!seller) {
     return <SellerStep onEnter={setSeller} />;
@@ -566,7 +587,7 @@ export default function SellApp() {
     return (
       <GamePickStep
         seller={seller}
-        onPick={(g) => { setGame(g); setCardRange(null); }}
+        onPick={(g) => { setGame(g); if (!urlRange) setCardRange(null); }}
         onBack={() => {
           localStorage.removeItem("seller_name");
           localStorage.removeItem("seller_phone");
@@ -593,7 +614,7 @@ export default function SellApp() {
       seller={seller}
       game={game}
       cardRange={cardRange}
-      onBack={() => { setGame(null); setCardRange(null); }}
+      onBack={() => { setGame(null); setCardRange(urlRange); }}
     />
   );
 }

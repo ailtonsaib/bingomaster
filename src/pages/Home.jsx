@@ -5,10 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import EditGameModal from "@/components/bingo/EditGameModal";
+import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
 
 const statusLabels = {
   waiting: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -22,6 +23,7 @@ export default function Home() {
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
   });
   const [editingGame, setEditingGame] = useState(null);
+  const [showDistribute, setShowDistribute] = useState(false);
 
   const handleDelete = async (id) => {
     // Delete cards first, then game
@@ -67,6 +69,14 @@ export default function Home() {
                   <ShoppingCart className="w-5 h-5" /> App de Vendas
                 </Button>
               </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 text-base px-8 border-purple-300 text-purple-700 hover:bg-purple-50"
+                onClick={() => setShowDistribute(true)}
+              >
+                <Layers className="w-5 h-5" /> Distribuir Cartelas
+              </Button>
             </div>
           </motion.div>
         </div>
@@ -168,6 +178,9 @@ export default function Home() {
           </div>
         )}
       </div>
+      {showDistribute && (
+        <DistributeCardsModal onClose={() => setShowDistribute(false)} />
+      )}
       {editingGame && (
         <EditGameModal
           game={editingGame}
