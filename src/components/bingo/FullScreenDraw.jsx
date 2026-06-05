@@ -137,7 +137,6 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   const isFinished = game?.status === "finished";
   const allDrawn = drawnNumbers.length >= maxNumber;
 
-  // Gerar colunas B-I-N-G-O com useMemo
   const columns = useMemo(() => {
     const cols = {
       B: { range: [1, 15], numbers: [] },
@@ -157,14 +156,6 @@ export default function FullScreenDraw({ game, cards, onClose }) {
 
     return cols;
   }, [drawnNumbers]);
-
-  const columnColors = {
-    B: "bg-blue-500",
-    I: "bg-purple-500",
-    N: "bg-pink-500",
-    G: "bg-green-500",
-    O: "bg-yellow-500",
-  };
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 overflow-auto">
@@ -440,9 +431,17 @@ export default function FullScreenDraw({ game, cards, onClose }) {
         <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-6">
           <h3 className="text-lg font-bold font-heading text-white mb-4">Números Sorteados</h3>
           <div className="grid grid-cols-5 md:grid-cols-15 gap-2">
-            {Object.entries(columns).map(([letter, { range, numbers }]) => (
+            {Object.entries(columns).map(([letter, { range, numbers }]) => {
+              const columnColorMap = {
+                B: "bg-blue-500",
+                I: "bg-purple-500",
+                N: "bg-pink-500",
+                G: "bg-green-500",
+                O: "bg-yellow-500",
+              };
+              return (
               <div key={letter} className="space-y-2">
-                <div className={`${columnColors[letter]} rounded-lg py-2 text-center font-bold text-white text-sm`}>
+                <div className={`${columnColorMap[letter]} rounded-lg py-2 text-center font-bold text-white text-sm`}>
                   {letter}
                 </div>
                 <div className="space-y-1">
@@ -467,7 +466,8 @@ export default function FullScreenDraw({ game, cards, onClose }) {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
