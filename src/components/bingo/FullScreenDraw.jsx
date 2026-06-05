@@ -301,6 +301,14 @@ export default function FullScreenDraw({ game, cards, onClose }) {
                 >
                   <Square className="w-4 h-4" /> Encerrar
                 </Button>
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="gap-2 bg-red-500 hover:bg-red-600 text-white border-0"
+                  onClick={handleReset}
+                >
+                  <RotateCcw className="w-4 h-4" /> Reiniciar Jogo
+                </Button>
               </>
             )}
             {isFinished && (
