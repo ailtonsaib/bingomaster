@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -133,22 +133,26 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   const isFinished = game?.status === "finished";
   const allDrawn = drawnNumbers.length >= maxNumber;
 
-  // Gerar colunas B-I-N-G-O
-  const columns = {
-    B: { range: [1, 15], numbers: [] },
-    I: { range: [16, 30], numbers: [] },
-    N: { range: [31, 45], numbers: [] },
-    G: { range: [46, 60], numbers: [] },
-    O: { range: [61, 75], numbers: [] },
-  };
+  // Gerar colunas B-I-N-G-O com useMemo
+  const columns = useMemo(() => {
+    const cols = {
+      B: { range: [1, 15], numbers: [] },
+      I: { range: [16, 30], numbers: [] },
+      N: { range: [31, 45], numbers: [] },
+      G: { range: [46, 60], numbers: [] },
+      O: { range: [61, 75], numbers: [] },
+    };
 
-  drawnNumbers.forEach((num) => {
-    if (num <= 15) columns.B.numbers.push(num);
-    else if (num <= 30) columns.I.numbers.push(num);
-    else if (num <= 45) columns.N.numbers.push(num);
-    else if (num <= 60) columns.G.numbers.push(num);
-    else if (num <= 75) columns.O.numbers.push(num);
-  });
+    drawnNumbers.forEach((num) => {
+      if (num <= 15) cols.B.numbers.push(num);
+      else if (num <= 30) cols.I.numbers.push(num);
+      else if (num <= 45) cols.N.numbers.push(num);
+      else if (num <= 60) cols.G.numbers.push(num);
+      else if (num <= 75) cols.O.numbers.push(num);
+    });
+
+    return cols;
+  }, [drawnNumbers]);
 
   const columnColors = {
     B: "bg-blue-500",
