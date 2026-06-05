@@ -60,10 +60,11 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   useEffect(() => {
     if (!isPlaying || drawMode !== "auto" || allDrawn) return;
 
-    const interval = setInterval(async () => {
-      // Pega os números atuais do game
-      const currentDrawn = game?.drawn_numbers || [];
-      const currentMax = game?.max_number || 75;
+    const drawNumber = async () => {
+      // Pega os números mais recentes diretamente do query client
+      const currentGame = queryClient.getQueryData(["game", game.id]);
+      const currentDrawn = currentGame?.drawn_numbers || [];
+      const currentMax = currentGame?.max_number || 75;
       
       // Sortear número aleatório não sorteado
       const available = Array.from({ length: currentMax }, (_, i) => i + 1)
@@ -76,10 +77,12 @@ export default function FullScreenDraw({ game, cards, onClose }) {
       
       const newDrawn = [...currentDrawn, num];
       await updateGame({ drawn_numbers: newDrawn });
-    }, autoInterval);
+    };
+
+    const interval = setInterval(drawNumber, autoInterval);
 
     return () => clearInterval(interval);
-  }, [isPlaying, drawMode, autoInterval, game, allDrawn]);
+  }, [isPlaying, drawMode, autoInterval, game?.id, allDrawn]);
 
   useEffect(() => {
     if (!game?.drawn_numbers) return;
