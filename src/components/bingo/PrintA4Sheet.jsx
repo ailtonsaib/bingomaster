@@ -137,8 +137,8 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       <div style={{ flex: 1 }} />
 
       {/* ── FOOTER ── */}
-      <div style={{ borderTop: "1.5px dashed #666", marginTop: 10, paddingTop: 6 }}>
-        <div style={{ textAlign: "center", marginBottom: 4 }}>
+      <div style={{ borderTop: "1.5px dashed #666", marginTop: 10, paddingTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: "bold", marginBottom: 3 }}>
             N° CARTELA: {cardNum}
           </div>
@@ -147,7 +147,7 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10 }}>
           <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>COLABORADOR:</span>
           <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;{card.player_name || ""}</div>
         </div>
