@@ -115,32 +115,22 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 
       {/* ── BARCODE ── */}
       <div style={{
-        textAlign: "center",
         borderLeft: "2px solid #000",
         borderRight: "2px solid #000",
-        padding: "4px 0 0 0",
+        padding: "4px 8px 0 8px",
         display: "flex",
-        justifyContent: "center",
+        justifyContent: "space-between",
+        alignItems: "center",
       }}>
         <Barcode value={cardNum} width={1.5} height={34} displayValue={false} margin={0} />
-      </div>
-
-      {/* ── IMAGEM DA CARTELA ── */}
-      {game?.card_image_url && (
-        <div style={{
-          borderLeft: "2px solid #000",
-          borderRight: "2px solid #000",
-          display: "flex",
-          justifyContent: "center",
-          padding: "6px 8px",
-        }}>
+        {game?.card_image_url && (
           <img
             src={game.card_image_url}
             alt="Imagem do evento"
-            style={{ maxHeight: 80, maxWidth: "100%", objectFit: "contain" }}
+            style={{ maxHeight: 40, maxWidth: 120, objectFit: "contain" }}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── PRIMEIRA CHANCE ── */}
       <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} />
@@ -155,13 +145,16 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 
       {/* ── FOOTER ── */}
       <div style={{ borderTop: "1.5px dashed #666", marginTop: 10, paddingTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Barcode value={cardNum} width={1} height={24} displayValue={false} margin={0} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <Barcode value={cardNum} width={1} height={24} displayValue={false} margin={0} />
+            </div>
+            <div style={{ fontSize: 10, fontWeight: "bold" }}>
+              N° {cardNum}
+            </div>
           </div>
-          <div style={{ fontSize: 10, fontWeight: "bold" }}>
-            N° {cardNum}
-          </div>
+          
         </div>
 
         <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10 }}>
