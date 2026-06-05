@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import EditGameModal from "@/components/bingo/EditGameModal";
 import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const statusLabels = {
   waiting: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -18,12 +19,15 @@ const statusLabels = {
 };
 
 export default function Home() {
+  const queryClient = useQueryClient();
   const { data: games = [], isLoading, refetch } = useQuery({
     queryKey: ["bingo-games"],
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
   });
   const [editingGame, setEditingGame] = useState(null);
   const [showDistribute, setShowDistribute] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const handleDelete = async (id) => {
     try {
@@ -42,6 +46,30 @@ export default function Home() {
         console.error("Erro ao deletar jogo:", error);
         alert("Erro ao deletar jogo. Tente novamente.");
       }
+    }
+  };
+
+  const handleResetAll = async () => {
+    setResetting(true);
+    try {
+      // Delete all cards first
+      const allCards = await base44.entities.BingoCard.filter({});
+      if (allCards.length > 0) {
+        await Promise.all(allCards.map((c) => base44.entities.BingoCard.delete(c.id)));
+      }
+      // Delete all games
+      const allGames = await base44.entities.BingoGame.filter({});
+      if (allGames.length > 0) {
+        await Promise.all(allGames.map((g) => base44.entities.BingoGame.delete(g.id)));
+      }
+      await queryClient.invalidateQueries({ queryKey: ["bingo-games"] });
+      refetch();
+      setShowResetDialog(false);
+    } catch (error) {
+      console.error("Erro ao resetar:", error);
+      alert("Erro ao resetar. Tente novamente.");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -102,6 +130,14 @@ export default function Home() {
                   <Trophy className="w-5 h-5" /> Analytics
                 </Button>
               </Link>
+              <Button
+                size="lg"
+                variant="destructive"
+                className="gap-2 text-base px-8 bg-red-500 hover:bg-red-600 text-white border-0"
+                onClick={() => setShowResetDialog(true)}
+              >
+                <RotateCcw className="w-5 h-5" /> Resetar Tudo
+              </Button>
             </div>
           </motion.div>
         </div>
@@ -213,6 +249,29 @@ export default function Home() {
           onSaved={refetch}
         />
       )}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Resetar Aplicativo Completo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá <strong>deletar TODOS os jogos e cartelas</strong> permanentemente. 
+              Não será possível recuperar os dados após o reset.
+              <br /><br />
+              <strong>Tem certeza que deseja continuar?</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetAll}
+              disabled={resetting}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {resetting ? "Resetando..." : "Sim, Resetar Tudo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
