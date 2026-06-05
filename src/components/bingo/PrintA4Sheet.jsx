@@ -80,13 +80,14 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
         </div>
       </div>
 
+      {/* ── WRAPPER LATERAL BORDERS ── */}
+      <div style={{ borderLeft: "2px solid #000", borderRight: "2px solid #000", borderBottom: "2px solid #000" }}>
+
       {/* ── CARTELA BAR ── */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
         background: "#888",
-        borderLeft: "2px solid #000",
-        borderRight: "2px solid #000",
       }}>
         <div style={{ background: "#888" }} />
         <div style={{
@@ -115,8 +116,6 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 
       {/* ── BARCODE ── */}
       <div style={{
-        borderLeft: "2px solid #000",
-        borderRight: "2px solid #000",
         padding: "4px 8px 0 8px",
         display: "flex",
         justifyContent: "space-between",
@@ -141,6 +140,8 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
           <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} />
         </div>
       )}
+
+      </div>{/* end lateral borders wrapper */}
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
@@ -183,8 +184,6 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 function ChanceSection({ title, grids, prizes }) {
   return (
     <div style={{
-      borderLeft: "2px solid #000",
-      borderRight: "2px solid #000",
       padding: "6px 8px 8px 8px",
     }}>
       <div style={{
