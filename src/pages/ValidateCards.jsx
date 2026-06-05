@@ -88,6 +88,7 @@ export default function ValidateCards() {
   const [search, setSearch] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const [sellCard, setSellCard] = useState(null);
+  const [quickSelling, setQuickSelling] = useState(null);
 
   const { data: games = [] } = useQuery({
     queryKey: ["validate-games"],
@@ -115,6 +116,15 @@ export default function ValidateCards() {
       c.player_phone?.includes(q)
     );
   });
+
+  const handleQuickSell = async (card) => {
+    setQuickSelling(card.id);
+    await base44.entities.BingoCard.update(card.id, {
+      player_phone: "vendida",
+    });
+    queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    setQuickSelling(null);
+  };
 
   const handleUnmark = async (card) => {
     await base44.entities.BingoCard.update(card.id, {
@@ -296,10 +306,11 @@ export default function ValidateCards() {
                             size="sm"
                             variant="outline"
                             className="shrink-0 text-green-700 border-green-300 hover:bg-green-50 gap-1 text-xs"
-                            onClick={() => setSellCard(card)}
+                            disabled={quickSelling === card.id}
+                            onClick={() => showDetails ? setSellCard(card) : handleQuickSell(card)}
                           >
                             <ShoppingCart className="w-3.5 h-3.5" />
-                            Vender
+                            {quickSelling === card.id ? "..." : "Vender"}
                           </Button>
                         )}
                       </CardContent>
