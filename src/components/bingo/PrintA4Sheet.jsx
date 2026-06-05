@@ -99,7 +99,7 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
           borderRight: "1px solid #555",
           letterSpacing: 1,
         }}>
-          Cartela: &nbsp;<span style={{ fontWeight: "900", fontSize: 14, letterSpacing: 2 }}>{cardNum}</span>
+          <span style={{ fontWeight: "900", fontSize: 14, letterSpacing: 2 }}>{cardNum}</span>
         </div>
         <div style={{
           background: "#888",
