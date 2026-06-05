@@ -20,6 +20,8 @@ export default function PrintCards() {
   const { gameId } = useParams();
   const printRef = useRef();
   const [exportBatch, setExportBatch] = useState(null); // null = show all, number = batch index
+  const [customRange, setCustomRange] = useState({ from: "", to: "" });
+  const [useCustomRange, setUseCustomRange] = useState(false);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -36,9 +38,25 @@ export default function PrintCards() {
 
   const handleExportBatch = (batchIdx) => {
     setExportBatch(batchIdx);
+    setUseCustomRange(false);
     setTimeout(() => {
       window.print();
       setTimeout(() => setExportBatch(null), 1000);
+    }, 300);
+  };
+
+  const handlePrintRange = () => {
+    const from = parseInt(customRange.from);
+    const to = parseInt(customRange.to);
+    if (isNaN(from) || isNaN(to) || from > to) {
+      alert("Por favor, insira um intervalo válido (de 1 a 100, por exemplo)");
+      return;
+    }
+    setExportBatch(null);
+    setUseCustomRange(true);
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setUseCustomRange(false), 1000);
     }, 300);
   };
 
@@ -46,9 +64,21 @@ export default function PrintCards() {
   const CARDS_PER_PAGE = 1;
   const prizes = game?.prizes || [];
 
-  // Which cards to show: all or just the selected batch
+  // Which cards to show: all, selected batch, or custom range
   const batches = chunkArray(cards, BATCH_SIZE);
-  const displayCards = exportBatch !== null ? batches[exportBatch] || [] : cards;
+  let displayCards = cards;
+  let rangeLabel = "";
+  
+  if (exportBatch !== null) {
+    displayCards = batches[exportBatch] || [];
+    rangeLabel = `Lote ${exportBatch + 1} (${exportBatch * BATCH_SIZE + 1}–${Math.min((exportBatch + 1) * BATCH_SIZE, cards.length)})`;
+  } else if (useCustomRange && customRange.from && customRange.to) {
+    const from = parseInt(customRange.from);
+    const to = parseInt(customRange.to);
+    displayCards = cards.filter((c) => c.card_number >= from && c.card_number <= to);
+    rangeLabel = `${from}–${to}`;
+  }
+  
   const pages = chunkArray(displayCards, CARDS_PER_PAGE);
 
   return (
@@ -67,9 +97,38 @@ export default function PrintCards() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-muted/40">
+            <span className="text-xs font-medium">Imprimir faixa:</span>
+            <input
+              type="number"
+              min="1"
+              placeholder="De"
+              value={customRange.from}
+              onChange={(e) => setCustomRange({ ...customRange, from: e.target.value })}
+              className="w-16 h-7 px-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <span className="text-xs text-muted-foreground">até</span>
+            <input
+              type="number"
+              min="1"
+              placeholder="Até"
+              value={customRange.to}
+              onChange={(e) => setCustomRange({ ...customRange, to: e.target.value })}
+              className="w-16 h-7 px-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={handlePrintRange}
+              disabled={!customRange.from || !customRange.to}
+            >
+              <Printer className="w-3 h-3" /> Imprimir
+            </Button>
+          </div>
           {batches.length > 1 && (
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Exportar lote:</span>
+              <span className="text-xs text-muted-foreground">Lotes:</span>
               {batches.map((_, idx) => (
                 <Button
                   key={idx}
@@ -97,9 +156,9 @@ export default function PrintCards() {
         </div>
       ) : (
         <div ref={printRef} id="print-area">
-          {exportBatch !== null && (
+          {(exportBatch !== null || useCustomRange) && (
             <div className="no-print text-center py-2 text-sm text-muted-foreground bg-yellow-50 border-b">
-              Modo exportação: lote {exportBatch + 1} ({exportBatch * BATCH_SIZE + 1}–{Math.min((exportBatch + 1) * BATCH_SIZE, cards.length)})
+              Modo exportação: {rangeLabel} — {displayCards.length} cartela(s)
             </div>
           )}
           {pages.map((pageCards, pageIdx) => (
