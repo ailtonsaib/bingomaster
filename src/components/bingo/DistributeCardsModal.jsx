@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -160,6 +160,7 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, e
 }
 
 export default function DistributeCardsModal({ onClose }) {
+  const queryClient = useQueryClient();
   const [selectedGame, setSelectedGame] = useState(null);
   const [showGamePicker, setShowGamePicker] = useState(false);
   const [assignments, setAssignments] = useState({});
@@ -210,6 +211,7 @@ export default function DistributeCardsModal({ onClose }) {
       setAssignments({});
       setAutoFrom("");
       setAutoQty("");
+      await queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] });
     } catch (error) {
       console.error("Erro ao limpar distribuições:", error);
     } finally {
