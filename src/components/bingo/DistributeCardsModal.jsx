@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  X, Copy, Check, CheckCircle2, MessageCircle, ChevronDown, Hash,
+  X, Copy, Check, CheckCircle2, MessageCircle, ChevronDown, Hash, Trash2,
   Link2, Users, Layers, AlertCircle
 } from "lucide-react";
 
@@ -123,6 +123,17 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, e
         <p className="text-xs text-amber-600 flex items-center gap-1">
           <AlertCircle className="w-3 h-3" /> {distributedInThisRange} cartela(s) já distribuída(s) neste intervalo
         </p>
+      )}
+
+      {valid && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full h-8 text-xs text-destructive hover:text-destructive"
+          onClick={() => { onChange(seller.id, "from", ""); onChange(seller.id, "to", ""); }}
+        >
+          <Trash2 className="w-3 h-3" /> Limpar distribuição deste vendedor
+        </Button>
       )}
 
       <div className="flex gap-2">
