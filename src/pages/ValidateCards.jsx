@@ -13,15 +13,16 @@ import { Link } from "react-router-dom";
 
 // Modal para registrar/editar venda
 function SellModal({ card, onClose, onSaved }) {
-  const [buyerName, setBuyerName] = useState(card.player_name || "");
-  const [buyerPhone, setBuyerPhone] = useState(card.player_phone || "");
+  // Não pré-preenche com nome da cartela — começa em branco
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     if (!buyerPhone.trim()) return;
     setSaving(true);
     await base44.entities.BingoCard.update(card.id, {
-      player_name: buyerName.trim() || card.player_name,
+      player_name: buyerName.trim() || "",
       player_phone: buyerPhone.trim(),
     });
     setSaving(false);
@@ -267,13 +268,11 @@ export default function ValidateCards() {
                         {/* Buyer info */}
                         {showDetails && sold && (
                           <div className="flex-1 min-w-0 flex flex-wrap gap-x-4 gap-y-0.5">
-                            {card.player_name && (
-                              <span className="flex items-center gap-1 text-sm text-green-800 truncate">
-                                <User className="w-3.5 h-3.5 shrink-0" />
-                                {card.player_name}
-                              </span>
-                            )}
-                            {card.player_phone && (
+                            <span className="flex items-center gap-1 text-sm text-green-800 truncate">
+                              <User className="w-3.5 h-3.5 shrink-0" />
+                              {card.player_name || <span className="italic text-muted-foreground">—</span>}
+                            </span>
+                            {card.player_phone && card.player_phone !== "vendida" && (
                               <span className="flex items-center gap-1 text-sm text-green-700">
                                 <Phone className="w-3.5 h-3.5 shrink-0" />
                                 {card.player_phone}
