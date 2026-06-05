@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/comp
 // CardHeader/CardFooter/BingoGrid removed — grid view only
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle, Upload, Filter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
 import SellCardModal from "@/components/bingo/SellCardModal";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 export default function GameCards() {
   const { gameId } = useParams();
@@ -34,6 +35,7 @@ export default function GameCards() {
   const [showRangeDelete, setShowRangeDelete] = useState(false);
   const [sellCard, setSellCard] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [sellerFilter, setSellerFilter] = useState("");
   const fileInputRef = useRef(null);
 
   const { data: game } = useQuery({
@@ -46,6 +48,22 @@ export default function GameCards() {
     queryKey: ["cards", gameId],
     queryFn: () => base44.entities.BingoCard.filter({ game_id: String(gameId) }),
   });
+
+  const { data: sellers = [] } = useQuery({
+    queryKey: ["sellers"],
+    queryFn: () => base44.entities.Seller.list(),
+  });
+
+  const filteredCards = useMemo(() => {
+    let result = [...cards];
+    if (sellerFilter) {
+      const seller = sellers.find((s) => s.id === sellerFilter);
+      if (seller) {
+        result = result.filter((c) => c.player_phone === seller.phone || c.player_city === seller.city);
+      }
+    }
+    return result.sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
+  }, [cards, sellers, sellerFilter]);
 
   const handleGenerate = async () => {
     if (!playerName.trim()) return;
@@ -238,7 +256,7 @@ export default function GameCards() {
               </Link>
             )}
             <Badge variant="outline" className="text-sm">
-              {cards.length} cartelas
+              {filteredCards.length} cartelas{sellerFilter ? ` (${cards.length} total)` : ""}
             </Badge>
             <Button
               variant="outline"
@@ -388,9 +406,25 @@ export default function GameCards() {
         {/* Selection toolbar */}
         {cards.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={selectedIds.size === cards.length ? clearSelection : selectAll}>
-              {selectedIds.size === cards.length ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
-              {selectedIds.size === cards.length ? "Desmarcar todas" : "Selecionar todas"}
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm">Filtrar por vendedor:</Label>
+              <select
+                value={sellerFilter}
+                onChange={(e) => setSellerFilter(e.target.value)}
+                className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">Todos os vendedores</option>
+                {sellers.map((seller) => (
+                  <option key={seller.id} value={seller.id}>
+                    {seller.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={selectedIds.size === filteredCards.length ? clearSelection : selectAll}>
+              {selectedIds.size === filteredCards.length ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+              {selectedIds.size === filteredCards.length ? "Desmarcar todas" : "Selecionar todas"}
             </Button>
 
             {selectedIds.size > 0 && (
@@ -459,7 +493,7 @@ export default function GameCards() {
           </div>
         ) : (
           <div className="grid gap-2 grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
-            {[...cards].sort((a, b) => (a.card_number || 0) - (b.card_number || 0)).map((card) => (
+            {filteredCards.map((card) => (
               <div
                 key={card.id}
                 className={`relative group flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
