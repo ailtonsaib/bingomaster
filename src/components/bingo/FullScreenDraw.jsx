@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye } from "lucide-react";
+import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BingoNumberBall from "./BingoNumberBall";
@@ -7,6 +7,7 @@ import BingoGrid from "./BingoGrid";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function FullScreenDraw({ game, cards, onClose }) {
   const queryClient = useQueryClient();
@@ -14,6 +15,8 @@ export default function FullScreenDraw({ game, cards, onClose }) {
   const [cardStats, setCardStats] = useState({});
   const [drawing, setDrawing] = useState(false);
   const [showWinningCardsModal, setShowWinningCardsModal] = useState(false);
+  const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
+  const [autoInterval, setAutoInterval] = useState(5000); // 5 segundos
 
   const updateGame = async (updates) => {
     if (!game) return;
@@ -51,6 +54,17 @@ export default function FullScreenDraw({ game, cards, onClose }) {
       drawn_numbers: [],
       prizes: (game.prizes || []).map(p => ({ ...p, awarded: false }))
     });
+
+  // Sorteio automático
+  useEffect(() => {
+    if (!isPlaying || drawMode !== "auto" || drawing || allDrawn) return;
+
+    const interval = setInterval(() => {
+      handleDraw();
+    }, autoInterval);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, drawMode, autoInterval, drawing, allDrawn]);
 
   useEffect(() => {
     if (!game?.drawn_numbers) return;
@@ -170,7 +184,7 @@ export default function FullScreenDraw({ game, cards, onClose }) {
           </div>
 
           {/* Controles de Sorteio */}
-          <div className="flex flex-wrap gap-3 justify-center mt-2">
+          <div className="flex flex-wrap gap-3 justify-center items-center mt-2">
             {isWaiting && (
               <Button
                 size="lg"
@@ -182,15 +196,64 @@ export default function FullScreenDraw({ game, cards, onClose }) {
             )}
             {isPlaying && (
               <>
+                {/* Seletor de Modo */}
+                <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1.5 border border-white/20">
+                  <Button
+                    size="sm"
+                    variant={drawMode === "manual" ? "default" : "ghost"}
+                    onClick={() => setDrawMode("manual")}
+                    className={drawMode === "manual" ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-white hover:bg-white/10"}
+                    title="Sorteio manual - clique para sortear"
+                  >
+                    <Hand className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={drawMode === "normal" ? "default" : "ghost"}
+                    onClick={() => setDrawMode("normal")}
+                    className={drawMode === "normal" ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-white hover:bg-white/10"}
+                    title="Sorteio normal - ritmo moderado"
+                  >
+                    <Zap className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={drawMode === "auto" ? "default" : "ghost"}
+                    onClick={() => setDrawMode("auto")}
+                    className={drawMode === "auto" ? "bg-accent text-accent-foreground hover:bg-accent/90" : "text-white hover:bg-white/10"}
+                    title="Sorteio automático - contínuo"
+                  >
+                    <Clock className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Intervalo para modo automático */}
+                {drawMode === "auto" && (
+                  <Select value={String(autoInterval)} onValueChange={(v) => setAutoInterval(Number(v))}>
+                    <SelectTrigger className="w-36 border-white/30 text-white">
+                      <SelectValue placeholder="Intervalo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3000">3 segundos</SelectItem>
+                      <SelectItem value="5000">5 segundos</SelectItem>
+                      <SelectItem value="10000">10 segundos</SelectItem>
+                      <SelectItem value="15000">15 segundos</SelectItem>
+                      <SelectItem value="30000">30 segundos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* Botão de sortear */}
                 <Button
                   size="lg"
                   className="gap-2 px-10 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold min-w-52"
                   onClick={handleDraw}
-                  disabled={drawing || allDrawn}
+                  disabled={drawing || allDrawn || drawMode === "auto"}
                 >
                   <Shuffle className="w-5 h-5" />
-                  {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : "Sortear Número"}
+                  {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : drawMode === "auto" ? "Automático" : "Sortear Número"}
                 </Button>
+
                 <Button
                   size="lg"
                   variant="outline"
