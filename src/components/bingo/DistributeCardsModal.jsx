@@ -165,6 +165,7 @@ export default function DistributeCardsModal({ onClose }) {
   const [assignments, setAssignments] = useState({});
   const [autoFrom, setAutoFrom] = useState("");
   const [autoQty, setAutoQty] = useState("");
+  const [clearing, setClearing] = useState(false);
 
   const { data: games = [] } = useQuery({
     queryKey: ["dist-games"],
@@ -195,6 +196,25 @@ export default function DistributeCardsModal({ onClose }) {
       ...prev,
       [sellerId]: { ...(prev[sellerId] || {}), [field]: value },
     }));
+  };
+
+  const handleClearAll = async () => {
+    if (!selectedGame || !window.confirm("Tem certeza que deseja excluir TODAS as cartelas distribuídas deste jogo? Esta ação não pode ser desfeita.")) return;
+    
+    setClearing(true);
+    try {
+      const distributedCards = cards.filter((c) => c.player_phone || c.player_city);
+      if (distributedCards.length > 0) {
+        await Promise.all(distributedCards.map((c) => base44.entities.BingoCard.delete(c.id)));
+      }
+      setAssignments({});
+      setAutoFrom("");
+      setAutoQty("");
+    } catch (error) {
+      console.error("Erro ao limpar distribuições:", error);
+    } finally {
+      setClearing(false);
+    }
   };
 
   // Auto-distribute: starting from autoFrom, give autoQty to each seller in order, skipping distributed numbers
@@ -282,26 +302,40 @@ export default function DistributeCardsModal({ onClose }) {
           {selectedGame && (
             <>
               {/* Info */}
-              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Hash className="w-3.5 h-3.5" />
-                  {cards.length} cartelas ({String(minCard).padStart(4,"0")}–{String(maxCard).padStart(4,"0")})
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" />
-                  {sellers.length} vendedores ativos
-                </span>
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Hash className="w-3.5 h-3.5" />
+                    {cards.length} cartelas ({String(minCard).padStart(4,"0")}–{String(maxCard).padStart(4,"0")})
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5" />
+                    {sellers.length} vendedores ativos
+                  </span>
+                  {distributedNumbers.length > 0 && (
+                    <span className="flex items-center gap-1 text-amber-600">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {distributedNumbers.length} já distribuídas/vendidas
+                    </span>
+                  )}
+                  {cards.length - distributedNumbers.length > 0 && (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {cards.length - distributedNumbers.length} disponíveis
+                    </span>
+                  )}
+                </div>
                 {distributedNumbers.length > 0 && (
-                  <span className="flex items-center gap-1 text-amber-600">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {distributedNumbers.length} já distribuídas/vendidas
-                  </span>
-                )}
-                {cards.length - distributedNumbers.length > 0 && (
-                  <span className="flex items-center gap-1 text-green-600">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {cards.length - distributedNumbers.length} disponíveis
-                  </span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="w-full gap-2"
+                    onClick={handleClearAll}
+                    disabled={clearing}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {clearing ? "Limpando..." : `Limpar todas as ${distributedNumbers.length} distribuições`}
+                  </Button>
                 )}
               </div>
 
