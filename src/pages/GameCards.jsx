@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCirc
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
+import SellCardModal from "@/components/bingo/SellCardModal";
 import { motion } from "framer-motion";
 
 export default function GameCards() {
@@ -31,6 +32,7 @@ export default function GameCards() {
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
   const [showRangeDelete, setShowRangeDelete] = useState(false);
+  const [sellCard, setSellCard] = useState(null);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -191,6 +193,14 @@ export default function GameCards() {
             </Badge>
           </div>
         </div>
+
+        {sellCard && (
+          <SellCardModal
+            card={sellCard}
+            onClose={() => setSellCard(null)}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["cards", gameId] })}
+          />
+        )}
 
         <BulkGenerateModal
           open={bulkOpen}
@@ -357,9 +367,11 @@ export default function GameCards() {
             {cards.map((card) => (
               <div
                 key={card.id}
-                onClick={() => toggleSelect(card.id)}
-                className={`relative flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
-                  ${selectedIds.has(card.id) ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary" : "bg-card hover:bg-muted/60 border-border"}`}
+                className={`relative group flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
+                  ${selectedIds.has(card.id) ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary" : 
+                    card.player_phone || card.player_city ? "bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700" :
+                    "bg-card hover:bg-muted/60 border-border"}`}
+                onClick={() => setSellCard(card)}
               >
                 <span className="text-xs font-bold leading-none">
                   {String(card.card_number || "").padStart(3, "0")}
@@ -368,7 +380,7 @@ export default function GameCards() {
                   {card.player_name}
                 </span>
                 <button
-                  className="absolute top-0.5 right-0.5 opacity-0 hover:opacity-100 group-hover:opacity-100 text-destructive"
+                  className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 text-destructive"
                   onClick={(e) => { e.stopPropagation(); handleDelete(card.id); }}
                   title="Excluir"
                 >
