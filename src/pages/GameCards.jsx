@@ -6,15 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/components/ui/card";
+// CardHeader/CardFooter/BingoGrid removed — grid view only
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBingoGrid } from "@/lib/bingoUtils";
-import BingoGrid from "@/components/bingo/BingoGrid";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
-import CardHeader from "@/components/bingo/CardHeader";
-import CardFooter from "@/components/bingo/CardFooter";
 import { motion } from "framer-motion";
 
 export default function GameCards() {
@@ -345,9 +343,9 @@ export default function GameCards() {
 
         {/* Cards list */}
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-80 rounded-xl bg-muted animate-pulse" />
+          <div className="grid gap-3 grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+            {[...Array(20)].map((_, i) => (
+              <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
             ))}
           </div>
         ) : cards.length === 0 ? (
@@ -355,65 +353,28 @@ export default function GameCards() {
             <p>Nenhuma cartela gerada ainda.</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {cards.map((card, idx) => (
-              <motion.div
+          <div className="grid gap-2 grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
+            {cards.map((card) => (
+              <div
                 key={card.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.03 }}
+                onClick={() => toggleSelect(card.id)}
+                className={`relative flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
+                  ${selectedIds.has(card.id) ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary" : "bg-card hover:bg-muted/60 border-border"}`}
               >
-                <Card className={`overflow-hidden transition-all ${selectedIds.has(card.id) ? "ring-2 ring-primary" : ""}`}>
-                  <UiCardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedIds.has(card.id)}
-                          onCheckedChange={() => toggleSelect(card.id)}
-                          className="shrink-0"
-                        />
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="w-3.5 h-3.5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">{card.player_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Cartela #{card.card_number} · {card.chances === 2 ? "2 chances" : "1 chance"}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(card.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </UiCardHeader>
-                  <CardContent>
-                    <CardHeader game={game} card={card} />
-                    <div className={`flex ${card.chances === 2 ? "gap-3 justify-center" : "justify-center"}`}>
-                      <BingoGrid
-                        numbers={card.grid_1}
-                        drawnNumbers={game?.drawn_numbers || []}
-                        label={card.chances === 2 ? "Chance 1" : undefined}
-                        compact={card.chances === 2}
-                      />
-                      {card.chances === 2 && card.grid_2 && (
-                        <BingoGrid
-                          numbers={card.grid_2}
-                          drawnNumbers={game?.drawn_numbers || []}
-                          label="Chance 2"
-                          compact
-                        />
-                      )}
-                    </div>
-                    <CardFooter card={card} />
-                  </CardContent>
-                </Card>
-              </motion.div>
+                <span className="text-xs font-bold leading-none">
+                  {String(card.card_number || "").padStart(3, "0")}
+                </span>
+                <span className="text-[10px] text-current opacity-60 mt-0.5 truncate w-full text-center">
+                  {card.player_name}
+                </span>
+                <button
+                  className="absolute top-0.5 right-0.5 opacity-0 hover:opacity-100 group-hover:opacity-100 text-destructive"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(card.id); }}
+                  title="Excluir"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
             ))}
           </div>
         )}
