@@ -60,11 +60,21 @@ export default function FullScreenDraw({ game, cards, onClose }) {
     if (!isPlaying || drawMode !== "auto" || drawing || allDrawn) return;
 
     const interval = setInterval(() => {
-      handleDraw();
+      // Sortear número aleatório não sorteado
+      const available = Array.from({ length: maxNumber }, (_, i) => i + 1)
+        .filter(n => !drawnNumbers.includes(n));
+      
+      if (available.length === 0) return;
+
+      const randomIndex = Math.floor(Math.random() * available.length);
+      const num = available[randomIndex];
+      
+      const newDrawn = [...drawnNumbers, num];
+      updateGame({ drawn_numbers: newDrawn });
     }, autoInterval);
 
     return () => clearInterval(interval);
-  }, [isPlaying, drawMode, autoInterval, drawing, allDrawn]);
+  }, [isPlaying, drawMode, autoInterval, drawing, allDrawn, drawnNumbers, maxNumber]);
 
   useEffect(() => {
     if (!game?.drawn_numbers) return;
