@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles } from "lucide-react";
 import { drawNumber, checkAllCardsForBingo } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -19,6 +20,11 @@ export default function GamePlay() {
   const [winners, setWinners] = useState([]);
   const [drawType, setDrawType] = useState("horizontal");
   const [cardFilter, setCardFilter] = useState("all"); // "all" ou "sold"
+  const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
+  const [manualNumber, setManualNumber] = useState("");
+  const [autoInterval, setAutoInterval] = useState(5); // segundos
+  const [autoDrawing, setAutoDrawing] = useState(false);
+  const [autoTimer, setAutoTimer] = useState(null);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -39,10 +45,27 @@ export default function GamePlay() {
 
   const handleStart = () => updateGame({ status: "in_progress" });
 
-  const handleDraw = async () => {
+  const handleDraw = async (number = null) => {
     if (!game || drawing) return;
     setDrawing(true);
-    const num = drawNumber(game.drawn_numbers || [], game.max_number || 75);
+    
+    let num;
+    if (number !== null) {
+      // Manual mode: use provided number
+      num = parseInt(number);
+      if (isNaN(num) || num < 1 || num > maxNumber) {
+        setDrawing(false);
+        return;
+      }
+      if (drawnNumbers.includes(num)) {
+        setDrawing(false);
+        return;
+      }
+    } else {
+      // Normal mode: random draw
+      num = drawNumber(game.drawn_numbers || [], game.max_number || 75);
+    }
+    
     if (num !== null) {
       const newDrawn = [...(game.drawn_numbers || []), num];
       await updateGame({ drawn_numbers: newDrawn });
@@ -58,6 +81,39 @@ export default function GamePlay() {
     }
     setTimeout(() => setDrawing(false), 800);
   };
+
+  const handleManualDraw = () => {
+    if (!manualNumber.trim()) return;
+    handleDraw(manualNumber);
+    setManualNumber("");
+  };
+
+  const toggleAutoDraw = () => {
+    if (autoDrawing) {
+      // Stop auto draw
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        setAutoTimer(null);
+      }
+      setAutoDrawing(false);
+    } else {
+      // Start auto draw
+      setAutoDrawing(true);
+      const timer = setInterval(() => {
+        handleDraw();
+      }, autoInterval * 1000);
+      setAutoTimer(timer);
+    }
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoTimer) {
+        clearInterval(autoTimer);
+      }
+    };
+  }, [autoTimer]);
 
   const handleConfirmWinners = async () => {
     if (winners.length === 0) return;
@@ -225,6 +281,42 @@ export default function GamePlay() {
                 )}
               </div>
 
+              {/* Draw mode selector */}
+              <div className="w-full">
+                <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Modo de Sorteio</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: "manual", label: "Manual", icon: Keyboard, desc: "Digite o número" },
+                    { value: "auto", label: "Automático", icon: Timer, desc: `${autoInterval}s` },
+                    { value: "normal", label: "Normal", icon: Sparkles, desc: "Clique para sortear" },
+                  ].map((opt) => {
+                    const Icon = opt.icon;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          if (!isPlaying) return;
+                          setDrawMode(opt.value);
+                          if (autoDrawing && opt.value !== "auto") {
+                            toggleAutoDraw();
+                          }
+                        }}
+                        disabled={!isPlaying}
+                        className={`rounded-xl px-2 py-3 text-xs font-semibold transition-all border flex flex-col items-center gap-1 ${
+                          drawMode === opt.value
+                            ? "bg-primary border-primary text-white shadow-lg shadow-primary/30"
+                            : "bg-white/10 border-white/10 text-violet-300 hover:bg-white/20"
+                        } disabled:opacity-60 disabled:cursor-not-allowed`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{opt.label}</span>
+                        <span className="text-[10px] opacity-80">{opt.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Control buttons */}
               <div className="flex flex-wrap gap-3 justify-center mt-2">
                 {isWaiting && (
@@ -234,15 +326,67 @@ export default function GamePlay() {
                 )}
                 {isPlaying && (
                   <>
-                    <Button
-                      size="lg"
-                      className="gap-2 px-10 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold min-w-52"
-                      onClick={handleDraw}
-                      disabled={drawing || allDrawn}
-                    >
-                      <Shuffle className="w-5 h-5" />
-                      {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : "Sortear Número"}
-                    </Button>
+                    {drawMode === "manual" && (
+                      <div className="flex gap-2 w-full max-w-xs">
+                        <Input
+                          type="number"
+                          min="1"
+                          max={maxNumber}
+                          value={manualNumber}
+                          onChange={(e) => setManualNumber(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleManualDraw()}
+                          placeholder="Nº"
+                          className="h-12 text-center text-lg font-bold bg-white/10 border-white/20 text-white placeholder:text-violet-400"
+                          disabled={drawing || allDrawn}
+                        />
+                        <Button
+                          size="lg"
+                          className="gap-2 px-6 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold"
+                          onClick={handleManualDraw}
+                          disabled={drawing || allDrawn || !manualNumber}
+                        >
+                          <Keyboard className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    )}
+                    {drawMode === "auto" && (
+                      <div className="flex gap-2 items-center w-full max-w-xs">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={autoInterval}
+                          onChange={(e) => setAutoInterval(Math.max(1, Math.min(60, parseInt(e.target.value) || 5)))}
+                          className="h-12 w-20 text-center text-lg font-bold bg-white/10 border-white/20 text-white"
+                          disabled={autoDrawing || drawing}
+                        />
+                        <span className="text-sm text-violet-300">segundos</span>
+                        <Button
+                          size="lg"
+                          className={`gap-2 px-6 border-0 text-lg font-bold ${
+                            autoDrawing
+                              ? "bg-red-500 hover:bg-red-600 text-white"
+                              : "bg-accent hover:bg-accent/90 text-accent-foreground"
+                          }`}
+                          onClick={toggleAutoDraw}
+                          disabled={drawing || allDrawn}
+                        >
+                          <Timer className="w-5 h-5" />
+                          {autoDrawing ? "Parar" : "Iniciar"}
+                        </Button>
+                      </div>
+                    )}
+                    {drawMode === "normal" && (
+                      <Button
+                        size="lg"
+                        className="gap-2 px-10 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold min-w-52"
+                        onClick={() => handleDraw()}
+                        disabled={drawing || allDrawn}
+                      >
+                        <Shuffle className="w-5 h-5" />
+                        {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : "Sortear Número"}
+                      </Button>
+                    )}
                     <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={handleFinish}>
                       <Square className="w-4 h-4" /> Encerrar
                     </Button>
