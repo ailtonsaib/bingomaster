@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/comp
 // CardHeader/CardFooter/BingoGrid removed — grid view only
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle, Upload, Filter } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle, Upload, Filter, FileText } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
@@ -192,6 +192,23 @@ export default function GameCards() {
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
   };
 
+  const handleGenerateReport = async () => {
+    try {
+      const response = await base44.functions.invoke('generateDistributionReport', {});
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `relatorio_distribuicao_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      alert('Erro ao gerar relatório. Tente novamente.');
+    }
+  };
+
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -266,6 +283,13 @@ export default function GameCards() {
                 </Button>
               </Link>
             )}
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleGenerateReport}
+            >
+              <FileText className="w-4 h-4 text-primary" /> Relatório
+            </Button>
             <Badge variant="outline" className="text-sm">
               {filteredCards.length} cartelas{sellerFilter ? ` (${cards.length} total)` : ""}
             </Badge>
