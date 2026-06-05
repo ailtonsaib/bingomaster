@@ -11,6 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function FullScreenDraw({ game, cards, onClose }) {
   const queryClient = useQueryClient();
+  
+  // Variáveis derivadas do game (devem vir primeiro)
+  const maxNumber = game?.max_number || 75;
+  const drawnNumbers = game?.drawn_numbers || [];
+  const lastNumber = drawnNumbers[drawnNumbers.length - 1];
+  const isPlaying = game?.status === "in_progress";
+  const isWaiting = game?.status === "waiting";
+  const isFinished = game?.status === "finished";
+  const allDrawn = drawnNumbers.length >= maxNumber;
+  
   const [winnerCards, setWinnerCards] = useState([]);
   const [cardStats, setCardStats] = useState({});
   const [drawing, setDrawing] = useState(false);
@@ -148,14 +158,6 @@ export default function FullScreenDraw({ game, cards, onClose }) {
     }
     return phone;
   };
-
-  const maxNumber = game?.max_number || 75;
-  const drawnNumbers = game?.drawn_numbers || [];
-  const lastNumber = drawnNumbers[drawnNumbers.length - 1];
-  const isPlaying = game?.status === "in_progress";
-  const isWaiting = game?.status === "waiting";
-  const isFinished = game?.status === "finished";
-  const allDrawn = drawnNumbers.length >= maxNumber;
 
   const columns = useMemo(() => {
     const cols = {
