@@ -79,7 +79,7 @@ export default function PrintCards() {
     rangeLabel = `${from}–${to}`;
   }
   
-  const pages = chunkArray(displayCards, CARDS_PER_PAGE);
+  const pages = chunkArray([...displayCards].sort((a, b) => (a.card_number || 0) - (b.card_number || 0)), CARDS_PER_PAGE);
 
   return (
     <>
