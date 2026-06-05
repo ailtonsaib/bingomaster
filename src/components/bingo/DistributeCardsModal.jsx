@@ -38,13 +38,9 @@ function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange })
 
   const handleWhatsApp = () => {
     const phone = seller.phone?.replace(/\D/g, "");
-    const rangeText = valid
-      ? `de *${String(from).padStart(4, "0")}* a *${String(to).padStart(4, "0")}* (${count} cartelas)`
-      : "(todas as cartelas)";
-    const msg = `Olá ${seller.name}! 👋\n\nSeu link para registrar vendas do *${game.name}*:\n\n${link}\n\nSuas cartelas: ${rangeText}\n\nBoas vendas! 🎉`;
     const url = phone
-      ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      ? `https://wa.me/55${phone}?text=${encodeURIComponent(link)}`
+      : `https://wa.me/?text=${encodeURIComponent(link)}`;
     window.open(url, "_blank");
   };
 
