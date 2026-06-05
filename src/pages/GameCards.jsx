@@ -459,7 +459,7 @@ export default function GameCards() {
           </div>
         ) : (
           <div className="grid gap-2 grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
-            {cards.map((card) => (
+            {[...cards].sort((a, b) => (a.card_number || 0) - (b.card_number || 0)).map((card) => (
               <div
                 key={card.id}
                 className={`relative group flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
