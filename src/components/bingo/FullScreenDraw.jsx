@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,13 @@ import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
+export default function FullScreenDraw({ game, cards, onClose, updateGame, autoDrawing, setAutoDrawing, autoInterval, setAutoInterval }) {
+  const drawMode = autoDrawing ? "auto" : "manual";
+  const setDrawMode = (mode) => {
+    if (mode === "auto" && !autoDrawing) setAutoDrawing(true);
+    if (mode !== "auto" && autoDrawing) setAutoDrawing(false);
+  };
+  
   // Busca dados sempre atualizados do banco
   const { data: freshGame } = useQuery({
     queryKey: ["game", game?.id],
@@ -31,8 +37,6 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
   const [cardStats, setCardStats] = useState({});
   const [drawing, setDrawing] = useState(false);
   const [showWinningCardsModal, setShowWinningCardsModal] = useState(false);
-  const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
-  const [autoInterval, setAutoInterval] = useState(5000); // 5 segundos
 
   const handleDraw = async () => {
     if (!currentGame || drawing) return;
@@ -62,43 +66,6 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
       prizes: (currentGame.prizes || []).map(p => ({ ...p, awarded: false }))
     });
   const handleClearDraw = () => updateGame({ drawn_numbers: [] });
-
-  // Sorteio automático
-  useEffect(() => {
-    if (!isPlaying || drawMode !== "auto" || allDrawn) return;
-    if (!updateGame) {
-      console.error("[Auto] updateGame não fornecido!");
-      return;
-    }
-
-    const drawNumber = async () => {
-      try {
-        const currentDrawn = drawnNumbers;
-        const currentMax = maxNumber;
-        
-        const available = Array.from({ length: currentMax }, (_, i) => i + 1)
-          .filter(n => !currentDrawn.includes(n));
-        
-        if (available.length === 0) return;
-
-        const num = available[Math.floor(Math.random() * available.length)];
-        const newDrawn = [...currentDrawn, num];
-        
-        console.log("[Auto] Sorteando:", num, "Total:", newDrawn.length);
-        await updateGame({ drawn_numbers: newDrawn });
-      } catch (error) {
-        console.error("[Auto] ERRO:", error);
-      }
-    };
-
-    console.log("[Auto] Iniciando intervalo:", autoInterval, "ms");
-    const intervalId = setInterval(drawNumber, autoInterval);
-
-    return () => {
-      console.log("[Auto] Limpando intervalo");
-      clearInterval(intervalId);
-    };
-  }, [isPlaying, drawMode, autoInterval, allDrawn, drawnNumbers, maxNumber, updateGame]);
 
   useEffect(() => {
     if (!currentGame?.drawn_numbers) return;
@@ -137,7 +104,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame }) {
 
     setCardStats(stats);
     setWinnerCards(winners);
-  }, [game?.drawn_numbers, cards]);
+  }, [currentGame?.drawn_numbers, cards]);
 
   const formatPhone = (phone) => {
     if (!phone) return "";

@@ -93,15 +93,15 @@ export default function GamePlay() {
 
   const toggleAutoDraw = () => {
     if (autoDrawing) {
-      // Stop auto draw
       if (autoTimer) {
         clearInterval(autoTimer);
         setAutoTimer(null);
       }
       setAutoDrawing(false);
+      setDrawMode("normal");
     } else {
-      // Start auto draw
       setAutoDrawing(true);
+      setDrawMode("auto");
       const timer = setInterval(() => {
         handleDraw();
       }, autoInterval * 1000);
@@ -183,6 +183,10 @@ export default function GamePlay() {
           cards={cards}
           onClose={() => setShowFullScreen(false)}
           updateGame={updateGame}
+          autoDrawing={autoDrawing}
+          setAutoDrawing={setAutoDrawing}
+          autoInterval={autoInterval}
+          setAutoInterval={setAutoInterval}
         />
       )}
       <div className="max-w-7xl mx-auto px-4 py-5">
