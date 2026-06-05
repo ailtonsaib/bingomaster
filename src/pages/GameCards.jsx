@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader as UiCardHeader, CardTitle } from "@/comp
 // CardHeader/CardFooter/BingoGrid removed — grid view only
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle } from "lucide-react";
+import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle, Upload } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBingoGrid } from "@/lib/bingoUtils";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
@@ -33,6 +33,8 @@ export default function GameCards() {
   const [rangeTo, setRangeTo] = useState("");
   const [showRangeDelete, setShowRangeDelete] = useState(false);
   const [sellCard, setSellCard] = useState(null);
+  const [showImport, setShowImport] = useState(false);
+  const fileInputRef = useRef(null);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -161,6 +163,53 @@ export default function GameCards() {
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
   };
 
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (!Array.isArray(data)) {
+          alert("Formato de arquivo inválido");
+          return;
+        }
+
+        const newCards = [];
+        for (const item of data) {
+          const g1a = generateBingoGrid();
+          const cardData = {
+            game_id: String(gameId),
+            player_name: item.player_name || "",
+            player_phone: item.player_phone || "",
+            player_city: item.player_city || "",
+            player_state: item.player_state || "",
+            chances: item.chances || 1,
+            grid_1a: g1a, grid_1b: g1a, grid_1c: g1a,
+            grid_1: g1a,
+            card_number: item.card_number || (cards.length + newCards.length + 1),
+          };
+          if (item.chances === 2) {
+            const g2a = generateBingoGrid();
+            cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
+            cardData.grid_2 = g2a;
+          }
+          newCards.push(cardData);
+        }
+
+        await base44.entities.BingoCard.bulkCreate(newCards);
+        queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+        setShowImport(false);
+        alert(`${newCards.length} cartela(s) importada(s) com sucesso!`);
+      } catch (error) {
+        alert("Erro ao importar arquivo: " + error.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -191,6 +240,13 @@ export default function GameCards() {
             <Badge variant="outline" className="text-sm">
               {cards.length} cartelas
             </Badge>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setShowImport(true)}
+            >
+              <Upload className="w-4 h-4 text-primary" /> Importar
+            </Button>
           </div>
         </div>
 
@@ -208,6 +264,45 @@ export default function GameCards() {
           onGenerate={handleBulkGenerate}
           generating={generating}
         />
+
+        {showImport && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-xl max-w-md w-full p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold font-heading">Importar Cartelas</h2>
+                <button onClick={() => setShowImport(false)} className="text-muted-foreground">
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Selecione um arquivo JSON exportado com cartelas vendidas
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Selecionar Arquivo
+              </Button>
+              <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
+                <p className="font-medium mb-1">Formato esperado:</p>
+                <p>Arquivo JSON com array de cartelas contendo: card_number, player_name, player_phone, player_city, player_state, chances</p>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowImport(false)} className="flex-1">
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Generate form */}
         <Card className="mb-8">

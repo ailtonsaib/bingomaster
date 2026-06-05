@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
-  ChevronDown, UserCheck, Hash
+  ChevronDown, UserCheck, Hash, Download
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -326,6 +326,54 @@ function CardRangeStep({ seller, game, onConfirm, onBack }) {
   );
 }
 
+// --- Export Sold Cards Modal ---
+function ExportSoldModal({ game, seller, soldCards, onClose }) {
+  const handleExport = () => {
+    const data = soldCards.map((c) => ({
+      card_number: c.card_number,
+      player_name: c.player_name,
+      player_phone: c.player_phone || "",
+      player_city: c.player_city || "",
+      player_state: c.player_state || "",
+      chances: c.chances,
+    }));
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cartelas-vendidas-${game.name.replace(/\s+/g, "-").toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-background rounded-xl max-w-md w-full p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold font-heading">Exportar Cartelas Vendidas</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {soldCards.length} cartela(s) vendida(s)
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Cancelar
+          </Button>
+          <Button onClick={handleExport} disabled={soldCards.length === 0} className="flex-1 gap-2">
+            <Download className="w-4 h-4" />
+            Exportar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Step 3: Card selection & sale ---
 function SellStep({ seller, game, cardRange, onBack }) {
   const queryClient = useQueryClient();
@@ -336,6 +384,7 @@ function SellStep({ seller, game, cardRange, onBack }) {
   const [buyerAddress, setBuyerAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedCard, setSavedCard] = useState(null);
+  const [showExport, setShowExport] = useState(false);
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["sell-cards", game.id],
@@ -353,6 +402,7 @@ function SellStep({ seller, game, cardRange, onBack }) {
 
   const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
   const sold = rangeCards.filter((c) => c.player_phone || c.player_city);
+  const soldCards = sold;
 
   const filtered = rangeCards.filter((c) => {
     const q = search.toLowerCase();
@@ -542,8 +592,28 @@ function SellStep({ seller, game, cardRange, onBack }) {
               <ShoppingCart className="w-5 h-5" />
               {saving ? "Registrando..." : "Confirmar Venda"}
             </Button>
+
+            {sold.length > 0 && (
+              <Button
+                variant="outline"
+                className="w-full h-12 text-base gap-2 mt-2"
+                onClick={() => setShowExport(true)}
+              >
+                <Download className="w-4 h-4" />
+                Exportar {sold.length} Cartela(s) Vendida(s)
+              </Button>
+            )}
           </div>
         </div>
+      )}
+
+      {showExport && (
+        <ExportSoldModal
+          game={game}
+          seller={seller}
+          soldCards={sold}
+          onClose={() => setShowExport(false)}
+        />
       )}
     </div>
   );
