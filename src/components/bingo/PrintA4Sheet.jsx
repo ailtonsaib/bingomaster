@@ -137,7 +137,9 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
-        <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} />
+        <div style={{ marginTop: 60 }}>
+          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} />
+        </div>
       )}
 
       {/* Spacer */}
