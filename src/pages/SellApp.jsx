@@ -226,7 +226,7 @@ function CardRangeStep({ seller, game, onConfirm, onBack }) {
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["sell-cards-range", game.id],
-    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }),
+    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }, "card_number", 10000),
   });
 
   const totalCards = cards.length;
@@ -418,7 +418,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["sell-cards", game.id],
-    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }),
+    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }, "card_number", 10000),
   });
 
   // Detect new cards since last visit
