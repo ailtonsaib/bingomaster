@@ -52,6 +52,13 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
     return ranges;
   }, [assigned, cards, selectedSeller]);
 
+  // Card number bounds
+  const { minCard, maxCard } = useMemo(() => {
+    if (!cards || cards.length === 0) return { minCard: null, maxCard: null };
+    const nums = cards.map((c) => c.card_number || 0);
+    return { minCard: Math.min(...nums), maxCard: Math.max(...nums) };
+  }, [cards]);
+
   // Check if current range overlaps with any taken range
   const overlapError = useMemo(() => {
     if (!valid) return null;
@@ -59,13 +66,24 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
     return overlap ? `Conflito: cartelas ${overlap.from}-${overlap.to} já foram distribuídas para ${overlap.label}` : null;
   }, [valid, fromN, toN, takenRanges]);
 
+  // Check if range is within available card numbers
+  const rangeError = useMemo(() => {
+    if (!valid || minCard === null) return null;
+    if (fromN < minCard || toN > maxCard) {
+      return `Fora do intervalo: cartelas disponíveis vão de ${minCard} a ${maxCard}`;
+    }
+    return null;
+  }, [valid, fromN, toN, minCard, maxCard]);
+
+  const hasError = overlapError || rangeError;
+
   // Find already assigned cards to this seller for this game
   const sellerCards = selectedSeller
     ? cards.filter((c) => c.player_name === selectedSeller.name || c.player_phone === selectedSeller.phone)
     : [];
 
   const handleAdd = () => {
-    if (!valid || overlapError) return;
+    if (!valid || hasError) return;
     onAdd(selectedSeller, fromN, toN);
     setSelectedSeller(null);
     setSearch("");
@@ -160,16 +178,30 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
           <Button
             className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 whitespace-nowrap"
             onClick={handleAdd}
-            disabled={!valid || !!overlapError}
+            disabled={!valid || !!hasError}
           >
             <span className="text-lg leading-none">+</span> Adicionar
           </Button>
         </div>
 
+        {/* Card range info */}
+        {minCard !== null && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+            Cartelas disponíveis: <strong>{minCard}</strong> a <strong>{maxCard}</strong> ({cards.length} no total)
+          </div>
+        )}
+
         {/* Overlap error */}
         {overlapError && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
             {overlapError}
+          </div>
+        )}
+
+        {/* Range error */}
+        {rangeError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            {rangeError}
           </div>
         )}
       </div>
