@@ -125,7 +125,7 @@ export default function DistributeCardsModal({ onClose }) {
 
   const { data: cards = [] } = useQuery({
     queryKey: ["dist-cards", selectedGame?.id],
-    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(selectedGame.id) }, "card_number", 10000),
+    queryFn: () => base44.functions.invoke("getGameCards", { game_id: String(selectedGame.id) }).then(r => r.data.cards),
     enabled: !!selectedGame,
   });
 
