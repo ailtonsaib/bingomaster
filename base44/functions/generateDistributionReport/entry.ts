@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     }).filter((s) => s.distributedCount > 0);
 
     // Calculate totals
-    const totalDistributed = allCards.filter((c) => c.player_phone || c.player_city).length;
+    const totalDistributed = allCards.filter((c) => c.seller_id).length;
     const totalCards = allCards.length;
 
     // Create PDF

@@ -46,8 +46,13 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
   const handleDelete = async () => {
     if (!window.confirm(`Excluir distribuição de ${seller.name}?`)) return;
     setDeleting(true);
-    const toDelete = existingCards.filter((c) => c.player_name === seller.name || c.player_phone === seller.phone);
-    await Promise.all(toDelete.map((c) => base44.entities.BingoCard.delete(c.id)));
+    const cardsInRange = existingCards.filter((c) => {
+      const n = c.card_number || 0;
+      return fromN && toN && n >= fromN && n <= toN;
+    });
+    await Promise.all(cardsInRange.map((c) =>
+      base44.entities.BingoCard.update(c.id, { seller_id: null, seller_name: null })
+    ));
     setDeleting(false);
     onDelete();
   };
@@ -192,9 +197,18 @@ export default function DistributeCardsModal({ onClose }) {
                 sellers={allSellers}
                 cards={cards}
                 assigned={assigned}
-                onAdd={(seller, from, to) => {
+                onAdd={async (seller, from, to) => {
+                  // Persist seller_id on cards in the assigned range
+                  const cardsInRange = cards.filter((c) => {
+                    const n = c.card_number || 0;
+                    return n >= from && n <= to;
+                  });
+                  await Promise.all(cardsInRange.map((c) =>
+                    base44.entities.BingoCard.update(c.id, { seller_id: seller.id, seller_name: seller.name })
+                  ));
+                  queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame?.id] });
+                  
                   setAssigned((prev) => {
-                    // replace if same seller already added
                     const filtered = prev.filter((a) => a.seller.id !== seller.id);
                     return [...filtered, { seller, from, to }];
                   });

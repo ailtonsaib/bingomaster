@@ -59,7 +59,7 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
 
   // Find already assigned cards to this seller for this game
   const sellerCards = selectedSeller
-    ? cards.filter((c) => c.player_name === selectedSeller.name || c.player_phone === selectedSeller.phone)
+    ? cards.filter((c) => c.seller_id === selectedSeller.id)
     : [];
 
   const handleAdd = () => {
