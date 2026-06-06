@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Printer, Trash2, User, Zap, CheckSquare, Square, XCircle, Upload, Filter, FileText } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { generateBingoGrid } from "@/lib/bingoUtils";
+import { generateBingoGrid, checkBingo } from "@/lib/bingoUtils";
 import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
 import SellCardModal from "@/components/bingo/SellCardModal";
 import { motion } from "framer-motion";
@@ -53,6 +53,14 @@ export default function GameCards() {
     queryKey: ["sellers"],
     queryFn: () => base44.entities.Seller.list(),
   });
+
+  const drawnSet = useMemo(() => new Set(game?.drawn_numbers || []), [game?.drawn_numbers]);
+
+  const isCardWinner = (card) => {
+    if (!game?.drawn_numbers?.length) return false;
+    const grids = [card.grid_1a, card.grid_1b, card.grid_1c, card.grid_2a, card.grid_2b, card.grid_2c, card.grid_1, card.grid_2].filter(Boolean);
+    return grids.some((g) => checkBingo(g, drawnSet, "full")) || card.is_winner;
+  };
 
   const filteredCards = useMemo(() => {
     let result = [...cards];
@@ -541,30 +549,39 @@ export default function GameCards() {
           </div>
         ) : (
           <div className="grid gap-2 grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
-            {filteredCards.map((card) => (
-              <div
-                key={card.id}
-                className={`relative group flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
-                  ${selectedIds.has(card.id) ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary" : 
-                    card.player_phone || card.player_city ? "bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700" :
-                    "bg-card hover:bg-muted/60 border-border"}`}
-                onClick={() => setSellCard(card)}
-              >
-                <span className="text-xs font-bold leading-none">
-                  {String(card.card_number || "").padStart(3, "0")}
-                </span>
-                <span className="text-[10px] text-current opacity-60 mt-0.5 truncate w-full text-center">
-                  {card.player_name}
-                </span>
-                <button
-                  className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 text-destructive"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(card.id); }}
-                  title="Excluir"
+            {filteredCards.map((card) => {
+              const winner = isCardWinner(card);
+              return (
+                <div
+                  key={card.id}
+                  className={`relative group flex flex-col items-center justify-center rounded-lg border p-2 cursor-pointer transition-all select-none
+                    ${selectedIds.has(card.id) ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary" :
+                      winner ? "bg-yellow-50 border-yellow-400 ring-1 ring-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-500" :
+                      card.player_phone || card.player_city ? "bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700" :
+                      "bg-card hover:bg-muted/60 border-border"}`}
+                  onClick={() => setSellCard(card)}
                 >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
+                  {winner && (
+                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-yellow-400 text-yellow-900 px-1 rounded-full leading-4 whitespace-nowrap">
+                      🏆 Premiada
+                    </span>
+                  )}
+                  <span className={`text-xs font-bold leading-none ${winner ? "mt-1" : ""}`}>
+                    {String(card.card_number || "").padStart(3, "0")}
+                  </span>
+                  <span className="text-[10px] text-current opacity-60 mt-0.5 truncate w-full text-center">
+                    {card.player_name}
+                  </span>
+                  <button
+                    className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 text-destructive"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(card.id); }}
+                    title="Excluir"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
