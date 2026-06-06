@@ -26,13 +26,11 @@ function QrModal({ link, name, onClose }) {
 
 // ─── Seller Card ─────────────────────────────────────────────────────────────
 function SellerCard({ seller, game, existingCards, onDelete }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
   const [showQr, setShowQr] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const fromN = parseInt(from) || null;
-  const toN = parseInt(to) || null;
+  const fromN = seller.from || null;
+  const toN = seller.to || null;
   const valid = fromN && toN && fromN <= toN;
   const count = valid ? toN - fromN + 1 : 0;
 
@@ -50,7 +48,6 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
     setDeleting(true);
     const toDelete = existingCards.filter((c) => c.player_name === seller.name || c.player_phone === seller.phone);
     await Promise.all(toDelete.map((c) => base44.entities.BingoCard.delete(c.id)));
-    setFrom(""); setTo("");
     setDeleting(false);
     onDelete();
   };
@@ -59,7 +56,7 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
     <>
       {showQr && <QrModal link={link} name={seller.name} onClose={() => setShowQr(false)} />}
       <div className="border rounded-xl p-4 bg-white space-y-3">
-        {/* Top row: name + range inputs + trash */}
+        {/* Top row: name + range + trash */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <p className="font-bold text-sm uppercase">{seller.name}</p>
@@ -70,22 +67,6 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
               </>
             )}
           </div>
-          <Input
-            type="number"
-            inputMode="numeric"
-            className="h-9 w-20 text-center text-sm font-bold"
-            placeholder="De"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-          <Input
-            type="number"
-            inputMode="numeric"
-            className="h-9 w-20 text-center text-sm font-bold"
-            placeholder="Até"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
           <button
             className="text-red-400 hover:text-red-600 p-1"
             onClick={handleDelete}
@@ -129,7 +110,8 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
 export default function DistributeCardsModal({ onClose }) {
   const queryClient = useQueryClient();
   const [selectedGame, setSelectedGame] = useState(null);
-  const [extraSellers, setExtraSellers] = useState([]); // sellers added manually in this session
+  // assigned = [{seller, from, to}] — only those added via the button
+  const [assigned, setAssigned] = useState([]);
 
   const { data: games = [] } = useQuery({
     queryKey: ["dist-games"],
@@ -147,11 +129,10 @@ export default function DistributeCardsModal({ onClose }) {
     enabled: !!selectedGame,
   });
 
-  // Merge db sellers with extra manually-added sellers
-  const sellers = [...dbSellers, ...extraSellers.filter((e) => !dbSellers.find((d) => d.id === e.id))];
+  // All db sellers available for the dropdown
+  const allSellers = dbSellers;
 
-  const distributedCount = cards.filter((c) => c.player_phone || c.player_city).length;
-  const sellerCount = sellers.length;
+  const distributedCount = assigned.reduce((acc, a) => acc + (a.to - a.from + 1), 0);
 
   const activeGames = games.filter((g) => g.status !== "finished");
 
@@ -197,7 +178,7 @@ export default function DistributeCardsModal({ onClose }) {
                 {[
                   { label: "Cartelas Geradas:", value: cards.length, color: "text-purple-600" },
                   { label: "Distribuídas:", value: distributedCount, color: "text-purple-600" },
-                  { label: "Vendedores:", value: sellerCount, color: "text-green-600" },
+                  { label: "Vendedores:", value: assigned.length, color: "text-green-600" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex flex-col px-5 py-3 border-r last:border-r-0">
                     <span className="text-xs text-muted-foreground">{label}</span>
@@ -208,34 +189,36 @@ export default function DistributeCardsModal({ onClose }) {
 
               {/* Add seller */}
               <AddSellerSection
-                sellers={sellers}
+                sellers={allSellers}
                 cards={cards}
                 onAdd={(seller, from, to) => {
-                  if (!sellers.find((s) => s.id === seller.id)) {
-                    setExtraSellers((prev) => [...prev, seller]);
-                  }
+                  setAssigned((prev) => {
+                    // replace if same seller already added
+                    const filtered = prev.filter((a) => a.seller.id !== seller.id);
+                    return [...filtered, { seller, from, to }];
+                  });
                 }}
               />
 
-              {/* Sellers list */}
-              {sellers.length > 0 && (
+              {/* Assigned sellers list — only those added via button */}
+              {assigned.length > 0 && (
                 <div className="px-5 py-4 space-y-3">
-                  <p className="text-sm font-semibold text-muted-foreground">Vendedores Cadastrados:</p>
-                  {sellers.map((seller) => (
+                  <p className="text-sm font-semibold text-muted-foreground">Vendedores com Distribuição:</p>
+                  {assigned.map(({ seller, from, to }) => (
                     <SellerCard
                       key={seller.id}
-                      seller={seller}
+                      seller={{ ...seller, from, to }}
                       game={selectedGame}
                       existingCards={cards}
-                      onDelete={() => queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] })}
+                      onDelete={() => setAssigned((prev) => prev.filter((a) => a.seller.id !== seller.id))}
                     />
                   ))}
                 </div>
               )}
 
-              {sellers.length === 0 && (
+              {assigned.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Nenhum vendedor cadastrado. Adicione acima ou cadastre na página de Vendedores.
+                  Selecione um vendedor, informe o intervalo de cartelas e clique em Adicionar.
                 </p>
               )}
             </>
