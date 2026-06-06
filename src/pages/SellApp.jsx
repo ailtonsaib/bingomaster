@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
-function SellerStep({ onEnter }) {
+function SellerStep({ onEnter, locked }) {
   const [name, setName] = useState(() => localStorage.getItem("seller_name") || "");
   const [phone, setPhone] = useState(() => localStorage.getItem("seller_phone") || "");
   const [sellerId, setSellerId] = useState(() => localStorage.getItem("seller_id") || "");
@@ -57,8 +57,8 @@ function SellerStep({ onEnter }) {
         </div>
 
         <div className="space-y-4 bg-card rounded-2xl p-5 shadow-md border">
-          {/* Seller picker */}
-          {sellers.length > 0 && (
+          {/* Seller picker — hidden when locked via link */}
+          {!locked && sellers.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">Selecionar vendedor cadastrado</Label>
               <div className="relative">
@@ -150,7 +150,7 @@ function SellerStep({ onEnter }) {
 }
 
 // --- Step 2: Pick game ---
-function GamePickStep({ seller, onPick, onBack }) {
+function GamePickStep({ seller, onPick, onBack, locked }) {
   const { data: games = [], isLoading } = useQuery({
     queryKey: ["sell-games"],
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
@@ -161,10 +161,21 @@ function GamePickStep({ seller, onPick, onBack }) {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <div className="bg-primary text-primary-foreground px-4 pt-10 pb-5">
-        <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-3">
-          <ArrowLeft className="w-4 h-4" /> Sair
-        </button>
-        <h1 className="text-xl font-bold font-heading">Olá, {seller.name}!</h1>
+        {locked ? (
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-xl font-bold font-heading">Olá, {seller.name}!</h1>
+            <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm">
+              <ArrowLeft className="w-4 h-4" /> Sair
+            </button>
+          </div>
+        ) : (
+          <>
+            <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-3">
+              <ArrowLeft className="w-4 h-4" /> Sair
+            </button>
+            <h1 className="text-xl font-bold font-heading">Olá, {seller.name}!</h1>
+          </>
+        )}
         <p className="text-primary-foreground/80 text-sm mt-0.5">Escolha o evento para vender</p>
       </div>
 
@@ -375,7 +386,7 @@ function ExportSoldModal({ game, seller, soldCards, onClose }) {
 }
 
 // --- Step 3: Card selection & sale ---
-function SellStep({ seller, game, cardRange, onBack }) {
+function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
@@ -471,9 +482,18 @@ function SellStep({ seller, game, cardRange, onBack }) {
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 pt-10 pb-4">
-        <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-2">
-          <ArrowLeft className="w-4 h-4" /> Trocar evento
-        </button>
+        {locked ? (
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-primary-foreground/80 text-sm">🔒 {seller.name}</span>
+            <button onClick={onLogout} className="flex items-center gap-1 text-primary-foreground/80 text-sm">
+              <ArrowLeft className="w-4 h-4" /> Sair
+            </button>
+          </div>
+        ) : (
+          <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-2">
+            <ArrowLeft className="w-4 h-4" /> Trocar evento
+          </button>
+        )}
         <h1 className="text-lg font-bold font-heading leading-tight">{game.name}</h1>
         <div className="flex flex-wrap gap-2 mt-2 text-sm text-primary-foreground/80 items-center">
           {rangeLabel && (
@@ -677,6 +697,8 @@ export default function SellApp() {
   const urlRangeFrom = urlParams.get("range_from");
   const urlRangeTo = urlParams.get("range_to");
 
+  const lockedSeller = !!(urlSellerName && urlGameId); // via link — seller is locked, cannot switch
+
   const [seller, setSeller] = useState(() => {
     if (urlSellerName) {
       localStorage.setItem("seller_name", urlSellerName);
@@ -689,6 +711,13 @@ export default function SellApp() {
     const id = localStorage.getItem("seller_id");
     return name ? { name, phone: phone || "", id: id || "" } : null;
   });
+
+  const handleLogout = () => {
+    localStorage.removeItem("seller_name");
+    localStorage.removeItem("seller_phone");
+    localStorage.removeItem("seller_id");
+    setSeller(null);
+  };
 
   // If URL has range, skip the range step
   const urlRange = urlRangeFrom || urlRangeTo
@@ -708,7 +737,7 @@ export default function SellApp() {
   const resolvedGame = game || (urlGameId ? preloadedGame : null);
 
   if (!seller) {
-    return <SellerStep onEnter={setSeller} />;
+    return <SellerStep onEnter={setSeller} locked={lockedSeller} />;
   }
 
   if (!resolvedGame) {
@@ -716,12 +745,8 @@ export default function SellApp() {
       <GamePickStep
         seller={seller}
         onPick={(g) => { setGame(g); if (!urlRange) setCardRange(null); }}
-        onBack={() => {
-          localStorage.removeItem("seller_name");
-          localStorage.removeItem("seller_phone");
-          localStorage.removeItem("seller_id");
-          setSeller(null);
-        }}
+        onBack={handleLogout}
+        locked={lockedSeller}
       />
     );
   }
@@ -743,6 +768,8 @@ export default function SellApp() {
       game={resolvedGame}
       cardRange={cardRange}
       onBack={() => { setGame(null); setCardRange(urlRange); }}
+      locked={lockedSeller}
+      onLogout={handleLogout}
     />
   );
 }
