@@ -328,6 +328,7 @@ export default function GameCards() {
           onClose={() => setBulkOpen(false)}
           onGenerate={handleBulkGenerate}
           generating={generating}
+          nextCardNumber={cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) + 1 : 1}
         />
 
         {showImport && (

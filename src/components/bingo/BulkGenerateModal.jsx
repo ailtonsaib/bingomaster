@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Zap } from "lucide-react";
 
-export default function BulkGenerateModal({ open, onClose, onGenerate, generating }) {
+export default function BulkGenerateModal({ open, onClose, onGenerate, generating, nextCardNumber = 1 }) {
   const [quantity, setQuantity] = useState("10");
   const [chances, setChances] = useState("1");
   const [prefix, setPrefix] = useState("Cartela");
@@ -66,7 +66,11 @@ export default function BulkGenerateModal({ open, onClose, onGenerate, generatin
                   onChange={(e) => setQuantity(e.target.value)}
                   className="text-lg font-semibold"
                 />
-                <p className="text-xs text-muted-foreground">Serão geradas <strong>{qty}</strong> cartelas numeradas automaticamente.</p>
+                <p className="text-xs text-muted-foreground">
+                  Serão geradas <strong>{qty}</strong> cartelas de{" "}
+                  <strong>{String(nextCardNumber).padStart(4, "0")}</strong> a{" "}
+                  <strong>{String(nextCardNumber + qty - 1).padStart(4, "0")}</strong>.
+                </p>
               </div>
 
               {/* Prefix */}
