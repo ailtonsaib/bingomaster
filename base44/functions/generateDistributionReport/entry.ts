@@ -16,24 +16,21 @@ Deno.serve(async (req) => {
     // Fetch all cards
     const allCards = await base44.entities.BingoCard.filter({}, "card_number", 100000);
 
-    // Calculate distributed cards per seller (by phone or city match)
+    // Calculate distributed cards per seller (by seller_id)
     const sellerStats = sellers.map((seller) => {
-      const distributedCards = allCards.filter(
-        (c) => c.player_phone === seller.phone || c.player_city === seller.city
-      );
+      const distributedCards = allCards.filter((c) => c.seller_id === seller.id);
       const soldCards = distributedCards.filter(
-        (c) => c.player_name && c.player_name.trim() !== ''
+        (c) => c.player_phone || c.player_city
       );
       return {
         seller,
         distributedCount: distributedCards.length,
         soldCount: soldCards.length,
       };
-    });
+    }).filter((s) => s.distributedCount > 0);
 
     // Calculate totals
     const totalDistributed = allCards.filter((c) => c.player_phone || c.player_city).length;
-    const totalSold = allCards.filter((c) => c.player_name && c.player_name.trim() !== '').length;
     const totalCards = allCards.length;
 
     // Create PDF
@@ -56,15 +53,14 @@ Deno.serve(async (req) => {
     doc.text('Resumo Geral', 20, 45);
     
     doc.setFontSize(10);
-    doc.text(`Total de Cartelas no Sistema: ${totalCards}`, 25, 55);
+    doc.text(`Total de Cartelas Geradas: ${totalCards}`, 25, 55);
     doc.text(`Total de Cartelas Distribuídas/Vendidas: ${totalDistributed}`, 25, 62);
-    doc.text(`Total de Cartelas Validadas (com nome): ${totalSold}`, 25, 69);
     
     // Seller details section
     doc.setFontSize(12);
-    doc.text('Detalhes por Vendedor', 20, 85);
+    doc.text('Detalhes por Vendedor', 20, 78);
     
-    let yPos = 95;
+    let yPos = 88;
     const pageHeight = doc.internal.pageSize.height;
     const bottomMargin = 20;
     
