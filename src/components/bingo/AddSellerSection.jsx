@@ -24,33 +24,13 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
   // Build list of already-taken card ranges
   const takenRanges = useMemo(() => {
     const ranges = [];
-    // Ranges from current session (assigned) — exclude current seller's own range
+    // Only consider ranges assigned in the current session
     (assigned || []).forEach((a) => {
       if (selectedSeller && a.seller.id === selectedSeller.id) return;
       ranges.push({ from: a.from, to: a.to, label: a.seller.name });
     });
-    // Ranges from cards already saved in DB with player_name set
-    // Group consecutive card numbers by seller
-    const dbCards = cards
-      .filter((c) => c.player_name)
-      .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
-
-    if (dbCards.length > 0) {
-      let currentRange = null;
-      dbCards.forEach((c) => {
-        const num = c.card_number || 0;
-        const name = c.player_name;
-        if (currentRange && currentRange.label === name && num === currentRange.to + 1) {
-          currentRange.to = num;
-        } else {
-          if (currentRange) ranges.push(currentRange);
-          currentRange = { from: num, to: num, label: name };
-        }
-      });
-      if (currentRange) ranges.push(currentRange);
-    }
     return ranges;
-  }, [assigned, cards, selectedSeller]);
+  }, [assigned, selectedSeller]);
 
   // Card number bounds
   const { minCard, maxCard } = useMemo(() => {
