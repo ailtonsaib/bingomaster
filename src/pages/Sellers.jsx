@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Pencil, Trash2, UserCheck, X, Check, Share2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, UserCheck, X, Check, Share2, Receipt } from "lucide-react";
 import ShareSellLinkModal from "@/components/bingo/ShareSellLinkModal";
+import SellerReceiptModal from "@/components/bingo/SellerReceiptModal";
 
 function SellerFormModal({ seller, onClose, onSaved }) {
   const [name, setName] = useState(seller?.name || "");
@@ -102,6 +103,7 @@ export default function Sellers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSeller, setEditingSeller] = useState(null);
   const [shareSeller, setShareSeller] = useState(null);
+  const [receiptSeller, setReceiptSeller] = useState(null);
   const [search, setSearch] = useState("");
 
   const { data: sellers = [], isLoading } = useQuery({
@@ -199,6 +201,15 @@ export default function Sellers() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => setReceiptSeller(seller)}
+                        title="Emitir recibo"
+                      >
+                        <Receipt className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         onClick={() => setShareSeller(seller)}
                         title="Enviar link do app"
@@ -238,6 +249,13 @@ export default function Sellers() {
           </div>
         )}
       </div>
+
+      {receiptSeller && (
+        <SellerReceiptModal
+          seller={receiptSeller}
+          onClose={() => setReceiptSeller(null)}
+        />
+      )}
 
       {shareSeller && (
         <ShareSellLinkModal
