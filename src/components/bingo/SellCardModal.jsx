@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +10,28 @@ export default function SellCardModal({ card, onClose, onSaved }) {
   const [name, setName] = useState(card.player_name || "");
   const [phone, setPhone] = useState(card.player_phone || "");
   const [address, setAddress] = useState(card.player_city || "");
+  const [sellerId, setSellerId] = useState(card.seller_id || "");
+  const [sellerName, setSellerName] = useState(card.seller_name || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showSellerDropdown, setShowSellerDropdown] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: sellers = [] } = useQuery({
+    queryKey: ["sellcard-sellers"],
+    queryFn: () => base44.entities.Seller.filter({ is_active: true }, "name"),
+  });
+
+  const filtered = sellers.filter((s) =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectSeller = (s) => {
+    setSellerId(s.id);
+    setSellerName(s.name);
+    setShowSellerDropdown(false);
+    setSearch("");
+  };
 
   // Indica se a cartela já tem comprador
   const isSold = !!(card.player_phone || card.player_city);
@@ -21,6 +42,8 @@ export default function SellCardModal({ card, onClose, onSaved }) {
       player_name: name.trim(),
       player_phone: phone.trim(),
       player_city: address.trim(),
+      seller_id: sellerId || null,
+      seller_name: sellerName || null,
     });
     setSaving(false);
     setSaved(true);
@@ -82,6 +105,47 @@ export default function SellCardModal({ card, onClose, onSaved }) {
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Rua, número, cidade..."
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Vendedor</Label>
+            <div className="relative">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
+                onClick={() => setShowSellerDropdown((v) => !v)}
+              >
+                <span className={sellerName ? "text-foreground" : "text-muted-foreground"}>
+                  {sellerName || "Selecionar vendedor..."}
+                </span>
+              </button>
+              {showSellerDropdown && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg max-h-44 overflow-auto">
+                  <div className="p-2 border-b sticky top-0 bg-background">
+                    <Input
+                      placeholder="Buscar..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="h-8 text-xs"
+                      autoFocus
+                    />
+                  </div>
+                  {filtered.length === 0 ? (
+                    <div className="text-xs text-muted-foreground text-center py-3">Nenhum encontrado</div>
+                  ) : (
+                    filtered.map((s) => (
+                      <button
+                        key={s.id}
+                        className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                        onClick={() => selectSeller(s)}
+                      >
+                        {s.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-3 pt-1">

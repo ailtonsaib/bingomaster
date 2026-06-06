@@ -39,15 +39,20 @@ export default function Home() {
   const [resetting, setResetting] = useState(false);
 
   const sellerStats = useMemo(() => {
-    return sellers.map((seller) => {
-      const soldCards = allCards.filter(
-        (c) => c.seller_id === seller.id
-      );
+    const stats = sellers.map((seller) => {
+      const soldCards = allCards.filter((c) => {
+        // Match por seller_id (vendas novas via SellApp ou SellCardModal)
+        if (c.seller_id) return c.seller_id === seller.id;
+        // Fallback: match por seller_name em cartelas sem seller_id
+        if (c.seller_name) return c.seller_name === seller.name;
+        return false;
+      });
       return {
         name: seller.name,
         vendidas: soldCards.length,
       };
     }).sort((a, b) => b.vendidas - a.vendidas);
+    return stats;
   }, [sellers, allCards]);
 
   const handleDelete = async (id) => {
