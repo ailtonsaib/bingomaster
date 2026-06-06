@@ -413,27 +413,31 @@ function SellStep({ seller, game, cardRange, onBack }) {
     setNewCardsCount(0);
   };
 
-  // Apply range filter
-  const rangeCards = cards.filter((c) => {
-    if (!cardRange?.from && !cardRange?.to) return true;
-    const n = c.card_number || 0;
-    if (cardRange.from && n < cardRange.from) return false;
-    if (cardRange.to && n > cardRange.to) return false;
-    return true;
-  });
+  // Apply range filter and sort by card_number
+  const rangeCards = cards
+    .filter((c) => {
+      if (!cardRange?.from && !cardRange?.to) return true;
+      const n = c.card_number || 0;
+      if (cardRange.from && n < cardRange.from) return false;
+      if (cardRange.to && n > cardRange.to) return false;
+      return true;
+    })
+    .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
 
   const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
   const sold = rangeCards.filter((c) => c.player_phone || c.player_city);
   const soldCards = sold;
 
-  const filtered = rangeCards.filter((c) => {
-    const q = search.toLowerCase();
-    return (
-      String(c.card_number).includes(q) ||
-      c.player_name?.toLowerCase().includes(q) ||
-      c.player_phone?.includes(q)
-    );
-  });
+  const filtered = rangeCards
+    .filter((c) => {
+      const q = search.toLowerCase();
+      return (
+        String(c.card_number).includes(q) ||
+        c.player_name?.toLowerCase().includes(q) ||
+        c.player_phone?.includes(q)
+      );
+    })
+    .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
 
   const openCard = (card) => {
     setSelectedCard(card);
