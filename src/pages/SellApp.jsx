@@ -697,7 +697,7 @@ export default function SellApp() {
   const urlRangeFrom = urlParams.get("range_from");
   const urlRangeTo = urlParams.get("range_to");
 
-  const lockedSeller = !!(urlSellerName && urlGameId); // via link — seller is locked, cannot switch
+  const lockedSeller = !!urlSellerName; // via link — seller is locked, cannot switch
 
   const [seller, setSeller] = useState(() => {
     if (urlSellerName) {
