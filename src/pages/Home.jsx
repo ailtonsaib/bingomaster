@@ -95,7 +95,7 @@ export default function Home() {
           }
         }
       }
-      await queryClient.invalidateQueries({ queryKey: ["bingo-games"] });
+      await queryClient.invalidateQueries();
       refetch();
       setShowResetDialog(false);
       alert("Reset concluído com sucesso!");
