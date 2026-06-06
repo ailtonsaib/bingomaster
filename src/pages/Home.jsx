@@ -31,7 +31,7 @@ export default function Home() {
   });
   const { data: allCards = [] } = useQuery({
     queryKey: ["all-cards-stats"],
-    queryFn: () => base44.entities.BingoCard.filter({}),
+    queryFn: () => base44.functions.invoke("getAllCards", {}).then(r => r.data.cards),
   });
   const [editingGame, setEditingGame] = useState(null);
   const [showDistribute, setShowDistribute] = useState(false);
@@ -41,7 +41,7 @@ export default function Home() {
   const sellerStats = useMemo(() => {
     return sellers.map((seller) => {
       const soldCards = allCards.filter(
-        (c) => (c.player_phone === seller.phone || c.player_city === seller.city) && c.player_name && c.player_name.trim() !== ''
+        (c) => c.seller_id === seller.id
       );
       return {
         name: seller.name,
@@ -53,7 +53,8 @@ export default function Home() {
   const handleDelete = async (id) => {
     try {
       // Delete cards first, then game
-      const cards = await base44.entities.BingoCard.filter({ game_id: String(id) });
+      const res = await base44.functions.invoke("getGameCards", { game_id: String(id) });
+      const cards = res.data.cards;
       for (const card of cards) {
         await base44.entities.BingoCard.delete(card.id);
       }
@@ -61,7 +62,6 @@ export default function Home() {
       refetch();
     } catch (error) {
       if (error.message?.includes("not found")) {
-        // Jogo já foi deletado, apenas atualiza a lista
         refetch();
       } else {
         console.error("Erro ao deletar jogo:", error);
@@ -74,7 +74,8 @@ export default function Home() {
     setResetting(true);
     try {
       // Delete all cards first
-      const allCards = await base44.entities.BingoCard.filter({});
+      const allCardsRes = await base44.functions.invoke("getAllCards", {});
+      const allCards = allCardsRes.data.cards;
       if (allCards.length > 0) {
         for (const card of allCards) {
           try {
@@ -85,7 +86,8 @@ export default function Home() {
         }
       }
       // Delete all games
-      const allGames = await base44.entities.BingoGame.filter({});
+      const allGamesRes = await base44.functions.invoke("getAllGames", {});
+      const allGames = allGamesRes.data.games;
       if (allGames.length > 0) {
         for (const game of allGames) {
           try {

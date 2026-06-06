@@ -514,6 +514,8 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
       player_name: buyerName.trim(),
       player_phone: buyerPhone.trim(),
       player_city: buyerAddress.trim(),
+      seller_id: seller.id || null,
+      seller_name: seller.name || null,
     };
     if (receiptUrl !== selectedCard.payment_receipt_url) {
       updateData.payment_receipt_url = receiptUrl;

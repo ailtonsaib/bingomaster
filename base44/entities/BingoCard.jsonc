@@ -30,6 +30,14 @@
       "type": "string",
       "description": "Estado do jogador"
     },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor que vendeu esta cartela"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor que vendeu esta cartela (para exibi\u00e7\u00e3o r\u00e1pida)"
+    },
     "chances": {
       "type": "number",
       "enum": [
