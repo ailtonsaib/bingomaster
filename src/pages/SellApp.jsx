@@ -385,11 +385,33 @@ function SellStep({ seller, game, cardRange, onBack }) {
   const [saving, setSaving] = useState(false);
   const [savedCard, setSavedCard] = useState(null);
   const [showExport, setShowExport] = useState(false);
+  const [newCardsCount, setNewCardsCount] = useState(0);
+  const [showNewBanner, setShowNewBanner] = useState(false);
+
+  const storageKey = `last_card_count_${game.id}_${seller.id || seller.name}`;
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["sell-cards", game.id],
     queryFn: () => base44.entities.BingoCard.filter({ game_id: String(game.id) }),
   });
+
+  // Detect new cards since last visit
+  useEffect(() => {
+    if (isLoading || cards.length === 0) return;
+    const totalAvailable = cards.filter((c) => !c.player_phone && !c.player_city).length;
+    const lastCount = parseInt(localStorage.getItem(storageKey) || "0");
+    if (totalAvailable > lastCount) {
+      setNewCardsCount(totalAvailable - lastCount);
+      setShowNewBanner(true);
+    }
+  }, [isLoading, cards.length]);
+
+  const dismissNewBanner = () => {
+    const totalAvailable = cards.filter((c) => !c.player_phone && !c.player_city).length;
+    localStorage.setItem(storageKey, String(totalAvailable));
+    setShowNewBanner(false);
+    setNewCardsCount(0);
+  };
 
   // Apply range filter
   const rangeCards = cards.filter((c) => {
@@ -475,6 +497,27 @@ function SellStep({ seller, game, cardRange, onBack }) {
           />
         </div>
       </div>
+
+      {/* New cards banner */}
+      {showNewBanner && (
+        <div className="mx-4 mt-3 bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center gap-3 shadow-sm">
+          <div className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-100 shrink-0">
+            <span className="text-lg">🎉</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">Novas cartelas disponíveis!</p>
+            <p className="text-xs text-amber-700">
+              +{newCardsCount} cartela{newCardsCount !== 1 ? "s" : ""} liberada{newCardsCount !== 1 ? "s" : ""} desde sua última visita
+            </p>
+          </div>
+          <button
+            onClick={dismissNewBanner}
+            className="text-amber-500 hover:text-amber-700 shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Success toast */}
       {savedCard && (
