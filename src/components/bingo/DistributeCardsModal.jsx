@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Trash2, Link2, QrCode, ExternalLink } from "lucide-react";
 import QRCode from "qrcode.react";
+import AddSellerSection from "./AddSellerSection";
 
 // ─── QR Modal ───────────────────────────────────────────────────────────────
 function QrModal({ link, name, onClose }) {
@@ -128,9 +129,6 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
 export default function DistributeCardsModal({ onClose }) {
   const queryClient = useQueryClient();
   const [selectedGame, setSelectedGame] = useState(null);
-  const [newName, setNewName] = useState("");
-  const [newFrom, setNewFrom] = useState("");
-  const [newTo, setNewTo] = useState("");
   const [extraSellers, setExtraSellers] = useState([]); // sellers added manually in this session
 
   const { data: games = [] } = useQuery({
@@ -154,13 +152,6 @@ export default function DistributeCardsModal({ onClose }) {
 
   const distributedCount = cards.filter((c) => c.player_phone || c.player_city).length;
   const sellerCount = sellers.length;
-
-  const handleAddSeller = () => {
-    if (!newName.trim()) return;
-    const id = `manual-${Date.now()}`;
-    setExtraSellers((prev) => [...prev, { id, name: newName.trim(), phone: "", from: newFrom, to: newTo }]);
-    setNewName(""); setNewFrom(""); setNewTo("");
-  };
 
   const activeGames = games.filter((g) => g.status !== "finished");
 
@@ -216,41 +207,15 @@ export default function DistributeCardsModal({ onClose }) {
               </div>
 
               {/* Add seller */}
-              <div className="px-5 py-4 border-b space-y-3">
-                <p className="text-sm font-semibold flex items-center gap-1.5">
-                  <span className="text-primary text-base">+</span> Adicionar Vendedor
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    className="flex-1 text-sm"
-                    placeholder="Nome do vendedor"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddSeller()}
-                  />
-                  <Input
-                    type="number"
-                    className="w-20 text-center text-sm"
-                    placeholder="De"
-                    value={newFrom}
-                    onChange={(e) => setNewFrom(e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    className="w-20 text-center text-sm"
-                    placeholder="Até"
-                    value={newTo}
-                    onChange={(e) => setNewTo(e.target.value)}
-                  />
-                  <Button
-                    className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 whitespace-nowrap"
-                    onClick={handleAddSeller}
-                    disabled={!newName.trim()}
-                  >
-                    <span className="text-lg leading-none">+</span> Adicionar
-                  </Button>
-                </div>
-              </div>
+              <AddSellerSection
+                sellers={sellers}
+                cards={cards}
+                onAdd={(seller, from, to) => {
+                  if (!sellers.find((s) => s.id === seller.id)) {
+                    setExtraSellers((prev) => [...prev, seller]);
+                  }
+                }}
+              />
 
               {/* Sellers list */}
               {sellers.length > 0 && (
