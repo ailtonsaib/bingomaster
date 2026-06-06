@@ -1,0 +1,32 @@
+{
+  "name": "SellerDistribution",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "ID do jogo"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "range_from": {
+      "type": "number",
+      "description": "N\u00famero inicial do intervalo de cartelas"
+    },
+    "range_to": {
+      "type": "number",
+      "description": "N\u00famero final do intervalo de cartelas"
+    }
+  },
+  "required": [
+    "game_id",
+    "seller_id",
+    "range_from",
+    "range_to"
+  ]
+}

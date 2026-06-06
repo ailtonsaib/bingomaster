@@ -10,27 +10,28 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all sellers
+    // Fetch all sellers, distributions and cards
     const sellers = await base44.entities.Seller.list();
-    
-    // Fetch all cards
+    const allDistributions = await base44.entities.SellerDistribution.list();
     const allCards = await base44.entities.BingoCard.filter({}, "card_number", 100000);
 
-    // Calculate distributed cards per seller (by seller_id)
+    // Calculate stats per seller using SellerDistribution records
     const sellerStats = sellers.map((seller) => {
-      const distributedCards = allCards.filter((c) => c.seller_id === seller.id);
-      const soldCards = allCards.filter(
+      const sellerDists = allDistributions.filter((d) => d.seller_id === seller.id);
+      if (sellerDists.length === 0) return null;
+
+      // Total distributed = sum of all assigned ranges
+      const distributedCount = sellerDists.reduce((acc, d) => acc + (d.range_to - d.range_from + 1), 0);
+      // Total sold = cards with this seller_id that have a buyer
+      const soldCount = allCards.filter(
         (c) => c.seller_id === seller.id && (c.player_phone || c.player_city)
-      );
-      return {
-        seller,
-        distributedCount: distributedCards.length,
-        soldCount: soldCards.length,
-      };
-    }).filter((s) => s.distributedCount > 0);
+      ).length;
+
+      return { seller, distributedCount, soldCount };
+    }).filter(Boolean);
 
     // Calculate totals
-    const totalDistributed = allCards.filter((c) => c.seller_id).length;
+    const totalDistributed = allDistributions.reduce((acc, d) => acc + (d.range_to - d.range_from + 1), 0);
     const totalCards = allCards.length;
 
     // Create PDF

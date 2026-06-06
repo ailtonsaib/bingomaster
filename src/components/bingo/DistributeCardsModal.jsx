@@ -25,52 +25,50 @@ function QrModal({ link, name, onClose }) {
 }
 
 // ─── Seller Card ─────────────────────────────────────────────────────────────
-function SellerCard({ seller, game, existingCards, onDelete }) {
+function SellerCard({ distribution, game, cards, onDelete }) {
   const [showQr, setShowQr] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const fromN = seller.from || null;
-  const toN = seller.to || null;
-  const valid = fromN && toN && fromN <= toN;
-  const count = valid ? toN - fromN + 1 : 0;
+  const fromN = distribution.range_from;
+  const toN = distribution.range_to;
+  const count = toN - fromN + 1;
 
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
   const params = new URLSearchParams();
-  params.set("seller_name", seller.name);
-  params.set("seller_phone", seller.phone || "");
-  params.set("seller_id", seller.id);
+  params.set("seller_name", distribution.seller_name);
+  params.set("seller_id", distribution.seller_id);
   params.set("game_id", game.id);
-  if (valid) { params.set("range_from", fromN); params.set("range_to", toN); }
+  params.set("range_from", fromN);
+  params.set("range_to", toN);
   const link = `${appUrl}/sell?${params.toString()}`;
 
   const handleDelete = async () => {
-    if (!window.confirm(`Excluir distribuição de ${seller.name}?`)) return;
+    if (!window.confirm(`Excluir distribuição de ${distribution.seller_name}?`)) return;
     setDeleting(true);
-    const cardsInRange = existingCards.filter((c) => {
+    // Clear seller_id from cards in range
+    const cardsInRange = cards.filter((c) => {
       const n = c.card_number || 0;
-      return fromN && toN && n >= fromN && n <= toN;
+      return n >= fromN && n <= toN;
     });
-    await Promise.all(cardsInRange.map((c) =>
-      base44.entities.BingoCard.update(c.id, { seller_id: null, seller_name: null })
-    ));
+    await Promise.all([
+      ...cardsInRange.map((c) =>
+        base44.entities.BingoCard.update(c.id, { seller_id: null, seller_name: null })
+      ),
+      base44.entities.SellerDistribution.delete(distribution.id),
+    ]);
     setDeleting(false);
     onDelete();
   };
 
   return (
     <>
-      {showQr && <QrModal link={link} name={seller.name} onClose={() => setShowQr(false)} />}
+      {showQr && <QrModal link={link} name={distribution.seller_name} onClose={() => setShowQr(false)} />}
       <div className="border rounded-xl p-4 bg-white space-y-3">
-        {/* Top row: name + range + trash */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <p className="font-bold text-sm uppercase">{seller.name}</p>
-            {valid && (
-              <>
-                <p className="text-xs text-primary">Cartelas: {fromN} até {toN}</p>
-                <p className="text-xs text-green-600">Total: {count} cartelas</p>
-              </>
-            )}
+            <p className="font-bold text-sm uppercase">{distribution.seller_name}</p>
+            <p className="text-xs text-primary">Cartelas: {fromN} até {toN}</p>
+            <p className="text-xs text-green-600">Total: {count} cartelas</p>
           </div>
           <button
             className="text-red-400 hover:text-red-600 p-1"
@@ -82,7 +80,6 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
           </button>
         </div>
 
-        {/* Action buttons */}
         <div className="grid grid-cols-3 gap-2">
           <Button
             size="sm"
@@ -115,8 +112,6 @@ function SellerCard({ seller, game, existingCards, onDelete }) {
 export default function DistributeCardsModal({ onClose }) {
   const queryClient = useQueryClient();
   const [selectedGame, setSelectedGame] = useState(null);
-  // assigned = [{seller, from, to}] — only those added via the button
-  const [assigned, setAssigned] = useState([]);
 
   const { data: games = [] } = useQuery({
     queryKey: ["dist-games"],
@@ -134,12 +129,35 @@ export default function DistributeCardsModal({ onClose }) {
     enabled: !!selectedGame,
   });
 
-  // All db sellers available for the dropdown
-  const allSellers = dbSellers;
+  const { data: distributions = [] } = useQuery({
+    queryKey: ["dist-distributions", selectedGame?.id],
+    queryFn: () => base44.entities.SellerDistribution.filter({ game_id: selectedGame.id }),
+    enabled: !!selectedGame,
+  });
 
-  const distributedCount = assigned.reduce((acc, a) => acc + (a.to - a.from + 1), 0);
-
+  const distributedCount = distributions.reduce((acc, d) => acc + (d.range_to - d.range_from + 1), 0);
   const activeGames = games.filter((g) => g.status !== "finished");
+
+  const handleAdd = async (seller, from, to) => {
+    // Save distribution record
+    await base44.entities.SellerDistribution.create({
+      game_id: selectedGame.id,
+      seller_id: seller.id,
+      seller_name: seller.name,
+      range_from: from,
+      range_to: to,
+    });
+    // Set seller_id on cards in range
+    const cardsInRange = cards.filter((c) => {
+      const n = c.card_number || 0;
+      return n >= from && n <= to;
+    });
+    await Promise.all(cardsInRange.map((c) =>
+      base44.entities.BingoCard.update(c.id, { seller_id: seller.id, seller_name: seller.name })
+    ));
+    queryClient.invalidateQueries({ queryKey: ["dist-distributions", selectedGame?.id] });
+    queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame?.id] });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -183,7 +201,7 @@ export default function DistributeCardsModal({ onClose }) {
                 {[
                   { label: "Cartelas Geradas:", value: cards.length, color: "text-purple-600" },
                   { label: "Distribuídas:", value: distributedCount, color: "text-purple-600" },
-                  { label: "Vendedores:", value: assigned.length, color: "text-green-600" },
+                  { label: "Vendedores:", value: distributions.length, color: "text-green-600" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex flex-col px-5 py-3 border-r last:border-r-0">
                     <span className="text-xs text-muted-foreground">{label}</span>
@@ -194,44 +212,29 @@ export default function DistributeCardsModal({ onClose }) {
 
               {/* Add seller */}
               <AddSellerSection
-                sellers={allSellers}
+                sellers={dbSellers}
                 cards={cards}
-                assigned={assigned}
-                onAdd={async (seller, from, to) => {
-                  // Persist seller_id on cards in the assigned range
-                  const cardsInRange = cards.filter((c) => {
-                    const n = c.card_number || 0;
-                    return n >= from && n <= to;
-                  });
-                  await Promise.all(cardsInRange.map((c) =>
-                    base44.entities.BingoCard.update(c.id, { seller_id: seller.id, seller_name: seller.name })
-                  ));
-                  queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame?.id] });
-                  
-                  setAssigned((prev) => {
-                    const filtered = prev.filter((a) => a.seller.id !== seller.id);
-                    return [...filtered, { seller, from, to }];
-                  });
-                }}
+                assigned={distributions.map((d) => ({ seller: { id: d.seller_id, name: d.seller_name }, from: d.range_from, to: d.range_to }))}
+                onAdd={handleAdd}
               />
 
-              {/* Assigned sellers list — only those added via button */}
-              {assigned.length > 0 && (
+              {/* Distributions list */}
+              {distributions.length > 0 && (
                 <div className="px-5 py-4 space-y-3">
                   <p className="text-sm font-semibold text-muted-foreground">Vendedores com Distribuição:</p>
-                  {assigned.map(({ seller, from, to }) => (
+                  {distributions.map((dist) => (
                     <SellerCard
-                      key={seller.id}
-                      seller={{ ...seller, from, to }}
+                      key={dist.id}
+                      distribution={dist}
                       game={selectedGame}
-                      existingCards={cards}
-                      onDelete={() => setAssigned((prev) => prev.filter((a) => a.seller.id !== seller.id))}
+                      cards={cards}
+                      onDelete={() => queryClient.invalidateQueries({ queryKey: ["dist-distributions", selectedGame?.id] })}
                     />
                   ))}
                 </div>
               )}
 
-              {assigned.length === 0 && (
+              {distributions.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   Selecione um vendedor, informe o intervalo de cartelas e clique em Adicionar.
                 </p>
