@@ -731,11 +731,16 @@ export default function SellApp() {
     return name ? { name, phone: phone || "", id: id || "" } : null;
   });
 
+  const [loggedOut, setLoggedOut] = useState(false);
+
   const handleLogout = () => {
     localStorage.removeItem("seller_name");
     localStorage.removeItem("seller_phone");
     localStorage.removeItem("seller_id");
     setSeller(null);
+    setGame(null);
+    setCardRange(urlRange);
+    if (lockedSeller) setLoggedOut(true);
   };
 
   // If URL has range, skip the range step
@@ -754,6 +759,26 @@ export default function SellApp() {
 
   const [game, setGame] = useState(null);
   const resolvedGame = game || (urlGameId ? preloadedGame : null);
+
+  if (loggedOut) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-b from-primary/10 to-background items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold font-heading mb-2">Sessão Encerrada</h1>
+          <p className="text-muted-foreground text-sm mb-6">Suas vendas foram registradas com sucesso.</p>
+          <Button
+            className="w-full h-12 text-base"
+            onClick={() => { setLoggedOut(false); setSeller(null); }}
+          >
+            Entrar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!seller) {
     return <SellerStep onEnter={setSeller} locked={lockedSeller} />;
