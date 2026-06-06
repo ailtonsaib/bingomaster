@@ -41,9 +41,12 @@ export default function Home() {
   const sellerStats = useMemo(() => {
     const stats = sellers.map((seller) => {
       const soldCards = allCards.filter((c) => {
-        // Match por seller_id (vendas novas via SellApp ou SellCardModal)
+        // Só conta cartela vendida (tem comprador) E vinculada ao vendedor
+        const isSold = !!(c.player_phone || c.player_city);
+        if (!isSold) return false;
+        // Match por seller_id (vendas via SellApp ou SellCardModal)
         if (c.seller_id) return c.seller_id === seller.id;
-        // Fallback: match por seller_name em cartelas sem seller_id
+        // Fallback: match por seller_name
         if (c.seller_name) return c.seller_name === seller.name;
         return false;
       });
