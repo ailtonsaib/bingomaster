@@ -33,6 +33,10 @@ export default function Home() {
     queryKey: ["all-cards-stats"],
     queryFn: () => base44.functions.invoke("getAllCards", {}).then(r => r.data.cards),
   });
+  const { data: distributions = [] } = useQuery({
+    queryKey: ["all-distributions"],
+    queryFn: () => base44.entities.SellerDistribution.list(),
+  });
   const [editingGame, setEditingGame] = useState(null);
   const [showDistribute, setShowDistribute] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -41,17 +45,20 @@ export default function Home() {
   const sellerStats = useMemo(() => {
     const stats = sellers.map((seller) => {
       const soldCards = allCards.filter((c) => {
-        // Só conta cartela vendida (tem comprador) com vendedor vinculado via seller_id
         const isSold = !!(c.player_phone || c.player_city);
         return isSold && c.seller_id === seller.id;
       });
+      const sellerDists = distributions.filter((d) => d.seller_id === seller.id);
+      const distributed = sellerDists.reduce((acc, d) => acc + (d.range_to - d.range_from + 1), 0);
+      if (soldCards.length === 0 && distributed === 0) return null;
       return {
         name: seller.name,
+        distribuídas: distributed,
         vendidas: soldCards.length,
       };
-    }).sort((a, b) => b.vendidas - a.vendidas);
+    }).filter(Boolean).sort((a, b) => b.distribuídas - a.distribuídas);
     return stats;
-  }, [sellers, allCards]);
+  }, [sellers, allCards, distributions]);
 
   const handleDelete = async (id) => {
     try {
@@ -192,30 +199,27 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" /> Cartelas Vendidas por Vendedor
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sellerStats.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum vendedor cadastrado</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={sellerStats} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    cursor={{ fill: 'hsl(var(--muted))' }}
-                  />
-                  <Bar dataKey="vendidas" radius={[6, 6, 0, 0]}>
-                    {sellerStats.map((entry, index) => (
-                      <Cell key={index} fill={entry.vendidas > 0 ? 'hsl(var(--primary))' : 'hsl(var(--muted))'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+                <BarChart3 className="w-5 h-5 text-primary" /> Cartelas: Distribuídas vs Vendidas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sellerStats.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum vendedor com dados</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={sellerStats} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      cursor={{ fill: 'hsl(var(--muted))' }}
+                    />
+                    <Bar dataKey="distribuídas" name="Distribuídas" fill="hsl(var(--chart-4))" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="vendidas" name="Vendidas" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
           </CardContent>
         </Card>
 
