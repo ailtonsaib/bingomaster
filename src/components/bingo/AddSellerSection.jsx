@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, Search } from "lucide-react";
 
-export default function AddSellerSection({ sellers, cards, onAdd }) {
+export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState(null);
@@ -21,13 +21,51 @@ export default function AddSellerSection({ sellers, cards, onAdd }) {
   const valid = selectedSeller && fromN && toN && fromN <= toN;
   const count = valid ? toN - fromN + 1 : 0;
 
+  // Build list of already-taken card ranges
+  const takenRanges = useMemo(() => {
+    const ranges = [];
+    // Ranges from current session (assigned) — exclude current seller's own range
+    (assigned || []).forEach((a) => {
+      if (selectedSeller && a.seller.id === selectedSeller.id) return;
+      ranges.push({ from: a.from, to: a.to, label: a.seller.name });
+    });
+    // Ranges from cards already saved in DB with player_name set
+    // Group consecutive card numbers by seller
+    const dbCards = cards
+      .filter((c) => c.player_name)
+      .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
+
+    if (dbCards.length > 0) {
+      let currentRange = null;
+      dbCards.forEach((c) => {
+        const num = c.card_number || 0;
+        const name = c.player_name;
+        if (currentRange && currentRange.label === name && num === currentRange.to + 1) {
+          currentRange.to = num;
+        } else {
+          if (currentRange) ranges.push(currentRange);
+          currentRange = { from: num, to: num, label: name };
+        }
+      });
+      if (currentRange) ranges.push(currentRange);
+    }
+    return ranges;
+  }, [assigned, cards, selectedSeller]);
+
+  // Check if current range overlaps with any taken range
+  const overlapError = useMemo(() => {
+    if (!valid) return null;
+    const overlap = takenRanges.find((r) => fromN <= r.to && toN >= r.from);
+    return overlap ? `Conflito: cartelas ${overlap.from}-${overlap.to} já foram distribuídas para ${overlap.label}` : null;
+  }, [valid, fromN, toN, takenRanges]);
+
   // Find already assigned cards to this seller for this game
   const sellerCards = selectedSeller
     ? cards.filter((c) => c.player_name === selectedSeller.name || c.player_phone === selectedSeller.phone)
     : [];
 
   const handleAdd = () => {
-    if (!valid) return;
+    if (!valid || overlapError) return;
     onAdd(selectedSeller, fromN, toN);
     setSelectedSeller(null);
     setSearch("");
@@ -122,11 +160,18 @@ export default function AddSellerSection({ sellers, cards, onAdd }) {
           <Button
             className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 whitespace-nowrap"
             onClick={handleAdd}
-            disabled={!valid}
+            disabled={!valid || !!overlapError}
           >
             <span className="text-lg leading-none">+</span> Adicionar
           </Button>
         </div>
+
+        {/* Overlap error */}
+        {overlapError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            {overlapError}
+          </div>
+        )}
       </div>
 
       {/* Show already assigned cards for selected seller */}

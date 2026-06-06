@@ -191,6 +191,7 @@ export default function DistributeCardsModal({ onClose }) {
               <AddSellerSection
                 sellers={allSellers}
                 cards={cards}
+                assigned={assigned}
                 onAdd={(seller, from, to) => {
                   setAssigned((prev) => {
                     // replace if same seller already added
