@@ -18,7 +18,7 @@ export default function GameAnalytics() {
 
   const { data: cards = [], isLoading: cardsLoading } = useQuery({
     queryKey: ["analytics-cards"],
-    queryFn: () => base44.entities.BingoCard.list(),
+    queryFn: () => base44.functions.invoke("getAllCards", {}).then(r => r.data.cards),
   });
 
   const { data: sellers = [], isLoading: sellersLoading } = useQuery({
@@ -57,23 +57,20 @@ export default function GameAnalytics() {
     });
 
     cards.forEach((card) => {
+      // Só conta cartela vendida (tem comprador) E vinculada ao vendedor via seller_id
       if (!card.player_phone && !card.player_city) return;
+      if (!card.seller_id) return;
 
       const game = games.find((g) => g.id === card.game_id);
       if (!game) return;
 
       const price = parseFloat(game.event_price || "0") || 0;
 
-      sellers.forEach((seller) => {
-        if (card.player_phone === seller.phone || card.player_city === seller.city) {
-          const sellerId = seller.id;
-          if (stats[sellerId]) {
-            stats[sellerId].totalSold++;
-            stats[sellerId].totalRevenue += price;
-            stats[sellerId].gamesParticipated.add(card.game_id);
-          }
-        }
-      });
+      if (stats[card.seller_id]) {
+        stats[card.seller_id].totalSold++;
+        stats[card.seller_id].totalRevenue += price;
+        stats[card.seller_id].gamesParticipated.add(card.game_id);
+      }
     });
 
     return Object.values(stats)
