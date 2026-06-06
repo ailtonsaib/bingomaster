@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
-  ChevronDown, UserCheck, Hash, Download
+  ChevronDown, UserCheck, Hash, Download, Camera, Trash2, Loader2
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -410,6 +410,9 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
   const [showExport, setShowExport] = useState(false);
   const [newCardsCount, setNewCardsCount] = useState(0);
   const [showNewBanner, setShowNewBanner] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const storageKey = `last_card_count_${game.id}_${seller.id || seller.name}`;
 
@@ -465,24 +468,63 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
 
   const openCard = (card) => {
     setSelectedCard(card);
-    // Não pré-preenche o nome da cartela — só mostra se já foi registrado um comprador real (junto com telefone/cidade)
     const hasBuyer = !!(card.player_phone || card.player_city);
     setBuyerName(hasBuyer ? (card.player_name || "") : "");
     setBuyerPhone(card.player_phone || "");
     setBuyerAddress(card.player_city || "");
+    setReceiptFile(null);
+    setReceiptPreview(card.payment_receipt_url || null);
+  };
+
+  const handlePickReceipt = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReceiptFile(file);
+    setReceiptPreview(URL.createObjectURL(file));
+    e.target.value = "";
+  };
+
+  const handleRemoveReceipt = () => {
+    setReceiptFile(null);
+    setReceiptPreview(null);
   };
 
   const handleSell = async () => {
     if (!buyerName.trim()) return;
     setSaving(true);
-    await base44.entities.BingoCard.update(selectedCard.id, {
+
+    let receiptUrl = selectedCard.payment_receipt_url || null;
+    if (receiptFile) {
+      setUploading(true);
+      try {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
+        receiptUrl = file_url;
+        if (receiptPreview && receiptPreview.startsWith("blob:")) {
+          URL.revokeObjectURL(receiptPreview);
+        }
+      } catch {
+        // continua sem o comprovante se falhar
+      }
+      setUploading(false);
+    } else if (!receiptFile && receiptPreview === null) {
+      receiptUrl = null;
+    }
+
+    const updateData = {
       player_name: buyerName.trim(),
       player_phone: buyerPhone.trim(),
       player_city: buyerAddress.trim(),
-    });
+    };
+    if (receiptUrl !== selectedCard.payment_receipt_url) {
+      updateData.payment_receipt_url = receiptUrl;
+    }
+
+    await base44.entities.BingoCard.update(selectedCard.id, updateData);
     setSaving(false);
     setSavedCard(selectedCard);
     setSelectedCard(null);
+    setReceiptFile(null);
+    setReceiptPreview(null);
     queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
     setTimeout(() => setSavedCard(null), 3000);
   };
@@ -662,15 +704,67 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
                   placeholder="Cidade ou endereço"
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">Comprovante de pagamento</Label>
+                {receiptPreview ? (
+                  <div className="relative rounded-xl overflow-hidden border bg-muted">
+                    <img
+                      src={receiptPreview}
+                      alt="Comprovante"
+                      className="w-full h-40 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveReceipt}
+                      className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePickReceipt}
+                      className="hidden"
+                      id="receipt-capture"
+                    />
+                    <label
+                      htmlFor="receipt-capture"
+                      className="flex items-center justify-center gap-2 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/30 hover:bg-muted/50 hover:border-primary/50 transition-colors cursor-pointer text-sm text-muted-foreground"
+                    >
+                      <Camera className="w-5 h-5" />
+                      Abrir câmera
+                    </label>
+                  </>
+                )}
+              </div>
             </div>
 
             <Button
               className="w-full h-12 text-base gap-2"
               onClick={handleSell}
-              disabled={!buyerName.trim() || saving}
+              disabled={!buyerName.trim() || saving || uploading}
             >
-              <ShoppingCart className="w-5 h-5" />
-              {saving ? "Registrando..." : "Confirmar Venda"}
+              {uploading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Enviando foto...
+                </>
+              ) : saving ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Registrando...
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-5 h-5" />
+                  Confirmar Venda
+                </>
+              )}
             </Button>
 
             {soldNotExported.length > 0 && (

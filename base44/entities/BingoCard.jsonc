@@ -43,6 +43,10 @@
       "type": "string",
       "description": "Data em que a cartela foi exportada pelo vendedor (ISO string). Vazio/null = n\u00e3o exportada."
     },
+    "payment_receipt_url": {
+      "type": "string",
+      "description": "URL da imagem do comprovante de pagamento"
+    },
     "grid_1a": {
       "type": "array",
       "items": {
