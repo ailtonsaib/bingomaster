@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const sellers = await base44.entities.Seller.list();
     
     // Fetch all cards
-    const allCards = await base44.entities.BingoCard.filter({});
+    const allCards = await base44.entities.BingoCard.filter({}, "card_number", 100000);
 
     // Calculate distributed cards per seller (by phone or city match)
     const sellerStats = sellers.map((seller) => {
