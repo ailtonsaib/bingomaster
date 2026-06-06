@@ -27,9 +27,11 @@ export default function GamePlay() {
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
   const manualInputRef = useRef(null);
-  const [autoInterval, setAutoInterval] = useState(5); // segundos
+  const [autoInterval, setAutoInterval] = useState(10); // segundos
   const [autoDrawing, setAutoDrawing] = useState(false);
   const [autoTimer, setAutoTimer] = useState(null);
+  const [autoCountdown, setAutoCountdown] = useState(null);
+  const autoDrawRef = useRef(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showWinnerCards, setShowWinnerCards] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -97,30 +99,53 @@ export default function GamePlay() {
     setTimeout(() => manualInputRef.current?.focus(), 100);
   };
 
+  // Keep handleDraw ref up-to-date to avoid stale closure in timers
+  useEffect(() => {
+    autoDrawRef.current = handleDraw;
+  });
+
+  const stopAutoDraw = () => {
+    if (autoTimer) {
+      clearInterval(autoTimer);
+      setAutoTimer(null);
+    }
+    setAutoDrawing(false);
+    setAutoCountdown(null);
+  };
+
+  const startAutoDraw = () => {
+    const secs = autoInterval;
+    setAutoDrawing(true);
+    setAutoCountdown(secs);
+
+    // Countdown tick every second
+    const countTimer = setInterval(() => {
+      setAutoCountdown((prev) => {
+        if (prev <= 1) {
+          autoDrawRef.current(); // draw
+          return secs; // reset
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    setAutoTimer(countTimer);
+  };
+
   const toggleAutoDraw = () => {
     if (autoDrawing) {
-      if (autoTimer) {
-        clearInterval(autoTimer);
-        setAutoTimer(null);
-      }
-      setAutoDrawing(false);
+      stopAutoDraw();
       setDrawMode("normal");
     } else {
-      setAutoDrawing(true);
       setDrawMode("auto");
-      const timer = setInterval(() => {
-        handleDraw();
-      }, autoInterval * 1000);
-      setAutoTimer(timer);
+      startAutoDraw();
     }
   };
 
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      if (autoTimer) {
-        clearInterval(autoTimer);
-      }
+      if (autoTimer) clearInterval(autoTimer);
     };
   }, [autoTimer]);
 
@@ -345,7 +370,7 @@ export default function GamePlay() {
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { value: "manual", label: "Manual", icon: Keyboard, desc: "Digite o número" },
-                    { value: "auto", label: "Automático", icon: Timer, desc: `${autoInterval}s` },
+                    { value: "auto", label: "Automático", icon: Timer, desc: autoDrawing ? `⏱ ${autoCountdown ?? autoInterval}s` : `${autoInterval}s` },
                     { value: "normal", label: "Normal", icon: Sparkles, desc: "Clique para sortear" },
                   ].map((opt) => {
                     const Icon = opt.icon;
@@ -409,30 +434,64 @@ export default function GamePlay() {
                       </div>
                     )}
                     {drawMode === "auto" && (
-                      <div className="flex gap-2 items-center w-full max-w-xs">
-                        <Input
-                          type="number"
-                          min="1"
-                          max="60"
-                          value={autoInterval}
-                          onChange={(e) => setAutoInterval(Math.max(1, Math.min(60, parseInt(e.target.value) || 5)))}
-                          className="h-12 w-20 text-center text-lg font-bold bg-white/10 border-white/20 text-white"
-                          disabled={autoDrawing || drawing}
-                        />
-                        <span className="text-sm text-violet-300">segundos</span>
-                        <Button
-                          size="lg"
-                          className={`gap-2 px-6 border-0 text-lg font-bold ${
-                            autoDrawing
-                              ? "bg-red-500 hover:bg-red-600 text-white"
-                              : "bg-accent hover:bg-accent/90 text-accent-foreground"
-                          }`}
-                          onClick={toggleAutoDraw}
-                          disabled={drawing || allDrawn}
-                        >
-                          <Timer className="w-5 h-5" />
-                          {autoDrawing ? "Parar" : "Iniciar"}
-                        </Button>
+                      <div className="flex flex-col items-center gap-3 w-full max-w-sm">
+                        {/* Countdown ring */}
+                        {autoDrawing && autoCountdown !== null && (
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="relative w-20 h-20">
+                              <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                                <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
+                                <circle
+                                  cx="40" cy="40" r="34" fill="none"
+                                  stroke="hsl(var(--accent))" strokeWidth="6"
+                                  strokeDasharray={`${2 * Math.PI * 34}`}
+                                  strokeDashoffset={`${2 * Math.PI * 34 * (1 - autoCountdown / autoInterval)}`}
+                                  strokeLinecap="round"
+                                  style={{ transition: "stroke-dashoffset 0.9s linear" }}
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-2xl font-bold text-white font-heading">{autoCountdown}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs text-violet-300">próximo sorteio</span>
+                          </div>
+                        )}
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="number"
+                            min="3"
+                            max="60"
+                            value={autoInterval}
+                            onChange={(e) => setAutoInterval(Math.max(3, Math.min(60, parseInt(e.target.value) || 10)))}
+                            className="h-11 w-20 text-center text-lg font-bold bg-white/10 border-white/20 text-white"
+                            disabled={autoDrawing}
+                          />
+                          <span className="text-sm text-violet-300">segundos</span>
+                          <Button
+                            size="lg"
+                            className={`gap-2 px-6 border-0 font-bold ${
+                              autoDrawing
+                                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                : "bg-accent hover:bg-accent/90 text-accent-foreground"
+                            }`}
+                            onClick={toggleAutoDraw}
+                            disabled={allDrawn}
+                          >
+                            <Timer className="w-5 h-5" />
+                            {autoDrawing ? "Pausar" : "Iniciar"}
+                          </Button>
+                          {autoDrawing && (
+                            <Button
+                              size="lg"
+                              variant="outline"
+                              className="gap-2 border-white/30 text-white hover:bg-white/10 font-bold"
+                              onClick={() => { stopAutoDraw(); startAutoDraw(); }}
+                            >
+                              <RotateCcw className="w-4 h-4" /> Reiniciar
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
                     {drawMode === "normal" && (
