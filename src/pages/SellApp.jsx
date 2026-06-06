@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
-  ChevronDown, UserCheck, Hash, Download, Camera, Trash2, Loader2
+  ChevronDown, UserCheck, Hash, Download, Camera, Trash2, Loader2, LogOut
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -882,6 +882,14 @@ export default function SellApp() {
             onClick={() => { setLoggedOut(false); setSeller(null); }}
           >
             Entrar novamente
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full h-12 text-base mt-3 gap-2"
+            onClick={() => window.close()}
+          >
+            <LogOut className="w-4 h-4" />
+            Sair do aplicativo
           </Button>
         </div>
       </div>
