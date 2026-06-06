@@ -614,12 +614,26 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
               <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
             ))}
           </div>
+        ) : rangeCards.length === 0 && (cardRange?.from || cardRange?.to) ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <div className="text-4xl">🔍</div>
+            <p className="font-semibold text-foreground">Nenhuma cartela neste intervalo</p>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              O intervalo {String(cardRange.from || "").padStart(4,"0")}–{String(cardRange.to || "").padStart(4,"0")} não tem cartelas cadastradas.
+            </p>
+            <Button variant="outline" className="mt-2" onClick={onBack}>
+              Alterar intervalo
+            </Button>
+          </div>
         ) : (
           <>
             {!search && available.length > 0 && (
               <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
                 Toque para vender
               </p>
+            )}
+            {!search && rangeCards.length === 0 && (
+              <p className="text-center text-muted-foreground text-sm py-10">Nenhuma cartela encontrada.</p>
             )}
             <div className="grid grid-cols-5 gap-2">
               {(search ? filtered : rangeCards).map((card) => {
