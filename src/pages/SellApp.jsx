@@ -537,18 +537,14 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 pt-10 pb-4">
-        {locked ? (
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-primary-foreground/80 text-sm">🔒 {seller.name}</span>
-            <button onClick={onLogout} className="flex items-center gap-1 text-primary-foreground/80 text-sm">
-              <ArrowLeft className="w-4 h-4" /> Sair
-            </button>
-          </div>
-        ) : (
-          <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-2">
-            <ArrowLeft className="w-4 h-4" /> Trocar evento
+        <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-1">
+            <ArrowLeft className="w-4 h-4" /> {locked ? 'Voltar' : 'Trocar evento'}
           </button>
-        )}
+          {locked && (
+            <button onClick={onLogout} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-2 ml-auto">
+              Sair <LogOut className="w-4 h-4" />
+            </button>
+          )}
         <h1 className="text-lg font-bold font-heading leading-tight">{game.name}</h1>
         <div className="flex flex-wrap gap-2 mt-2 text-sm text-primary-foreground/80 items-center">
           {rangeLabel && (
@@ -927,7 +923,7 @@ export default function SellApp() {
       seller={seller}
       game={resolvedGame}
       cardRange={cardRange}
-      onBack={() => { setGame(null); setCardRange(urlRange); }}
+      onBack={() => { if (lockedSeller) { setCardRange(null); } else { setGame(null); setCardRange(urlRange); } }}
       locked={lockedSeller}
       onLogout={handleLogout}
     />
