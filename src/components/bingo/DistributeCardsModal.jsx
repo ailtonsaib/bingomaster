@@ -3,198 +3,142 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  X, Copy, Check, CheckCircle2, MessageCircle, ChevronDown, Hash, Trash2,
-  Link2, Users, Layers, AlertCircle
-} from "lucide-react";
+import { X, Trash2, Link2, QrCode, ExternalLink } from "lucide-react";
+import QRCode from "qrcode.react";
 
-function SellerRow({ seller, game, maxCard, minCard, allAssignments, onChange, existingCards, onDelete }) {
-  const assignment = allAssignments[seller.id] || { from: "", to: "" };
-  const [copied, setCopied] = useState(false);
+// ─── QR Modal ───────────────────────────────────────────────────────────────
+function QrModal({ link, name, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl p-6 flex flex-col items-center gap-4 max-w-xs w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="font-bold text-base text-center">{name}</p>
+        <QRCode value={link} size={200} />
+        <p className="text-xs text-gray-500 break-all text-center">{link}</p>
+        <Button className="w-full" onClick={onClose}>Fechar</Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seller Card ─────────────────────────────────────────────────────────────
+function SellerCard({ seller, game, existingCards, onDelete }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [showQr, setShowQr] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const from = parseInt(assignment.from) || null;
-  const to = parseInt(assignment.to) || null;
-  const valid = from && to && from <= to;
-  const count = valid ? to - from + 1 : 0;
+  const fromN = parseInt(from) || null;
+  const toN = parseInt(to) || null;
+  const valid = fromN && toN && fromN <= toN;
+  const count = valid ? toN - fromN + 1 : 0;
 
-  // Check for overlap with other sellers
-  const hasOverlap = (() => {
-    if (!valid) return false;
-    for (const [otherId, other] of Object.entries(allAssignments)) {
-      if (otherId === seller.id) continue;
-      const otherFrom = parseInt(other.from);
-      const otherTo = parseInt(other.to);
-      if (otherFrom && otherTo && otherFrom <= otherTo) {
-        // Check overlap: ranges overlap if one starts before the other ends
-        if (from <= otherTo && to >= otherFrom) {
-          return true;
-        }
-      }
-    }
-    return false;
-  })();
-
-  // Check which numbers in this range are already distributed (have player info)
-  const distributedInThisRange = valid
-    ? existingCards.filter((c) => {
-        const num = c.card_number;
-        return num >= from && num <= to && (c.player_phone || c.player_city);
-      }).length
-    : 0;
-
-  // Build the pre-filled link
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
   const params = new URLSearchParams();
   params.set("seller_name", seller.name);
   params.set("seller_phone", seller.phone || "");
   params.set("seller_id", seller.id);
   params.set("game_id", game.id);
-  if (valid) {
-    params.set("range_from", from);
-    params.set("range_to", to);
-  }
+  if (valid) { params.set("range_from", fromN); params.set("range_to", toN); }
   const link = `${appUrl}/sell?${params.toString()}`;
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleWhatsApp = () => {
-    const phone = seller.phone?.replace(/\D/g, "");
-    const url = phone
-      ? `https://wa.me/55${phone}?text=${encodeURIComponent(link)}`
-      : `https://wa.me/?text=${encodeURIComponent(link)}`;
-    window.open(url, "_blank");
-  };
-
-  const handleDeleteDistribution = async () => {
-    if (!window.confirm(`Deseja excluir as cartelas distribuídas para ${seller.name}?`)) return;
-    
+  const handleDelete = async () => {
+    if (!window.confirm(`Excluir distribuição de ${seller.name}?`)) return;
     setDeleting(true);
-    try {
-      const cardsToDelete = existingCards.filter((c) => c.player_name === seller.name || c.player_phone === seller.phone);
-      if (cardsToDelete.length > 0) {
-        await Promise.all(cardsToDelete.map((c) => base44.entities.BingoCard.delete(c.id)));
-      }
-      onChange(seller.id, "from", "");
-      onChange(seller.id, "to", "");
-      await onDelete();
-    } catch (error) {
-      console.error("Erro ao deletar distribuição:", error);
-    } finally {
-      setDeleting(false);
-    }
+    const toDelete = existingCards.filter((c) => c.player_name === seller.name || c.player_phone === seller.phone);
+    await Promise.all(toDelete.map((c) => base44.entities.BingoCard.delete(c.id)));
+    setFrom(""); setTo("");
+    setDeleting(false);
+    onDelete();
   };
 
   return (
-    <div className="border rounded-xl p-4 space-y-3 bg-card">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-semibold text-sm font-heading">{seller.name}</p>
-          {seller.phone && <p className="text-xs text-muted-foreground">{seller.phone}</p>}
-        </div>
-        {valid && (
-          <Badge className="bg-primary/10 text-primary border-0 text-xs">
-            {count} cartelas
-          </Badge>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Cartela inicial</p>
+    <>
+      {showQr && <QrModal link={link} name={seller.name} onClose={() => setShowQr(false)} />}
+      <div className="border rounded-xl p-4 bg-white space-y-3">
+        {/* Top row: name + range inputs + trash */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <p className="font-bold text-sm uppercase">{seller.name}</p>
+            {valid && (
+              <>
+                <p className="text-xs text-primary">Cartelas: {fromN} até {toN}</p>
+                <p className="text-xs text-green-600">Total: {count} cartelas</p>
+              </>
+            )}
+          </div>
           <Input
             type="number"
             inputMode="numeric"
-            className="h-10 text-center font-bold text-base"
-            placeholder={String(minCard).padStart(4, "0")}
-            value={assignment.from}
-            onChange={(e) => onChange(seller.id, "from", e.target.value)}
+            className="h-9 w-20 text-center text-sm font-bold"
+            placeholder="De"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
           />
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Cartela final</p>
           <Input
             type="number"
             inputMode="numeric"
-            className="h-10 text-center font-bold text-base"
-            placeholder={String(maxCard).padStart(4, "0")}
-            value={assignment.to}
-            onChange={(e) => onChange(seller.id, "to", e.target.value)}
+            className="h-9 w-20 text-center text-sm font-bold"
+            placeholder="Até"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
           />
+          <button
+            className="text-red-400 hover:text-red-600 p-1"
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Excluir distribuição"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Action buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            size="sm"
+            className="bg-green-500 hover:bg-green-600 text-white gap-1 text-xs"
+            onClick={() => window.open(link, "_blank")}
+          >
+            <ExternalLink className="w-3.5 h-3.5" /> Testar
+          </Button>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-1 text-xs"
+            onClick={() => navigator.clipboard.writeText(link)}
+          >
+            <Link2 className="w-3.5 h-3.5" /> Link
+          </Button>
+          <Button
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-xs"
+            onClick={() => setShowQr(true)}
+          >
+            <QrCode className="w-3.5 h-3.5" /> QR
+          </Button>
         </div>
       </div>
-
-      {from && to && from > to && (
-        <p className="text-xs text-destructive flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" /> Cartela inicial deve ser menor que a final
-        </p>
-      )}
-      {hasOverlap && (
-        <p className="text-xs text-destructive flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" /> Intervalo sobreposto com outro vendedor
-        </p>
-      )}
-      {distributedInThisRange > 0 && (
-        <p className="text-xs text-amber-600 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" /> {distributedInThisRange} cartela(s) já distribuída(s) neste intervalo
-        </p>
-      )}
-
-      {valid && (
-         <Button
-           variant="ghost"
-           size="sm"
-           className="w-full h-8 text-xs text-destructive hover:text-destructive"
-           onClick={handleDeleteDistribution}
-           disabled={deleting}
-         >
-           <Trash2 className="w-3 h-3" /> {deleting ? "Deletando..." : "Excluir distribuição"}
-         </Button>
-       )}
-
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 gap-1.5 text-xs"
-          onClick={handleCopy}
-        >
-          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? "Copiado!" : "Copiar link"}
-        </Button>
-        <Button
-          size="sm"
-          className="flex-1 gap-1.5 text-xs bg-green-600 hover:bg-green-700 text-white"
-          onClick={handleWhatsApp}
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          WhatsApp
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
 
+// ─── Main Modal ──────────────────────────────────────────────────────────────
 export default function DistributeCardsModal({ onClose }) {
   const queryClient = useQueryClient();
   const [selectedGame, setSelectedGame] = useState(null);
-  const [showGamePicker, setShowGamePicker] = useState(false);
-  const [assignments, setAssignments] = useState({});
-  const [autoFrom, setAutoFrom] = useState("");
-  const [autoQty, setAutoQty] = useState("");
-  const [clearing, setClearing] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newFrom, setNewFrom] = useState("");
+  const [newTo, setNewTo] = useState("");
+  const [extraSellers, setExtraSellers] = useState([]); // sellers added manually in this session
 
   const { data: games = [] } = useQuery({
     queryKey: ["dist-games"],
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
   });
 
-  const { data: sellers = [] } = useQuery({
+  const { data: dbSellers = [] } = useQuery({
     queryKey: ["dist-sellers"],
     queryFn: () => base44.entities.Seller.filter({ is_active: true }, "name"),
   });
@@ -205,84 +149,17 @@ export default function DistributeCardsModal({ onClose }) {
     enabled: !!selectedGame,
   });
 
-  const maxCard = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) : 999;
-  const minCard = cards.length > 0 ? Math.min(...cards.map((c) => c.card_number || 0)) : 1;
+  // Merge db sellers with extra manually-added sellers
+  const sellers = [...dbSellers, ...extraSellers.filter((e) => !dbSellers.find((d) => d.id === e.id))];
 
-  // Calculate which numbers are already distributed (assigned to sellers)
-  const distributedNumbers = cards
-    .filter((c) => c.player_phone || c.player_city)
-    .map((c) => c.card_number);
+  const distributedCount = cards.filter((c) => c.player_phone || c.player_city).length;
+  const sellerCount = sellers.length;
 
-  const handleChange = (sellerId, field, value) => {
-    setAssignments((prev) => ({
-      ...prev,
-      [sellerId]: { ...(prev[sellerId] || {}), [field]: value },
-    }));
-  };
-
-  const handleClearAll = async () => {
-    if (!selectedGame || !window.confirm("Tem certeza que deseja excluir TODAS as cartelas distribuídas deste jogo? Esta ação não pode ser desfeita.")) return;
-    
-    setClearing(true);
-    try {
-      const distributedCards = cards.filter((c) => c.player_phone || c.player_city);
-      if (distributedCards.length > 0) {
-        await Promise.all(distributedCards.map((c) => base44.entities.BingoCard.delete(c.id)));
-      }
-      setAssignments({});
-      setAutoFrom("");
-      setAutoQty("");
-      await queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] });
-    } catch (error) {
-      console.error("Erro ao limpar distribuições:", error);
-    } finally {
-      setClearing(false);
-    }
-  };
-
-  const handleDeleteSoldOnly = async () => {
-    if (!selectedGame || !window.confirm(`Deseja excluir apenas as ${distributedNumbers.length} cartelas vendidas? Esta ação não pode ser desfeita.`)) return;
-    
-    setClearing(true);
-    try {
-      const soldCards = cards.filter((c) => c.player_phone || c.player_city);
-      if (soldCards.length > 0) {
-        await Promise.all(soldCards.map((c) => base44.entities.BingoCard.delete(c.id)));
-      }
-      setAssignments({});
-      await queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] });
-    } catch (error) {
-      console.error("Erro ao deletar vendidas:", error);
-    } finally {
-      setClearing(false);
-    }
-  };
-
-  // Auto-distribute: starting from autoFrom, give autoQty to each seller in order, skipping distributed numbers
-  const handleAutoDistribute = () => {
-    const start = parseInt(autoFrom) || minCard;
-    const qty = parseInt(autoQty);
-    if (!qty || sellers.length === 0) return;
-    
-    const newAssignments = {};
-    let currentStart = start;
-    
-    sellers.forEach((s, i) => {
-      // Find next available range (skip distributed numbers)
-      let from = currentStart;
-      let to = from + qty - 1;
-      
-      // Adjust if range overlaps with distributed numbers
-      while (distributedNumbers.some(num => num >= from && num <= to)) {
-        from = to + 1;
-        to = from + qty - 1;
-      }
-      
-      newAssignments[s.id] = { from: String(from), to: String(to) };
-      currentStart = to + 1;
-    });
-    
-    setAssignments(newAssignments);
+  const handleAddSeller = () => {
+    if (!newName.trim()) return;
+    const id = `manual-${Date.now()}`;
+    setExtraSellers((prev) => [...prev, { id, name: newName.trim(), phone: "", from: newFrom, to: newTo }]);
+    setNewName(""); setNewFrom(""); setNewTo("");
   };
 
   const activeGames = games.filter((g) => g.status !== "finished");
@@ -290,168 +167,111 @@ export default function DistributeCardsModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className="bg-background rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
+        className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b shrink-0">
-          <div>
-            <h2 className="font-bold font-heading flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" /> Distribuir Cartelas por Vendedor
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Gere links personalizados para cada vendedor</p>
+        <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>🎟</span>
+            <span className="font-semibold">Selecione o Evento</span>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto">
           {/* Game selector */}
-          <div>
-            <p className="text-sm font-medium mb-1.5">Selecionar jogo</p>
-            <div className="relative">
-              <button
-                className="w-full flex items-center justify-between h-11 px-3 rounded-lg border border-input bg-background text-sm hover:bg-accent transition-colors"
-                onClick={() => setShowGamePicker((v) => !v)}
-              >
-                <span className={selectedGame ? "text-foreground" : "text-muted-foreground"}>
-                  {selectedGame?.name || "Escolha um jogo..."}
-                </span>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </button>
-              {showGamePicker && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg max-h-48 overflow-auto">
-                  {activeGames.length === 0 ? (
-                    <div className="text-xs text-muted-foreground text-center py-4">Nenhum jogo ativo</div>
-                  ) : (
-                    activeGames.map((g) => (
-                      <button
-                        key={g.id}
-                        className="w-full text-left px-3 py-2.5 hover:bg-muted text-sm"
-                        onClick={() => { setSelectedGame(g); setShowGamePicker(false); setAssignments({}); }}
-                      >
-                        {g.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+          <div className="px-5 pt-4 pb-3 border-b">
+            <select
+              className="w-full h-11 rounded-lg border-2 border-purple-400 bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+              value={selectedGame?.id || ""}
+              onChange={(e) => {
+                const g = games.find((x) => x.id === e.target.value);
+                setSelectedGame(g || null);
+              }}
+            >
+              <option value="">Escolha um evento...</option>
+              {activeGames.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}{g.event_date ? ` - ${g.event_date.slice(0,10)}` : ""}</option>
+              ))}
+            </select>
           </div>
 
           {selectedGame && (
             <>
-              {/* Info */}
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Hash className="w-3.5 h-3.5" />
-                    {cards.length} cartelas ({String(minCard).padStart(4,"0")}–{String(maxCard).padStart(4,"0")})
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" />
-                    {sellers.length} vendedores ativos
-                  </span>
-                  {distributedNumbers.length > 0 && (
-                    <span className="flex items-center gap-1 text-amber-600">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      {distributedNumbers.length} já distribuídas/vendidas
-                    </span>
-                  )}
-                  {cards.length - distributedNumbers.length > 0 && (
-                    <span className="flex items-center gap-1 text-green-600">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      {cards.length - distributedNumbers.length} disponíveis
-                    </span>
-                  )}
-                </div>
-                {distributedNumbers.length > 0 && (
-                  <div className="space-y-2">
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="w-full gap-2"
-                      onClick={handleDeleteSoldOnly}
-                      disabled={clearing}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {clearing ? "Excluindo..." : `Excluir apenas ${distributedNumbers.length} vendidas`}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={handleClearAll}
-                      disabled={clearing}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {clearing ? "Limpando..." : `Limpar todas as ${distributedNumbers.length} distribuições`}
-                    </Button>
+              {/* Stats row */}
+              <div className="grid grid-cols-3 border-b">
+                {[
+                  { label: "Cartelas Geradas:", value: cards.length, color: "text-purple-600" },
+                  { label: "Distribuídas:", value: distributedCount, color: "text-purple-600" },
+                  { label: "Vendedores:", value: sellerCount, color: "text-green-600" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="flex flex-col px-5 py-3 border-r last:border-r-0">
+                    <span className="text-xs text-muted-foreground">{label}</span>
+                    <span className={`text-xl font-bold ${color}`}>{value}</span>
                   </div>
-                )}
+                ))}
               </div>
 
-              {/* Auto-distribute */}
-              <div className="bg-muted/40 rounded-xl p-4 space-y-3">
-                <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Distribuição automática</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Começar na cartela</p>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      className="h-10 text-center"
-                      placeholder={String(minCard).padStart(4, "0")}
-                      value={autoFrom}
-                      onChange={(e) => setAutoFrom(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Qtde por vendedor</p>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      className="h-10 text-center"
-                      placeholder="100"
-                      value={autoQty}
-                      onChange={(e) => setAutoQty(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={handleAutoDistribute}
-                  disabled={!autoQty || sellers.length === 0}
-                >
-                  <Link2 className="w-3.5 h-3.5" /> Distribuir automaticamente
-                </Button>
-              </div>
-
-              {/* Seller rows */}
-              {sellers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum vendedor cadastrado. Cadastre vendedores primeiro.
+              {/* Add seller */}
+              <div className="px-5 py-4 border-b space-y-3">
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  <span className="text-primary text-base">+</span> Adicionar Vendedor
                 </p>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vendedores</p>
+                <div className="flex gap-2">
+                  <Input
+                    className="flex-1 text-sm"
+                    placeholder="Nome do vendedor"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddSeller()}
+                  />
+                  <Input
+                    type="number"
+                    className="w-20 text-center text-sm"
+                    placeholder="De"
+                    value={newFrom}
+                    onChange={(e) => setNewFrom(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    className="w-20 text-center text-sm"
+                    placeholder="Até"
+                    value={newTo}
+                    onChange={(e) => setNewTo(e.target.value)}
+                  />
+                  <Button
+                    className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 whitespace-nowrap"
+                    onClick={handleAddSeller}
+                    disabled={!newName.trim()}
+                  >
+                    <span className="text-lg leading-none">+</span> Adicionar
+                  </Button>
+                </div>
+              </div>
+
+              {/* Sellers list */}
+              {sellers.length > 0 && (
+                <div className="px-5 py-4 space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground">Vendedores Cadastrados:</p>
                   {sellers.map((seller) => (
-                    <SellerRow
+                    <SellerCard
                       key={seller.id}
                       seller={seller}
                       game={selectedGame}
-                      maxCard={maxCard}
-                      minCard={minCard}
-                      allAssignments={assignments}
-                      onChange={handleChange}
                       existingCards={cards}
                       onDelete={() => queryClient.invalidateQueries({ queryKey: ["dist-cards", selectedGame.id] })}
                     />
                   ))}
                 </div>
+              )}
+
+              {sellers.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum vendedor cadastrado. Adicione acima ou cadastre na página de Vendedores.
+                </p>
               )}
             </>
           )}
