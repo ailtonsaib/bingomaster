@@ -3,10 +3,9 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Printer } from "lucide-react";
 import PrintA4Sheet from "@/components/bingo/PrintA4Sheet";
-
-const BATCH_SIZE = 300; // cards per PDF export batch (100 A4 pages)
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -19,9 +18,12 @@ function chunkArray(arr, size) {
 export default function PrintCards() {
   const { gameId } = useParams();
   const printRef = useRef();
-  const [exportBatch, setExportBatch] = useState(null); // null = show all, number = batch index
-  const [customRange, setCustomRange] = useState({ from: "", to: "" });
-  const [useCustomRange, setUseCustomRange] = useState(false);
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const [cards, setCards] = useState(null); // null = ainda nao carregou
+  const [isLoading, setIsLoading] = useState(false);
+  const [rangeLabel, setRangeLabel] = useState("");
+  const [showButtons, setShowButtons] = useState(false);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -29,57 +31,42 @@ export default function PrintCards() {
     select: (data) => data[0],
   });
 
-  const { data: cards = [], isLoading } = useQuery({
-    queryKey: ["cards", gameId],
-    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(gameId) }),
+  const { data: totalCards } = useQuery({
+    queryKey: ["game-total-cards", gameId],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getGameCards", { game_id: String(gameId) });
+      return (res.data.cards || []).length;
+    },
   });
 
-  const handlePrint = () => window.print();
-
-  const handleExportBatch = (batchIdx) => {
-    setExportBatch(batchIdx);
-    setUseCustomRange(false);
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => setExportBatch(null), 1000);
-    }, 300);
-  };
-
-  const handlePrintRange = () => {
-    const from = parseInt(customRange.from);
-    const to = parseInt(customRange.to);
-    if (isNaN(from) || isNaN(to) || from > to) {
-      alert("Por favor, insira um intervalo válido (de 1 a 100, por exemplo)");
+  const handleLoadRange = async () => {
+    const from = parseInt(rangeFrom);
+    const to = parseInt(rangeTo);
+    if (isNaN(from) || isNaN(to) || from < 1 || to < from) {
+      alert("Insira um intervalo válido (ex: 1 até 200)");
       return;
     }
-    setExportBatch(null);
-    setUseCustomRange(true);
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => setUseCustomRange(false), 1000);
-    }, 300);
+    setIsLoading(true);
+    setCards(null);
+    const res = await base44.functions.invoke("getGameCards", {
+      game_id: String(gameId),
+      range_from: from,
+      range_to: to,
+    });
+    setCards(res.data.cards || []);
+    setRangeLabel(`${from} até ${to}`);
+    setShowButtons(true);
+    setIsLoading(false);
   };
 
-  // 1 card per A4 sheet (3 identical grids side by side per chance)
+  const handlePrint = () => {
+    setTimeout(() => window.print(), 200);
+  };
+
   const CARDS_PER_PAGE = 1;
   const prizes = game?.prizes || [];
-
-  // Which cards to show: all, selected batch, or custom range
-  const batches = chunkArray(cards, BATCH_SIZE);
-  let displayCards = cards;
-  let rangeLabel = "";
-  
-  if (exportBatch !== null) {
-    displayCards = batches[exportBatch] || [];
-    rangeLabel = `Lote ${exportBatch + 1} (${exportBatch * BATCH_SIZE + 1}–${Math.min((exportBatch + 1) * BATCH_SIZE, cards.length)})`;
-  } else if (useCustomRange && customRange.from && customRange.to) {
-    const from = parseInt(customRange.from);
-    const to = parseInt(customRange.to);
-    displayCards = cards.filter((c) => c.card_number >= from && c.card_number <= to);
-    rangeLabel = `${from}–${to}`;
-  }
-  
-  const pages = chunkArray([...displayCards].sort((a, b) => (a.card_number || 0) - (b.card_number || 0)), CARDS_PER_PAGE);
+  const sortedCards = cards ? [...cards].sort((a, b) => (a.card_number || 0) - (b.card_number || 0)) : [];
+  const pages = chunkArray(sortedCards, CARDS_PER_PAGE);
 
   return (
     <>
@@ -93,94 +80,136 @@ export default function PrintCards() {
             <ArrowLeft className="w-4 h-4" /> Voltar às Cartelas
           </Link>
           <span className="text-sm font-semibold">
-            Impressão A4 — {cards.length} cartelas / {chunkArray(cards, CARDS_PER_PAGE).length} folhas
+            Impressão A4 {totalCards ? `— ${totalCards} cartelas no total` : ""}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-muted/40">
-            <span className="text-xs font-medium">Imprimir faixa:</span>
-            <input
-              type="number"
-              min="1"
-              placeholder="De"
-              value={customRange.from}
-              onChange={(e) => setCustomRange({ ...customRange, from: e.target.value })}
-              className="w-16 h-7 px-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <span className="text-xs text-muted-foreground">até</span>
-            <input
-              type="number"
-              min="1"
-              placeholder="Até"
-              value={customRange.to}
-              onChange={(e) => setCustomRange({ ...customRange, to: e.target.value })}
-              className="w-16 h-7 px-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <Button
-              variant="default"
-              size="sm"
-              className="h-7 text-xs gap-1.5"
-              onClick={handlePrintRange}
-              disabled={!customRange.from || !customRange.to}
-            >
-              <Printer className="w-3 h-3" /> Imprimir
-            </Button>
-          </div>
-          {batches.length > 1 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Lotes:</span>
-              {batches.map((_, idx) => (
-                <Button
-                  key={idx}
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs h-8"
-                  onClick={() => handleExportBatch(idx)}
-                >
-                  <Download className="w-3 h-3" />
-                  {idx * BATCH_SIZE + 1}–{Math.min((idx + 1) * BATCH_SIZE, cards.length)}
-                </Button>
-              ))}
-            </div>
-          )}
+        {showButtons && cards && cards.length > 0 && (
           <Button onClick={handlePrint} className="gap-2">
-            <Printer className="w-4 h-4" /> Imprimir Tudo
+            <Printer className="w-4 h-4" /> Imprimir Agora
           </Button>
-        </div>
+        )}
       </div>
 
-      {/* Print area */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64 text-muted-foreground">
-          Carregando cartelas...
-        </div>
-      ) : (
-        <div ref={printRef} id="print-area">
-          {(exportBatch !== null || useCustomRange) && (
-            <div className="no-print text-center py-2 text-sm text-muted-foreground bg-yellow-50 border-b">
-              Modo exportação: {rangeLabel} — {displayCards.length} cartela(s)
+      {/* Main content */}
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        {/* Range input — always visible until cards are loaded */}
+        <div className="bg-card rounded-2xl shadow-lg border p-8 text-center space-y-6">
+          <div>
+            <h2 className="text-xl font-bold font-heading">Impressão de Cartelas A4</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Informe o intervalo de cartelas que deseja imprimir
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">De (número)</label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="1"
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+                className="w-28 text-center text-lg h-12"
+                onKeyDown={(e) => e.key === "Enter" && handleLoadRange()}
+              />
+            </div>
+            <span className="text-xl font-bold text-muted-foreground mt-5">até</span>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Até (número)</label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="500"
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+                className="w-28 text-center text-lg h-12"
+                onKeyDown={(e) => e.key === "Enter" && handleLoadRange()}
+              />
+            </div>
+          </div>
+
+          <Button
+            size="lg"
+            className="gap-2 px-8"
+            onClick={handleLoadRange}
+            disabled={!rangeFrom || !rangeTo || isLoading}
+          >
+            {isLoading ? "Carregando..." : "Carregar Cartelas"}
+          </Button>
+
+          {/* Quick range suggestions */}
+          {totalCards > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs text-muted-foreground">Sugestões:</span>
+              {(() => {
+                const step = 500;
+                const total = totalCards || 0;
+                const chunks = [];
+                for (let i = 1; i <= total; i += step) {
+                  chunks.push({ from: i, to: Math.min(i + step - 1, total) });
+                }
+                return chunks.slice(0, 10).map((chunk) => (
+                  <button
+                    key={chunk.from}
+                    className="text-xs px-2.5 py-1 rounded-full border hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setRangeFrom(String(chunk.from));
+                      setRangeTo(String(chunk.to));
+                    }}
+                  >
+                    {chunk.from}–{chunk.to}
+                  </button>
+                ));
+              })()}
             </div>
           )}
-          {pages.map((pageCards, pageIdx) => (
-            <div
-              key={pageIdx}
-              className="print-page"
-              style={{
-                pageBreakAfter: pageIdx < pages.length - 1 ? "always" : "auto",
-                breakAfter: pageIdx < pages.length - 1 ? "page" : "auto",
-              }}
-            >
-              <PrintA4Sheet card={pageCards[0]} game={game} prizes={prizes} />
-            </div>
-          ))}
         </div>
-      )}
+
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex items-center justify-center h-40 text-muted-foreground">
+            <div className="w-6 h-6 border-2 border-slate-200 border-t-primary rounded-full animate-spin mr-3" />
+            Carregando cartelas...
+          </div>
+        )}
+
+        {/* Print area */}
+        {cards && cards.length > 0 && (
+          <>
+            <div className="no-print text-center py-3 mt-6 text-sm text-muted-foreground bg-yellow-50 border rounded-lg">
+              Exibindo cartelas {rangeLabel} — {cards.length} cartela(s) — {pages.length} folha(s) A4
+            </div>
+
+            <div ref={printRef} id="print-area">
+              {pages.map((pageCards, pageIdx) => (
+                <div
+                  key={pageIdx}
+                  className="print-page"
+                  style={{
+                    pageBreakAfter: pageIdx < pages.length - 1 ? "always" : "auto",
+                    breakAfter: pageIdx < pages.length - 1 ? "page" : "auto",
+                  }}
+                >
+                  <PrintA4Sheet card={pageCards[0]} game={game} prizes={prizes} />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {cards && cards.length === 0 && !isLoading && (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-lg font-semibold">Nenhuma cartela encontrada</p>
+            <p className="text-sm mt-1">Verifique o intervalo informado.</p>
+          </div>
+        )}
+      </div>
 
       <style>{`
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; padding: 0; background: #fff; }
-          #print-area { margin: 0; padding: 0; }
           .print-page {
             width: 210mm;
             min-height: 297mm;

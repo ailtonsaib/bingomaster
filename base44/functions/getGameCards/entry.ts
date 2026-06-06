@@ -9,15 +9,24 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { game_id } = await req.json();
+    const { game_id, range_from, range_to } = await req.json();
 
     if (!game_id) {
       return Response.json({ error: 'game_id is required' }, { status: 400 });
     }
 
-    // Fetch all cards for the game with a high limit
+    let query = { game_id: String(game_id) };
+
+    // If range is provided, filter by card_number range at DB level
+    if (range_from !== undefined && range_to !== undefined) {
+      query.card_number = {
+        $gte: Number(range_from),
+        $lte: Number(range_to),
+      };
+    }
+
     const cards = await base44.asServiceRole.entities.BingoCard.filter(
-      { game_id: String(game_id) },
+      query,
       'card_number',
       100000
     );
