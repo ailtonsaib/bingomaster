@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { maskPhone } from "@/lib/utils";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
@@ -131,7 +132,7 @@ function SellerStep({ onEnter, locked }) {
                 className="pl-9 h-12 text-base"
                 placeholder="(00) 00000-0000"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(maskPhone(e.target.value))}
                 onKeyDown={(e) => e.key === "Enter" && handleContinue()}
               />
             </div>
@@ -703,7 +704,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
                   className="h-12 text-base"
                   type="tel"
                   value={buyerPhone}
-                  onChange={(e) => setBuyerPhone(e.target.value)}
+                  onChange={(e) => setBuyerPhone(maskPhone(e.target.value))}
                   placeholder="(00) 00000-0000"
                 />
               </div>

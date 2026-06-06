@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { maskPhone } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Search, ChevronDown, User, Phone, CheckCircle2,
@@ -63,7 +64,7 @@ function SellModal({ card, onClose, onSaved }) {
               className="h-12 text-base"
               type="tel"
               value={buyerPhone}
-              onChange={(e) => setBuyerPhone(e.target.value)}
+              onChange={(e) => setBuyerPhone(maskPhone(e.target.value))}
               placeholder="(00) 00000-0000"
             />
           </div>
