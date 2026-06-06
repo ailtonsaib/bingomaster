@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     // Calculate distributed cards per seller (by seller_id)
     const sellerStats = sellers.map((seller) => {
       const distributedCards = allCards.filter((c) => c.seller_id === seller.id);
-      const soldCards = distributedCards.filter(
-        (c) => c.player_phone || c.player_city
+      const soldCards = allCards.filter(
+        (c) => c.seller_id === seller.id && (c.player_phone || c.player_city)
       );
       return {
         seller,
