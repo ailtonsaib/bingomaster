@@ -338,8 +338,11 @@ function CardRangeStep({ seller, game, onConfirm, onBack }) {
 }
 
 // --- Export Sold Cards Modal ---
-function ExportSoldModal({ game, seller, soldCards, onClose }) {
-  const handleExport = () => {
+function ExportSoldModal({ game, seller, soldCards, onClose, onExported }) {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
     const data = soldCards.map((c) => ({
       card_number: c.card_number,
       player_name: c.player_name,
@@ -352,10 +355,19 @@ function ExportSoldModal({ game, seller, soldCards, onClose }) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+    const timestamp = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `cartelas-vendidas-${game.name.replace(/\s+/g, "-").toLowerCase()}.json`;
+    a.download = `cartelas-vendidas-${game.name.replace(/\s+/g, "-").toLowerCase()}-${timestamp}.json`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Mark cards as exported
+    const now = new Date().toISOString();
+    await Promise.all(soldCards.map((c) =>
+      base44.entities.BingoCard.update(c.id, { exported_date: now })
+    ));
+    setExporting(false);
+    onExported();
     onClose();
   };
 
@@ -372,12 +384,12 @@ function ExportSoldModal({ game, seller, soldCards, onClose }) {
           {soldCards.length} cartela(s) vendida(s)
         </p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onClose} className="flex-1">
+          <Button variant="outline" onClick={onClose} className="flex-1" disabled={exporting}>
             Cancelar
           </Button>
-          <Button onClick={handleExport} disabled={soldCards.length === 0} className="flex-1 gap-2">
+          <Button onClick={handleExport} disabled={soldCards.length === 0 || exporting} className="flex-1 gap-2">
             <Download className="w-4 h-4" />
-            Exportar
+            {exporting ? "Exportando..." : `Exportar ${soldCards.length}`}
           </Button>
         </div>
       </div>
@@ -437,7 +449,8 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
 
   const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
   const sold = rangeCards.filter((c) => c.player_phone || c.player_city);
-  const soldCards = sold;
+  // Only unexported sold cards for the export button
+  const soldNotExported = sold.filter((c) => !c.exported_date);
 
   const filtered = rangeCards
     .filter((c) => {
@@ -660,15 +673,20 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
               {saving ? "Registrando..." : "Confirmar Venda"}
             </Button>
 
-            {sold.length > 0 && (
+            {soldNotExported.length > 0 && (
               <Button
                 variant="outline"
                 className="w-full h-12 text-base gap-2 mt-2"
                 onClick={() => setShowExport(true)}
               >
                 <Download className="w-4 h-4" />
-                Exportar {sold.length} Cartela(s) Vendida(s)
+                Exportar {soldNotExported.length} Nova(s) Cartela(s)
               </Button>
+            )}
+            {soldNotExported.length === 0 && sold.length > 0 && (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                Todas as {sold.length} cartelas vendidas já foram exportadas.
+              </p>
             )}
           </div>
         </div>
@@ -678,8 +696,9 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
         <ExportSoldModal
           game={game}
           seller={seller}
-          soldCards={sold}
+          soldCards={soldNotExported}
           onClose={() => setShowExport(false)}
+          onExported={() => queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] })}
         />
       )}
     </div>
