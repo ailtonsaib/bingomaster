@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
     // Calculate totals
     const totalDistributed = allDistributions.reduce((acc, d) => acc + (d.range_to - d.range_from + 1), 0);
     const totalCards = allCards.length;
+    const totalSold = allCards.filter((c) => c.seller_id && (c.player_phone || c.player_city)).length;
 
     // Create PDF
     const doc = new jsPDF();
@@ -54,14 +55,19 @@ Deno.serve(async (req) => {
     doc.text('Resumo Geral', 20, 45);
     
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(40);
     doc.text(`Total de Cartelas Geradas: ${totalCards}`, 25, 55);
-    doc.text(`Total de Cartelas Distribuídas/Vendidas: ${totalDistributed}`, 25, 62);
+    doc.text(`Total de Cartelas Distribuídas: ${totalDistributed}`, 25, 63);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total de Cartelas Vendidas: ${String(totalSold).padStart(2, '0')}`, 25, 71);
+    doc.setFont('helvetica', 'normal');
     
     // Seller details section
     doc.setFontSize(12);
-    doc.text('Detalhes por Vendedor', 20, 78);
+    doc.text('Detalhes por Vendedor', 20, 85);
     
-    let yPos = 88;
+    let yPos = 95;
     const pageHeight = doc.internal.pageSize.height;
     const bottomMargin = 20;
     
