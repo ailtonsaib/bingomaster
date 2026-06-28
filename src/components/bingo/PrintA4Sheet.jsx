@@ -191,16 +191,15 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
 
       {/* ── FOOTER ── */}
       <div style={{ borderTop: "1.5px dashed #666", paddingTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <Barcode value={cardNum} width={1} height={24} displayValue={false} margin={0} />
-            </div>
             <div style={{ fontSize: 10, fontWeight: "bold" }}>
               N° {cardNum}
             </div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <Barcode value={cardNum} width={1} height={24} displayValue={false} margin={0} />
+            </div>
           </div>
-          
         </div>
 
         <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10 }}>
