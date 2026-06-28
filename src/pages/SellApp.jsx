@@ -413,6 +413,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   const [showExport, setShowExport] = useState(false);
   const [newCardsCount, setNewCardsCount] = useState(0);
   const [showNewBanner, setShowNewBanner] = useState(false);
+  const [goalAlert, setGoalAlert] = useState(null); // { percent: 50 | 100, soldCount, totalRange }
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -532,6 +533,23 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     setReceiptFile(null);
     setReceiptPreview(null);
     queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
+
+    // Check milestone alerts (50% and 100% of range)
+    const updatedSold = sold.length + 1; // optimistic count after this sale
+    const total = rangeCards.length;
+    if (total > 0) {
+      const pct = (updatedSold / total) * 100;
+      const alreadyAlerted50 = localStorage.getItem(`goal_50_${game.id}_${seller.id || seller.name}`);
+      const alreadyAlerted100 = localStorage.getItem(`goal_100_${game.id}_${seller.id || seller.name}`);
+      if (pct >= 100 && !alreadyAlerted100) {
+        localStorage.setItem(`goal_100_${game.id}_${seller.id || seller.name}`, "1");
+        setGoalAlert({ percent: 100, soldCount: updatedSold, totalRange: total });
+      } else if (pct >= 50 && !alreadyAlerted50) {
+        localStorage.setItem(`goal_50_${game.id}_${seller.id || seller.name}`, "1");
+        setGoalAlert({ percent: 50, soldCount: updatedSold, totalRange: total });
+      }
+    }
+
     setTimeout(() => { setSavedCard(null); setLastSoldBuyerPhone(null); }, 8000);
   };
 
@@ -620,6 +638,39 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
               Enviar link do sorteio via WhatsApp
             </a>
           )}
+        </div>
+      )}
+
+      {/* Goal milestone alert */}
+      {goalAlert && (
+        <div className="mx-4 mt-3 bg-amber-50 border border-amber-300 rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2 text-amber-800 text-sm font-semibold">
+            <span className="text-xl">{goalAlert.percent === 100 ? "🏆" : "🎯"}</span>
+            {goalAlert.percent === 100
+              ? `Parabéns! Você vendeu 100% das suas cartelas!`
+              : `Meta de 50% atingida! ${goalAlert.soldCount} de ${goalAlert.totalRange} cartelas vendidas.`}
+          </div>
+          {seller.phone && (
+            <a
+              href={`https://wa.me/55${seller.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                goalAlert.percent === 100
+                  ? `🏆 Parabéns ${seller.name}! Você vendeu *100%* das suas cartelas do evento *${game.name}*! Todas as ${goalAlert.totalRange} cartelas foram vendidas. Excelente trabalho!`
+                  : `🎯 ${seller.name}, você atingiu *50%* das suas cartelas vendidas no evento *${game.name}*! ${goalAlert.soldCount} de ${goalAlert.totalRange} cartelas vendidas. Continue assim!`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 w-full justify-center bg-[#25D366] hover:bg-[#1ebe5a] text-white text-sm font-medium rounded-lg px-3 py-2 transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Enviar parabéns via WhatsApp
+            </a>
+          )}
+          <button
+            onClick={() => setGoalAlert(null)}
+            className="text-xs text-amber-600 underline w-full text-center"
+          >
+            Fechar
+          </button>
         </div>
       )}
 
