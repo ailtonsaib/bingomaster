@@ -36,7 +36,7 @@ export default function ValidateCards() {
   const isPaid = (card) => hasBuyer(card) && (card.payment_status === "paid" || !card.payment_status);
   const isPending = (card) => hasBuyer(card) && card.payment_status === "pending";
   const hasSeller = (card) => !!card.seller_id && !hasBuyer(card);
-  const isValidated = (card) => !!card.is_validated;
+  const isValidated = (card) => !!card.is_validated && hasBuyer(card);
   // Pendente de validação = paga mas ainda não marcada como concorrendo
   const awaitingValidation = (card) => isPaid(card) && !isValidated(card);
 
