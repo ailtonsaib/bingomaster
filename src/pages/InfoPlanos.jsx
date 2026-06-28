@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy, Settings, ChevronDown, AlertTriangle, RefreshCw, Lock, Ban, Smartphone, HelpCircle, Phone, Mail, MessageCircle } from "lucide-react";
-import { useState as useAccordionState } from "react";
+import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy, Settings, ChevronDown, AlertTriangle, RefreshCw, Lock, Ban, Smartphone, HelpCircle, Phone, Mail, MessageCircle, Send, Loader2, CheckCircle } from "lucide-react";
+import { useLicense } from "@/hooks/useLicense";
+import { base44 } from "@/api/base44Client";
+import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+
+// alias for inner components
+const useAccordionState = useState;
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -167,10 +173,17 @@ const PLANS = [
 
 export default function InfoPlanos() {
   const [copied, setCopied] = useState(null);
+  const [upgradeModal, setUpgradeModal] = useState(null); // plan object
+  const [upgradeMsg, setUpgradeMsg] = useState("");
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeDone, setUpgradeDone] = useState(null);
+  const { license, loading: licenseLoading } = useLicense();
+  const { toast } = useToast();
 
-  const getFullUrl = (path) => {
-    return `${window.location.origin}${path}`;
-  };
+  const currentPlanKey = license?.plan_key || "free";
+  const currentPlan = PLANS.find(p => p.key === currentPlanKey) || PLANS[0];
+
+  const getFullUrl = (path) => `${window.location.origin}${path}`;
 
   const handleCopy = (path, key) => {
     navigator.clipboard.writeText(getFullUrl(path));
@@ -178,7 +191,34 @@ export default function InfoPlanos() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const currentPlan = PLANS.find(p => p.current) || PLANS.find(p => p.key === "mega");
+  const handleRequestUpgrade = async (plan) => {
+    setUpgrading(true);
+    try {
+      let device_ip = "desconhecido";
+      try { const r = await fetch("https://api.ipify.org?format=json"); const d = await r.json(); device_ip = d.ip; } catch (_) {}
+
+      const result = await base44.functions.invoke("requestPlanUpgrade", {
+        requested_plan_key: plan.key,
+        requested_plan_name: plan.name,
+        requested_plan_price: plan.price ? parseFloat(plan.price.replace(/[^\d,]/g, "").replace(",", ".")) : 0,
+        message: upgradeMsg,
+        device_ip,
+      });
+
+      if (result.data?.success) {
+        setUpgradeDone(plan);
+        setUpgradeModal(null);
+        setUpgradeMsg("");
+        toast({ title: "✅ Solicitação enviada!", description: "Você receberá as instruções de pagamento em breve." });
+      } else {
+        toast({ title: "Erro", description: result.data?.error || "Erro ao enviar solicitação.", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -203,14 +243,29 @@ export default function InfoPlanos() {
               <Crown className="w-4 h-4 text-violet-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-violet-900">
-                Seu plano atual: <span className="text-violet-700">MEGA — 50.000 cartelas</span>
-              </p>
-              <p className="text-xs text-violet-600">Para fazer upgrade, entre em contato com o administrador do sistema.</p>
+              {licenseLoading ? (
+                <div className="h-4 w-48 bg-violet-200 animate-pulse rounded" />
+              ) : (
+                <p className="text-sm font-semibold text-violet-900">
+                  Seu plano atual: <span className="text-violet-700">{currentPlan.name} — {license?.max_cards?.toLocaleString("pt-BR") || currentPlan.cards} cartelas</span>
+                </p>
+              )}
+              <p className="text-xs text-violet-600">Para fazer upgrade, selecione um plano abaixo e envie a solicitação.</p>
             </div>
           </div>
-          <Badge className="bg-violet-600 text-white border-0 text-sm px-4 py-1">MEGA</Badge>
+          <Badge className="bg-violet-600 text-white border-0 text-sm px-4 py-1">{currentPlan.name}</Badge>
         </div>
+
+        {/* Upgrade success message */}
+        {upgradeDone && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">Solicitação para o plano {upgradeDone.name} enviada!</p>
+              <p className="text-xs text-emerald-700">Você receberá as instruções de pagamento por e-mail. Após a confirmação, o plano será ativado. A solicitação expira em 5 dias úteis.</p>
+            </div>
+          </div>
+        )}
 
         {/* System Links */}
         <Card className="mb-10">
@@ -298,7 +353,7 @@ export default function InfoPlanos() {
                 <p className="text-xs text-muted-foreground mb-1">{plan.desc}</p>
                 <p className="text-sm font-bold text-primary mb-4">{plan.cards}</p>
 
-                <ul className="space-y-1.5 flex-1">
+                <ul className="space-y-1.5 flex-1 mb-4">
                   {plan.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/80">
                       <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
@@ -306,10 +361,51 @@ export default function InfoPlanos() {
                     </li>
                   ))}
                 </ul>
+
+                {plan.key === currentPlanKey ? (
+                  <div className="mt-auto text-center text-xs font-semibold text-violet-600 bg-violet-50 rounded-lg py-2">✅ Plano atual</div>
+                ) : plan.key !== "free" ? (
+                  <button
+                    onClick={() => { setUpgradeModal(plan); setUpgradeMsg(""); }}
+                    className="mt-auto w-full text-xs font-semibold bg-primary text-primary-foreground rounded-lg py-2 hover:bg-primary/90 transition-colors"
+                  >
+                    Solicitar este plano
+                  </button>
+                ) : null}
               </div>
             );
           })}
         </div>
+
+        {/* ── UPGRADE MODAL ── */}
+        {upgradeModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setUpgradeModal(null)}>
+            <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+              <h2 className="text-lg font-bold mb-1">Solicitar plano {upgradeModal.name}</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Valor: <strong>{upgradeModal.price || "Gratuito"}</strong> — pagamento único.<br />
+                Após enviar, você receberá as instruções de pagamento por e-mail. A solicitação expira em <strong>5 dias úteis</strong>.
+              </p>
+              <div className="mb-4">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Mensagem (opcional)</label>
+                <Textarea
+                  placeholder="Ex: Quero fazer upgrade para o plano PRO..."
+                  value={upgradeMsg}
+                  onChange={e => setUpgradeMsg(e.target.value)}
+                  rows={3}
+                  className="text-sm resize-none"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setUpgradeModal(null)}>Cancelar</Button>
+                <Button size="sm" onClick={() => handleRequestUpgrade(upgradeModal)} disabled={upgrading} className="gap-1.5">
+                  {upgrading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Enviar Solicitação
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pricing note */}
         <p className="text-center text-xs text-muted-foreground mt-6 mb-12">

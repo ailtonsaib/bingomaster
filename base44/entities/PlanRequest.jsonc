@@ -1,0 +1,71 @@
+{
+  "name": "PlanRequest",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio solicitante"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio solicitante"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio solicitante"
+    },
+    "current_plan_key": {
+      "type": "string",
+      "description": "Plano atual do usu\u00e1rio"
+    },
+    "requested_plan_key": {
+      "type": "string",
+      "description": "Plano solicitado"
+    },
+    "requested_plan_name": {
+      "type": "string",
+      "description": "Nome do plano solicitado"
+    },
+    "requested_plan_price": {
+      "type": "number",
+      "description": "Pre\u00e7o do plano solicitado"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "awaiting_payment",
+        "approved",
+        "rejected",
+        "expired"
+      ],
+      "default": "pending",
+      "description": "Status da solicita\u00e7\u00e3o"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mensagem do usu\u00e1rio na solicita\u00e7\u00e3o"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Notas internas do administrador"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "Data de expira\u00e7\u00e3o da solicita\u00e7\u00e3o (5 dias \u00fateis)"
+    },
+    "approved_at": {
+      "type": "string",
+      "description": "Data de aprova\u00e7\u00e3o"
+    },
+    "device_ip": {
+      "type": "string",
+      "description": "IP do dispositivo do solicitante"
+    }
+  },
+  "required": [
+    "user_id",
+    "user_email",
+    "requested_plan_key"
+  ]
+}

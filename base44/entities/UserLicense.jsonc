@@ -1,0 +1,51 @@
+{
+  "name": "UserLicense",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio"
+    },
+    "plan_key": {
+      "type": "string",
+      "description": "Plano ativo: free, basic, pro, max, ultra, enterprise, mega"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Nome exibido do plano ativo"
+    },
+    "max_cards": {
+      "type": "number",
+      "description": "Limite de cartelas do plano ativo"
+    },
+    "device_ip": {
+      "type": "string",
+      "description": "IP do dispositivo registrado no primeiro acesso"
+    },
+    "first_access_at": {
+      "type": "string",
+      "description": "Data/hora do primeiro acesso (ISO)"
+    },
+    "last_access_at": {
+      "type": "string",
+      "description": "Data/hora do \u00faltimo acesso (ISO)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es do administrador"
+    }
+  },
+  "required": [
+    "user_id",
+    "user_email",
+    "plan_key"
+  ]
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Pencil, Check, X, Settings } from "lucide-react";
+import { ArrowLeft, Save, Pencil, Check, X, Settings, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,6 +105,13 @@ export default function AdminPlanos() {
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Link>
 
+        <div className="mb-4 flex justify-end">
+          <Link to="/admin-solicitacoes">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Clock className="w-4 h-4" /> Ver Solicitações
+            </Button>
+          </Link>
+        </div>
         <div className="mb-8 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Settings className="w-5 h-5 text-primary" />
