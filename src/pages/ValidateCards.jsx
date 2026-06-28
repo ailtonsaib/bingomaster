@@ -221,7 +221,7 @@ export default function ValidateCards() {
                   const withSeller = hasSeller(card);
                   // Cards without payment_status set (legacy) are treated as paid
                   const isLegacyPaid = hasBuyer(card) && !card.payment_status;
-                  const canValidate = (paid || isLegacyPaid) && !validated;
+                  const canValidate = (paid || pending || isLegacyPaid) && !validated;
 
                   return (
                     <Card key={card.id} className={`border transition-all ${getCardStyle(card)}`}>
@@ -288,8 +288,6 @@ export default function ValidateCards() {
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             {validating === card.id ? "..." : "Concorrer aos Prêmios"}
                           </Button>
-                        ) : pending ? (
-                          <span className="text-xs text-orange-600 shrink-0">Aguard. pgto</span>
                         ) : null}
                       </CardContent>
                     </Card>
