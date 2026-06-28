@@ -16,6 +16,7 @@ import DrawStatistics from "@/components/bingo/DrawStatistics";
 import FullScreenDraw from "@/components/bingo/FullScreenDraw";
 import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
 import DrawHistoryModal from "@/components/bingo/DrawHistoryModal";
+import TiebreakerModal from "@/components/bingo/TiebreakerModal";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -35,6 +36,9 @@ export default function GamePlay() {
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showWinnerCards, setShowWinnerCards] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [pendingWinners, setPendingWinners] = useState([]);
+  const [tiebreakerPrizeIndex, setTiebreakerPrizeIndex] = useState(-1);
+  const [showTiebreaker, setShowTiebreaker] = useState(false);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -88,9 +92,10 @@ export default function GamePlay() {
         ? cards.filter((c) => c.player_phone || c.player_city)
         : cards;
 
-      // Auto-finish when any card reaches 20 points
+      // Verifica cartelas que atingiram 20 pontos (excluindo já vencedoras)
       const drawnSet = new Set(newDrawn);
-      const hasTwentyPoints = filteredCards.some((c) => {
+      const newWinners = filteredCards.filter((c) => {
+        if (c.is_winner) return false;
         const allNums = new Set([
           ...(c.grid_1 || []), ...(c.grid_2 || []),
           ...(c.grid_1a || []), ...(c.grid_1b || []), ...(c.grid_1c || []),
@@ -99,13 +104,25 @@ export default function GamePlay() {
         return Array.from(allNums).filter(n => drawnSet.has(n)).length >= 20;
       });
 
-      const updates = { drawn_numbers: newDrawn };
-      if (hasTwentyPoints) {
-        updates.status = "finished";
+      // Atualiza números sorteados (sem auto-finalizar)
+      updateGame({ drawn_numbers: newDrawn });
+
+      // Se há novas vencedoras, gerencia o prêmio ativo
+      if (newWinners.length > 0) {
+        if (autoDrawing) stopAutoDraw();
+        const prizeIdx = (game.prizes || []).findIndex(p => !p.awarded);
+        if (prizeIdx >= 0) {
+          if (newWinners.length === 1) {
+            await awardPrize(prizeIdx, newWinners[0]);
+          } else {
+            setPendingWinners(newWinners);
+            setTiebreakerPrizeIndex(prizeIdx);
+            setShowTiebreaker(true);
+          }
+        } else {
+          updateGame({ status: "finished" });
+        }
       }
-      // Não aguarda — setQueryData dentro de updateGame já atualizou o cache,
-      // então grade e número grande atualizam juntos quando drawing=false
-      updateGame(updates);
 
       // Check all cards for bingo after the new number
       const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
@@ -207,12 +224,51 @@ export default function GamePlay() {
     setWinners([]);
   };
 
+  const awardPrize = async (prizeIndex, card, pedraMaior = null) => {
+    if (prizeIndex < 0 || prizeIndex >= (game.prizes || []).length) return;
+    const prizes = [...(game.prizes || [])];
+    const now = new Date().toISOString();
+    const lastDrawn = (game.drawn_numbers || []).slice(-1)[0];
+
+    prizes[prizeIndex] = {
+      ...prizes[prizeIndex],
+      awarded: true,
+      awarded_card_id: card.id,
+      awarded_card_number: card.card_number,
+      awarded_player_name: card.player_name,
+      pedra_maior: pedraMaior,
+    };
+
+    const hasMorePrizes = prizes.slice(prizeIndex + 1).some(p => !p.awarded);
+    const updates = { prizes };
+    if (!hasMorePrizes) {
+      updates.status = "finished";
+    }
+    await updateGame(updates);
+
+    const wonPrizes = [...(card.won_prizes || []), {
+      prize_index: prizeIndex,
+      prize_name: prizes[prizeIndex].name,
+      won_at_draw: lastDrawn,
+      won_at: now,
+    }];
+    await base44.entities.BingoCard.update(card.id, { is_winner: true, won_prizes: wonPrizes });
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+  };
+
+  const handleTiebreakerAward = async (card, pedraMaior) => {
+    setShowTiebreaker(false);
+    setPendingWinners([]);
+    await awardPrize(tiebreakerPrizeIndex, card, pedraMaior);
+    setTiebreakerPrizeIndex(-1);
+  };
+
   const handleFinish = () => updateGame({ status: "finished" });
 
   const handleClearDraw = () => updateGame({ drawn_numbers: [] });
 
   const handleReset = () =>
-    updateGame({ status: "waiting", drawn_numbers: [], prizes: (game.prizes || []).map(p => ({ ...p, awarded: false })) });
+    updateGame({ status: "waiting", drawn_numbers: [], prizes: (game.prizes || []).map(p => ({ name: p.name, description: p.description, awarded: false })) });
 
   const handleAwardPrize = async (idx) => {
     const prizes = [...(game.prizes || [])];
@@ -264,6 +320,16 @@ export default function GamePlay() {
           setAutoDrawing={setAutoDrawing}
           autoInterval={autoInterval}
           setAutoInterval={setAutoInterval}
+        />
+      )}
+      {showTiebreaker && (
+        <TiebreakerModal
+          winners={pendingWinners}
+          drawnNumbers={drawnNumbers}
+          maxNumber={maxNumber}
+          prizeName={(game.prizes || [])[tiebreakerPrizeIndex]?.name || ""}
+          onAward={handleTiebreakerAward}
+          onClose={() => { setShowTiebreaker(false); setPendingWinners([]); setTiebreakerPrizeIndex(-1); }}
         />
       )}
       {showHistory && (
@@ -596,6 +662,7 @@ export default function GamePlay() {
               prizes={game.prizes || []}
               isPlaying={isPlaying}
               onAwardPrize={handleAwardPrize}
+              activePrizeIndex={(game.prizes || []).findIndex(p => !p.awarded)}
             />
 
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4 space-y-3">

@@ -41,6 +41,22 @@
           },
           "awarded": {
             "type": "boolean"
+          },
+          "awarded_card_id": {
+            "type": "string",
+            "description": "ID da cartela vencedora"
+          },
+          "awarded_card_number": {
+            "type": "number",
+            "description": "N\u00famero da cartela vencedora"
+          },
+          "awarded_player_name": {
+            "type": "string",
+            "description": "Nome do comprador da cartela vencedora"
+          },
+          "pedra_maior": {
+            "type": "number",
+            "description": "N\u00famero da pedra maior (desempate entre m\u00faltiplos vencedores)"
           }
         }
       },
