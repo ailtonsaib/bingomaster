@@ -1,136 +1,237 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft, Trophy, ChevronDown, User, Phone, MapPin,
+  CheckCircle2, Clock, CreditCard, ShieldCheck, Medal
+} from "lucide-react";
 
 export default function WinnerSummary() {
-  const { data: allCards = [], isLoading } = useQuery({
-    queryKey: ["all-cards-winners"],
-    queryFn: () => base44.entities.BingoCard.list(),
-  });
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [showGamePicker, setShowGamePicker] = useState(false);
 
   const { data: games = [] } = useQuery({
-    queryKey: ["all-games"],
-    queryFn: () => base44.entities.BingoGame.list(),
+    queryKey: ["winner-games"],
+    queryFn: () => base44.entities.BingoGame.list("-created_date"),
   });
 
-  // Build game name map
-  const gameMap = {};
-  games.forEach((g) => { gameMap[g.id] = g; });
+  const { data: cards = [], isLoading } = useQuery({
+    queryKey: ["winner-cards", selectedGame?.id],
+    queryFn: () => base44.entities.BingoCard.filter(
+      { game_id: String(selectedGame.id), is_winner: true },
+      "card_number"
+    ),
+    enabled: !!selectedGame,
+  });
 
-  // Filter cards marked as winners or with won_prizes
-  const winnerCards = allCards
-    .filter((c) => c.is_winner || (c.won_prizes && c.won_prizes.length > 0))
-    .sort((a, b) => {
-      const gA = gameMap[a.game_id]?.name || "";
-      const gB = gameMap[b.game_id]?.name || "";
-      if (gA !== gB) return gA.localeCompare(gB);
-      return (a.card_number || 0) - (b.card_number || 0);
-    });
+  // Organiza prêmios: para cada prêmio do jogo, encontra a(s) cartela(s) vencedora(s)
+  const prizes = selectedGame?.prizes || [];
+
+  const prizeRows = prizes.map((prize, idx) => {
+    const winners = cards.filter(
+      (c) => c.won_prizes && c.won_prizes.some((wp) => wp.prize_index === idx)
+    );
+    return { prize, idx, winners };
+  });
+
+  const paymentLabel = (card) => {
+    if (card.payment_status === "pending") return { label: "Pgto pendente", className: "bg-orange-100 text-orange-700 border-orange-200", icon: <Clock className="w-3 h-3" /> };
+    return { label: "Pago", className: "bg-green-100 text-green-700 border-green-200", icon: <CheckCircle2 className="w-3 h-3" /> };
+  };
+
+  const totalWinners = cards.length;
+  const awardedCount = prizeRows.filter((r) => r.winners.length > 0).length;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="w-4 h-4" /> Início
-            </Link>
-            <h1 className="text-2xl font-bold font-heading flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-accent" /> Cartelas Premiadas
-            </h1>
-          </div>
-          <Badge variant="outline" className="text-base px-3 py-1.5">
-            <Trophy className="w-4 h-4 text-accent mr-1.5" />
-            {winnerCards.length} premiada{winnerCards.length !== 1 ? "s" : ""}
-          </Badge>
+      {/* Header */}
+      <div className="bg-primary text-primary-foreground px-4 pt-10 pb-6">
+        <Link to="/" className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-4">
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </Link>
+        <h1 className="text-2xl font-bold font-heading flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-yellow-300" /> Resumo de Prêmios
+        </h1>
+        <p className="text-primary-foreground/80 text-sm mt-1">
+          Veja quais cartelas ganharam cada prêmio e o status de pagamento
+        </p>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+        {/* Game picker */}
+        <div className="relative">
+          <button
+            className="w-full flex items-center justify-between h-12 px-4 rounded-xl border border-input bg-card text-sm hover:bg-accent transition-colors shadow-sm"
+            onClick={() => setShowGamePicker((v) => !v)}
+          >
+            <span className={selectedGame ? "text-foreground font-medium" : "text-muted-foreground"}>
+              {selectedGame?.name || "Selecione um jogo..."}
+            </span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          {showGamePicker && (
+            <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg max-h-52 overflow-auto">
+              {games.length === 0 ? (
+                <div className="text-xs text-muted-foreground text-center py-4">Nenhum jogo encontrado</div>
+              ) : (
+                games.map((g) => (
+                  <button
+                    key={g.id}
+                    className="w-full text-left px-4 py-3 hover:bg-muted text-sm"
+                    onClick={() => { setSelectedGame(g); setShowGamePicker(false); }}
+                  >
+                    <span className="font-medium">{g.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {g.status === "finished" ? "✅ Finalizado" : g.status === "in_progress" ? "🎯 Em andamento" : "⏳ Aguardando"}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : winnerCards.length === 0 ? (
+        {selectedGame && (
+          <>
+            {/* Stats */}
+            {!isLoading && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-card border rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold font-heading text-primary">{prizes.length}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Prêmios no jogo</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold font-heading text-amber-700">{awardedCount}</div>
+                  <div className="text-xs text-amber-600 mt-0.5">Prêmios entregues</div>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold font-heading text-green-700">{totalWinners}</div>
+                  <div className="text-xs text-green-600 mt-0.5">Cartelas premiadas</div>
+                </div>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />)}
+              </div>
+            ) : prizes.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                  <Trophy className="w-12 h-12 mb-3 opacity-20" />
+                  <p>Este jogo não possui prêmios cadastrados.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {prizeRows.map(({ prize, idx, winners }) => (
+                  <Card key={idx} className={`border-2 transition-all ${
+                    winners.length > 0
+                      ? "border-amber-300 bg-amber-50/30"
+                      : "border-border bg-card"
+                  }`}>
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <CardTitle className="text-base font-heading flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                          winners.length > 0
+                            ? "bg-amber-500 text-white"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          {idx + 1}
+                        </div>
+                        <span className="flex-1">{prize.name || `Prêmio ${idx + 1}`}</span>
+                        {winners.length > 0 ? (
+                          <Badge className="bg-amber-500 text-white border-0 gap-1">
+                            <Trophy className="w-3 h-3" /> Entregue
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Não entregue
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      {prize.description && (
+                        <p className="text-xs text-muted-foreground ml-9">{prize.description}</p>
+                      )}
+                    </CardHeader>
+
+                    <CardContent className="px-4 pb-4">
+                      {winners.length === 0 ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2 ml-1">
+                          <Medal className="w-4 h-4 opacity-40" />
+                          Nenhuma cartela vencedora registrada para este prêmio
+                        </div>
+                      ) : (
+                        <div className="space-y-2 mt-1">
+                          {winners.map((card) => {
+                            const payment = paymentLabel(card);
+                            const wonPrize = card.won_prizes?.find((wp) => wp.prize_index === idx);
+                            return (
+                              <div key={card.id} className="flex items-start gap-3 bg-white border border-amber-200 rounded-lg p-3">
+                                <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold font-heading text-primary">
+                                      #{String(card.card_number || "").padStart(4, "0")}
+                                    </span>
+                                    <Badge variant="outline" className={`text-xs gap-1 ${payment.className}`}>
+                                      {payment.icon} {payment.label}
+                                    </Badge>
+                                    {wonPrize?.won_at_draw && (
+                                      <span className="text-xs text-muted-foreground">
+                                        (pedra {wonPrize.won_at_draw})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                                    {card.player_name && (
+                                      <span className="flex items-center gap-1 text-sm text-foreground">
+                                        <User className="w-3 h-3 text-muted-foreground" /> {card.player_name}
+                                      </span>
+                                    )}
+                                    {card.player_phone && (
+                                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <Phone className="w-3 h-3" /> {card.player_phone}
+                                      </span>
+                                    )}
+                                    {card.player_city && (
+                                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <MapPin className="w-3 h-3" />
+                                        {[card.player_city, card.player_state].filter(Boolean).join(" - ")}
+                                      </span>
+                                    )}
+                                    {card.seller_name && (
+                                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        Vendedor: {card.seller_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {!selectedGame && (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-              <Trophy className="w-16 h-16 mb-4 opacity-20" />
-              <p className="text-lg">Nenhuma cartela premiada ainda.</p>
-              <p className="text-sm mt-1">As cartelas marcadas como vencedoras aparecerão aqui automaticamente.</p>
+              <Trophy className="w-16 h-16 mb-4 opacity-15" />
+              <p className="text-base font-medium">Selecione um jogo acima</p>
+              <p className="text-sm mt-1">para ver o resumo dos prêmios e vencedores</p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-4">
-            {/* Group by game */}
-            {(() => {
-              const grouped = {};
-              winnerCards.forEach((card) => {
-                const gameName = gameMap[card.game_id]?.name || "Jogo sem nome";
-                if (!grouped[gameName]) grouped[gameName] = [];
-                grouped[gameName].push(card);
-              });
-
-              return Object.entries(grouped).map(([gameName, cards]) => (
-                <Card key={gameName}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-heading flex items-center gap-2">
-                      <Users className="w-4 h-4 text-primary" />
-                      {gameName}
-                      <Badge variant="secondary" className="text-xs">{cards.length} cartela{cards.length !== 1 ? "s" : ""}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/40">
-                            <th className="text-left py-2.5 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Nº Cartela</th>
-                            <th className="text-left py-2.5 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Jogador</th>
-                            <th className="text-left py-2.5 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Telefone</th>
-                            <th className="text-left py-2.5 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Cidade</th>
-                            <th className="text-left py-2.5 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Prêmio(s)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cards.map((card) => (
-                            <tr key={card.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                              <td className="py-2.5 px-4 font-mono font-bold text-primary">
-                                {String(card.card_number || "").padStart(3, "0")}
-                              </td>
-                              <td className="py-2.5 px-4 font-medium">{card.player_name || "—"}</td>
-                              <td className="py-2.5 px-4 text-muted-foreground">{card.player_phone || "—"}</td>
-                              <td className="py-2.5 px-4 text-muted-foreground">
-                                {[card.player_city, card.player_state].filter(Boolean).join(" - ") || "—"}
-                              </td>
-                              <td className="py-2.5 px-4">
-                                <div className="flex flex-wrap gap-1">
-                                  {card.won_prizes && card.won_prizes.length > 0 ? (
-                                    card.won_prizes.map((prize, i) => (
-                                      <Badge key={i} className="bg-accent text-accent-foreground text-xs border-0">
-                                        🏆 {prize.prize_name}
-                                      </Badge>
-                                    ))
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">
-                                      Vencedor
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              ));
-            })()}
-          </div>
         )}
       </div>
     </div>
