@@ -26,20 +26,21 @@ export default function RifaFormModal({ rifa, onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!form.name || !form.total_tickets || !form.ticket_price) return;
+    if (saving) return;
     setSaving(true);
+    const data = {
+      name: form.name,
+      description: form.description || null,
+      prize: form.prize || null,
+      ticket_price: Number(form.ticket_price),
+      total_tickets: Number(form.total_tickets),
+      tickets_per_page: Number(form.tickets_per_page) || 10,
+      event_location: form.event_location || null,
+      organizer_name: form.organizer_name || null,
+      organizer_phone: form.organizer_phone || null,
+      event_date: form.event_date || null,
+    };
     try {
-      const data = {
-        name: form.name,
-        description: form.description,
-        prize: form.prize,
-        ticket_price: Number(form.ticket_price),
-        total_tickets: Number(form.total_tickets),
-        tickets_per_page: Number(form.tickets_per_page),
-        event_location: form.event_location,
-        organizer_name: form.organizer_name,
-        organizer_phone: form.organizer_phone,
-        event_date: form.event_date || null,
-      };
       if (rifa?.id) {
         await base44.entities.Rifa.update(rifa.id, data);
       } else {
@@ -47,14 +48,13 @@ export default function RifaFormModal({ rifa, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert("Erro ao salvar rifa: " + (err?.message || err));
-    } finally {
       setSaving(false);
+      alert("Erro ao salvar: " + (err?.message || String(err)));
     }
   };
 
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open onOpenChange={(open) => { if (!open && !saving) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{rifa ? "Editar Rifa" : "Nova Rifa"}</DialogTitle>
