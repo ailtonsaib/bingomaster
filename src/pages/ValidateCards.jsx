@@ -71,14 +71,14 @@ export default function ValidateCards() {
   const handleValidate = async (card) => {
     setValidating(card.id);
     await base44.entities.BingoCard.update(card.id, { is_validated: true });
-    queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
     setValidating(null);
   };
 
   const handleUnvalidate = async (card) => {
     setUnvalidating(card.id);
     await base44.entities.BingoCard.update(card.id, { is_validated: false });
-    queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
     setUnvalidating(null);
   };
 
