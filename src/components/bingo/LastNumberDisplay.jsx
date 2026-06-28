@@ -35,13 +35,12 @@ export default function LastNumberDisplay({ number, drawing }) {
             <span className="text-4xl">🎱</span>
           </motion.div>
         ) : (
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {number ? (
               <motion.div
                 key={number}
                 initial={{ scale: 0, rotate: -180, opacity: 0 }}
                 animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 180, damping: 14 }}
               >
                 <BingoNumberBall number={number} size="xl" />
