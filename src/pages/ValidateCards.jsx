@@ -32,23 +32,24 @@ export default function ValidateCards() {
   });
 
   // Card status helpers
-  // A card is sold when it has phone OR city (name alone is set during bulk generation)
   const hasBuyer = (card) => !!card.player_phone || !!card.player_city;
-  const isPaid = (card) => hasBuyer(card) && card.payment_status === "paid";
+  const isPaid = (card) => hasBuyer(card) && (card.payment_status === "paid" || !card.payment_status);
   const isPending = (card) => hasBuyer(card) && card.payment_status === "pending";
   const hasSeller = (card) => !!card.seller_id && !hasBuyer(card);
   const isValidated = (card) => !!card.is_validated;
+  // Pendente de validação = paga mas ainda não marcada como concorrendo
+  const awaitingValidation = (card) => isPaid(card) && !isValidated(card);
 
   // Stats
   const paidCards = cards.filter(isPaid);
   const pendingCards = cards.filter(isPending);
   const validatedCards = cards.filter(isValidated);
-  const withSellerOnly = cards.filter(hasSeller);
+  const awaitingCount = cards.filter(awaitingValidation);
 
-  // Sort: validated first, then paid (not validated), then pending, then with seller, then available
+  // Sort: validated first, then awaiting validation, then pending payment, then with seller, then available
   const sortOrder = (card) => {
     if (isValidated(card)) return 0;
-    if (isPaid(card)) return 1;
+    if (awaitingValidation(card)) return 1;
     if (isPending(card)) return 2;
     if (hasSeller(card)) return 3;
     return 4;
@@ -83,7 +84,7 @@ export default function ValidateCards() {
 
   const getCardStyle = (card) => {
     if (isValidated(card)) return "border-green-200 bg-green-50/50";
-    if (isPaid(card)) return "border-amber-200 bg-amber-50/30";
+    if (awaitingValidation(card)) return "border-amber-200 bg-amber-50/30";
     if (isPending(card)) return "border-orange-200 bg-orange-50/30";
     if (hasSeller(card)) return "border-blue-200 bg-blue-50/20";
     return "border-border bg-card";
@@ -91,15 +92,15 @@ export default function ValidateCards() {
 
   const getCardStatus = (card) => {
     if (isValidated(card)) return { label: "Concorrendo 🏆", className: "bg-green-100 text-green-700 border-green-200" };
-    if (isPaid(card)) return { label: "Pago", className: "bg-amber-100 text-amber-700 border-amber-200" };
-    if (isPending(card)) return { label: "Pendente", className: "bg-orange-100 text-orange-700 border-orange-200" };
+    if (awaitingValidation(card)) return { label: "Aguard. validação", className: "bg-amber-100 text-amber-700 border-amber-200" };
+    if (isPending(card)) return { label: "Pgto pendente", className: "bg-orange-100 text-orange-700 border-orange-200" };
     if (hasSeller(card)) return { label: "Com vendedor", className: "bg-blue-100 text-blue-700 border-blue-200" };
     return { label: "Disponível", className: "text-muted-foreground" };
   };
 
   const getStatusIcon = (card) => {
     if (isValidated(card)) return <ShieldCheck className="w-4 h-4 text-green-600 shrink-0" />;
-    if (isPaid(card)) return <ShoppingCart className="w-4 h-4 text-amber-500 shrink-0" />;
+    if (awaitingValidation(card)) return <ShoppingCart className="w-4 h-4 text-amber-500 shrink-0" />;
     if (isPending(card)) return <Clock className="w-4 h-4 text-orange-500 shrink-0" />;
     if (hasSeller(card)) return <Users className="w-4 h-4 text-blue-500 shrink-0" />;
     return <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />;
@@ -158,12 +159,12 @@ export default function ValidateCards() {
                 <div className="text-xs text-muted-foreground mt-0.5">Total</div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                <div className="text-xl font-bold font-heading text-amber-700">{paidCards.length}</div>
-                <div className="text-xs text-amber-600 mt-0.5">Pagas</div>
+                <div className="text-xl font-bold font-heading text-amber-700">{awaitingCount.length}</div>
+                <div className="text-xs text-amber-600 mt-0.5">Aguard. validação</div>
               </div>
               <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
                 <div className="text-xl font-bold font-heading text-orange-700">{pendingCards.length}</div>
-                <div className="text-xs text-orange-600 mt-0.5">Pendentes</div>
+                <div className="text-xs text-orange-600 mt-0.5">Pgto pendente</div>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
                 <div className="text-xl font-bold font-heading text-green-700">{validatedCards.length}</div>
@@ -174,7 +175,7 @@ export default function ValidateCards() {
             {/* Legend */}
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 text-green-700 border border-green-200"><ShieldCheck className="w-3 h-3" /> Concorrendo aos prêmios</span>
-              <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-700 border border-amber-200"><ShoppingCart className="w-3 h-3" /> Paga (pode validar)</span>
+              <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-700 border border-amber-200"><ShoppingCart className="w-3 h-3" /> Aguardando validação</span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-100 text-orange-700 border border-orange-200"><Clock className="w-3 h-3" /> Pagamento pendente</span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-200"><Users className="w-3 h-3" /> Com vendedor</span>
             </div>
@@ -215,13 +216,10 @@ export default function ValidateCards() {
               <div className="space-y-2">
                 {filtered.map((card) => {
                   const status = getCardStatus(card);
-                  const validated = isValidated(card);
-                  const paid = isPaid(card);
-                  const pending = isPending(card);
-                  const withSeller = hasSeller(card);
-                  // Cards without payment_status set (legacy) are treated as paid
-                  const isLegacyPaid = hasBuyer(card) && !card.payment_status;
-                  const canValidate = (paid || pending || isLegacyPaid) && !validated;
+                   const validated = isValidated(card);
+                   const pending = isPending(card);
+                   const withSeller = hasSeller(card);
+                  const canValidate = awaitingValidation(card);
 
                   return (
                     <Card key={card.id} className={`border transition-all ${getCardStyle(card)}`}>
@@ -230,7 +228,7 @@ export default function ValidateCards() {
 
                         {/* Card number */}
                         <span className={`font-bold font-heading text-base shrink-0 ${
-                          validated ? "text-green-800" : paid ? "text-amber-800" : pending ? "text-orange-800" : withSeller ? "text-blue-800" : "text-foreground"
+                          validated ? "text-green-800" : awaitingValidation(card) ? "text-amber-800" : pending ? "text-orange-800" : withSeller ? "text-blue-800" : "text-foreground"
                         }`}>
                           {String(card.card_number || "").padStart(4, "0")}
                         </span>
