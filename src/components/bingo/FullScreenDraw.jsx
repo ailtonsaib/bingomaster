@@ -56,8 +56,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
     const num = available[Math.floor(Math.random() * available.length)];
     const newDrawn = [...drawnNumbers, num];
     await updateGame({ drawn_numbers: newDrawn });
-    
-    setTimeout(() => setDrawing(false), 800);
+    setDrawing(false);
   };
 
   const handleStart = () => updateGame({ status: "in_progress" });

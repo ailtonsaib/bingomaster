@@ -50,7 +50,7 @@ export default function GamePlay() {
   const updateGame = useCallback(async (updates) => {
     if (!game) return;
     await base44.entities.BingoGame.update(game.id, updates);
-    queryClient.invalidateQueries({ queryKey: ["game", gameId] });
+    await queryClient.invalidateQueries({ queryKey: ["game", gameId] });
   }, [game, gameId, queryClient]);
 
   const handleStart = () => updateGame({ status: "in_progress" });
@@ -89,7 +89,7 @@ export default function GamePlay() {
         setWinners(found);
       }
     }
-    setTimeout(() => setDrawing(false), 800);
+    setDrawing(false);
   };
 
   const handleManualDraw = () => {
