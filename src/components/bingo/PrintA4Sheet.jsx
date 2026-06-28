@@ -157,8 +157,9 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
       <div style={{
         padding: "4px 8px 0 8px",
         display: "flex",
-        justifyContent: "space-between",
+        justifyContent: "center",
         alignItems: "center",
+        gap: 16,
       }}>
         <Barcode value={cardNum} width={1.5} height={34} displayValue={false} margin={0} />
         {game?.card_image_url && (
