@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, Save, Pencil, Check, X, Settings, Clock } from "lucide-react";
+import { ArrowLeft, Save, Pencil, Check, X, Settings, Clock, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,13 +9,20 @@ import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 
 const DEFAULT_PLANS = [
-  { plan_key: "free",       plan_name: "FREE",       price: 0,    max_cards: 50,    description: "Para conhecer o sistema" },
-  { plan_key: "basic",      plan_name: "BASIC",      price: 400,  max_cards: 2000,  description: "Para pequenos eventos" },
-  { plan_key: "pro",        plan_name: "PRO",        price: 700,  max_cards: 4000,  description: "Para eventos frequentes" },
-  { plan_key: "max",        plan_name: "MAX",        price: 900,  max_cards: 8000,  description: "Para grandes eventos" },
-  { plan_key: "ultra",      plan_name: "ULTRA",      price: 1100, max_cards: 12000, description: "Para eventos de grande porte" },
-  { plan_key: "enterprise", plan_name: "ENTERPRISE", price: 1500, max_cards: 15000, description: "Para empresas e operações maiores" },
-  { plan_key: "mega",       plan_name: "MEGA",       price: 2500, max_cards: 50000, description: "Para operações de larga escala" },
+  { plan_key: "free",       plan_name: "FREE",       price: 0,    max_cards: 50,    description: "Para conhecer o sistema",          app_generator: true,  app_seller: false, app_buyer: false, app_telao: false },
+  { plan_key: "basic",      plan_name: "BASIC",      price: 400,  max_cards: 2000,  description: "Para pequenos eventos",            app_generator: true,  app_seller: true,  app_buyer: false, app_telao: false },
+  { plan_key: "pro",        plan_name: "PRO",        price: 700,  max_cards: 4000,  description: "Para eventos frequentes",          app_generator: true,  app_seller: true,  app_buyer: false, app_telao: true  },
+  { plan_key: "max",        plan_name: "MAX",        price: 900,  max_cards: 8000,  description: "Para grandes eventos",             app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
+  { plan_key: "ultra",      plan_name: "ULTRA",      price: 1100, max_cards: 12000, description: "Para eventos de grande porte",     app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
+  { plan_key: "enterprise", plan_name: "ENTERPRISE", price: 1500, max_cards: 15000, description: "Para empresas e operações maiores",app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
+  { plan_key: "mega",       plan_name: "MEGA",       price: 2500, max_cards: 50000, description: "Para operações de larga escala",   app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
+];
+
+const APPS = [
+  { key: "app_generator", label: "Gerador de Bingo", icon: "🎰" },
+  { key: "app_seller",    label: "App do Vendedor",   icon: "🛒" },
+  { key: "app_buyer",     label: "App do Comprador",  icon: "🧑‍💼" },
+  { key: "app_telao",     label: "Telão / Projetor",  icon: "📺" },
 ];
 
 const BADGE_COLORS = {
@@ -61,7 +68,15 @@ export default function AdminPlanos() {
 
   const startEdit = (plan) => {
     setEditing(plan.plan_key);
-    setEditValues({ price: plan.price ?? 0, max_cards: plan.max_cards, description: plan.description || "" });
+    setEditValues({
+      price: plan.price ?? 0,
+      max_cards: plan.max_cards,
+      description: plan.description || "",
+      app_generator: plan.app_generator ?? true,
+      app_seller:    plan.app_seller    ?? false,
+      app_buyer:     plan.app_buyer     ?? false,
+      app_telao:     plan.app_telao     ?? false,
+    });
   };
 
   const cancelEdit = () => {
@@ -75,6 +90,10 @@ export default function AdminPlanos() {
       price: Number(editValues.price),
       max_cards: Number(editValues.max_cards),
       description: editValues.description,
+      app_generator: !!editValues.app_generator,
+      app_seller:    !!editValues.app_seller,
+      app_buyer:     !!editValues.app_buyer,
+      app_telao:     !!editValues.app_telao,
     };
     if (plan.id) {
       await base44.entities.PlanConfig.update(plan.id, updated);
@@ -177,6 +196,24 @@ export default function AdminPlanos() {
                             placeholder="Descrição curta..."
                           />
                         </div>
+                        {/* Apps toggles */}
+                        <div className="flex flex-col gap-1 min-w-[200px]">
+                          <label className="text-xs font-medium text-muted-foreground">Aplicativos disponíveis</label>
+                          <div className="flex flex-wrap gap-3 mt-1">
+                            {APPS.map(app => (
+                              <label key={app.key} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={!!editValues[app.key]}
+                                  onChange={e => setEditValues(v => ({ ...v, [app.key]: e.target.checked }))}
+                                  className="w-3.5 h-3.5 accent-primary"
+                                />
+                                <span>{app.icon} {app.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="flex gap-2 pb-0.5">
                           <Button
                             size="sm"
@@ -207,6 +244,16 @@ export default function AdminPlanos() {
                           <div>
                             <p className="text-xs text-muted-foreground">Descrição</p>
                             <p className="text-sm text-foreground/80">{plan.description || "—"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Aplicativos</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {APPS.map(app => (
+                                <span key={app.key} className={`text-xs px-2 py-0.5 rounded-full border font-medium ${plan[app.key] ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-400 line-through"}`}>
+                                  {app.icon} {app.label}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         <Button

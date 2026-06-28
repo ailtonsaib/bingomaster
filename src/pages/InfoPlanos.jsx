@@ -36,139 +36,21 @@ const SYSTEM_LINKS = [
   },
 ];
 
+const APPS_INFO = [
+  { key: "app_generator", label: "Gerador de Bingo", icon: "🎰" },
+  { key: "app_seller",    label: "App do Vendedor",  icon: "🛒" },
+  { key: "app_buyer",     label: "App do Comprador", icon: "🧑‍💼" },
+  { key: "app_telao",     label: "Telão / Projetor", icon: "📺" },
+];
+
 const PLANS = [
-  {
-    key: "free",
-    name: "FREE",
-    subtitle: "Gratuito",
-    desc: "Para conhecer o sistema",
-    price: null,
-    cards: "50 cartelas",
-    color: "border-slate-200",
-    badgeClass: "bg-slate-100 text-slate-700",
-    icon: Shield,
-    features: [
-      "Até 50 cartelas no total",
-      "1 evento ativo",
-      "Geração automática de cartelas",
-      "Sorteio eletrônico",
-      "Validação de cartelas",
-    ],
-  },
-  {
-    key: "basic",
-    name: "BASIC",
-    subtitle: "R$ 400,00",
-    desc: "Para pequenos eventos",
-    price: "R$ 400,00",
-    cards: "2.000 cartelas",
-    color: "border-blue-300",
-    badgeClass: "bg-blue-100 text-blue-700",
-    icon: Zap,
-    features: [
-      "Até 2.000 cartelas no total",
-      "Eventos ilimitados",
-      "Geração automática de cartelas",
-      "Sorteio eletrônico completo",
-      "Validação de cartelas",
-      "App do vendedor (links por código)",
-      "Exportação PDF e CSV",
-      "Suporte por WhatsApp",
-    ],
-  },
-  {
-    key: "pro",
-    name: "PRO",
-    subtitle: "R$ 700,00",
-    desc: "Para eventos frequentes",
-    price: "R$ 700,00",
-    cards: "4.000 cartelas",
-    color: "border-violet-400",
-    badgeClass: "bg-violet-100 text-violet-700",
-    icon: Star,
-    popular: true,
-    features: [
-      "Até 4.000 cartelas no total",
-      "Eventos ilimitados",
-      "Todas as funções do BASIC",
-      "Telão do sorteio (projetor)",
-      "Dashboard completo com estatísticas",
-      "Relatório em PDF do evento",
-      "Ranking por vendedor",
-      "Criação de rifas",
-      "Suporte prioritário",
-    ],
-  },
-  {
-    key: "max",
-    name: "MAX",
-    subtitle: "R$ 900,00",
-    desc: "Para grandes eventos",
-    price: "R$ 900,00",
-    cards: "8.000 cartelas",
-    color: "border-emerald-400",
-    badgeClass: "bg-emerald-100 text-emerald-700",
-    icon: Crown,
-    features: [
-      "Até 8.000 cartelas no total",
-      "Eventos ilimitados",
-      "Todas as funções do PRO",
-      "Acompanhamento de cartelas via aplicativo",
-      "Exportação em lote (PDF)",
-      "Acesso válido por 6 meses",
-      "Suporte VIP com atendimento rápido",
-    ],
-  },
-  {
-    key: "ultra",
-    name: "ULTRA",
-    subtitle: "R$ 1.100,00",
-    desc: "Para eventos de grande porte",
-    price: "R$ 1.100,00",
-    cards: "12.000 cartelas",
-    color: "border-pink-400",
-    badgeClass: "bg-pink-100 text-pink-700",
-    icon: Rocket,
-    features: [
-      "Até 12.000 cartelas no total",
-      "Eventos ilimitados",
-      "Todas as funções do MAX",
-      "Múltiplos vendedores com lotes",
-    ],
-  },
-  {
-    key: "enterprise",
-    name: "ENTERPRISE",
-    subtitle: "R$ 1.500,00",
-    desc: "Para empresas e operações maiores",
-    price: "R$ 1.500,00",
-    cards: "15.000 cartelas",
-    color: "border-orange-400",
-    badgeClass: "bg-orange-100 text-orange-700",
-    icon: Trophy,
-    features: [
-      "Até 15.000 cartelas no total",
-      "Eventos ilimitados",
-      "Todas as funções do ULTRA",
-    ],
-  },
-  {
-    key: "mega",
-    name: "MEGA",
-    subtitle: "R$ 2.500,00",
-    desc: "Para operações de larga escala",
-    price: "R$ 2.500,00",
-    cards: "50.000 cartelas",
-    color: "border-violet-500",
-    badgeClass: "bg-violet-100 text-violet-800",
-    icon: Crown,
-    current: true,
-    features: [
-      "Até 50.000 cartelas no total",
-      "Eventos ilimitados",
-      "Todas as funções do ENTERPRISE",
-    ],
-  },
+  { key: "free",       name: "FREE",       subtitle: "Gratuito",      desc: "Para conhecer o sistema",           price: null,         cards: "50 cartelas",      color: "border-slate-200",   badgeClass: "bg-slate-100 text-slate-700",   icon: Shield,  apps: { app_generator: true,  app_seller: false, app_buyer: false, app_telao: false }, features: ["Até 50 cartelas no total","1 evento ativo","Sorteio eletrônico","Validação de cartelas"] },
+  { key: "basic",      name: "BASIC",      subtitle: "R$ 400,00",     desc: "Para pequenos eventos",             price: "R$ 400,00",  cards: "2.000 cartelas",   color: "border-blue-300",    badgeClass: "bg-blue-100 text-blue-700",     icon: Zap,     apps: { app_generator: true,  app_seller: true,  app_buyer: false, app_telao: false }, features: ["Até 2.000 cartelas","Eventos ilimitados","Exportação PDF e CSV","Suporte por WhatsApp"] },
+  { key: "pro",        name: "PRO",        subtitle: "R$ 700,00",     desc: "Para eventos frequentes",           price: "R$ 700,00",  cards: "4.000 cartelas",   color: "border-violet-400",  badgeClass: "bg-violet-100 text-violet-700",  icon: Star,    popular: true, apps: { app_generator: true, app_seller: true, app_buyer: false, app_telao: true }, features: ["Até 4.000 cartelas","Eventos ilimitados","Dashboard com estatísticas","Relatório em PDF","Suporte prioritário"] },
+  { key: "max",        name: "MAX",        subtitle: "R$ 900,00",     desc: "Para grandes eventos",              price: "R$ 900,00",  cards: "8.000 cartelas",   color: "border-emerald-400", badgeClass: "bg-emerald-100 text-emerald-700", icon: Crown,   apps: { app_generator: true, app_seller: true, app_buyer: true,  app_telao: true }, features: ["Até 8.000 cartelas","Eventos ilimitados","Exportação em lote (PDF)","Suporte VIP"] },
+  { key: "ultra",      name: "ULTRA",      subtitle: "R$ 1.100,00",   desc: "Para eventos de grande porte",      price: "R$ 1.100,00",cards: "12.000 cartelas",  color: "border-pink-400",    badgeClass: "bg-pink-100 text-pink-700",      icon: Rocket,  apps: { app_generator: true, app_seller: true, app_buyer: true,  app_telao: true }, features: ["Até 12.000 cartelas","Eventos ilimitados","Múltiplos vendedores com lotes"] },
+  { key: "enterprise", name: "ENTERPRISE", subtitle: "R$ 1.500,00",   desc: "Para empresas e operações maiores", price: "R$ 1.500,00",cards: "15.000 cartelas",  color: "border-orange-400",  badgeClass: "bg-orange-100 text-orange-700",  icon: Trophy,  apps: { app_generator: true, app_seller: true, app_buyer: true,  app_telao: true }, features: ["Até 15.000 cartelas","Eventos ilimitados"] },
+  { key: "mega",       name: "MEGA",       subtitle: "R$ 2.500,00",   desc: "Para operações de larga escala",    price: "R$ 2.500,00",cards: "50.000 cartelas",  color: "border-violet-500",  badgeClass: "bg-violet-100 text-violet-800",  icon: Crown,   current: true, apps: { app_generator: true, app_seller: true, app_buyer: true, app_telao: true }, features: ["Até 50.000 cartelas","Eventos ilimitados"] },
 ];
 
 export default function InfoPlanos() {
@@ -353,7 +235,7 @@ export default function InfoPlanos() {
                 <p className="text-xs text-muted-foreground mb-1">{plan.desc}</p>
                 <p className="text-sm font-bold text-primary mb-4">{plan.cards}</p>
 
-                <ul className="space-y-1.5 flex-1 mb-4">
+                <ul className="space-y-1.5 mb-3">
                   {plan.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/80">
                       <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
@@ -361,6 +243,22 @@ export default function InfoPlanos() {
                     </li>
                   ))}
                 </ul>
+
+                {/* Apps disponíveis */}
+                <div className="border-t pt-3 mb-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Aplicativos inclusos:</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {APPS_INFO.map(app => {
+                      const active = plan.apps?.[app.key];
+                      return (
+                        <div key={app.key} className={`flex items-center gap-1 text-xs rounded-md px-2 py-1 ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-400"}`}>
+                          <span>{app.icon}</span>
+                          <span className={active ? "" : "line-through opacity-60"}>{app.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {plan.key === currentPlanKey ? (
                   <div className="mt-auto text-center text-xs font-semibold text-violet-600 bg-violet-50 rounded-lg py-2">✅ Plano atual</div>
