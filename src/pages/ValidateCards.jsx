@@ -32,7 +32,8 @@ export default function ValidateCards() {
   });
 
   // Card status helpers
-  const hasBuyer = (card) => !!card.player_phone || !!card.player_city || !!card.player_name;
+  // A card is sold when it has phone OR city (name alone is set during bulk generation)
+  const hasBuyer = (card) => !!card.player_phone || !!card.player_city;
   const isPaid = (card) => hasBuyer(card) && card.payment_status === "paid";
   const isPending = (card) => hasBuyer(card) && card.payment_status === "pending";
   const hasSeller = (card) => !!card.seller_id && !hasBuyer(card);
