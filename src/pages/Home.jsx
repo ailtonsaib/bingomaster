@@ -169,11 +169,11 @@ export default function Home() {
                   <UserCheck className="w-5 h-5" /> Vendedores
                 </Button>
               </Link>
-              <Link to="/sell">
+              <a href="/sell" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-300 text-green-700 hover:bg-green-50">
                   <ShoppingCart className="w-5 h-5" /> App do Vendedor
                 </Button>
-              </Link>
+              </a>
               <Button
                 size="lg"
                 variant="outline"
@@ -207,11 +207,11 @@ export default function Home() {
                   <Ticket className="w-5 h-5" /> Gerador de Rifas
                 </Button>
               </Link>
-              <Link to="/buyer">
+              <a href="/buyer" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-cyan-300 text-cyan-700 hover:bg-cyan-50">
                   <Smartphone className="w-5 h-5" /> App do Comprador
                 </Button>
-              </Link>
+              </a>
               <Button
                 size="lg"
                 variant="outline"
