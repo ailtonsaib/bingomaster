@@ -243,21 +243,21 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
         {grids.map((grid, i) => {
           const prize = prizes[i];
           return (
-            <div key={i} style={{ display: "flex", flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <PrintBingoGrid numbers={grid} brandName={brandName} size={circleSize} />
               {prize && (
                 <div style={{
                   fontSize: Math.max(9, Math.round(circleSize * 0.32)),
                   color: "#000",
                   fontWeight: "bold",
-                  textAlign: "right",
-                  whiteSpace: "nowrap",
-                  lineHeight: 1.3,
+                  marginTop: 4,
+                  textAlign: "center",
+                  width: "100%",
                 }}>
                   {i + 1}) {prize.name || ""}
-                  {prize.description ? <><br />{prize.description}</> : null}
+                  {prize.description ? ` (${prize.description})` : ""}
                 </div>
               )}
-              <PrintBingoGrid numbers={grid} brandName={brandName} size={circleSize} />
             </div>
           );
         })}
