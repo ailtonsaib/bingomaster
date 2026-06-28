@@ -64,6 +64,11 @@
       "default": "paid",
       "description": "Status do pagamento: pending = aguardando confirma\u00e7\u00e3o, paid = pago e confirmado"
     },
+    "is_validated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se esta cartela est\u00e1 habilitada para concorrer aos pr\u00eamios no sorteio"
+    },
     "grid_1a": {
       "type": "array",
       "items": {
