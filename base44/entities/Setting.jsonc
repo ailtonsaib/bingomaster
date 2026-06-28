@@ -11,6 +11,10 @@
       ],
       "default": "BINGO",
       "description": "Nome da marca exibido no app e nas cartelas impressas (cabe\u00e7alho das colunas)"
+    },
+    "regulation": {
+      "type": "string",
+      "description": "Texto do regulamento do bingo para impress\u00e3o opcional junto \u00e0s cartelas"
     }
   },
   "required": [

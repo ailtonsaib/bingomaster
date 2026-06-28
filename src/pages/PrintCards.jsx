@@ -4,9 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, ScrollText } from "lucide-react";
 import PrintA4Sheet from "@/components/bingo/PrintA4Sheet";
+import RegulationSheet from "@/components/bingo/RegulationSheet";
+import RegulationPanel from "@/components/bingo/RegulationPanel";
 import { useBrandName } from "@/hooks/useBrandName";
+import { useRegulation } from "@/hooks/useRegulation";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -19,6 +23,7 @@ function chunkArray(arr, size) {
 export default function PrintCards() {
   const { gameId } = useParams();
   const { brandName } = useBrandName();
+  const { regulation } = useRegulation();
   const printRef = useRef();
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
@@ -26,6 +31,7 @@ export default function PrintCards() {
   const [isLoading, setIsLoading] = useState(false);
   const [rangeLabel, setRangeLabel] = useState("");
   const [showButtons, setShowButtons] = useState(false);
+  const [printRegulation, setPrintRegulation] = useState(false);
 
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
@@ -68,7 +74,16 @@ export default function PrintCards() {
   const CARDS_PER_PAGE = 1;
   const prizes = game?.prizes || [];
   const sortedCards = cards ? [...cards].sort((a, b) => (a.card_number || 0) - (b.card_number || 0)) : [];
-  const pages = chunkArray(sortedCards, CARDS_PER_PAGE);
+  const cardPages = chunkArray(sortedCards, CARDS_PER_PAGE);
+
+  // Intercala: cartela → regulamento → cartela → regulamento ... até a última
+  const allPages = [];
+  cardPages.forEach((pageCards) => {
+    allPages.push({ type: "card", cards: pageCards });
+    if (printRegulation && regulation) {
+      allPages.push({ type: "regulation" });
+    }
+  });
 
   return (
     <>
@@ -176,24 +191,47 @@ export default function PrintCards() {
           </div>
         )}
 
+        {/* Regulation editor + print toggle */}
+        <div className="mt-6 space-y-4">
+          <RegulationPanel />
+          {regulation && regulation.trim() && (
+            <div className="bg-card rounded-2xl shadow-lg border p-5 flex items-center gap-3">
+              <Checkbox
+                id="print-regulation"
+                checked={printRegulation}
+                onCheckedChange={(checked) => setPrintRegulation(checked === true)}
+              />
+              <label htmlFor="print-regulation" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                <ScrollText className="w-4 h-4 text-primary" />
+                Imprimir regulamento intercalado com as cartelas (uma cartela por folha + regulamento na próxima)
+              </label>
+            </div>
+          )}
+        </div>
+
         {/* Print area */}
         {cards && cards.length > 0 && (
           <>
             <div className="no-print text-center py-3 mt-6 text-sm text-muted-foreground bg-yellow-50 border rounded-lg">
-              Exibindo cartelas {rangeLabel} — {cards.length} cartela(s) — {pages.length} folha(s) A4
+              Exibindo cartelas {rangeLabel} — {cards.length} cartela(s) — {allPages.length} folha(s) A4
+              {printRegulation && regulation && ` (com regulamento intercalado)`}
             </div>
 
             <div ref={printRef} id="print-area">
-              {pages.map((pageCards, pageIdx) => (
+              {allPages.map((page, pageIdx) => (
                 <div
                   key={pageIdx}
                   className="print-page"
                   style={{
-                    pageBreakAfter: pageIdx < pages.length - 1 ? "always" : "auto",
-                    breakAfter: pageIdx < pages.length - 1 ? "page" : "auto",
+                    pageBreakAfter: pageIdx < allPages.length - 1 ? "always" : "auto",
+                    breakAfter: pageIdx < allPages.length - 1 ? "page" : "auto",
                   }}
                 >
-                  <PrintA4Sheet card={pageCards[0]} game={game} prizes={prizes} brandName={brandName} />
+                  {page.type === "card" ? (
+                    <PrintA4Sheet card={page.cards[0]} game={game} prizes={prizes} brandName={brandName} />
+                  ) : (
+                    <RegulationSheet regulation={regulation} game={game} brandName={brandName} />
+                  )}
                 </div>
               ))}
             </div>
