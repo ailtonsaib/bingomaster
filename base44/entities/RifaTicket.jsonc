@@ -1,0 +1,36 @@
+{
+  "name": "RifaTicket",
+  "type": "object",
+  "properties": {
+    "rifa_id": {
+      "type": "string",
+      "description": "ID da rifa"
+    },
+    "number": {
+      "type": "number",
+      "description": "N\u00famero do bilhete"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Nome do comprador"
+    },
+    "buyer_phone": {
+      "type": "string",
+      "description": "Telefone do comprador"
+    },
+    "is_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Bilhete foi pago"
+    },
+    "is_winner": {
+      "type": "boolean",
+      "default": false,
+      "description": "Este bilhete foi o vencedor"
+    }
+  },
+  "required": [
+    "rifa_id",
+    "number"
+  ]
+}

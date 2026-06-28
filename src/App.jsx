@@ -22,6 +22,9 @@ import WinnerSummary from '@/pages/WinnerSummary';
 import InfoPlanos from '@/pages/InfoPlanos';
 import AdminPlanos from '@/pages/AdminPlanos';
 import AdminSolicitacoes from '@/pages/AdminSolicitacoes';
+import Rifas from '@/pages/Rifas';
+import RifaDetail from '@/pages/RifaDetail';
+import PrintRifa from '@/pages/PrintRifa';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -76,6 +79,9 @@ const AuthenticatedApp = () => {
         <Route path="/info-planos" element={<InfoPlanos />} />
         <Route path="/admin-planos" element={<AdminPlanos />} />
         <Route path="/admin-solicitacoes" element={<AdminSolicitacoes />} />
+        <Route path="/rifas" element={<Rifas />} />
+        <Route path="/rifas/:rifaId" element={<RifaDetail />} />
+        <Route path="/rifas/print/:rifaId" element={<PrintRifa />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
