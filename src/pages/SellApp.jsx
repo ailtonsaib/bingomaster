@@ -10,7 +10,8 @@ import { useLicense } from "@/hooks/useLicense";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
-  ChevronDown, UserCheck, Hash, Camera, Trash2, Loader2, LogOut, MessageCircle
+  ChevronDown, UserCheck, Hash, Camera, Trash2, Loader2, LogOut, MessageCircle,
+  Clock, Paperclip, BadgeCheck
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -298,6 +299,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   const [goalAlert, setGoalAlert] = useState(null); // { percent: 50 | 100, soldCount, totalRange }
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
+  const [receiptFileName, setReceiptFileName] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const storageKey = `last_card_count_${game.id}_${seller.id || seller.name}`;
@@ -349,7 +351,8 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
 
   const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
-  const sold = rangeCards.filter((c) => c.player_phone || c.player_city);
+  const pending = rangeCards.filter((c) => (c.player_phone || c.player_city) && c.payment_status === "pending");
+  const sold = rangeCards.filter((c) => (c.player_phone || c.player_city) && c.payment_status !== "pending");
 
   const filtered = rangeCards
     .filter((c) => {
@@ -369,6 +372,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     setBuyerPhone(card.player_phone || "");
     setBuyerAddress(card.player_city || "");
     setReceiptFile(null);
+    setReceiptFileName(null);
     setReceiptPreview(card.payment_receipt_url || null);
   };
 
@@ -376,16 +380,23 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     const file = e.target.files?.[0];
     if (!file) return;
     setReceiptFile(file);
-    setReceiptPreview(URL.createObjectURL(file));
+    setReceiptFileName(file.name);
+    // Only set image preview for image files
+    if (file.type.startsWith("image/")) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview(null);
+    }
     e.target.value = "";
   };
 
   const handleRemoveReceipt = () => {
     setReceiptFile(null);
     setReceiptPreview(null);
+    setReceiptFileName(null);
   };
 
-  const handleSell = async () => {
+  const handleSell = async (asPending = false) => {
     if (!buyerName.trim()) return;
     setSaving(true);
 
@@ -412,6 +423,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
       player_city: buyerAddress.trim(),
       seller_id: seller.id || null,
       seller_name: seller.name || null,
+      payment_status: asPending ? "pending" : "paid",
     };
     if (receiptUrl !== selectedCard.payment_receipt_url) {
       updateData.payment_receipt_url = receiptUrl;
@@ -419,30 +431,36 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
 
     await base44.entities.BingoCard.update(selectedCard.id, updateData);
     setSaving(false);
-    setSavedCard(selectedCard);
-    setLastSoldBuyerPhone(buyerPhone.trim());
+
+    const wasPendingNowPaid = !asPending && selectedCard.payment_status === "pending";
+    if (!asPending) {
+      setSavedCard(selectedCard);
+      setLastSoldBuyerPhone(buyerPhone.trim());
+    }
     setSelectedCard(null);
     setReceiptFile(null);
     setReceiptPreview(null);
+    setReceiptFileName(null);
     queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
 
-    // Check milestone alerts (50% and 100% of range)
-    const updatedSold = sold.length + 1; // optimistic count after this sale
-    const total = rangeCards.length;
-    if (total > 0) {
-      const pct = (updatedSold / total) * 100;
-      const alreadyAlerted50 = localStorage.getItem(`goal_50_${game.id}_${seller.id || seller.name}`);
-      const alreadyAlerted100 = localStorage.getItem(`goal_100_${game.id}_${seller.id || seller.name}`);
-      if (pct >= 100 && !alreadyAlerted100) {
-        localStorage.setItem(`goal_100_${game.id}_${seller.id || seller.name}`, "1");
-        setGoalAlert({ percent: 100, soldCount: updatedSold, totalRange: total });
-      } else if (pct >= 50 && !alreadyAlerted50) {
-        localStorage.setItem(`goal_50_${game.id}_${seller.id || seller.name}`, "1");
-        setGoalAlert({ percent: 50, soldCount: updatedSold, totalRange: total });
+    // Check milestone alerts only when marking as paid (not pending)
+    if (!asPending) {
+      const updatedSold = sold.length + (wasPendingNowPaid ? 0 : 1);
+      const total = rangeCards.length;
+      if (total > 0) {
+        const pct = (updatedSold / total) * 100;
+        const alreadyAlerted50 = localStorage.getItem(`goal_50_${game.id}_${seller.id || seller.name}`);
+        const alreadyAlerted100 = localStorage.getItem(`goal_100_${game.id}_${seller.id || seller.name}`);
+        if (pct >= 100 && !alreadyAlerted100) {
+          localStorage.setItem(`goal_100_${game.id}_${seller.id || seller.name}`, "1");
+          setGoalAlert({ percent: 100, soldCount: updatedSold, totalRange: total });
+        } else if (pct >= 50 && !alreadyAlerted50) {
+          localStorage.setItem(`goal_50_${game.id}_${seller.id || seller.name}`, "1");
+          setGoalAlert({ percent: 50, soldCount: updatedSold, totalRange: total });
+        }
       }
+      setTimeout(() => { setSavedCard(null); setLastSoldBuyerPhone(null); }, 8000);
     }
-
-    setTimeout(() => { setSavedCard(null); setLastSoldBuyerPhone(null); }, 8000);
   };
 
   const rangeLabel = cardRange?.from || cardRange?.to
@@ -470,7 +488,8 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
           )}
           <span>{rangeCards.length} cartelas</span>
           <span>•</span>
-          <span className="text-green-300 font-medium">{sold.length} vendidas</span>
+          <span className="text-green-300 font-medium">{sold.length} pagas</span>
+          {pending.length > 0 && <><span>•</span><span className="text-amber-300 font-medium">{pending.length} pendentes</span></>}
           <span>•</span>
           <span>{available.length} disponíveis</span>
         </div>
@@ -597,21 +616,26 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
             )}
             <div className="grid grid-cols-5 gap-2">
               {(search ? filtered : rangeCards).map((card) => {
-                const isSold = !!(card.player_phone || card.player_city);
+                const hasBuyer = !!(card.player_phone || card.player_city);
+                const isPending = hasBuyer && card.payment_status === "pending";
+                const isPaid = hasBuyer && !isPending;
                 return (
                   <button
                     key={card.id}
                     onClick={() => openCard(card)}
                     className={`flex flex-col items-center justify-center rounded-xl p-2 text-center border transition-all active:scale-95
-                      ${isSold
-                        ? "bg-green-50 border-green-300 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-300"
+                      ${isPaid
+                        ? "bg-green-50 border-green-300 text-green-800"
+                        : isPending
+                        ? "bg-amber-50 border-amber-300 text-amber-800"
                         : "bg-card border-border hover:border-primary/60 hover:bg-primary/5"
                       }`}
                   >
                     <span className="text-sm font-bold leading-none">
                       {String(card.card_number || "").padStart(4, "0")}
                     </span>
-                    {isSold && card.player_name && (
+                    {isPending && <Clock className="w-2.5 h-2.5 mt-0.5 opacity-70" />}
+                    {hasBuyer && card.player_name && (
                       <span className="text-[9px] mt-0.5 opacity-70 truncate w-full">
                         {card.player_name.split(" ")[0]}
                       </span>
@@ -680,28 +704,27 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-sm">Comprovante de pagamento</Label>
+                <Label className="text-sm">Comprovante / Anexo</Label>
                 {receiptPreview ? (
                   <div className="relative rounded-xl overflow-hidden border bg-muted">
-                    <img
-                      src={receiptPreview}
-                      alt="Comprovante"
-                      className="w-full h-40 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveReceipt}
-                      className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
-                    >
+                    <img src={receiptPreview} alt="Comprovante" className="w-full h-36 object-cover" />
+                    <button type="button" onClick={handleRemoveReceipt} className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors">
                       <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : receiptFileName ? (
+                  <div className="flex items-center gap-2 h-12 rounded-xl border bg-muted/50 px-3">
+                    <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm truncate flex-1">{receiptFileName}</span>
+                    <button type="button" onClick={handleRemoveReceipt} className="text-muted-foreground hover:text-destructive shrink-0">
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <>
                     <input
                       type="file"
-                      accept="image/*"
-                      capture="environment"
+                      accept="image/*,application/pdf,.pdf,.doc,.docx"
                       onChange={handlePickReceipt}
                       className="hidden"
                       id="receipt-capture"
@@ -710,39 +733,59 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
                       htmlFor="receipt-capture"
                       className="flex items-center justify-center gap-2 h-12 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/30 hover:bg-muted/50 hover:border-primary/50 transition-colors cursor-pointer text-sm text-muted-foreground"
                     >
-                      <Camera className="w-5 h-5" />
-                      Abrir câmera
+                      <Paperclip className="w-5 h-5" />
+                      Anexar comprovante
                     </label>
                   </>
+                )}
+                {/* Also show existing receipt from db if no new file selected */}
+                {!receiptFile && !receiptFileName && selectedCard?.payment_receipt_url && (
+                  <a href={selectedCard.payment_receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">
+                    Ver comprovante atual
+                  </a>
                 )}
               </div>
             </div>
 
-            <Button
-              className="w-full h-12 text-base gap-2"
-              onClick={handleSell}
-              disabled={!buyerName.trim() || saving || uploading}
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Enviando foto...
-                </>
-              ) : saving ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Registrando...
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-5 h-5" />
-                  Confirmar Venda
-                </>
-              )}
-            </Button>
+            {/* Payment status indicator for existing pending */}
+            {selectedCard?.payment_status === "pending" && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
+                <Clock className="w-4 h-4 shrink-0" />
+                Esta cartela está pendente de pagamento.
+              </div>
+            )}
 
-            <p className="text-xs text-muted-foreground text-center py-1">
-              ✅ As vendas são registradas automaticamente no sistema.
+            <div className="space-y-2">
+              {/* Primary action: paid or confirm payment */}
+              <Button
+                className="w-full h-12 text-base gap-2"
+                onClick={() => handleSell(false)}
+                disabled={!buyerName.trim() || saving || uploading}
+              >
+                {uploading || saving ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" />{uploading ? "Enviando..." : "Registrando..."}</>
+                ) : selectedCard?.payment_status === "pending" ? (
+                  <><BadgeCheck className="w-5 h-5" /> Confirmar Pagamento</>
+                ) : (
+                  <><ShoppingCart className="w-5 h-5" /> Confirmar Venda (Pago)</>
+                )}
+              </Button>
+
+              {/* Secondary: save as pending (only if not already pending) */}
+              {selectedCard?.payment_status !== "pending" && (
+                <Button
+                  variant="outline"
+                  className="w-full h-11 text-sm gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  onClick={() => handleSell(true)}
+                  disabled={!buyerName.trim() || saving || uploading}
+                >
+                  <Clock className="w-4 h-4" /> Salvar como Pendente
+                </Button>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              🟡 Pendente = aguardando pagamento &nbsp;|&nbsp; 🟢 Pago = confirmado no sistema
             </p>
           </div>
         </div>

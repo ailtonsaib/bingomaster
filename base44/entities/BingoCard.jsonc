@@ -55,6 +55,15 @@
       "type": "string",
       "description": "URL da imagem do comprovante de pagamento"
     },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid"
+      ],
+      "default": "paid",
+      "description": "Status do pagamento: pending = aguardando confirma\u00e7\u00e3o, paid = pago e confirmado"
+    },
     "grid_1a": {
       "type": "array",
       "items": {
