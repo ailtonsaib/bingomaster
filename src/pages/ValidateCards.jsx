@@ -4,84 +4,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { maskPhone } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Search, ChevronDown, User, Phone, CheckCircle2,
-  XCircle, ArrowLeft, Eye, EyeOff, ShoppingCart, Undo2, X
+  XCircle, ArrowLeft, Eye, EyeOff, ShieldCheck, Undo2, ShoppingCart, Clock
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-// Modal para registrar/editar venda
-function SellModal({ card, onClose, onSaved }) {
-  // Não pré-preenche com nome da cartela — começa em branco
-  const [buyerName, setBuyerName] = useState("");
-  const [buyerPhone, setBuyerPhone] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!buyerPhone.trim()) return;
-    setSaving(true);
-    await base44.entities.BingoCard.update(card.id, {
-      player_name: buyerName.trim() || "",
-      player_phone: buyerPhone.trim(),
-    });
-    setSaving(false);
-    onSaved();
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
-      <div
-        className="bg-background rounded-t-2xl w-full max-w-md p-5 pb-10 space-y-4 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-lg font-heading">
-              Cartela #{String(card.card_number || "").padStart(4, "0")}
-            </h2>
-            <p className="text-xs text-muted-foreground">Registrar venda</p>
-          </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-muted-foreground" /></button>
-        </div>
-
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Nome do Comprador</label>
-            <Input
-              className="h-12 text-base"
-              value={buyerName}
-              onChange={(e) => setBuyerName(e.target.value)}
-              placeholder="Nome completo (opcional)"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Telefone / WhatsApp *</label>
-            <Input
-              className="h-12 text-base"
-              type="tel"
-              value={buyerPhone}
-              onChange={(e) => setBuyerPhone(maskPhone(e.target.value))}
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-        </div>
-
-        <Button
-          className="w-full h-12 text-base gap-2"
-          onClick={handleSave}
-          disabled={!buyerPhone.trim() || saving}
-        >
-          <ShoppingCart className="w-5 h-5" />
-          {saving ? "Registrando..." : "Confirmar Venda"}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export default function ValidateCards() {
   const queryClient = useQueryClient();
@@ -89,8 +17,8 @@ export default function ValidateCards() {
   const [showGamePicker, setShowGamePicker] = useState(false);
   const [search, setSearch] = useState("");
   const [showDetails, setShowDetails] = useState(false);
-  const [sellCard, setSellCard] = useState(null);
-  const [quickSelling, setQuickSelling] = useState(null);
+  const [validating, setValidating] = useState(null);
+  const [unvalidating, setUnvalidating] = useState(null);
 
   const { data: games = [] } = useQuery({
     queryKey: ["validate-games"],
@@ -103,11 +31,12 @@ export default function ValidateCards() {
     enabled: !!selectedGame,
   });
 
-  // "vendida" = tem player_phone preenchido
-  const isSold = (card) => !!card.player_phone;
+  const isSold = (card) => !!card.player_phone || !!card.player_city || !!card.player_name;
+  const isValidated = (card) => !!card.is_validated;
 
-  const sold = cards.filter(isSold);
-  const available = cards.filter((c) => !isSold(c));
+  const soldCards = cards.filter(isSold);
+  const validatedCards = cards.filter(isValidated);
+  const pendingCards = soldCards.filter((c) => !isValidated(c));
 
   const filtered = cards.filter((c) => {
     if (!search) return true;
@@ -119,25 +48,18 @@ export default function ValidateCards() {
     );
   });
 
-  const handleQuickSell = async (card) => {
-    setQuickSelling(card.id);
-    await base44.entities.BingoCard.update(card.id, {
-      player_phone: "vendida",
-    });
+  const handleValidate = async (card) => {
+    setValidating(card.id);
+    await base44.entities.BingoCard.update(card.id, { is_validated: true });
     queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
-    setQuickSelling(null);
+    setValidating(null);
   };
 
-  const handleUnmark = async (card) => {
-    await base44.entities.BingoCard.update(card.id, {
-      player_phone: "",
-      player_city: "",
-    });
+  const handleUnvalidate = async (card) => {
+    setUnvalidating(card.id);
+    await base44.entities.BingoCard.update(card.id, { is_validated: false });
     queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
-  };
-
-  const handleSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    setUnvalidating(null);
   };
 
   return (
@@ -149,7 +71,7 @@ export default function ValidateCards() {
         </Link>
         <h1 className="text-2xl font-bold font-heading">Validação de Cartelas</h1>
         <p className="text-primary-foreground/80 text-sm mt-1">
-          Consulte e gerencie as cartelas do jogo
+          Valide o pagamento das cartelas vendidas para liberá-las no sorteio
         </p>
       </div>
 
@@ -192,15 +114,22 @@ export default function ValidateCards() {
                 <div className="text-2xl font-bold font-heading text-foreground">{cards.length}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">Total</div>
               </div>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold font-heading text-green-700">{sold.length}</div>
-                <div className="text-xs text-green-600 mt-0.5">Vendidas</div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold font-heading text-amber-700">{soldCards.length}</div>
+                <div className="text-xs text-amber-600 mt-0.5">Vendidas</div>
               </div>
-              <div className="bg-muted border rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold font-heading text-muted-foreground">{available.length}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Disponíveis</div>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold font-heading text-green-700">{validatedCards.length}</div>
+                <div className="text-xs text-green-600 mt-0.5">Validadas ✓</div>
               </div>
             </div>
+
+            {pendingCards.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2">
+                <Clock className="w-4 h-4 shrink-0" />
+                <span><strong>{pendingCards.length}</strong> cartela(s) vendida(s) aguardando validação de pagamento.</span>
+              </div>
+            )}
 
             {/* Search + toggle details */}
             <div className="flex gap-2">
@@ -238,43 +167,60 @@ export default function ValidateCards() {
               <div className="space-y-2">
                 {filtered.map((card) => {
                   const sold = isSold(card);
+                  const validated = isValidated(card);
                   return (
                     <Card
                       key={card.id}
-                      className={`border transition-all ${sold ? "border-green-200 bg-green-50/50" : "border-border bg-card"}`}
+                      className={`border transition-all ${
+                        validated
+                          ? "border-green-200 bg-green-50/50"
+                          : sold
+                          ? "border-amber-200 bg-amber-50/30"
+                          : "border-border bg-card"
+                      }`}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
                         {/* Status icon */}
-                        {sold
-                          ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                          : <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />
-                        }
+                        {validated ? (
+                          <ShieldCheck className="w-4 h-4 text-green-600 shrink-0" />
+                        ) : sold ? (
+                          <ShoppingCart className="w-4 h-4 text-amber-500 shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
 
                         {/* Card number */}
-                        <span className={`font-bold font-heading text-base shrink-0 ${sold ? "text-green-800" : "text-foreground"}`}>
+                        <span className={`font-bold font-heading text-base shrink-0 ${
+                          validated ? "text-green-800" : sold ? "text-amber-800" : "text-foreground"
+                        }`}>
                           {String(card.card_number || "").padStart(4, "0")}
                         </span>
 
                         {/* Status badge */}
                         <Badge
                           variant="outline"
-                          className={`text-xs shrink-0 ${sold
-                            ? "bg-green-100 text-green-700 border-green-200"
-                            : "text-muted-foreground"
+                          className={`text-xs shrink-0 ${
+                            validated
+                              ? "bg-green-100 text-green-700 border-green-200"
+                              : sold
+                              ? "bg-amber-100 text-amber-700 border-amber-200"
+                              : "text-muted-foreground"
                           }`}
                         >
-                          {sold ? "Vendida" : "Disponível"}
+                          {validated ? "Validada" : sold ? "Vendida" : "Disponível"}
                         </Badge>
 
                         {/* Buyer info */}
                         {showDetails && sold && (
                           <div className="flex-1 min-w-0 flex flex-wrap gap-x-4 gap-y-0.5">
-                            <span className="flex items-center gap-1 text-sm text-green-800 truncate">
-                              <User className="w-3.5 h-3.5 shrink-0" />
-                              {card.player_name || <span className="italic text-muted-foreground">—</span>}
-                            </span>
-                            {card.player_phone && card.player_phone !== "vendida" && (
-                              <span className="flex items-center gap-1 text-sm text-green-700">
+                            {card.player_name && (
+                              <span className="flex items-center gap-1 text-sm truncate">
+                                <User className="w-3.5 h-3.5 shrink-0" />
+                                {card.player_name}
+                              </span>
+                            )}
+                            {card.player_phone && (
+                              <span className="flex items-center gap-1 text-sm">
                                 <Phone className="w-3.5 h-3.5 shrink-0" />
                                 {card.player_phone}
                               </span>
@@ -282,37 +228,32 @@ export default function ValidateCards() {
                           </div>
                         )}
 
-                        {!showDetails && sold && (
-                          <span className="flex-1 text-xs text-muted-foreground italic">
-                            Ative "Dados" para ver o comprador
-                          </span>
-                        )}
-
+                        {!showDetails && sold && <div className="flex-1" />}
                         {!sold && <div className="flex-1" />}
 
                         {/* Action buttons */}
-                        {sold ? (
+                        {validated ? (
                           <Button
                             size="sm"
                             variant="ghost"
                             className="shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50 gap-1 text-xs"
-                            onClick={() => handleUnmark(card)}
+                            disabled={unvalidating === card.id}
+                            onClick={() => handleUnvalidate(card)}
                           >
                             <Undo2 className="w-3.5 h-3.5" />
-                            Desmarcar
+                            {unvalidating === card.id ? "..." : "Desvalidar"}
                           </Button>
-                        ) : (
+                        ) : sold ? (
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="shrink-0 text-green-700 border-green-300 hover:bg-green-50 gap-1 text-xs"
-                            disabled={quickSelling === card.id}
-                            onClick={() => showDetails ? setSellCard(card) : handleQuickSell(card)}
+                            className="shrink-0 bg-green-600 hover:bg-green-700 text-white gap-1 text-xs"
+                            disabled={validating === card.id}
+                            onClick={() => handleValidate(card)}
                           >
-                            <ShoppingCart className="w-3.5 h-3.5" />
-                            {quickSelling === card.id ? "..." : "Vender"}
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {validating === card.id ? "..." : "Validar"}
                           </Button>
-                        )}
+                        ) : null}
                       </CardContent>
                     </Card>
                   );
@@ -322,14 +263,6 @@ export default function ValidateCards() {
           </>
         )}
       </div>
-
-      {sellCard && (
-        <SellModal
-          card={sellCard}
-          onClose={() => setSellCard(null)}
-          onSaved={handleSaved}
-        />
-      )}
     </div>
   );
 }

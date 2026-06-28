@@ -88,7 +88,9 @@ export default function GamePlay() {
     
     if (num !== null) {
       const newDrawn = [...(game.drawn_numbers || []), num];
-      const filteredCards = cardFilter === "sold"
+      const filteredCards = cardFilter === "validated"
+        ? cards.filter((c) => c.is_validated)
+        : cardFilter === "sold"
         ? cards.filter((c) => c.player_phone || c.player_city)
         : cards;
 
@@ -441,10 +443,11 @@ export default function GamePlay() {
               {/* Card filter selector */}
               <div className="w-full mt-3">
                 <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Cartelas no Sorteio</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: "all", label: "Todas as Cartelas", count: cards.length, icon: "📋" },
-                    { value: "sold", label: "Apenas Vendidas", count: cards.filter((c) => c.player_phone || c.player_city).length, icon: "✅" },
+                    { value: "all", label: "Todas", count: cards.length, icon: "📋" },
+                    { value: "sold", label: "Vendidas", count: cards.filter((c) => c.player_phone || c.player_city).length, icon: "🛒" },
+                    { value: "validated", label: "Validadas", count: cards.filter((c) => c.is_validated).length, icon: "✅" },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -673,8 +676,8 @@ export default function GamePlay() {
                 <StatBox label="Sorteados" value={drawnNumbers.length} />
                 <StatBox label="Restantes" value={maxNumber - drawnNumbers.length} />
                 <StatBox
-                  label={cardFilter === "sold" ? "Cartelas (Vendidas)" : "Cartelas (Todas)"}
-                  value={cardFilter === "sold" ? cards.filter((c) => c.player_phone || c.player_city).length : cards.length}
+                  label={cardFilter === "validated" ? "Cartelas (Validadas)" : cardFilter === "sold" ? "Cartelas (Vendidas)" : "Cartelas (Todas)"}
+                  value={cardFilter === "validated" ? cards.filter((c) => c.is_validated).length : cardFilter === "sold" ? cards.filter((c) => c.player_phone || c.player_city).length : cards.length}
                 />
                 <StatBox label="Prêmios Restantes" value={(game.prizes || []).filter(p => !p.awarded).length} />
                 <button

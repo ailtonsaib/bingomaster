@@ -1,0 +1,120 @@
+{
+  "name": "BingoCard",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "ID do jogo de bingo associado"
+    },
+    "card_identifier": {
+      "type": "string",
+      "description": "Identificador único legível da cartela (ex: CARD-001)"
+    },
+    "card_number": {
+      "type": "number",
+      "description": "Número sequencial da cartela dentro do jogo"
+    },
+    "player_name": {
+      "type": "string",
+      "description": "Nome do jogador/dono da cartela"
+    },
+    "player_phone": {
+      "type": "string",
+      "description": "Telefone do jogador"
+    },
+    "player_city": {
+      "type": "string",
+      "description": "Cidade do jogador"
+    },
+    "player_state": {
+      "type": "string",
+      "description": "Estado do jogador"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor que vendeu esta cartela"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor que vendeu esta cartela (para exibição rápida)"
+    },
+    "chances": {
+      "type": "number",
+      "enum": [1, 2],
+      "default": 1,
+      "description": "Dificuldade de chances: 1 (normal) ou 2 (dupla chance)"
+    },
+    "exported_date": {
+      "type": "string",
+      "description": "Data em que a cartela foi exportada pelo vendedor (ISO string). Vazio/null = não exportada."
+    },
+    "payment_receipt_url": {
+      "type": "string",
+      "description": "URL da imagem do comprovante de pagamento"
+    },
+    "is_validated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o pagamento foi validado pelo organizador. Apenas cartelas validadas participam do sorteio."
+    },
+    "grid_1a": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Primeira chance - grid 1 (25 números, centro=0)"
+    },
+    "grid_1b": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Primeira chance - grid 2 (25 números, centro=0)"
+    },
+    "grid_1c": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Primeira chance - grid 3 (25 números, centro=0)"
+    },
+    "grid_2a": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Segunda chance - grid 1 (25 números, centro=0)"
+    },
+    "grid_2b": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Segunda chance - grid 2 (25 números, centro=0)"
+    },
+    "grid_2c": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Segunda chance - grid 3 (25 números, centro=0)"
+    },
+    "grid_1": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Legacy: primeira cartela (compatibilidade)"
+    },
+    "grid_2": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Legacy: segunda cartela (compatibilidade)"
+    },
+    "won_prizes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "prize_index": { "type": "number" },
+          "prize_name": { "type": "string" },
+          "won_at_draw": { "type": "number" },
+          "won_at": { "type": "string" }
+        }
+      },
+      "description": "Prêmios ganhos por esta cartela"
+    },
+    "is_winner": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se esta cartela já ganhou algum prêmio"
+    }
+  },
+  "required": ["game_id", "player_name"]
+}
