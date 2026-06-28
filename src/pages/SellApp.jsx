@@ -290,7 +290,6 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   const [selectedCard, setSelectedCard] = useState(null);
   const [buyerName, setBuyerName] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
-  const [buyerAddress, setBuyerAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedCard, setSavedCard] = useState(null);
   const [lastSoldBuyerPhone, setLastSoldBuyerPhone] = useState(null);
@@ -370,7 +369,6 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     const hasBuyer = !!(card.player_phone || card.player_city);
     setBuyerName(hasBuyer ? (card.player_name || "") : "");
     setBuyerPhone(card.player_phone || "");
-    setBuyerAddress(card.player_city || "");
     setReceiptFile(null);
     setReceiptFileName(null);
     setReceiptPreview(card.payment_receipt_url || null);
@@ -397,7 +395,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   };
 
   const handleSell = async (asPending = false) => {
-    if (!buyerName.trim()) return;
+    if (!buyerName.trim() || !buyerPhone.trim()) return;
     setSaving(true);
 
     let receiptUrl = selectedCard.payment_receipt_url || null;
@@ -420,7 +418,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     const updateData = {
       player_name: buyerName.trim(),
       player_phone: buyerPhone.trim(),
-      player_city: buyerAddress.trim(),
+      player_city: "",
       seller_id: seller.id || null,
       seller_name: seller.name || null,
       payment_status: asPending ? "pending" : "paid",
@@ -684,22 +682,13 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-sm">Telefone / WhatsApp</Label>
+                <Label className="text-sm">Telefone / WhatsApp *</Label>
                 <Input
                   className="h-12 text-base"
                   type="tel"
                   value={buyerPhone}
                   onChange={(e) => setBuyerPhone(maskPhone(e.target.value))}
                   placeholder="(00) 00000-0000"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-sm">Endereço / Cidade</Label>
-                <Input
-                  className="h-12 text-base"
-                  value={buyerAddress}
-                  onChange={(e) => setBuyerAddress(e.target.value)}
-                  placeholder="Cidade ou endereço"
                 />
               </div>
 
@@ -760,7 +749,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
               <Button
                 className="w-full h-12 text-base gap-2"
                 onClick={() => handleSell(false)}
-                disabled={!buyerName.trim() || saving || uploading}
+                disabled={!buyerName.trim() || !buyerPhone.trim() || saving || uploading}
               >
                 {uploading || saving ? (
                   <><Loader2 className="w-5 h-5 animate-spin" />{uploading ? "Enviando..." : "Registrando..."}</>
@@ -777,7 +766,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
                   variant="outline"
                   className="w-full h-11 text-sm gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
                   onClick={() => handleSell(true)}
-                  disabled={!buyerName.trim() || saving || uploading}
+                  disabled={!buyerName.trim() || !buyerPhone.trim() || saving || uploading}
                 >
                   <Clock className="w-4 h-4" /> Salvar como Pendente
                 </Button>
