@@ -38,9 +38,9 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
     card.grid_2c || card.grid_2 || [],
   ];
 
-  // Prizes: first 3 for primeira chance; next 3 for segunda chance (fallback to first 3 if not set)
+  // Prizes: mesmos prêmios para primeira e segunda chance
   const prizes1 = prizes.slice(0, 3);
-  const prizes2 = prizes.slice(3, 6).length > 0 ? prizes.slice(3, 6) : prizes.slice(0, 3);
+  const prizes2 = prizes1;
 
   return (
     <div style={{
@@ -210,40 +210,49 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   );
 }
 
-// 3 distinct grids side by side, each with its own prize below
+// 3 grids side by side; prizes on the same line as the chance title
 function ChanceSection({ title, grids, prizes, brandName }) {
   return (
     <div style={{
       padding: "6px 8px 8px 8px",
     }}>
+      {/* Title + prizes on the same line */}
       <div style={{
-        textAlign: "center",
-        fontSize: 15,
-        fontWeight: "bold",
-        letterSpacing: 3,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
         marginBottom: 8,
+        flexWrap: "wrap",
       }}>
-        {title}
+        <div style={{
+          fontSize: 15,
+          fontWeight: "bold",
+          letterSpacing: 3,
+          whiteSpace: "nowrap",
+        }}>
+          {title}
+        </div>
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "4px 16px",
+          fontSize: 11,
+          fontWeight: "bold",
+          flex: 1,
+        }}>
+          {prizes.map((prize, i) => prize && prize.name ? (
+            <span key={i} style={{ whiteSpace: "normal" }}>
+              {i + 1}) {prize.name}
+              {prize.description ? ` (${prize.description})` : ""}
+            </span>
+          ) : null)}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-        {grids.map((grid, i) => {
-          const prize = prizes[i];
-          return (
-            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <PrintBingoGrid numbers={grid} brandName={brandName} />
-              {/* Prize for this specific grid */}
-              {prize && (
-                <div style={{ fontSize: 11, color: "#000", fontWeight: "bold", marginTop: 5, textAlign: "left", width: "100%", maxWidth: 170 }}>
-                  <div style={{ whiteSpace: "normal" }}>
-                    {i + 1}) {prize.name || ""}
-                    {prize.description ? ` (${prize.description})` : ""}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {grids.map((grid, i) => (
+          <PrintBingoGrid key={i} numbers={grid} brandName={brandName} />
+        ))}
       </div>
     </div>
   );
