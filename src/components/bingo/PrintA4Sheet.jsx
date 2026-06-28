@@ -202,7 +202,7 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10, marginBottom: 14 }}>
           <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>COLABORADOR:</span>
           <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;</div>
         </div>
