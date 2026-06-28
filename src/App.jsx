@@ -55,13 +55,14 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Telão é uma tela pública de exibição — não exige login */}
+      <Route path="/telao/:gameId" element={<Telao />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Home />} />
         <Route path="/new-game" element={<NewGame />} />
         <Route path="/game/:gameId" element={<GamePlay />} />
         <Route path="/cards/:gameId" element={<GameCards />} />
         <Route path="/display/:gameId" element={<GameDisplay />} />
-        <Route path="/telao/:gameId" element={<Telao />} />
         <Route path="/print/:gameId" element={<PrintCards />} />
         <Route path="/sellers" element={<Sellers />} />
         <Route path="/sell" element={<SellApp />} />

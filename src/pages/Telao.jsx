@@ -14,8 +14,7 @@ export default function Telao() {
 
   const { data: game } = useQuery({
     queryKey: ["telao-game", gameId],
-    queryFn: () => base44.entities.BingoGame.filter({ id: gameId }),
-    select: (d) => d[0],
+    queryFn: () => base44.functions.invoke("getGamePublic", { game_id: String(gameId) }).then(r => r.data.game),
     refetchInterval: 1500,
   });
 
