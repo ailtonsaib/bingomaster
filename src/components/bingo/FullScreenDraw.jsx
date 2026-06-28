@@ -111,6 +111,12 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
   // Auto-finish when a card reaches 20 points
   const autoFinishedRef = useRef(false);
   useEffect(() => {
+    if (isWaiting || drawnNumbers.length === 0) {
+      autoFinishedRef.current = false;
+    }
+  }, [isWaiting, drawnNumbers.length]);
+
+  useEffect(() => {
     if (winnerCards.length > 0 && isPlaying && !autoFinishedRef.current) {
       autoFinishedRef.current = true;
       updateGame({ status: "finished" });

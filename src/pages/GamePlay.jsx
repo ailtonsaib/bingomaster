@@ -78,12 +78,28 @@ export default function GamePlay() {
     
     if (num !== null) {
       const newDrawn = [...(game.drawn_numbers || []), num];
-      await updateGame({ drawn_numbers: newDrawn });
-
-      // Check all cards for bingo after the new number (apply filter)
       const filteredCards = cardFilter === "sold"
         ? cards.filter((c) => c.player_phone || c.player_city)
         : cards;
+
+      // Auto-finish when any card reaches 20 points
+      const drawnSet = new Set(newDrawn);
+      const hasTwentyPoints = filteredCards.some((c) => {
+        const allNums = new Set([
+          ...(c.grid_1 || []), ...(c.grid_2 || []),
+          ...(c.grid_1a || []), ...(c.grid_1b || []), ...(c.grid_1c || []),
+          ...(c.grid_2a || []), ...(c.grid_2b || []), ...(c.grid_2c || []),
+        ].filter(n => n !== 0));
+        return Array.from(allNums).filter(n => drawnSet.has(n)).length >= 20;
+      });
+
+      const updates = { drawn_numbers: newDrawn };
+      if (hasTwentyPoints) {
+        updates.status = "finished";
+      }
+      await updateGame(updates);
+
+      // Check all cards for bingo after the new number
       const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
       if (found.length > 0) {
         setWinners(found);
