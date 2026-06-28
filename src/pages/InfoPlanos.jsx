@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy, Settings } from "lucide-react";
+import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy, Settings, ChevronDown, AlertTriangle, RefreshCw, Lock, Ban, Smartphone, HelpCircle, Phone, Mail, MessageCircle } from "lucide-react";
+import { useState as useAccordionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -310,11 +311,203 @@ export default function InfoPlanos() {
           })}
         </div>
 
-        {/* Footer note */}
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          Para contratar ou fazer upgrade de plano, entre em contato com o suporte do sistema.
+        {/* Pricing note */}
+        <p className="text-center text-xs text-muted-foreground mt-6 mb-12">
+          💳 Os valores são cobrados uma única vez. Entre em contato com o administrador para contratar ou fazer upgrade.
         </p>
+
+        {/* ── REGRAS DE USO ── */}
+        <TermsSection />
+
+        {/* ── FAQ ── */}
+        <FaqSection />
+
+        {/* ── CONTATO ── */}
+        <ContactSection />
+
+        {/* ── COPYRIGHT ── */}
+        <div className="mt-10 pt-6 border-t text-center text-xs text-muted-foreground space-y-1">
+          <p className="font-semibold text-foreground">© 2026 AILTON AIRES — Todos os direitos reservados.</p>
+          <p>Este sistema é de propriedade exclusiva de Ailton Aires. É proibida a reprodução,<br className="hidden sm:inline" /> distribuição ou uso não autorizado deste software.</p>
+        </div>
       </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────── */
+/*  SEÇÃO DE REGRAS                            */
+/* ─────────────────────────────────────────── */
+const RULES = [
+  {
+    icon: Smartphone,
+    color: "text-blue-600 bg-blue-50",
+    title: "Licença por Dispositivo Único",
+    text: "Sua licença fica vinculada ao dispositivo utilizado no primeiro acesso (computador, tablet ou celular). O sistema registra o dispositivo automaticamente.",
+  },
+  {
+    icon: RefreshCw,
+    color: "text-amber-600 bg-amber-50",
+    title: "Solicitação de Troca de Dispositivo",
+    text: "Ao tentar acessar de um aparelho diferente, uma solicitação de troca é enviada ao administrador. O acesso só é liberado após aprovação manual.",
+  },
+  {
+    icon: AlertTriangle,
+    color: "text-orange-600 bg-orange-50",
+    title: "Taxa de Reinstalação",
+    text: "Em caso de formatação ou perda do dispositivo original, será cobrada uma taxa única de R$ 50,00 para reativar o acesso em um novo aparelho.",
+  },
+  {
+    icon: Lock,
+    color: "text-violet-600 bg-violet-50",
+    title: "Conta Pessoal e Intransferível",
+    text: "A licença é pessoal e não pode ser compartilhada com outras pessoas ou organizações. Cada usuário deve possuir sua própria conta.",
+  },
+  {
+    icon: Ban,
+    color: "text-red-600 bg-red-50",
+    title: "Suspensão por Uso Indevido",
+    text: "Tentativas de burlar limites de cartelas ou bloqueios de dispositivo podem resultar em suspensão imediata da conta, sem direito a reembolso.",
+  },
+];
+
+function TermsSection() {
+  return (
+    <div className="mb-10">
+      <div className="flex items-center gap-2 mb-5">
+        <Lock className="w-5 h-5 text-primary" />
+        <h2 className="text-xl font-bold font-heading">Regras de Uso e Termos Importantes</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        {RULES.map((rule, i) => {
+          const Icon = rule.icon;
+          return (
+            <div key={i} className="flex gap-3 p-4 rounded-xl border bg-card">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${rule.color}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold mb-0.5">{rule.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{rule.text}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Taxa de reinstalação destaque */}
+      <div className="rounded-xl border-2 border-orange-300 bg-orange-50 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <RefreshCw className="w-5 h-5 text-orange-600" />
+          <p className="font-bold text-orange-800">Taxa de Reinstalação: R$ 50,00</p>
+        </div>
+        <p className="text-sm text-orange-700 mb-3">
+          Ao formatar ou perder acesso ao dispositivo original, é necessário pagar uma taxa única de R$ 50,00 para liberar o acesso em um novo aparelho. Essa taxa cobre o processo de verificação e reativação da licença.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {["Formatação do dispositivo", "Perda do dispositivo", "Reinstalação do sistema"].map(item => (
+            <span key={item} className="text-xs bg-orange-100 border border-orange-300 text-orange-800 rounded-full px-3 py-1 font-medium">
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────── */
+/*  FAQ                                        */
+/* ─────────────────────────────────────────── */
+const FAQS = [
+  {
+    q: "Como solicito upgrade de plano?",
+    a: "Entre em contato diretamente com o administrador via WhatsApp ou e-mail. Informe o plano desejado e o administrador liberará o acesso após a confirmação do pagamento.",
+  },
+  {
+    q: "O que acontece com minhas cartelas ao trocar de plano?",
+    a: "Todas as cartelas e dados gerados são mantidos. O upgrade apenas aumenta o limite disponível para criação de novas cartelas.",
+  },
+  {
+    q: "Posso usar em celular e computador ao mesmo tempo?",
+    a: "Não. A licença padrão permite apenas um dispositivo ativo por vez. Para trocar de dispositivo, é necessário solicitar aprovação ao administrador.",
+  },
+  {
+    q: "O app do vendedor conta como dispositivo separado?",
+    a: "O app do vendedor possui acesso restrito e não conta como dispositivo principal. Somente o acesso administrativo fica vinculado ao dispositivo.",
+  },
+  {
+    q: "O limite de cartelas é por evento ou no total?",
+    a: "O limite é acumulado no total da conta, independente de quantos eventos foram criados. Cartelas excluídas não são contabilizadas.",
+  },
+];
+
+function FaqSection() {
+  const [open, setOpen] = useAccordionState(null);
+  return (
+    <div className="mb-10">
+      <div className="flex items-center gap-2 mb-5">
+        <HelpCircle className="w-5 h-5 text-primary" />
+        <h2 className="text-xl font-bold font-heading">Perguntas Frequentes</h2>
+      </div>
+      <div className="space-y-2">
+        {FAQS.map((faq, i) => (
+          <div key={i} className="border rounded-xl overflow-hidden bg-card">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium hover:bg-muted/50 transition-colors"
+              onClick={() => setOpen(open === i ? null : i)}
+            >
+              {faq.q}
+              <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${open === i ? "rotate-180" : ""}`} />
+            </button>
+            {open === i && (
+              <div className="px-4 pb-4 text-xs text-muted-foreground leading-relaxed border-t pt-3">
+                {faq.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────── */
+/*  CONTATO                                    */
+/* ─────────────────────────────────────────── */
+function ContactSection() {
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 p-6 text-white">
+      <h2 className="text-lg font-bold mb-1">Precisa de ajuda ou quer fazer upgrade?</h2>
+      <p className="text-violet-200 text-sm mb-5">
+        Entre em contato com o administrador para contratar um plano, solicitar upgrade, pagar taxa de reinstalação ou tirar dúvidas.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <a
+          href="https://wa.me/5562996099697"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 bg-white/15 hover:bg-white/25 transition-colors rounded-xl px-4 py-3 text-sm font-medium"
+        >
+          <MessageCircle className="w-4 h-4" />
+          WhatsApp — (62) 99609-9697
+        </a>
+        <a
+          href="tel:+5562996099697"
+          className="flex items-center gap-2 bg-white/15 hover:bg-white/25 transition-colors rounded-xl px-4 py-3 text-sm font-medium"
+        >
+          <Phone className="w-4 h-4" />
+          (62) 99609-9697
+        </a>
+        <a
+          href="mailto:ailtonsaib@gmail.com"
+          className="flex items-center gap-2 bg-white/15 hover:bg-white/25 transition-colors rounded-xl px-4 py-3 text-sm font-medium"
+        >
+          <Mail className="w-4 h-4" />
+          ailtonsaib@gmail.com
+        </a>
+      </div>
+      <p className="mt-4 text-violet-200 text-xs font-semibold">AILTON AIRES</p>
     </div>
   );
 }
