@@ -90,7 +90,7 @@ export default function ValidateCards() {
   };
 
   const getCardStatus = (card) => {
-    if (isValidated(card)) return { label: "Validada", className: "bg-green-100 text-green-700 border-green-200" };
+    if (isValidated(card)) return { label: "Concorrendo 🏆", className: "bg-green-100 text-green-700 border-green-200" };
     if (isPaid(card)) return { label: "Pago", className: "bg-amber-100 text-amber-700 border-amber-200" };
     if (isPending(card)) return { label: "Pendente", className: "bg-orange-100 text-orange-700 border-orange-200" };
     if (hasSeller(card)) return { label: "Com vendedor", className: "bg-blue-100 text-blue-700 border-blue-200" };
@@ -114,7 +114,7 @@ export default function ValidateCards() {
         </Link>
         <h1 className="text-2xl font-bold font-heading">Validação de Cartelas</h1>
         <p className="text-primary-foreground/80 text-sm mt-1">
-          Valide o pagamento das cartelas vendidas para liberá-las no sorteio
+          Habilite as cartelas pagas para concorrerem aos prêmios no sorteio
         </p>
       </div>
 
@@ -167,13 +167,13 @@ export default function ValidateCards() {
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
                 <div className="text-xl font-bold font-heading text-green-700">{validatedCards.length}</div>
-                <div className="text-xs text-green-600 mt-0.5">Validadas ✓</div>
+                <div className="text-xs text-green-600 mt-0.5">Concorrendo 🏆</div>
               </div>
             </div>
 
             {/* Legend */}
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 text-green-700 border border-green-200"><ShieldCheck className="w-3 h-3" /> Validada</span>
+              <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 text-green-700 border border-green-200"><ShieldCheck className="w-3 h-3" /> Concorrendo aos prêmios</span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-700 border border-amber-200"><ShoppingCart className="w-3 h-3" /> Paga (pode validar)</span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-100 text-orange-700 border border-orange-200"><Clock className="w-3 h-3" /> Pagamento pendente</span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-200"><Users className="w-3 h-3" /> Com vendedor</span>
@@ -276,7 +276,7 @@ export default function ValidateCards() {
                             onClick={() => handleUnvalidate(card)}
                           >
                             <Undo2 className="w-3.5 h-3.5" />
-                            {unvalidating === card.id ? "..." : "Desvalidar"}
+                            {unvalidating === card.id ? "..." : "Remover da disputa"}
                           </Button>
                         ) : canValidate ? (
                           <Button
@@ -286,7 +286,7 @@ export default function ValidateCards() {
                             onClick={() => handleValidate(card)}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            {validating === card.id ? "..." : "Validar"}
+                            {validating === card.id ? "..." : "Concorrer aos Prêmios"}
                           </Button>
                         ) : pending ? (
                           <span className="text-xs text-orange-600 shrink-0">Aguard. pgto</span>
