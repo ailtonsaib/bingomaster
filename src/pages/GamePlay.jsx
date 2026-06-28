@@ -49,8 +49,14 @@ export default function GamePlay() {
 
   const updateGame = useCallback(async (updates) => {
     if (!game) return;
+    // Optimistic update — reflete no UI imediatamente (síncrono)
+    queryClient.setQueryData(["game", gameId], (oldData) => {
+      const arr = Array.isArray(oldData) ? oldData : [];
+      const current = arr[0] || game;
+      return [{ ...current, ...updates }];
+    });
     await base44.entities.BingoGame.update(game.id, updates);
-    await queryClient.refetchQueries({ queryKey: ["game", gameId] });
+    queryClient.invalidateQueries({ queryKey: ["game", gameId] });
   }, [game, gameId, queryClient]);
 
   const handleStart = () => updateGame({ status: "in_progress" });
@@ -97,7 +103,9 @@ export default function GamePlay() {
       if (hasTwentyPoints) {
         updates.status = "finished";
       }
-      await updateGame(updates);
+      // Não aguarda — setQueryData dentro de updateGame já atualizou o cache,
+      // então grade e número grande atualizam juntos quando drawing=false
+      updateGame(updates);
 
       // Check all cards for bingo after the new number
       const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
