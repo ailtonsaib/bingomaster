@@ -41,7 +41,7 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   const gridAreaH = (chanceAreaH - chanceGap) / numChances - 55; // 55 = título + prêmio + padding
   const layout = calculateGridLayout(numGrids, availWidth, gridAreaH);
   const { cols, size: circleSize } = layout;
-  const gridGap = 8;
+  const gridGap = 20;
 
   // Gera N grades — usa os campos existentes (grid_1a/b/c) e repete o primeiro para extras
   const baseGrid1 = card.grid_1a || card.grid_1 || [];
