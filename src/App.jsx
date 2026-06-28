@@ -25,6 +25,7 @@ import AdminSolicitacoes from '@/pages/AdminSolicitacoes';
 import Rifas from '@/pages/Rifas';
 import RifaDetail from '@/pages/RifaDetail';
 import PrintRifa from '@/pages/PrintRifa';
+import BuyerApp from '@/pages/BuyerApp';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -82,6 +83,7 @@ const AuthenticatedApp = () => {
         <Route path="/rifas" element={<Rifas />} />
         <Route path="/rifas/:rifaId" element={<RifaDetail />} />
         <Route path="/rifas/print/:rifaId" element={<PrintRifa />} />
+        <Route path="/buyer" element={<BuyerApp />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
