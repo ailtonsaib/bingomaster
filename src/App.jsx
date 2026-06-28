@@ -11,6 +11,7 @@ import NewGame from '@/pages/NewGame';
 import GamePlay from '@/pages/GamePlay';
 import GameCards from '@/pages/GameCards';
 import GameDisplay from '@/pages/GameDisplay';
+import Telao from '@/pages/Telao';
 import PrintCards from '@/pages/PrintCards';
 import Sellers from '@/pages/Sellers';
 import SellApp from '@/pages/SellApp';
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
         <Route path="/game/:gameId" element={<GamePlay />} />
         <Route path="/cards/:gameId" element={<GameCards />} />
         <Route path="/display/:gameId" element={<GameDisplay />} />
+        <Route path="/telao/:gameId" element={<Telao />} />
         <Route path="/print/:gameId" element={<PrintCards />} />
         <Route path="/sellers" element={<Sellers />} />
         <Route path="/sell" element={<SellApp />} />

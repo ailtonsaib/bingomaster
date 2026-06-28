@@ -256,6 +256,11 @@ export default function GamePlay() {
                 <Users className="w-4 h-4" /> {cards.length} Cartelas
               </Button>
             </Link>
+            <Link to={`/telao/${game.id}`} target="_blank">
+              <Button variant="outline" size="sm" className="gap-1.5 border-amber-400/40 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30">
+                <Monitor className="w-4 h-4" /> Telão
+              </Button>
+            </Link>
             <Link to={`/display/${game.id}`} target="_blank">
               <Button variant="outline" size="sm" className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20">
                 <Monitor className="w-4 h-4" /> Painel
