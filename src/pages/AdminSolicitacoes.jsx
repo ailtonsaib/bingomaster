@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { ArrowLeft, Check, X, Clock, CheckCircle, XCircle, RefreshCw, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,13 @@ export default function AdminSolicitacoes() {
   const [actionLoading, setActionLoading] = useState(null);
   const [notes, setNotes] = useState({});
   const [filter, setFilter] = useState("pending");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
 
-  useEffect(() => { loadRequests(); }, []);
+  useEffect(() => {
+    base44.auth.me().then(u => { setCurrentUser(u); setUserLoading(false); }).catch(() => setUserLoading(false));
+    loadRequests();
+  }, []);
 
   // Auto-expire: mark as expired if past expires_at and still pending
   const markExpired = async (reqs) => {
@@ -75,6 +80,18 @@ export default function AdminSolicitacoes() {
 
   const counts = {};
   requests.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+
+  if (loading || userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

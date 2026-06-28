@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { ArrowLeft, Save, Pencil, Check, X, Settings, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,12 +31,15 @@ const BADGE_COLORS = {
 export default function AdminPlanos() {
   const { toast } = useToast();
   const [plans, setPlans] = useState([]);
-  const [editing, setEditing] = useState(null); // plan_key being edited
+  const [editing, setEditing] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
 
   useEffect(() => {
+    base44.auth.me().then(u => { setCurrentUser(u); setUserLoading(false); }).catch(() => setUserLoading(false));
     loadPlans();
   }, []);
 
@@ -90,12 +93,16 @@ export default function AdminPlanos() {
     return Number(val).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
-  if (loading) {
+  if (loading || userLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
       </div>
     );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return <Navigate to="/" replace />;
   }
 
   return (
