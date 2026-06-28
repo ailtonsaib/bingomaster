@@ -1,0 +1,31 @@
+{
+  "name": "PlanConfig",
+  "type": "object",
+  "properties": {
+    "plan_key": {
+      "type": "string",
+      "description": "Chave \u00fanica do plano (free, basic, pro, max, ultra, enterprise, mega)"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Nome exibido do plano"
+    },
+    "price": {
+      "type": "number",
+      "description": "Pre\u00e7o do plano em reais"
+    },
+    "max_cards": {
+      "type": "number",
+      "description": "Quantidade m\u00e1xima de cartelas liberadas para este plano"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o curta do plano"
+    }
+  },
+  "required": [
+    "plan_key",
+    "plan_name",
+    "max_cards"
+  ]
+}

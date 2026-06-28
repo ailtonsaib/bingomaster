@@ -20,6 +20,7 @@ import PastGames from '@/pages/PastGames';
 import GameAnalytics from '@/pages/GameAnalytics';
 import WinnerSummary from '@/pages/WinnerSummary';
 import InfoPlanos from '@/pages/InfoPlanos';
+import AdminPlanos from '@/pages/AdminPlanos';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
         <Route path="/game-analytics" element={<GameAnalytics />} />
         <Route path="/winners" element={<WinnerSummary />} />
         <Route path="/info-planos" element={<InfoPlanos />} />
+        <Route path="/admin-planos" element={<AdminPlanos />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

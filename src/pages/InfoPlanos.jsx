@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy } from "lucide-react";
+import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -249,9 +249,14 @@ export default function InfoPlanos() {
         </Card>
 
         {/* Plans */}
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <Zap className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-bold font-heading">Planos e Preços</h2>
+          <Link to="/admin-planos">
+            <Button size="sm" variant="outline" className="gap-1.5">
+              <Settings className="w-4 h-4" /> Administrar Planos
+            </Button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
