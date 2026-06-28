@@ -228,7 +228,8 @@ function WatchStep({ buyer, game, onBack }) {
   const [shownWinner, setShownWinner] = useState(null); // { prizeName, isWinner }
   const [gameEndShown, setGameEndShown] = useState(false);
   const [didWinAny, setDidWinAny] = useState(false);
-  const prevPrizesRef = useRef([]);
+  // Initialize with current prizes so already-awarded prizes on load don't trigger notifications
+  const prevPrizesRef = useRef(game.prizes ? game.prizes.map((p) => ({ ...p })) : []);
   const prevStatusRef = useRef(game.status);
 
   // Poll game
@@ -317,9 +318,16 @@ function WatchStep({ buyer, game, onBack }) {
     prevPrizesRef.current = currentPrizes.map((p) => ({ ...p }));
   }, [prizes, liveGame, myCards, shownWinner]);
 
-  // Detect game finished
+  // Detect game finished — only trigger when status transitions TO "finished" during this session
+  const initializedRef = useRef(false);
   useEffect(() => {
     if (!liveGame) return;
+    if (!initializedRef.current) {
+      // First data load: sync prevStatus to current without triggering notification
+      prevStatusRef.current = liveGame.status;
+      initializedRef.current = true;
+      return;
+    }
     if (prevStatusRef.current !== "finished" && liveGame.status === "finished" && !gameEndShown && !shownWinner) {
       setGameEndShown(true);
     }
