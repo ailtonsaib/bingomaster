@@ -5,7 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2 } from "lucide-react";
 import { drawNumber, checkAllCardsForBingo } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -39,6 +40,8 @@ export default function GamePlay() {
   const [pendingWinners, setPendingWinners] = useState([]);
   const [tiebreakerPrizeIndex, setTiebreakerPrizeIndex] = useState(-1);
   const [showTiebreaker, setShowTiebreaker] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showFinishDialog, setShowFinishDialog] = useState(false);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -292,6 +295,7 @@ export default function GamePlay() {
   const isPlaying = game.status === "in_progress";
   const isFinished = game.status === "finished";
   const allDrawn = drawnNumbers.length >= maxNumber;
+  const allPrizesAwarded = (game.prizes || []).length > 0 && (game.prizes || []).every(p => p.awarded);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
@@ -340,6 +344,48 @@ export default function GamePlay() {
           onClose={() => setShowHistory(false)}
         />
       )}
+
+      {/* Cancel draw dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Cancelar Sorteio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá <strong>zerar todos os números sorteados e os prêmios concedidos</strong>, voltando o jogo para o estado inicial. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={() => { handleReset(); setShowCancelDialog(false); }}
+            >
+              Sim, Cancelar Sorteio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Finish event dialog */}
+      <AlertDialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Encerrar Evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todos os prêmios foram sorteados. Deseja <strong>encerrar oficialmente o evento</strong>? O jogo será marcado como finalizado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-emerald-500 hover:bg-emerald-600"
+              onClick={() => { handleFinish(); setShowFinishDialog(false); }}
+            >
+              Sim, Encerrar Evento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="max-w-7xl mx-auto px-4 py-5">
 
         {/* Header */}
@@ -614,15 +660,20 @@ export default function GamePlay() {
                     <Button
                       size="lg"
                       variant="outline"
-                      className="gap-2 border-white/30 text-white hover:bg-white/10"
-                      onClick={handleClearDraw}
-                      disabled={drawnNumbers.length === 0}
+                      className="gap-2 border-red-400/50 text-red-300 hover:bg-red-500/20"
+                      onClick={() => setShowCancelDialog(true)}
                     >
-                      <RotateCcw className="w-4 h-4" /> Zerar Sorteio
+                      <XCircle className="w-4 h-4" /> Cancelar Sorteio
                     </Button>
-                    <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={handleFinish}>
-                      <Square className="w-4 h-4" /> Encerrar
-                    </Button>
+                    {allPrizesAwarded && (
+                      <Button
+                        size="lg"
+                        className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white border-0 font-bold"
+                        onClick={() => setShowFinishDialog(true)}
+                      >
+                        <CheckCircle2 className="w-5 h-5" /> Encerrar Evento
+                      </Button>
+                    )}
                   </>
                 )}
                 {isFinished && (
