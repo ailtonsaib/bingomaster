@@ -30,9 +30,18 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   const validPrizes = (prizes || []).filter(p => p && p.name && p.name.trim());
   const numGrids = Math.max(1, Math.min(6, validPrizes.length));
 
-  // Tamanho dos círculos diminui com mais grades para caber na página A4
-  const circleSize = numGrids <= 3 ? 32 : numGrids === 4 ? 26 : numGrids === 5 ? 22 : 19;
-  const gridGap = numGrids <= 3 ? 10 : numGrids <= 4 ? 8 : 5;
+  // Calcula layout ideal para preencher a página A4 (horizontal e vertical)
+  const MM_TO_PX = 3.7795;
+  const availWidth = 210 * MM_TO_PX - 7 * MM_TO_PX * 2 - 4; // página - padding lateral - bordas
+  const availHeight = 297 * MM_TO_PX - (5 + 4) * MM_TO_PX;  // página - padding vertical
+  const fixedH = 230; // header + barra + barcode + rodapé + gaps
+  const chanceAreaH = availHeight - fixedH;
+  const numChances = hasSecondChance ? 2 : 1;
+  const chanceGap = hasSecondChance ? 50 : 0;
+  const gridAreaH = (chanceAreaH - chanceGap) / numChances - 55; // 55 = título + prêmio + padding
+  const layout = calculateGridLayout(numGrids, availWidth, gridAreaH);
+  const { cols, size: circleSize } = layout;
+  const gridGap = 8;
 
   // Gera N grades — usa os campos existentes (grid_1a/b/c) e repete o primeiro para extras
   const baseGrid1 = card.grid_1a || card.grid_1 || [];
@@ -162,12 +171,12 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
       </div>
 
       {/* ── PRIMEIRA CHANCE ── */}
-      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} circleSize={circleSize} gridGap={gridGap} />
+      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} />
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
-        <div style={{ marginTop: 60 }}>
-          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} circleSize={circleSize} gridGap={gridGap} />
+        <div style={{ marginTop: chanceGap }}>
+          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} />
         </div>
       )}
 
@@ -214,8 +223,8 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   );
 }
 
-// N grids side by side, each with its prize description below
-function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridGap = 10 }) {
+// N grids in a CSS grid (rows × cols), each with its prize description below
+function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridGap = 8, cols = 1 }) {
   return (
     <div style={{
       padding: "6px 8px 8px 8px",
@@ -230,7 +239,7 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
         {title}
       </div>
 
-      <div style={{ display: "flex", gap: gridGap, justifyContent: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: gridGap, justifyItems: "center" }}>
         {grids.map((grid, i) => {
           const prize = prizes[i];
           return (
@@ -238,13 +247,12 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
               <PrintBingoGrid numbers={grid} brandName={brandName} size={circleSize} />
               {prize && (
                 <div style={{
-                  fontSize: circleSize <= 22 ? 9 : 10,
+                  fontSize: Math.max(9, Math.round(circleSize * 0.32)),
                   color: "#000",
                   fontWeight: "bold",
                   marginTop: 4,
                   textAlign: "center",
                   width: "100%",
-                  maxWidth: 160,
                 }}>
                   {i + 1}) {prize.name || ""}
                   {prize.description ? ` (${prize.description})` : ""}
@@ -256,4 +264,26 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
       </div>
     </div>
   );
+}
+
+// Calcula o melhor layout (cols × rows) e o tamanho do círculo para preencher a área
+function calculateGridLayout(numGrids, availWidth, availHeight) {
+  if (numGrids <= 0) return { cols: 1, rows: 1, size: 32 };
+  const gap = 8;
+  let best = { cols: numGrids, rows: 1, size: 0 };
+
+  for (let cols = 1; cols <= numGrids; cols++) {
+    const rows = Math.ceil(numGrids / cols);
+    const emptySlots = cols * rows - numGrids;
+    if (emptySlots > 1) continue; // tolera no máximo 1 slot vazio
+
+    const sizeByWidth = Math.floor((availWidth - (cols - 1) * gap) / (cols * 5) - 2);
+    const sizeByHeight = Math.floor((availHeight - (rows - 1) * gap) / (rows * 5) - 2);
+    const size = Math.max(10, Math.min(sizeByWidth, sizeByHeight));
+
+    if (size > best.size) {
+      best = { cols, rows, size };
+    }
+  }
+  return best;
 }
