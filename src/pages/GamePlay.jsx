@@ -42,6 +42,7 @@ export default function GamePlay() {
   const [showTiebreaker, setShowTiebreaker] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -344,6 +345,27 @@ export default function GamePlay() {
           onClose={() => setShowHistory(false)}
         />
       )}
+
+      {/* Restart finished game dialog */}
+      <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Reiniciar Sorteio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá <strong>zerar todos os números sorteados e os prêmios concedidos</strong>, voltando o jogo para o estado inicial. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={() => { handleReset(); setShowRestartDialog(false); }}
+            >
+              Sim, Reiniciar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Cancel draw dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
@@ -677,8 +699,8 @@ export default function GamePlay() {
                   </>
                 )}
                 {isFinished && (
-                  <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={handleReset}>
-                    <RotateCcw className="w-4 h-4" /> Novo Jogo
+                  <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={() => setShowRestartDialog(true)}>
+                    <RotateCcw className="w-4 h-4" /> Reiniciar Sorteio
                   </Button>
                 )}
               </div>
