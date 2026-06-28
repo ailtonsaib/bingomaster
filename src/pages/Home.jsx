@@ -45,6 +45,7 @@ export default function Home() {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [showGamePicker, setShowGamePicker] = useState(false);
+  const [showCardsPicker, setShowCardsPicker] = useState(false);
 
   const sellerStats = useMemo(() => {
     const stats = sellers.map((seller) => {
@@ -220,11 +221,14 @@ export default function Home() {
               >
                 <Shuffle className="w-5 h-5" /> Sorteio
               </Button>
-              <Link to="/validate">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
-                  <Grid3x3 className="w-5 h-5" /> Cartelas
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50"
+                onClick={() => setShowCardsPicker(true)}
+              >
+                <Grid3x3 className="w-5 h-5" /> Cartelas
+              </Button>
               <Link to="/info-planos">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
                   <Layers className="w-5 h-5" /> Planos & Info
@@ -407,6 +411,42 @@ export default function Home() {
           </div>
         </div>
       )}
+      {/* Game picker modal for Cartelas */}
+      {showCardsPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCardsPicker(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold font-heading flex items-center gap-2">
+                <Grid3x3 className="w-5 h-5 text-slate-600" /> Gerenciar Cartelas
+              </h2>
+              <button onClick={() => setShowCardsPicker(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <p className="text-sm text-muted-foreground">Escolha um jogo para gerenciar as cartelas:</p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {games.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhum jogo encontrado.</p>
+              ) : (
+                games.map((game) => (
+                  <Link key={game.id} to={`/cards/${game.id}`} onClick={() => setShowCardsPicker(false)}>
+                    <div className="flex items-center justify-between p-3 rounded-xl border hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer group">
+                      <div>
+                        <p className="font-semibold text-sm">{game.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {game.status === "waiting" ? "Aguardando início" : game.status === "finished" ? "Finalizado" : "Em andamento"}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" className="gap-1.5 group-hover:border-slate-500 group-hover:text-slate-700">
+                        <Eye className="w-3.5 h-3.5" /> Abrir
+                      </Button>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingGame && (
         <EditGameModal
           game={editingGame}
