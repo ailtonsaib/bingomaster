@@ -243,7 +243,7 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
         {grids.map((grid, i) => {
           const prize = prizes[i];
           return (
-            <div key={i} style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <div key={i} style={{ display: "flex", flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
               {prize && (
                 <div style={{
                   fontSize: Math.max(9, Math.round(circleSize * 0.32)),
