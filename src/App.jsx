@@ -28,6 +28,7 @@ import PrintRifa from '@/pages/PrintRifa';
 import BuyerApp from '@/pages/BuyerApp';
 import SellerReport from '@/pages/SellerReport';
 import FinalReport from '@/pages/FinalReport';
+import FinancialReport from '@/pages/FinancialReport';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -88,6 +89,7 @@ const AuthenticatedApp = () => {
         <Route path="/buyer" element={<BuyerApp />} />
         <Route path="/seller-report" element={<SellerReport />} />
         <Route path="/final-report" element={<FinalReport />} />
+        <Route path="/financial-report" element={<FinancialReport />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
