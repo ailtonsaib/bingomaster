@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Search, ChevronDown, User, Phone, CheckCircle2,
-  XCircle, ArrowLeft, Eye, EyeOff, ShieldCheck, Undo2, ShoppingCart, Clock, Users
+  XCircle, ArrowLeft, Eye, EyeOff, ShieldCheck, Undo2, ShoppingCart, Clock, Users, ListChecks
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -19,6 +19,8 @@ export default function ValidateCards() {
   const [showDetails, setShowDetails] = useState(false);
   const [validating, setValidating] = useState(null);
   const [unvalidating, setUnvalidating] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const { data: games = [] } = useQuery({
     queryKey: ["validate-games"],
@@ -80,6 +82,33 @@ export default function ValidateCards() {
     await base44.entities.BingoCard.update(card.id, { is_validated: false });
     await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
     setUnvalidating(null);
+  };
+
+  const toggleSelect = (cardId) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(cardId) ? next.delete(cardId) : next.add(cardId);
+      return next;
+    });
+  };
+
+  const selectableCards = filtered.filter(awaitingValidation);
+
+  const toggleSelectAll = () => {
+    if (selected.size === selectableCards.length && selectableCards.length > 0) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(selectableCards.map((c) => c.id)));
+    }
+  };
+
+  const handleBulkValidate = async () => {
+    setBulkLoading(true);
+    const toValidate = cards.filter((c) => selected.has(c.id));
+    await Promise.all(toValidate.map((c) => base44.entities.BingoCard.update(c.id, { is_validated: true })));
+    setSelected(new Set());
+    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    setBulkLoading(false);
   };
 
   const getCardStyle = (card) => {
@@ -201,6 +230,34 @@ export default function ValidateCards() {
               </Button>
             </div>
 
+            {/* Bulk action bar */}
+            {selectableCards.length > 0 && (
+              <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-green-600 cursor-pointer"
+                  checked={selected.size === selectableCards.length && selectableCards.length > 0}
+                  onChange={toggleSelectAll}
+                />
+                <span className="text-sm text-amber-800 flex-1">
+                  {selected.size > 0
+                    ? `${selected.size} cartela${selected.size > 1 ? "s" : ""} selecionada${selected.size > 1 ? "s" : ""}`
+                    : `Selecionar todas (${selectableCards.length}) em espera`}
+                </span>
+                {selected.size > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white gap-1 text-xs"
+                    disabled={bulkLoading}
+                    onClick={handleBulkValidate}
+                  >
+                    <ListChecks className="w-3.5 h-3.5" />
+                    {bulkLoading ? "Salvando..." : "Habilitar selecionadas"}
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Cards list */}
             {isLoading ? (
               <div className="space-y-2">
@@ -224,6 +281,14 @@ export default function ValidateCards() {
                   return (
                     <Card key={card.id} className={`border transition-all ${getCardStyle(card)}`}>
                       <CardContent className="p-3 flex items-center gap-3">
+                        {canValidate && (
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-green-600 cursor-pointer shrink-0"
+                            checked={selected.has(card.id)}
+                            onChange={() => toggleSelect(card.id)}
+                          />
+                        )}
                         {getStatusIcon(card)}
 
                         {/* Card number */}
