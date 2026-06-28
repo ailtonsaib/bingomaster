@@ -5,7 +5,7 @@
 
 -- Tabela: bingo_games
 CREATE TABLE IF NOT EXISTS public.bingo_games (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   created_date TIMESTAMPTZ DEFAULT now(),
   updated_date TIMESTAMPTZ DEFAULT now(),
   created_by_id UUID,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.bingo_games (
 
 -- Tabela: sellers
 CREATE TABLE IF NOT EXISTS public.sellers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   created_date TIMESTAMPTZ DEFAULT now(),
   updated_date TIMESTAMPTZ DEFAULT now(),
   created_by_id UUID,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.sellers (
 
 -- Tabela: bingo_cards
 CREATE TABLE IF NOT EXISTS public.bingo_cards (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   created_date TIMESTAMPTZ DEFAULT now(),
   updated_date TIMESTAMPTZ DEFAULT now(),
   created_by_id UUID,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.bingo_cards (
 
 -- Tabela: seller_distributions
 CREATE TABLE IF NOT EXISTS public.seller_distributions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   created_date TIMESTAMPTZ DEFAULT now(),
   updated_date TIMESTAMPTZ DEFAULT now(),
   created_by_id UUID,
