@@ -625,17 +625,19 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             Cartela #{String(savedCard.card_number).padStart(4, "0")} vendida com sucesso!
           </div>
-          {hasBuyerApp && lastSoldBuyerPhone && (
+          {lastSoldBuyerPhone && (
             <a
               href={`https://wa.me/55${lastSoldBuyerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                `Olá! Sua cartela #${String(savedCard.card_number).padStart(4, "0")} foi registrada no ${game.name}. Acompanhe o sorteio ao vivo pelo link: ${window.location.origin}/buyer?game_id=${game.id}&phone=${lastSoldBuyerPhone.replace(/\D/g, "")}`
+                hasBuyerApp
+                  ? `Olá! Sua cartela #${String(savedCard.card_number).padStart(4, "0")} foi registrada no ${game.name}. Acompanhe o sorteio ao vivo pelo link: ${window.location.origin}/buyer?game_id=${game.id}&phone=${lastSoldBuyerPhone.replace(/\D/g, "")}`
+                  : `Olá! Sua cartela #${String(savedCard.card_number).padStart(4, "0")} foi registrada no ${game.name}. Boa sorte! 🍀`
               )}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 w-full justify-center bg-[#25D366] hover:bg-[#1ebe5a] text-white text-sm font-medium rounded-lg px-3 py-2 transition-colors"
             >
               <MessageCircle className="w-4 h-4" />
-              Enviar link do sorteio via WhatsApp
+              {hasBuyerApp ? "Enviar link do sorteio via WhatsApp" : "Enviar confirmação via WhatsApp"}
             </a>
           )}
         </div>
