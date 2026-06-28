@@ -1,14 +1,18 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Trophy } from "lucide-react";
+import { Trophy, Plus, X, CheckCircle2 } from "lucide-react";
+
+const MAX_PRIZES = 6;
 
 export default function PrizeForm({ prizes, onChange }) {
-  const setCount = (count) => {
-    const newPrizes = Array.from({ length: count }, (_, i) =>
-      prizes[i] || { name: "", description: "", awarded: false }
-    );
-    onChange(newPrizes);
+  const addPrize = () => {
+    if (prizes.length >= MAX_PRIZES) return;
+    onChange([...prizes, { name: "", description: "", awarded: false }]);
+  };
+
+  const removePrize = (idx) => {
+    onChange(prizes.filter((_, i) => i !== idx));
   };
 
   const updatePrize = (idx, field, value) => {
@@ -24,28 +28,12 @@ export default function PrizeForm({ prizes, onChange }) {
           <Trophy className="w-4 h-4 text-accent" />
           Prêmios
         </Label>
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-muted-foreground mr-1">Quantidade:</span>
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setCount(n)}
-              className={`w-7 h-7 rounded-md text-xs font-bold border transition-colors ${
-                prizes.length === n
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-input hover:bg-muted"
-              }`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+        <span className="text-xs text-muted-foreground">{prizes.length}/{MAX_PRIZES}</span>
       </div>
 
       {prizes.length === 0 && (
         <p className="text-sm text-muted-foreground italic">
-          Nenhum prêmio adicionado. Clique em "Adicionar" para definir prêmios.
+          Nenhum prêmio adicionado. Clique em "Adicionar Prêmio" para definir prêmios.
         </p>
       )}
 
@@ -56,9 +44,16 @@ export default function PrizeForm({ prizes, onChange }) {
               {idx + 1}
             </div>
             <div className="flex-1 space-y-1.5">
-              <div className="text-xs text-muted-foreground font-medium">
-                {idx < 3 ? `1ª Chance — Grid ${idx + 1}` : `2ª Chance — Grid ${idx - 2}`}
-              </div>
+              {prize.awarded && (
+                <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                  <CheckCircle2 className="w-3 h-3" /> Premiado
+                  {prize.awarded_card_number != null && (
+                    <span className="text-muted-foreground">
+                      — Cartela #{String(prize.awarded_card_number).padStart(4, "0")}
+                    </span>
+                  )}
+                </div>
+              )}
               <Input
                 placeholder={`Nome do ${idx + 1}º prêmio`}
                 value={prize.name}
@@ -72,9 +67,29 @@ export default function PrizeForm({ prizes, onChange }) {
                 className="h-8 text-sm"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => removePrize(idx)}
+              className="shrink-0 mt-0.5 w-7 h-7 rounded-md border border-input text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors flex items-center justify-center"
+              title="Remover prêmio"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         ))}
       </div>
+
+      {prizes.length < MAX_PRIZES && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full gap-1.5 border-dashed"
+          onClick={addPrize}
+        >
+          <Plus className="w-4 h-4" /> Adicionar Prêmio
+        </Button>
+      )}
     </div>
   );
 }
