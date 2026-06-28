@@ -172,12 +172,12 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
       </div>
 
       {/* ── PRIMEIRA CHANCE ── */}
-      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} />
+      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} availWidth={availWidth} />
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
         <div style={{ marginTop: chanceGap }}>
-          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} />
+          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} availWidth={availWidth} />
         </div>
       )}
 
@@ -224,7 +224,7 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
 }
 
 // N grids in a CSS grid (rows × cols), each with its prize description below
-function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridGap = 8, cols = 1 }) {
+function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridGap = 8, cols = 1, availWidth = 760 }) {
   return (
     <div style={{
       padding: "6px 8px 8px 8px",
@@ -239,12 +239,28 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
         {title}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: gridGap, justifyItems: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: gridGap }}>
         {grids.map((grid, i) => {
           const prize = prizes[i];
+          // Largura real disponível por coluna em px
+          const colWidth = (availWidth - (cols - 1) * gridGap) / cols;
+          // Largura que a grade ocupa = 5 círculos × (circleSize + 2px margin)
+          const gridNaturalWidth = 5 * (circleSize + 2);
+          // Altura da grade = 6 linhas (1 header + 5 rows) × (circleSize + 2px margin)
+          const gridNaturalHeight = 6 * (circleSize + 2);
+          const scale = Math.min(1, colWidth / gridNaturalWidth);
+          // Compensar espaço sobrando após scale (transform não afeta layout)
+          const heightOffset = scale < 1 ? gridNaturalHeight * (scale - 1) : 0;
           return (
-            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <PrintBingoGrid numbers={grid} brandName={brandName} size={circleSize} />
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", minWidth: 0, width: "100%" }}>
+              <div style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "top center",
+                width: gridNaturalWidth,
+                marginBottom: heightOffset,
+              }}>
+                <PrintBingoGrid numbers={grid} brandName={brandName} size={circleSize} />
+              </div>
               {prize && (
                 <div style={{
                   fontSize: Math.max(9, Math.round(circleSize * 0.32)),
@@ -253,6 +269,9 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
                   marginTop: 4,
                   textAlign: "left",
                   width: "100%",
+                  wordBreak: "break-word",
+                  whiteSpace: "normal",
+                  overflowWrap: "break-word",
                 }}>
                   {i + 1}) {prize.name || ""}
                   {prize.description ? ` (${prize.description})` : ""}
