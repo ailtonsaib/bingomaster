@@ -33,7 +33,7 @@ export default function ValidateCards() {
 
   // Card status helpers
   const hasBuyer = (card) => !!card.player_phone || !!card.player_city || !!card.player_name;
-  const isPaid = (card) => hasBuyer(card) && card.payment_status !== "pending";
+  const isPaid = (card) => hasBuyer(card) && card.payment_status === "paid";
   const isPending = (card) => hasBuyer(card) && card.payment_status === "pending";
   const hasSeller = (card) => !!card.seller_id && !hasBuyer(card);
   const isValidated = (card) => !!card.is_validated;
@@ -218,7 +218,9 @@ export default function ValidateCards() {
                   const paid = isPaid(card);
                   const pending = isPending(card);
                   const withSeller = hasSeller(card);
-                  const canValidate = paid && !validated;
+                  // Cards without payment_status set (legacy) are treated as paid
+                  const isLegacyPaid = hasBuyer(card) && !card.payment_status;
+                  const canValidate = (paid || isLegacyPaid) && !validated;
 
                   return (
                     <Card key={card.id} className={`border transition-all ${getCardStyle(card)}`}>
