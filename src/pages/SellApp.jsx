@@ -15,36 +15,38 @@ import {
 
 // --- Step 1: Seller identification ---
 function SellerStep({ onEnter, locked }) {
-  const [name, setName] = useState(() => localStorage.getItem("seller_name") || "");
   const [phone, setPhone] = useState(() => localStorage.getItem("seller_phone") || "");
-  const [sellerId, setSellerId] = useState(() => localStorage.getItem("seller_id") || "");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const { data: sellers = [] } = useQuery({
     queryKey: ["sell-sellers"],
     queryFn: () => base44.entities.Seller.filter({ is_active: true }, "name"),
   });
 
-  const filtered = sellers.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.phone?.includes(search)
-  );
-
-  const selectSeller = (s) => {
-    setName(s.name);
-    setPhone(s.phone || "");
-    setSellerId(s.id);
-    setShowDropdown(false);
-    setSearch("");
-  };
-
   const handleContinue = () => {
-    if (!name.trim()) return;
-    localStorage.setItem("seller_name", name.trim());
-    localStorage.setItem("seller_phone", phone.trim());
-    localStorage.setItem("seller_id", sellerId);
-    onEnter({ name: name.trim(), phone: phone.trim(), id: sellerId });
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (!phoneDigits) { setError("Informe seu telefone para continuar."); return; }
+
+    setLoading(true);
+    setError("");
+
+    const match = sellers.find((s) => {
+      const sellerDigits = (s.phone || "").replace(/\D/g, "");
+      return sellerDigits && sellerDigits === phoneDigits;
+    });
+
+    setLoading(false);
+
+    if (!match) {
+      setError("Telefone não encontrado. Verifique com o organizador.");
+      return;
+    }
+
+    localStorage.setItem("seller_name", match.name);
+    localStorage.setItem("seller_phone", match.phone || phone);
+    localStorage.setItem("seller_id", match.id);
+    onEnter({ name: match.name, phone: match.phone || phone, id: match.id });
   };
 
   return (
@@ -55,95 +57,36 @@ function SellerStep({ onEnter, locked }) {
             <TicketCheck className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold font-heading">Venda de Cartelas</h1>
-          <p className="text-muted-foreground text-sm mt-1">Identifique-se para começar</p>
+          <p className="text-muted-foreground text-sm mt-1">Informe seu telefone cadastrado para entrar</p>
         </div>
 
         <div className="space-y-4 bg-card rounded-2xl p-5 shadow-md border">
-          {/* Seller picker — hidden when locked via link */}
-          {!locked && sellers.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Selecionar vendedor cadastrado</Label>
-              <div className="relative">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between h-12 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
-                  onClick={() => setShowDropdown((v) => !v)}
-                >
-                  <span className={name ? "text-foreground" : "text-muted-foreground"}>
-                    {name || "Escolha um vendedor..."}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </button>
-
-                {showDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg max-h-56 overflow-auto">
-                    <div className="p-2 border-b sticky top-0 bg-background">
-                      <Input
-                        placeholder="Buscar vendedor..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="h-9 text-sm"
-                        autoFocus
-                      />
-                    </div>
-                    {filtered.length === 0 ? (
-                      <div className="text-xs text-muted-foreground text-center py-4">Nenhum vendedor encontrado</div>
-                    ) : (
-                      filtered.map((s) => (
-                        <button
-                          key={s.id}
-                          className="w-full text-left px-3 py-2.5 hover:bg-muted text-sm flex flex-col"
-                          onClick={() => selectSeller(s)}
-                        >
-                          <span className="font-medium">{s.name}</span>
-                          {s.phone && <span className="text-xs text-muted-foreground">{s.phone}</span>}
-                        </button>
-                      ))
-                    )}
-                    <button
-                      className="w-full text-left px-3 py-2.5 text-xs text-primary border-t hover:bg-muted"
-                      onClick={() => { setName(""); setPhone(""); setSellerId(""); setShowDropdown(false); }}
-                    >
-                      + Digitar manualmente
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Seu nome</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                className="pl-9 h-12 text-base"
-                placeholder="Nome completo"
-                value={name}
-                onChange={(e) => { setName(e.target.value); setSellerId(""); }}
-                onKeyDown={(e) => e.key === "Enter" && handleContinue()}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Seu telefone (opcional)</Label>
+            <Label className="text-sm font-medium">Seu telefone / WhatsApp</Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 className="pl-9 h-12 text-base"
                 placeholder="(00) 00000-0000"
                 value={phone}
-                onChange={(e) => setPhone(maskPhone(e.target.value))}
+                onChange={(e) => { setPhone(maskPhone(e.target.value)); setError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleContinue()}
+                autoFocus
+                inputMode="numeric"
               />
             </div>
           </div>
+
+          {error && (
+            <p className="text-sm text-destructive font-medium">{error}</p>
+          )}
+
           <Button
             className="w-full h-12 text-base gap-2 mt-2"
             onClick={handleContinue}
-            disabled={!name.trim()}
+            disabled={!phone.replace(/\D/g, "") || loading}
           >
-            Continuar <ChevronRight className="w-4 h-4" />
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ChevronRight className="w-4 h-4" /> Entrar</>}
           </Button>
         </div>
       </div>
@@ -364,6 +307,13 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     queryFn: () => base44.functions.invoke("getGameCards", { game_id: String(game.id) }).then(r => r.data.cards),
   });
 
+  // Load seller distributions to determine assigned range
+  const { data: distributions = [] } = useQuery({
+    queryKey: ["sell-distributions", game.id, seller.id],
+    queryFn: () => base44.entities.SellerDistribution.filter({ game_id: game.id, seller_id: seller.id }),
+    enabled: !!seller.id,
+  });
+
   // Detect new cards since last visit
   useEffect(() => {
     if (isLoading || cards.length === 0) return;
@@ -382,11 +332,16 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     setNewCardsCount(0);
   };
 
-  // Apply range filter and sort by card_number
+  // Apply range filter: use distributions if available, else cardRange param
   const rangeCards = cards
     .filter((c) => {
-      if (!cardRange?.from && !cardRange?.to) return true;
       const n = c.card_number || 0;
+      // If seller has distributions for this game, use them
+      if (distributions.length > 0) {
+        return distributions.some((d) => n >= d.range_from && n <= d.range_to);
+      }
+      // Fallback to manually provided cardRange
+      if (!cardRange?.from && !cardRange?.to) return true;
       if (cardRange.from && n < cardRange.from) return false;
       if (cardRange.to && n > cardRange.to) return false;
       return true;
@@ -854,6 +809,14 @@ export default function SellApp() {
   const [game, setGame] = useState(null);
   const resolvedGame = game || (urlGameId ? preloadedGame : null);
 
+  // Check if seller has distributions assigned (skip range step if yes)
+  const { data: sellerDistributions = [] } = useQuery({
+    queryKey: ["seller-dists", seller?.id, resolvedGame?.id],
+    queryFn: () => base44.entities.SellerDistribution.filter({ game_id: resolvedGame.id, seller_id: seller.id }),
+    enabled: !!seller?.id && !!resolvedGame?.id,
+  });
+  const hasDistributions = sellerDistributions.length > 0;
+
   const { data: planConfigs = [] } = useQuery({
     queryKey: ["plan-configs-sell"],
     queryFn: () => base44.entities.PlanConfig.list(),
@@ -905,7 +868,7 @@ export default function SellApp() {
     );
   }
 
-  if (cardRange === null) {
+  if (cardRange === null && !hasDistributions) {
     return (
       <CardRangeStep
         seller={seller}
