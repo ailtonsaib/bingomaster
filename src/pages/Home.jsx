@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2 } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -196,6 +196,11 @@ export default function Home() {
               <Link to="/seller-report">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
                   <FileBarChart2 className="w-5 h-5" /> Relatório de Vendas
+                </Button>
+              </Link>
+              <Link to="/final-report">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-rose-300 text-rose-700 hover:bg-rose-50">
+                  <ClipboardList className="w-5 h-5" /> Relatório Final
                 </Button>
               </Link>
               <Link to="/past-games">
