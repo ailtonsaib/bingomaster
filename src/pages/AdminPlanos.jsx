@@ -9,20 +9,21 @@ import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 
 const DEFAULT_PLANS = [
-  { plan_key: "free",       plan_name: "FREE",       price: 0,    max_cards: 50,    description: "Para conhecer o sistema",          app_generator: true,  app_seller: false, app_buyer: false, app_telao: false },
-  { plan_key: "basic",      plan_name: "BASIC",      price: 400,  max_cards: 2000,  description: "Para pequenos eventos",            app_generator: true,  app_seller: true,  app_buyer: false, app_telao: false },
-  { plan_key: "pro",        plan_name: "PRO",        price: 700,  max_cards: 4000,  description: "Para eventos frequentes",          app_generator: true,  app_seller: true,  app_buyer: false, app_telao: true  },
-  { plan_key: "max",        plan_name: "MAX",        price: 900,  max_cards: 8000,  description: "Para grandes eventos",             app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
-  { plan_key: "ultra",      plan_name: "ULTRA",      price: 1100, max_cards: 12000, description: "Para eventos de grande porte",     app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
-  { plan_key: "enterprise", plan_name: "ENTERPRISE", price: 1500, max_cards: 15000, description: "Para empresas e operações maiores",app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
-  { plan_key: "mega",       plan_name: "MEGA",       price: 2500, max_cards: 50000, description: "Para operações de larga escala",   app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true  },
+  { plan_key: "free",       plan_name: "FREE",       price: 0,    max_cards: 50,    description: "Para conhecer o sistema",          app_generator: true,  app_seller: false, app_buyer: false, app_telao: false, app_rifa: false },
+  { plan_key: "basic",      plan_name: "BASIC",      price: 400,  max_cards: 2000,  description: "Para pequenos eventos",            app_generator: true,  app_seller: true,  app_buyer: false, app_telao: false, app_rifa: true  },
+  { plan_key: "pro",        plan_name: "PRO",        price: 700,  max_cards: 4000,  description: "Para eventos frequentes",          app_generator: true,  app_seller: true,  app_buyer: false, app_telao: true,  app_rifa: true  },
+  { plan_key: "max",        plan_name: "MAX",        price: 900,  max_cards: 8000,  description: "Para grandes eventos",             app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true,  app_rifa: true  },
+  { plan_key: "ultra",      plan_name: "ULTRA",      price: 1100, max_cards: 12000, description: "Para eventos de grande porte",     app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true,  app_rifa: true  },
+  { plan_key: "enterprise", plan_name: "ENTERPRISE", price: 1500, max_cards: 15000, description: "Para empresas e operações maiores",app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true,  app_rifa: true  },
+  { plan_key: "mega",       plan_name: "MEGA",       price: 2500, max_cards: 50000, description: "Para operações de larga escala",   app_generator: true,  app_seller: true,  app_buyer: true,  app_telao: true,  app_rifa: true  },
 ];
 
 const APPS = [
   { key: "app_generator", label: "Gerador de Bingo", icon: "🎰" },
-  { key: "app_seller",    label: "App do Vendedor",   icon: "🛒" },
-  { key: "app_buyer",     label: "App do Comprador",  icon: "🧑‍💼" },
-  { key: "app_telao",     label: "Telão / Projetor",  icon: "📺" },
+  { key: "app_seller",    label: "App do Vendedor",  icon: "🛒" },
+  { key: "app_buyer",     label: "App do Comprador", icon: "🧑‍💼" },
+  { key: "app_telao",     label: "Telão / Projetor", icon: "📺" },
+  { key: "app_rifa",      label: "Gerador de Rifas", icon: "🎟️" },
 ];
 
 const BADGE_COLORS = {
@@ -76,6 +77,7 @@ export default function AdminPlanos() {
       app_seller:    plan.app_seller    ?? false,
       app_buyer:     plan.app_buyer     ?? false,
       app_telao:     plan.app_telao     ?? false,
+      app_rifa:      plan.app_rifa      ?? false,
     });
   };
 
@@ -94,6 +96,7 @@ export default function AdminPlanos() {
       app_seller:    !!editValues.app_seller,
       app_buyer:     !!editValues.app_buyer,
       app_telao:     !!editValues.app_telao,
+      app_rifa:      !!editValues.app_rifa,
     };
     if (plan.id) {
       await base44.entities.PlanConfig.update(plan.id, updated);

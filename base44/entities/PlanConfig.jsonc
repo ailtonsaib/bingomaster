@@ -4,7 +4,7 @@
   "properties": {
     "plan_key": {
       "type": "string",
-      "description": "Chave \u00fanica do plano (free, basic, pro, max, ultra, enterprise, mega)"
+      "description": "Chave \u00fanica do plano"
     },
     "plan_name": {
       "type": "string",
@@ -16,31 +16,36 @@
     },
     "max_cards": {
       "type": "number",
-      "description": "Quantidade m\u00e1xima de cartelas liberadas para este plano"
+      "description": "Quantidade m\u00e1xima de cartelas"
     },
     "description": {
       "type": "string",
       "description": "Descri\u00e7\u00e3o curta do plano"
     },
+    "app_generator": {
+      "type": "boolean",
+      "default": true,
+      "description": "Gerador de Bingo dispon\u00edvel"
+    },
     "app_seller": {
       "type": "boolean",
       "default": false,
-      "description": "App do Vendedor dispon\u00edvel neste plano"
+      "description": "App do Vendedor dispon\u00edvel"
     },
     "app_buyer": {
       "type": "boolean",
       "default": false,
-      "description": "App do Comprador dispon\u00edvel neste plano"
+      "description": "App do Comprador dispon\u00edvel"
     },
     "app_telao": {
       "type": "boolean",
       "default": false,
-      "description": "Tel\u00e3o / Projetor dispon\u00edvel neste plano"
+      "description": "Tel\u00e3o / Projetor dispon\u00edvel"
     },
-    "app_generator": {
+    "app_rifa": {
       "type": "boolean",
-      "default": true,
-      "description": "Gerador de Bingo dispon\u00edvel neste plano"
+      "default": false,
+      "description": "Gerador de Rifas dispon\u00edvel"
     }
   },
   "required": [
