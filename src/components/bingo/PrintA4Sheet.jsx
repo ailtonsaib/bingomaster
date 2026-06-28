@@ -251,7 +251,7 @@ function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridG
                   color: "#000",
                   fontWeight: "bold",
                   marginTop: 4,
-                  textAlign: "center",
+                  textAlign: "left",
                   width: "100%",
                 }}>
                   {i + 1}) {prize.name || ""}
