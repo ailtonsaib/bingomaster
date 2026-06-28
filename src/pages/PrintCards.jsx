@@ -208,22 +208,6 @@ export default function PrintCards() {
         )}
       </div>
 
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { margin: 0; padding: 0; background: #fff; }
-          .print-page {
-            width: 210mm;
-            min-height: 297mm;
-            page-break-after: always;
-            break-after: page;
-          }
-        }
-        @page {
-          size: A4;
-          margin: 0;
-        }
-      `}</style>
     </>
   );
 }

@@ -92,3 +92,23 @@
     @apply bg-background text-foreground font-body;
   }
 }
+
+/* Print styles for bingo cards */
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .print-page {
+    width: 210mm;
+    min-height: 297mm;
+    page-break-after: always;
+    break-after: page;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
