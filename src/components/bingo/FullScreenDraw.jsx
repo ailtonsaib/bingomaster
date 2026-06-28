@@ -42,7 +42,7 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
   const [showWinningCardsModal, setShowWinningCardsModal] = useState(false);
 
   const handleDraw = async () => {
-    if (!currentGame || drawing) return;
+    if (!currentGame || drawing || currentGame.status === "finished") return;
     setDrawing(true);
     
     const available = Array.from({ length: maxNumber }, (_, i) => i + 1)

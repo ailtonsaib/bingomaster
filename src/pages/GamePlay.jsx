@@ -62,7 +62,7 @@ export default function GamePlay() {
   const handleStart = () => updateGame({ status: "in_progress" });
 
   const handleDraw = async (number = null) => {
-    if (!game || drawing) return;
+    if (!game || drawing || game.status === "finished") return;
     setDrawing(true);
     
     let num;
@@ -165,6 +165,14 @@ export default function GamePlay() {
       startAutoDraw();
     }
   };
+
+  // Para o sorteio automático quando o jogo é encerrado (cartela atingiu 20 pontos)
+  useEffect(() => {
+    if (game?.status === "finished" && autoDrawing) {
+      stopAutoDraw();
+      setDrawMode("normal");
+    }
+  }, [game?.status]);
 
   // Cleanup timer on unmount
   useEffect(() => {
