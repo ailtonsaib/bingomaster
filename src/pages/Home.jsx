@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3 } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -170,7 +170,7 @@ export default function Home() {
               </Link>
               <Link to="/sell">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-300 text-green-700 hover:bg-green-50">
-                  <ShoppingCart className="w-5 h-5" /> App de Vendas
+                  <ShoppingCart className="w-5 h-5" /> App do Vendedor
                 </Button>
               </Link>
               <Button
@@ -193,12 +193,22 @@ export default function Home() {
               </Link>
               <Link to="/past-games">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
-                  <Trophy className="w-5 h-5" /> Jogos Anteriores
+                  <Monitor className="w-5 h-5" /> Jogos Anteriores
                 </Button>
               </Link>
               <Link to="/game-analytics">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
-                  <Trophy className="w-5 h-5" /> Analytics
+                  <BarChart3 className="w-5 h-5" /> Analytics
+                </Button>
+              </Link>
+              <Link to="/rifas">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
+                  <Ticket className="w-5 h-5" /> Gerador de Rifas
+                </Button>
+              </Link>
+              <Link to="/game-analytics">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
+                  <Shuffle className="w-5 h-5" /> Sorteio
                 </Button>
               </Link>
               <Link to="/info-planos">
