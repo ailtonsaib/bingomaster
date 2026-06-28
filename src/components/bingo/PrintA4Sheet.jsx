@@ -26,21 +26,25 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   const cardNum = String(card.card_number || 1).padStart(6, "0");
   const hasSecondChance = card.chances === 2;
 
-  // 3 grids per chance — use new fields if available, fallback to legacy
-  const grids1 = [
-    card.grid_1a || card.grid_1 || [],
-    card.grid_1b || card.grid_1 || [],
-    card.grid_1c || card.grid_1 || [],
-  ];
-  const grids2 = [
-    card.grid_2a || card.grid_2 || [],
-    card.grid_2b || card.grid_2 || [],
-    card.grid_2c || card.grid_2 || [],
-  ];
+  // Número de grades = número de prêmios (mínimo 1, máximo 6)
+  const validPrizes = (prizes || []).filter(p => p && p.name && p.name.trim());
+  const numGrids = Math.max(1, Math.min(6, validPrizes.length));
 
-  // Prizes: mesmos prêmios para primeira e segunda chance
-  const prizes1 = prizes.slice(0, 3);
-  const prizes2 = prizes1;
+  // Tamanho dos círculos diminui com mais grades para caber na página A4
+  const circleSize = numGrids <= 3 ? 32 : numGrids === 4 ? 26 : numGrids === 5 ? 22 : 19;
+  const gridGap = numGrids <= 3 ? 10 : numGrids <= 4 ? 8 : 5;
+
+  // Gera N grades — usa os campos existentes (grid_1a/b/c) e repete o primeiro para extras
+  const baseGrid1 = card.grid_1a || card.grid_1 || [];
+  const baseGrid2 = card.grid_2a || card.grid_2 || [];
+  const gridFields1 = [card.grid_1a, card.grid_1b, card.grid_1c];
+  const gridFields2 = [card.grid_2a, card.grid_2b, card.grid_2c];
+  const grids1 = Array.from({ length: numGrids }, (_, i) => gridFields1[i] || baseGrid1);
+  const grids2 = Array.from({ length: numGrids }, (_, i) => gridFields2[i] || baseGrid2);
+
+  // Mesmos prêmios para primeira e segunda chance
+  const prizes1 = validPrizes;
+  const prizes2 = validPrizes;
 
   return (
     <div style={{
@@ -158,12 +162,12 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
       </div>
 
       {/* ── PRIMEIRA CHANCE ── */}
-      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} />
+      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} circleSize={circleSize} gridGap={gridGap} />
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
         <div style={{ marginTop: 60 }}>
-          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} />
+          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} circleSize={circleSize} gridGap={gridGap} />
         </div>
       )}
 
@@ -210,49 +214,45 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   );
 }
 
-// 3 grids side by side; prizes on the same line as the chance title
-function ChanceSection({ title, grids, prizes, brandName }) {
+// N grids side by side, each with its prize description below
+function ChanceSection({ title, grids, prizes, brandName, circleSize = 32, gridGap = 10 }) {
   return (
     <div style={{
       padding: "6px 8px 8px 8px",
     }}>
-      {/* Title + prizes on the same line */}
       <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
+        textAlign: "center",
+        fontSize: 15,
+        fontWeight: "bold",
+        letterSpacing: 3,
         marginBottom: 8,
-        flexWrap: "wrap",
       }}>
-        <div style={{
-          fontSize: 15,
-          fontWeight: "bold",
-          letterSpacing: 3,
-          whiteSpace: "nowrap",
-        }}>
-          {title}
-        </div>
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "4px 16px",
-          fontSize: 11,
-          fontWeight: "bold",
-          flex: 1,
-        }}>
-          {prizes.map((prize, i) => prize && prize.name ? (
-            <span key={i} style={{ whiteSpace: "normal" }}>
-              {i + 1}) {prize.name}
-              {prize.description ? ` (${prize.description})` : ""}
-            </span>
-          ) : null)}
-        </div>
+        {title}
       </div>
 
-      <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-        {grids.map((grid, i) => (
-          <PrintBingoGrid key={i} numbers={grid} brandName={brandName} />
-        ))}
+      <div style={{ display: "flex", gap: gridGap, justifyContent: "center" }}>
+        {grids.map((grid, i) => {
+          const prize = prizes[i];
+          return (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <PrintBingoGrid numbers={grid} brandName={brandName} size={circleSize} />
+              {prize && (
+                <div style={{
+                  fontSize: circleSize <= 22 ? 9 : 10,
+                  color: "#000",
+                  fontWeight: "bold",
+                  marginTop: 4,
+                  textAlign: "center",
+                  width: "100%",
+                  maxWidth: 160,
+                }}>
+                  {i + 1}) {prize.name || ""}
+                  {prize.description ? ` (${prize.description})` : ""}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { getBrandLetters } from "@/lib/brandConfig";
 
-export default function PrintBingoGrid({ numbers, brandName = "BINGO" }) {
+export default function PrintBingoGrid({ numbers, brandName = "BINGO", size = 32 }) {
   if (!numbers || numbers.length === 0) return null;
 
   const HEADERS = getBrandLetters(brandName);
@@ -11,7 +11,8 @@ export default function PrintBingoGrid({ numbers, brandName = "BINGO" }) {
     rows.push(numbers.slice(r * 5, r * 5 + 5));
   }
 
-  const size = 32;
+  const fontSize = size <= 22 ? 9 : size <= 26 ? 10 : 12;
+  const headerFontSize = size <= 22 ? 10 : size <= 26 ? 12 : 14;
 
   const circleStyle = {
     width: size,
@@ -21,7 +22,7 @@ export default function PrintBingoGrid({ numbers, brandName = "BINGO" }) {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 12,
+    fontSize: fontSize,
     fontWeight: "bold",
     fontFamily: "Arial, sans-serif",
     background: "#fff",
@@ -32,7 +33,7 @@ export default function PrintBingoGrid({ numbers, brandName = "BINGO" }) {
 
   const headerCircleStyle = {
     ...circleStyle,
-    fontSize: 14,
+    fontSize: headerFontSize,
     fontWeight: "900",
   };
 
