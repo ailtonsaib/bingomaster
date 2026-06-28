@@ -42,10 +42,11 @@
       "type": "number",
       "enum": [
         1,
-        2
+        2,
+        3
       ],
       "default": 1,
-      "description": "Dificuldade de chances: 1 (normal) ou 2 (dupla chance)"
+      "description": "N\u00famero de chances: 1 (\u00fanica), 2 (dupla) ou 3 (tripla)"
     },
     "exported_date": {
       "type": "string",
@@ -74,42 +75,63 @@
       "items": {
         "type": "number"
       },
-      "description": "Primeira chance - grid 1 (25 n\u00fameros, centro=0)"
+      "description": "Primeira chance - grid 1 (20 n\u00fameros)"
     },
     "grid_1b": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Primeira chance - grid 2 (25 n\u00fameros, centro=0)"
+      "description": "Primeira chance - grid 2 (20 n\u00fameros)"
     },
     "grid_1c": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Primeira chance - grid 3 (25 n\u00fameros, centro=0)"
+      "description": "Primeira chance - grid 3 (20 n\u00fameros)"
     },
     "grid_2a": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Segunda chance - grid 1 (25 n\u00fameros, centro=0)"
+      "description": "Segunda chance - grid 1 (20 n\u00fameros)"
     },
     "grid_2b": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Segunda chance - grid 2 (25 n\u00fameros, centro=0)"
+      "description": "Segunda chance - grid 2 (20 n\u00fameros)"
     },
     "grid_2c": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Segunda chance - grid 3 (25 n\u00fameros, centro=0)"
+      "description": "Segunda chance - grid 3 (20 n\u00fameros)"
+    },
+    "grid_3a": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Terceira chance - grid 1 (20 n\u00fameros)"
+    },
+    "grid_3b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Terceira chance - grid 2 (20 n\u00fameros)"
+    },
+    "grid_3c": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Terceira chance - grid 3 (20 n\u00fameros)"
     },
     "grid_1": {
       "type": "array",
@@ -124,6 +146,13 @@
         "type": "number"
       },
       "description": "Legacy: segunda cartela (compatibilidade)"
+    },
+    "grid_3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Legacy: terceira cartela (compatibilidade)"
     },
     "won_prizes": {
       "type": "array",

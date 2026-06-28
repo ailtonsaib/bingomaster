@@ -88,7 +88,7 @@ export default function BulkGenerateModal({ open, onClose, onGenerate, generatin
               {/* Chances / Difficulty */}
               <div className="space-y-2">
                 <Label>Nível de dificuldade</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setChances("1")}
                     className={`rounded-xl border-2 p-4 text-left transition-all ${
@@ -98,7 +98,7 @@ export default function BulkGenerateModal({ open, onClose, onGenerate, generatin
                     }`}
                   >
                     <div className="font-bold text-sm mb-1">1 Chance</div>
-                    <div className="text-xs text-muted-foreground">1 cartela por jogador. Mais difícil de vencer.</div>
+                    <div className="text-xs text-muted-foreground">1 cartela. Mais difícil.</div>
                   </button>
                   <button
                     onClick={() => setChances("2")}
@@ -109,7 +109,18 @@ export default function BulkGenerateModal({ open, onClose, onGenerate, generatin
                     }`}
                   >
                     <div className="font-bold text-sm mb-1">2 Chances</div>
-                    <div className="text-xs text-muted-foreground">2 cartelas por jogador. Mais fácil de vencer.</div>
+                    <div className="text-xs text-muted-foreground">2 cartelas. Intermediário.</div>
+                  </button>
+                  <button
+                    onClick={() => setChances("3")}
+                    className={`rounded-xl border-2 p-4 text-left transition-all ${
+                      chances === "3"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-bold text-sm mb-1">3 Chances</div>
+                    <div className="text-xs text-muted-foreground">3 cartelas. Mais fácil.</div>
                   </button>
                 </div>
               </div>

@@ -58,7 +58,7 @@ export default function GameCards() {
 
   const isCardWinner = (card) => {
     if (!game?.drawn_numbers?.length) return false;
-    const grids = [card.grid_1a, card.grid_1b, card.grid_1c, card.grid_2a, card.grid_2b, card.grid_2c, card.grid_1, card.grid_2].filter(Boolean);
+    const grids = [card.grid_1a, card.grid_1b, card.grid_1c, card.grid_2a, card.grid_2b, card.grid_2c, card.grid_3a, card.grid_3b, card.grid_3c, card.grid_1, card.grid_2, card.grid_3].filter(Boolean);
     return grids.some((g) => checkBingo(g, drawnSet, "full")) || card.is_winner;
   };
 
@@ -94,10 +94,15 @@ export default function GameCards() {
         grid_1: g1a, // legacy compat
         card_number: nextNum + i,
       };
-      if (chancesNum === 2) {
+      if (chancesNum >= 2) {
         const g2a = generateBingoGrid();
         cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
-        cardData.grid_2 = g2a; // legacy compat
+        cardData.grid_2 = g2a;
+      }
+      if (chancesNum >= 3) {
+        const g3a = generateBingoGrid();
+        cardData.grid_3a = g3a; cardData.grid_3b = g3a; cardData.grid_3c = g3a;
+        cardData.grid_3 = g3a;
       }
       newCards.push(cardData);
     }
@@ -129,10 +134,15 @@ export default function GameCards() {
           grid_1: g1a,
           card_number: nextNum + idx,
         };
-        if (chances === 2) {
+        if (chances >= 2) {
           const g2a = generateBingoGrid();
           cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
           cardData.grid_2 = g2a;
+        }
+        if (chances >= 3) {
+          const g3a = generateBingoGrid();
+          cardData.grid_3a = g3a; cardData.grid_3b = g3a; cardData.grid_3c = g3a;
+          cardData.grid_3 = g3a;
         }
         newCards.push(cardData);
       }
@@ -248,10 +258,15 @@ export default function GameCards() {
             grid_1: g1a,
             card_number: item.card_number || (cards.length + newCards.length + 1),
           };
-          if (item.chances === 2) {
+          if (item.chances >= 2) {
             const g2a = generateBingoGrid();
             cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
             cardData.grid_2 = g2a;
+          }
+          if (item.chances >= 3) {
+            const g3a = generateBingoGrid();
+            cardData.grid_3a = g3a; cardData.grid_3b = g3a; cardData.grid_3c = g3a;
+            cardData.grid_3 = g3a;
           }
           newCards.push(cardData);
         }
@@ -429,6 +444,10 @@ export default function GameCards() {
                   <div className="flex items-center gap-1.5">
                     <RadioGroupItem value="2" id="c2" />
                     <Label htmlFor="c2" className="text-sm cursor-pointer">2 chances</Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="3" id="c3" />
+                    <Label htmlFor="c3" className="text-sm cursor-pointer">3 chances</Label>
                   </div>
                 </RadioGroup>
               </div>
