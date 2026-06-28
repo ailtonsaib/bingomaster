@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Nome completo do vendedor"
     },
+    "email": {
+      "type": "string",
+      "description": "E-mail do vendedor"
+    },
     "phone": {
       "type": "string",
       "description": "Telefone / WhatsApp do vendedor"

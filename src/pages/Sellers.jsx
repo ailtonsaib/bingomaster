@@ -15,6 +15,7 @@ import SellerReceiptModal from "@/components/bingo/SellerReceiptModal";
 function SellerFormModal({ seller, onClose, onSaved }) {
   const [name, setName] = useState(seller?.name || "");
   const [phone, setPhone] = useState(seller?.phone || "");
+  const [email, setEmail] = useState(seller?.email || "");
   const [address, setAddress] = useState(seller?.address || "");
   const [city, setCity] = useState(seller?.city || "");
   const [state, setState] = useState(seller?.state || "");
@@ -27,6 +28,7 @@ function SellerFormModal({ seller, onClose, onSaved }) {
     const data = {
       name: name.trim(),
       phone: phone.trim(),
+      email: email.trim(),
       address: address.trim(),
       city: city.trim(),
       state: state.trim().toUpperCase(),
@@ -59,6 +61,11 @@ function SellerFormModal({ seller, onClose, onSaved }) {
           <div className="space-y-1.5">
             <Label>Nome *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" autoFocus />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>E-mail</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
