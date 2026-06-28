@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Minimize, Trophy, Users, Hash, Play, Square, Shuffle, RotateCcw, Eye, Clock, Zap, Hand, Eraser, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBrandName } from "@/hooks/useBrandName";
 import { getBrandLetters } from "@/lib/brandConfig";
+import PointsRanking from "./PointsRanking";
 
 export default function FullScreenDraw({ game, cards, onClose, updateGame, autoDrawing, setAutoDrawing, autoInterval, setAutoInterval }) {
   const drawMode = autoDrawing ? "auto" : "manual";
@@ -107,6 +108,15 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
     setCardStats(stats);
     setWinnerCards(winners);
   }, [currentGame?.drawn_numbers, cards]);
+
+  // Auto-finish when a card reaches 20 points
+  const autoFinishedRef = useRef(false);
+  useEffect(() => {
+    if (winnerCards.length > 0 && isPlaying && !autoFinishedRef.current) {
+      autoFinishedRef.current = true;
+      updateGame({ status: "finished" });
+    }
+  }, [winnerCards.length, isPlaying, updateGame]);
 
   const formatPhone = (phone) => {
     if (!phone) return "";
@@ -324,6 +334,9 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
             </Button>
           )}
         </div>
+
+        {/* Ranking 17-20 pontos + mensagens */}
+        <PointsRanking cards={cards} drawnNumbers={drawnNumbers} />
 
         {/* Estatísticas principais */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

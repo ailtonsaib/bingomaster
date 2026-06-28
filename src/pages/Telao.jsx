@@ -6,17 +6,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Trophy, CheckCircle2 } from "lucide-react";
 import { useBrandName } from "@/hooks/useBrandName";
 import { getBrandLetters, getLetterForNumber, COLUMN_BG } from "@/lib/brandConfig";
+import PointsRanking from "@/components/bingo/PointsRanking";
 
 export default function Telao() {
   const { gameId } = useParams();
   const [prevLength, setPrevLength] = useState(0);
   const { brandName } = useBrandName();
 
-  const { data: game } = useQuery({
+  const { data: gameData } = useQuery({
     queryKey: ["telao-game", gameId],
-    queryFn: () => base44.functions.invoke("getGamePublic", { game_id: String(gameId) }).then(r => r.data.game),
+    queryFn: () => base44.functions.invoke("getGamePublic", { game_id: String(gameId) }).then(r => r.data),
     refetchInterval: 1500,
   });
+  const game = gameData?.game;
+  const cards = gameData?.cards || [];
 
   const drawnNumbers = game?.drawn_numbers || [];
   const drawnSet = new Set(drawnNumbers);
@@ -161,45 +164,55 @@ export default function Telao() {
         </div>
 
         <div className="border-l border-white/10 bg-black/30 p-6 flex flex-col gap-4 min-h-0 overflow-y-auto">
-          <h2 className="text-lg font-bold text-violet-200 uppercase tracking-wider flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" /> Prêmios
-          </h2>
+          {/* Ranking 17-20 pontos */}
+          <div>
+            <h2 className="text-sm font-bold text-violet-200 uppercase tracking-wider flex items-center gap-2 mb-3">
+              <Trophy className="w-5 h-5 text-amber-400" /> Ranking de Pontos
+            </h2>
+            <PointsRanking cards={cards} drawnNumbers={drawnNumbers} variant="telao" />
+          </div>
 
-          <div className="space-y-3 flex-1">
-            {prizes.length === 0 ? (
-              <p className="text-sm text-violet-400 italic">Nenhum prêmio definido.</p>
-            ) : (
-              prizes.map((prize, idx) => (
-                <motion.div
-                  key={idx}
-                  layout
-                  className={`rounded-xl p-4 border transition-all ${prize.awarded ? "bg-emerald-500/20 border-emerald-400/40" : "bg-white/5 border-white/10"}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-black text-base font-heading ${prize.awarded ? "bg-emerald-500 text-white" : "bg-amber-400/20 text-amber-300"}`}>
-                      {prize.awarded ? <CheckCircle2 className="w-6 h-6" /> : idx + 1}
+          <div className="border-t border-white/10 pt-4">
+            <h2 className="text-lg font-bold text-violet-200 uppercase tracking-wider flex items-center gap-2 mb-3">
+              <Trophy className="w-5 h-5 text-amber-400" /> Prêmios
+            </h2>
+
+            <div className="space-y-3 flex-1">
+              {prizes.length === 0 ? (
+                <p className="text-sm text-violet-400 italic">Nenhum prêmio definido.</p>
+              ) : (
+                prizes.map((prize, idx) => (
+                  <motion.div
+                    key={idx}
+                    layout
+                    className={`rounded-xl p-4 border transition-all ${prize.awarded ? "bg-emerald-500/20 border-emerald-400/40" : "bg-white/5 border-white/10"}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-black text-base font-heading ${prize.awarded ? "bg-emerald-500 text-white" : "bg-amber-400/20 text-amber-300"}`}>
+                        {prize.awarded ? <CheckCircle2 className="w-6 h-6" /> : idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-bold text-base leading-tight ${prize.awarded ? "line-through text-white/40" : "text-white"}`}>
+                          {prize.name}
+                        </p>
+                        {prize.description && (
+                          <p className="text-sm text-violet-300/70 mt-0.5">{prize.description}</p>
+                        )}
+                        {prize.awarded && (
+                          <motion.span
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="inline-block mt-1 text-sm text-emerald-400 font-semibold"
+                          >
+                            ✓ Prêmio entregue!
+                          </motion.span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-bold text-base leading-tight ${prize.awarded ? "line-through text-white/40" : "text-white"}`}>
-                        {prize.name}
-                      </p>
-                      {prize.description && (
-                        <p className="text-sm text-violet-300/70 mt-0.5">{prize.description}</p>
-                      )}
-                      {prize.awarded && (
-                        <motion.span
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="inline-block mt-1 text-sm text-emerald-400 font-semibold"
-                        >
-                          ✓ Prêmio entregue!
-                        </motion.span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            )}
+                  </motion.div>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">

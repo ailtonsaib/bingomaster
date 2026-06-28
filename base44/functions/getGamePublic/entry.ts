@@ -18,7 +18,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Jogo não encontrado' }, { status: 404 });
     }
 
-    return Response.json({ game });
+    const cards = await base44.asServiceRole.entities.BingoCard.filter({ game_id: String(game_id) });
+
+    return Response.json({ game, cards });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
