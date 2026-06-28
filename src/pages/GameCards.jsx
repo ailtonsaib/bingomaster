@@ -273,8 +273,8 @@ export default function GameCards() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Link to={game ? `/game/${game.id}` : "/"} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="w-4 h-4" /> Voltar ao Jogo
+            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
+              <ArrowLeft className="w-4 h-4" /> Voltar ao Painel
             </Link>
             <h1 className="text-2xl font-bold font-heading">
               Cartelas {game ? `- ${game.name}` : ""}
