@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Pencil, Trash2, UserCheck, X, Check, Share2, Receipt } from "lucide-react";
+import { maskPhone } from "@/lib/utils";
 import ShareSellLinkModal from "@/components/bingo/ShareSellLinkModal";
 import SellerReceiptModal from "@/components/bingo/SellerReceiptModal";
 
@@ -63,7 +64,7 @@ function SellerFormModal({ seller, onClose, onSaved }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Telefone / WhatsApp</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
+              <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(00) 00000-0000" inputMode="numeric" />
             </div>
             <div className="space-y-1.5">
               <Label>Estado (UF)</Label>
