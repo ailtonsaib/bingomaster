@@ -11,8 +11,8 @@ export default function PrintBingoGrid({ numbers, brandName = "BINGO", size = 32
     rows.push(numbers.slice(r * 5, r * 5 + 5));
   }
 
-  const fontSize = Math.max(10, Math.round(size * 0.48));
-  const headerFontSize = Math.max(12, Math.round(size * 0.54));
+  const fontSize = Math.max(8, Math.round(size * 0.38));
+  const headerFontSize = Math.max(10, Math.round(size * 0.44));
 
   const circleStyle = {
     width: size,
