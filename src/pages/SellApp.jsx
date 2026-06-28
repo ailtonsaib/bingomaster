@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { maskPhone } from "@/lib/utils";
+import { useLicense } from "@/hooks/useLicense";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
-  ChevronDown, UserCheck, Hash, Download, Camera, Trash2, Loader2, LogOut
+  ChevronDown, UserCheck, Hash, Download, Camera, Trash2, Loader2, LogOut, MessageCircle
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -399,7 +400,7 @@ function ExportSoldModal({ game, seller, soldCards, onClose, onExported }) {
 }
 
 // --- Step 3: Card selection & sale ---
-function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
+function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerApp }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
@@ -408,6 +409,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
   const [buyerAddress, setBuyerAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedCard, setSavedCard] = useState(null);
+  const [lastSoldBuyerPhone, setLastSoldBuyerPhone] = useState(null);
   const [showExport, setShowExport] = useState(false);
   const [newCardsCount, setNewCardsCount] = useState(0);
   const [showNewBanner, setShowNewBanner] = useState(false);
@@ -525,11 +527,12 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
     await base44.entities.BingoCard.update(selectedCard.id, updateData);
     setSaving(false);
     setSavedCard(selectedCard);
+    setLastSoldBuyerPhone(buyerPhone.trim());
     setSelectedCard(null);
     setReceiptFile(null);
     setReceiptPreview(null);
     queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
-    setTimeout(() => setSavedCard(null), 3000);
+    setTimeout(() => { setSavedCard(null); setLastSoldBuyerPhone(null); }, 8000);
   };
 
   const rangeLabel = cardRange?.from || cardRange?.to
@@ -599,9 +602,24 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
 
       {/* Success toast */}
       {savedCard && (
-        <div className="mx-4 mt-3 bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2 text-green-700 text-sm">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Cartela #{String(savedCard.card_number).padStart(4, "0")} vendida com sucesso!
+        <div className="mx-4 mt-3 bg-green-50 border border-green-200 rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2 text-green-700 text-sm">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            Cartela #{String(savedCard.card_number).padStart(4, "0")} vendida com sucesso!
+          </div>
+          {hasBuyerApp && lastSoldBuyerPhone && (
+            <a
+              href={`https://wa.me/55${lastSoldBuyerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                `Olá! Sua cartela #${String(savedCard.card_number).padStart(4, "0")} foi registrada no ${game.name}. Acompanhe o sorteio ao vivo pelo link: ${window.location.origin}/buyer?game_id=${game.id}&phone=${lastSoldBuyerPhone.replace(/\D/g, "")}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 w-full justify-center bg-[#25D366] hover:bg-[#1ebe5a] text-white text-sm font-medium rounded-lg px-3 py-2 transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Enviar link do sorteio via WhatsApp
+            </a>
+          )}
         </div>
       )}
 
@@ -814,6 +832,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout }) {
 
 // --- Main orchestrator ---
 export default function SellApp() {
+  const { license } = useLicense();
   // Read URL params (pre-filled link from DistributeCardsModal)
   const urlParams = new URLSearchParams(window.location.search);
   const urlSellerName = urlParams.get("seller_name");
@@ -866,6 +885,14 @@ export default function SellApp() {
 
   const [game, setGame] = useState(null);
   const resolvedGame = game || (urlGameId ? preloadedGame : null);
+
+  const { data: planConfigs = [] } = useQuery({
+    queryKey: ["plan-configs-sell"],
+    queryFn: () => base44.entities.PlanConfig.list(),
+    enabled: !!license,
+  });
+  const currentPlanConfig = planConfigs.find((p) => p.plan_key === license?.plan_key);
+  const hasBuyerApp = currentPlanConfig?.app_buyer ?? false;
 
   if (loggedOut) {
     return (
@@ -929,6 +956,7 @@ export default function SellApp() {
       onBack={() => { if (lockedSeller) { setCardRange(null); } else { setGame(null); setCardRange(urlRange); } }}
       locked={lockedSeller}
       onLogout={handleLogout}
+      hasBuyerApp={hasBuyerApp}
     />
   );
 }
