@@ -43,7 +43,7 @@ export default function RegulationSheet({ regulation, game, brandName = "BINGO" 
       </div>
 
       {/* ── FOOTER (mesma posição do rodapé da cartela) ── */}
-      <div style={{ borderTop: "1.5px dashed #666", paddingTop: 6, marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ borderTop: "1.5px dashed #666", paddingTop: 6, marginTop: 90, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10, marginBottom: 14 }}>
           <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>VENDEDOR:</span>
           <div style={{ flex: 1, borderBottom: "1px solid #000" }}>&nbsp;</div>
