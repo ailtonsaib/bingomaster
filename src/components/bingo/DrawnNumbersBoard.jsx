@@ -1,16 +1,19 @@
 import { motion } from "framer-motion";
 import BingoNumberBall from "./BingoNumberBall";
-
-const COLUMNS = [
-  { letter: "B", min: 1, max: 15, color: "text-violet-300 border-violet-500/40 bg-violet-900/30" },
-  { letter: "I", min: 16, max: 30, color: "text-blue-300 border-blue-500/40 bg-blue-900/30" },
-  { letter: "N", min: 31, max: 45, color: "text-emerald-300 border-emerald-500/40 bg-emerald-900/30" },
-  { letter: "G", min: 46, max: 60, color: "text-amber-300 border-amber-500/40 bg-amber-900/30" },
-  { letter: "O", min: 61, max: 75, color: "text-rose-300 border-rose-500/40 bg-rose-900/30" },
-];
+import { useBrandName } from "@/hooks/useBrandName";
+import { getBrandLetters, COLUMN_SOFT } from "@/lib/brandConfig";
 
 export default function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
+  const { brandName } = useBrandName();
+  const letters = getBrandLetters(brandName);
   const drawnSet = new Set(drawnNumbers);
+
+  const COLUMNS = letters.map((letter, i) => ({
+    letter,
+    min: i * 15 + 1,
+    max: i * 15 + 15,
+    color: COLUMN_SOFT[i],
+  }));
 
   return (
     <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-5 space-y-4">
@@ -36,13 +39,7 @@ export default function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 })
                     key={num}
                     animate={drawn ? { scale: [1, 1.15, 1] } : {}}
                     transition={{ duration: 0.3 }}
-                    className={`
-                      text-center text-xs font-semibold rounded-md py-1 transition-all duration-300
-                      ${drawn
-                        ? "bg-white text-violet-900 shadow-lg font-bold"
-                        : "bg-white/5 text-white/40"
-                      }
-                    `}
+                    className={`text-center text-xs font-semibold rounded-md py-1 transition-all duration-300 ${drawn ? "bg-white text-violet-900 shadow-lg font-bold" : "bg-white/5 text-white/40"}`}
                   >
                     {num}
                   </motion.div>

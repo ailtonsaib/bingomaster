@@ -1,32 +1,12 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const letterMap = {
-  B: [1, 15],
-  I: [16, 30],
-  N: [31, 45],
-  G: [46, 60],
-  O: [61, 75],
-};
-
-function getLetterForNumber(num) {
-  for (const [letter, [min, max]] of Object.entries(letterMap)) {
-    if (num >= min && num <= max) return letter;
-  }
-  return "";
-}
-
-const letterColors = {
-  B: "from-violet-500 to-purple-600",
-  I: "from-blue-500 to-indigo-600",
-  N: "from-emerald-500 to-green-600",
-  G: "from-amber-500 to-yellow-600",
-  O: "from-rose-500 to-red-600",
-};
+import { useBrandName } from "@/hooks/useBrandName";
+import { getLetterForNumber, getColumnIndex, COLUMN_GRADIENT } from "@/lib/brandConfig";
 
 export default function BingoNumberBall({ number, size = "md", animated = false, isDrawn = false, minimal = false }) {
-  const letter = getLetterForNumber(number);
-  const gradient = letterColors[letter] || "from-gray-500 to-gray-600";
+  const { brandName } = useBrandName();
+  const letter = getLetterForNumber(number, brandName);
+  const gradient = COLUMN_GRADIENT[getColumnIndex(number)] || "from-gray-500 to-gray-600";
 
   const sizeClasses = {
     sm: "w-8 h-8 text-xs",

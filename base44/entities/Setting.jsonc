@@ -1,0 +1,19 @@
+{
+  "name": "Setting",
+  "type": "object",
+  "properties": {
+    "brand_name": {
+      "type": "string",
+      "enum": [
+        "BINGO",
+        "SORTE",
+        "AJUDA"
+      ],
+      "default": "BINGO",
+      "description": "Nome da marca exibido no app e nas cartelas impressas (cabe\u00e7alho das colunas)"
+    }
+  },
+  "required": [
+    "brand_name"
+  ]
+}

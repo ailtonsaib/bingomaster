@@ -1,7 +1,7 @@
 import PrintBingoGrid from "./PrintBingoGrid";
 import Barcode from "react-barcode";
 
-export default function PrintA4Sheet({ card, game, prizes = [] }) {
+export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BINGO" }) {
   if (!card) return null;
 
   const formatDate = (iso) => {
@@ -158,12 +158,12 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
       </div>
 
       {/* ── PRIMEIRA CHANCE ── */}
-      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} />
+      <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} />
 
       {/* ── SEGUNDA CHANCE ── */}
       {hasSecondChance && (
         <div style={{ marginTop: 60 }}>
-          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} />
+          <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} />
         </div>
       )}
 
@@ -211,7 +211,7 @@ export default function PrintA4Sheet({ card, game, prizes = [] }) {
 }
 
 // 3 distinct grids side by side, each with its own prize below
-function ChanceSection({ title, grids, prizes }) {
+function ChanceSection({ title, grids, prizes, brandName }) {
   return (
     <div style={{
       padding: "6px 8px 8px 8px",
@@ -231,7 +231,7 @@ function ChanceSection({ title, grids, prizes }) {
           const prize = prizes[i];
           return (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <PrintBingoGrid numbers={grid} />
+              <PrintBingoGrid numbers={grid} brandName={brandName} />
               {/* Prize for this specific grid */}
               {prize && (
                 <div style={{ fontSize: 11, color: "#000", fontWeight: "bold", marginTop: 5, textAlign: "left", width: "100%", maxWidth: 170 }}>

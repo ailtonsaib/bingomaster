@@ -5,18 +5,13 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import BingoNumberBall from "@/components/bingo/BingoNumberBall";
 import { Trophy, CheckCircle2, ArrowLeft } from "lucide-react";
-
-const COLUMNS = [
-  { letter: "B", min: 1, max: 15, color: "from-violet-500/30 to-violet-900/10 border-violet-400/30", header: "bg-violet-600" },
-  { letter: "I", min: 16, max: 30, color: "from-blue-500/30 to-blue-900/10 border-blue-400/30", header: "bg-blue-600" },
-  { letter: "N", min: 31, max: 45, color: "from-emerald-500/30 to-emerald-900/10 border-emerald-400/30", header: "bg-emerald-600" },
-  { letter: "G", min: 46, max: 60, color: "from-amber-500/30 to-amber-900/10 border-amber-400/30", header: "bg-amber-500" },
-  { letter: "O", min: 61, max: 75, color: "from-rose-500/30 to-rose-900/10 border-rose-400/30", header: "bg-rose-600" },
-];
+import { useBrandName } from "@/hooks/useBrandName";
+import { getBrandLetters, getLetterForNumber, COLUMN_BG } from "@/lib/brandConfig";
 
 export default function GameDisplay() {
   const { gameId } = useParams();
   const [prevLength, setPrevLength] = useState(0);
+  const { brandName } = useBrandName();
 
   const { data: game } = useQuery({
     queryKey: ["display-game", gameId],
@@ -32,7 +27,6 @@ export default function GameDisplay() {
   const pct = Math.round((drawnNumbers.length / maxNumber) * 100);
   const prizes = game?.prizes || [];
 
-  // detect new number
   const isNew = drawnNumbers.length > prevLength;
   useEffect(() => {
     if (drawnNumbers.length !== prevLength) setPrevLength(drawnNumbers.length);
@@ -45,6 +39,8 @@ export default function GameDisplay() {
       </div>
     );
   }
+
+  const letters = getBrandLetters(brandName);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-indigo-950 text-white flex flex-col">
@@ -71,7 +67,6 @@ export default function GameDisplay() {
               Último Número Sorteado
             </span>
             <div className="relative flex items-center justify-center h-52">
-              {/* Pulse rings */}
               {lastNumber && (
                 <>
                   <motion.div
@@ -99,7 +94,7 @@ export default function GameDisplay() {
                     <div className="w-44 h-44 rounded-full bg-gradient-to-br from-accent to-amber-600 shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center">
                       <span className="text-5xl font-black font-heading text-amber-950">{lastNumber}</span>
                       <span className="text-sm font-bold text-amber-900/80 -mt-1">
-                        {["B","I","N","G","O"][Math.ceil(lastNumber / 15) - 1]}
+                        {getLetterForNumber(lastNumber, brandName)}
                       </span>
                     </div>
                   </motion.div>
@@ -130,16 +125,16 @@ export default function GameDisplay() {
             </div>
           </div>
 
-          {/* BINGO board by column */}
+          {/* Board by column */}
           <div className="w-full max-w-2xl">
             <div className="grid grid-cols-5 gap-2">
-              {COLUMNS.map((col) => (
-                <div key={col.letter} className={`rounded-xl border bg-gradient-to-b ${col.color} overflow-hidden`}>
-                  <div className={`${col.header} text-white text-center font-black text-xl py-2 font-heading`}>
-                    {col.letter}
+              {letters.map((letter, colIdx) => (
+                <div key={colIdx} className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+                  <div className={`${COLUMN_BG[colIdx]} text-white text-center font-black text-xl py-2 font-heading`}>
+                    {letter}
                   </div>
                   <div className="grid grid-cols-3 gap-px p-1.5">
-                    {Array.from({ length: col.max - col.min + 1 }, (_, i) => col.min + i).map((num) => {
+                    {Array.from({ length: 15 }, (_, i) => colIdx * 15 + i + 1).map((num) => {
                       const drawn = drawnSet.has(num);
                       const isLast = num === lastNumber;
                       return (
@@ -147,15 +142,7 @@ export default function GameDisplay() {
                           key={num}
                           animate={isLast && isNew ? { scale: [1, 1.3, 1] } : {}}
                           transition={{ duration: 0.4 }}
-                          className={`
-                            text-center text-xs font-bold rounded py-1.5 transition-all duration-500
-                            ${isLast
-                              ? "bg-accent text-amber-950 shadow-lg scale-105 ring-1 ring-amber-300"
-                              : drawn
-                                ? "bg-white text-violet-900"
-                                : "bg-white/5 text-white/25"
-                            }
-                          `}
+                          className={`text-center text-xs font-bold rounded py-1.5 transition-all duration-500 ${isLast ? "bg-accent text-amber-950 shadow-lg scale-105 ring-1 ring-amber-300" : drawn ? "bg-white text-violet-900" : "bg-white/5 text-white/25"}`}
                         >
                           {num}
                         </motion.div>
@@ -204,16 +191,10 @@ export default function GameDisplay() {
                 <motion.div
                   key={idx}
                   layout
-                  className={`rounded-xl p-4 border transition-all ${
-                    prize.awarded
-                      ? "bg-emerald-500/20 border-emerald-400/40"
-                      : "bg-white/5 border-white/10"
-                  }`}
+                  className={`rounded-xl p-4 border transition-all ${prize.awarded ? "bg-emerald-500/20 border-emerald-400/40" : "bg-white/5 border-white/10"}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center font-black text-sm font-heading ${
-                      prize.awarded ? "bg-emerald-500 text-white" : "bg-amber-400/20 text-amber-300"
-                    }`}>
+                    <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center font-black text-sm font-heading ${prize.awarded ? "bg-emerald-500 text-white" : "bg-amber-400/20 text-amber-300"}`}>
                       {prize.awarded ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">

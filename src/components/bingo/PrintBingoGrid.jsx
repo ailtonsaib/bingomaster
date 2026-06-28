@@ -1,7 +1,9 @@
-const HEADERS = ["S", "O", "R", "T", "E"];
+import { getBrandLetters } from "@/lib/brandConfig";
 
-export default function PrintBingoGrid({ numbers }) {
+export default function PrintBingoGrid({ numbers, brandName = "BINGO" }) {
   if (!numbers || numbers.length === 0) return null;
+
+  const HEADERS = getBrandLetters(brandName);
 
   const totalRows = Math.ceil(numbers.length / 5);
   const rows = [];
@@ -41,15 +43,14 @@ export default function PrintBingoGrid({ numbers }) {
     color: "#c00",
   };
 
-  // flat index in the grid
   let flatIndex = 0;
 
   return (
     <div style={{ display: "inline-block" }}>
-      {/* Header row S O R T E */}
+      {/* Header row */}
       <div style={{ display: "flex", marginBottom: 0 }}>
-        {HEADERS.map((h) => (
-          <div key={h} style={headerCircleStyle}>{h}</div>
+        {HEADERS.map((h, i) => (
+          <div key={i} style={headerCircleStyle}>{h}</div>
         ))}
       </div>
       {/* Number rows */}

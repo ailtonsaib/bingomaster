@@ -4,18 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Trophy, CheckCircle2 } from "lucide-react";
-
-const COLUMNS = [
-  { letter: "B", min: 1, max: 15, header: "bg-violet-600" },
-  { letter: "I", min: 16, max: 30, header: "bg-blue-600" },
-  { letter: "N", min: 31, max: 45, header: "bg-emerald-600" },
-  { letter: "G", min: 46, max: 60, header: "bg-amber-500" },
-  { letter: "O", min: 61, max: 75, header: "bg-rose-600" },
-];
+import { useBrandName } from "@/hooks/useBrandName";
+import { getBrandLetters, getLetterForNumber, COLUMN_BG } from "@/lib/brandConfig";
 
 export default function Telao() {
   const { gameId } = useParams();
   const [prevLength, setPrevLength] = useState(0);
+  const { brandName } = useBrandName();
 
   const { data: game } = useQuery({
     queryKey: ["telao-game", gameId],
@@ -44,6 +39,8 @@ export default function Telao() {
       </div>
     );
   }
+
+  const letters = getBrandLetters(brandName);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-indigo-950 text-white flex flex-col overflow-hidden">
@@ -100,7 +97,7 @@ export default function Telao() {
                         {lastNumber}
                       </span>
                       <span className="text-lg font-bold text-amber-900/80 -mt-1">
-                        {["B", "I", "N", "G", "O"][Math.ceil(lastNumber / 15) - 1]}
+                        {getLetterForNumber(lastNumber, brandName)}
                       </span>
                     </div>
                   </motion.div>
@@ -132,13 +129,13 @@ export default function Telao() {
 
           <div className="w-full max-w-3xl">
             <div className="grid grid-cols-5 gap-2">
-              {COLUMNS.map((col) => (
-                <div key={col.letter} className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-                  <div className={`${col.header} text-white text-center font-black text-2xl py-2 font-heading`}>
-                    {col.letter}
+              {letters.map((letter, colIdx) => (
+                <div key={colIdx} className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+                  <div className={`${COLUMN_BG[colIdx]} text-white text-center font-black text-2xl py-2 font-heading`}>
+                    {letter}
                   </div>
                   <div className="grid grid-cols-3 gap-px p-1.5">
-                    {Array.from({ length: col.max - col.min + 1 }, (_, i) => col.min + i).map((num) => {
+                    {Array.from({ length: 15 }, (_, i) => colIdx * 15 + i + 1).map((num) => {
                       const drawn = drawnSet.has(num);
                       const isLast = num === lastNumber;
                       const cellClass = isLast

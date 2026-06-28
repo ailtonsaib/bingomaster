@@ -8,6 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useBrandName } from "@/hooks/useBrandName";
+import { getBrandLetters } from "@/lib/brandConfig";
 
 export default function FullScreenDraw({ game, cards, onClose, updateGame, autoDrawing, setAutoDrawing, autoInterval, setAutoInterval }) {
   const drawMode = autoDrawing ? "auto" : "manual";
@@ -138,25 +140,23 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
     window.open(whatsappUrl, "_blank");
   };
 
+  const { brandName } = useBrandName();
+
   const columns = useMemo(() => {
-    const cols = {
-      B: { range: [1, 15], numbers: [] },
-      I: { range: [16, 30], numbers: [] },
-      N: { range: [31, 45], numbers: [] },
-      G: { range: [46, 60], numbers: [] },
-      O: { range: [61, 75], numbers: [] },
-    };
+    const letters = getBrandLetters(brandName);
+    const cols = {};
+    letters.forEach((letter, i) => {
+      cols[letter] = { range: [i * 15 + 1, i * 15 + 15], numbers: [] };
+    });
 
     drawnNumbers.forEach((num) => {
-      if (num <= 15) cols.B.numbers.push(num);
-      else if (num <= 30) cols.I.numbers.push(num);
-      else if (num <= 45) cols.N.numbers.push(num);
-      else if (num <= 60) cols.G.numbers.push(num);
-      else if (num <= 75) cols.O.numbers.push(num);
+      const colIdx = Math.min(4, Math.max(0, Math.ceil(num / 15) - 1));
+      const letter = letters[colIdx];
+      if (letter) cols[letter].numbers.push(num);
     });
 
     return cols;
-  }, [drawnNumbers]);
+  }, [drawnNumbers, brandName]);
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 overflow-auto">
@@ -447,17 +447,11 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
         <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-6">
           <h3 className="text-lg font-bold font-heading text-white mb-4">Números Sorteados</h3>
           <div className="grid grid-cols-5 md:grid-cols-15 gap-2">
-            {Object.entries(columns).map(([letter, { range, numbers }]) => {
-              const columnColorMap = {
-                B: "bg-blue-500",
-                I: "bg-purple-500",
-                N: "bg-pink-500",
-                G: "bg-green-500",
-                O: "bg-yellow-500",
-              };
+            {Object.entries(columns).map(([letter, { range, numbers }], colIdx) => {
+              const colColors = ["bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-green-500", "bg-yellow-500"];
               return (
               <div key={letter} className="space-y-2">
-                <div className={`${columnColorMap[letter]} rounded-lg py-2 text-center font-bold text-white text-sm`}>
+                <div className={`${colColors[colIdx % 5]} rounded-lg py-2 text-center font-bold text-white text-sm`}>
                   {letter}
                 </div>
                 <div className="space-y-1">

@@ -3,9 +3,11 @@ import { Trophy, X, Star, Sparkles, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import confetti from "canvas-confetti";
 import { useEffect, useRef } from "react";
+import { useBrandName } from "@/hooks/useBrandName";
 
 export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
   const audioRef = useRef(null);
+  const { brandName } = useBrandName();
 
   useEffect(() => {
     if (winners && winners.length > 0) {
@@ -150,7 +152,7 @@ export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
     const prizeName = winner.prizeName || "Prêmio";
     const drawnNumbers = winner.drawnNumbers || 0;
 
-    const message = `🎉 *BINGO! VOCÊ GANHOU!* 🎉\n\n` +
+    const message = `🎉 *${brandName}! VOCÊ GANHOU!* 🎉\n\n` +
       `Olá ${winnerName}, parabéns!\n\n` +
       `🏆 *Prêmio:* ${prizeName}\n` +
       `🎮 *Jogo:* ${gameName}\n` +
@@ -243,7 +245,7 @@ export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
             }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
-            ✨ BINGO! ✨
+            ✨ {brandName}! ✨
           </motion.h2>
           
           <motion.p 
@@ -254,7 +256,7 @@ export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
           >
             {winners.length === 1
               ? `${winners[0].card.player_name || `Cartela ${winners[0].card.card_identifier}`} ganhou!`
-              : `${winners.length} cartelas completaram o bingo!`
+              : `${winners.length} cartelas completaram o ${brandName}!`
             }
           </motion.p>
 

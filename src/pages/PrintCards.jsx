@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Printer } from "lucide-react";
 import PrintA4Sheet from "@/components/bingo/PrintA4Sheet";
+import { useBrandName } from "@/hooks/useBrandName";
 
 function chunkArray(arr, size) {
   const chunks = [];
@@ -17,6 +18,7 @@ function chunkArray(arr, size) {
 
 export default function PrintCards() {
   const { gameId } = useParams();
+  const { brandName } = useBrandName();
   const printRef = useRef();
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
@@ -191,7 +193,7 @@ export default function PrintCards() {
                     breakAfter: pageIdx < pages.length - 1 ? "page" : "auto",
                   }}
                 >
-                  <PrintA4Sheet card={pageCards[0]} game={game} prizes={prizes} />
+                  <PrintA4Sheet card={pageCards[0]} game={game} prizes={prizes} brandName={brandName} />
                 </div>
               ))}
             </div>

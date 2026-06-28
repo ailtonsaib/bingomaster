@@ -1,16 +1,10 @@
 import { cn } from "@/lib/utils";
-
-const HEADERS = ["S", "O", "R", "T", "E"];
-
-const headerColors = {
-  B: "bg-violet-600",
-  I: "bg-blue-600",
-  N: "bg-emerald-600",
-  G: "bg-amber-500",
-  O: "bg-rose-600",
-};
+import { useBrandName } from "@/hooks/useBrandName";
+import { getBrandLetters, COLUMN_BG } from "@/lib/brandConfig";
 
 export default function BingoGrid({ numbers, drawnNumbers = [], label, compact = false }) {
+  const { brandName } = useBrandName();
+  const headers = getBrandLetters(brandName);
   const drawn = new Set(drawnNumbers);
   const cellSize = compact ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
   const headerSize = compact ? "w-9 h-8 text-xs" : "w-11 h-9 text-sm";
@@ -25,13 +19,13 @@ export default function BingoGrid({ numbers, drawnNumbers = [], label, compact =
       <div className="bg-card rounded-xl border-2 border-primary/20 overflow-hidden shadow-md">
         {/* Header */}
         <div className="grid grid-cols-5 gap-px bg-primary/10">
-          {HEADERS.map((h) => (
+          {headers.map((h, i) => (
             <div
-              key={h}
+              key={i}
               className={cn(
                 "flex items-center justify-center font-bold text-white font-heading",
                 headerSize,
-                headerColors[h]
+                COLUMN_BG[i]
               )}
             >
               {h}
@@ -43,7 +37,6 @@ export default function BingoGrid({ numbers, drawnNumbers = [], label, compact =
         <div className="grid grid-cols-5 gap-px bg-border/50 p-px">
           {numbers.map((num, idx) => {
             const isMarked = drawn.has(num);
-
             return (
               <div
                 key={idx}

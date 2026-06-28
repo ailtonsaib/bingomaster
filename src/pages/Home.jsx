@@ -12,6 +12,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import EditGameModal from "@/components/bingo/EditGameModal";
 import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useBrandName } from "@/hooks/useBrandName";
+import { BRAND_OPTIONS } from "@/lib/brandConfig";
 
 const statusLabels = {
   waiting: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -21,6 +23,7 @@ const statusLabels = {
 
 export default function Home() {
   const queryClient = useQueryClient();
+  const { brandName, setBrandName } = useBrandName();
   const { data: games = [], isLoading, refetch } = useQuery({
     queryKey: ["bingo-games"],
     queryFn: () => base44.entities.BingoGame.list("-created_date"),
@@ -131,12 +134,29 @@ export default function Home() {
             className="text-center"
           >
             <h1 className="text-4xl md:text-6xl font-bold font-display tracking-tight text-foreground">
-              Bingo
+              {brandName}
               <span className="text-primary"> Eletrônico</span>
             </h1>
             <p className="mt-3 text-lg text-muted-foreground max-w-lg mx-auto">
               Crie jogos, gere cartelas e sorteie números com um sistema completo e elegante.
             </p>
+            {/* Brand selector */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <span className="text-sm text-muted-foreground font-medium">Nome exibido:</span>
+              {BRAND_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setBrandName(opt)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    brandName === opt
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "bg-muted text-muted-foreground hover:bg-muted/70 border border-border"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
               <Link to="/new-game">
                 <Button size="lg" className="gap-2 text-base px-8">
