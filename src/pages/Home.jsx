@@ -44,6 +44,7 @@ export default function Home() {
   const [showDistribute, setShowDistribute] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [showGamePicker, setShowGamePicker] = useState(false);
 
   const sellerStats = useMemo(() => {
     const stats = sellers.map((seller) => {
@@ -211,11 +212,14 @@ export default function Home() {
                   <Smartphone className="w-5 h-5" /> App do Comprador
                 </Button>
               </Link>
-              <Link to="/game-analytics">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
-                  <Shuffle className="w-5 h-5" /> Sorteio
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50"
+                onClick={() => setShowGamePicker(true)}
+              >
+                <Shuffle className="w-5 h-5" /> Sorteio
+              </Button>
               <Link to="/validate">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
                   <Grid3x3 className="w-5 h-5" /> Cartelas
@@ -364,6 +368,44 @@ export default function Home() {
       </div>
       {showDistribute && (
         <DistributeCardsModal onClose={() => setShowDistribute(false)} />
+      )}
+
+      {/* Game picker modal for Sorteio */}
+      {showGamePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowGamePicker(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold font-heading flex items-center gap-2">
+                <Shuffle className="w-5 h-5 text-teal-600" /> Iniciar Sorteio
+              </h2>
+              <button onClick={() => setShowGamePicker(false)} className="text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">Escolha um jogo para abrir o painel de sorteio:</p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {games.filter(g => g.status !== "finished").length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhum jogo ativo no momento.</p>
+              ) : (
+                games.filter(g => g.status !== "finished").map((game) => (
+                  <Link key={game.id} to={`/game/${game.id}`} onClick={() => setShowGamePicker(false)}>
+                    <div className="flex items-center justify-between p-3 rounded-xl border hover:border-teal-400 hover:bg-teal-50 transition-all cursor-pointer group">
+                      <div>
+                        <p className="font-semibold text-sm">{game.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {game.status === "waiting" ? "Aguardando início" : "Em andamento"}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" className="gap-1.5 group-hover:border-teal-500 group-hover:text-teal-700">
+                        <Eye className="w-3.5 h-3.5" /> Abrir
+                      </Button>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
       {editingGame && (
         <EditGameModal
