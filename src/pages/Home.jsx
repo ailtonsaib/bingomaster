@@ -201,6 +201,11 @@ export default function Home() {
                   <Trophy className="w-5 h-5" /> Analytics
                 </Button>
               </Link>
+              <Link to="/info-planos">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
+                  <Layers className="w-5 h-5" /> Planos & Info
+                </Button>
+              </Link>
               <Button
                 size="lg"
                 variant="destructive"
