@@ -10,7 +10,7 @@ import { useLicense } from "@/hooks/useLicense";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
-  ChevronDown, UserCheck, Hash, Download, Camera, Trash2, Loader2, LogOut, MessageCircle
+  ChevronDown, UserCheck, Hash, Camera, Trash2, Loader2, LogOut, MessageCircle
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -339,66 +339,6 @@ function CardRangeStep({ seller, game, onConfirm, onBack }) {
   );
 }
 
-// --- Export Sold Cards Modal ---
-function ExportSoldModal({ game, seller, soldCards, onClose, onExported }) {
-  const [exporting, setExporting] = useState(false);
-
-  const handleExport = async () => {
-    setExporting(true);
-    const data = soldCards.map((c) => ({
-      card_number: c.card_number,
-      player_name: c.player_name,
-      player_phone: c.player_phone || "",
-      player_city: c.player_city || "",
-      player_state: c.player_state || "",
-      chances: c.chances,
-    }));
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const timestamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `cartelas-vendidas-${game.name.replace(/\s+/g, "-").toLowerCase()}-${timestamp}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    // Mark cards as exported
-    const now = new Date().toISOString();
-    await Promise.all(soldCards.map((c) =>
-      base44.entities.BingoCard.update(c.id, { exported_date: now })
-    ));
-    setExporting(false);
-    onExported();
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-xl max-w-md w-full p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold font-heading">Exportar Cartelas Vendidas</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {soldCards.length} cartela(s) vendida(s)
-        </p>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onClose} className="flex-1" disabled={exporting}>
-            Cancelar
-          </Button>
-          <Button onClick={handleExport} disabled={soldCards.length === 0 || exporting} className="flex-1 gap-2">
-            <Download className="w-4 h-4" />
-            {exporting ? "Exportando..." : `Exportar ${soldCards.length}`}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // --- Step 3: Card selection & sale ---
 function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerApp }) {
   const queryClient = useQueryClient();
@@ -410,7 +350,6 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   const [saving, setSaving] = useState(false);
   const [savedCard, setSavedCard] = useState(null);
   const [lastSoldBuyerPhone, setLastSoldBuyerPhone] = useState(null);
-  const [showExport, setShowExport] = useState(false);
   const [newCardsCount, setNewCardsCount] = useState(0);
   const [showNewBanner, setShowNewBanner] = useState(false);
   const [goalAlert, setGoalAlert] = useState(null); // { percent: 50 | 100, soldCount, totalRange }
@@ -456,8 +395,6 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
 
   const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
   const sold = rangeCards.filter((c) => c.player_phone || c.player_city);
-  // Only unexported sold cards for the export button
-  const soldNotExported = sold.filter((c) => !c.exported_date);
 
   const filtered = rangeCards
     .filter((c) => {
@@ -849,34 +786,14 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
               )}
             </Button>
 
-            {soldNotExported.length > 0 && (
-              <Button
-                variant="outline"
-                className="w-full h-12 text-base gap-2 mt-2"
-                onClick={() => setShowExport(true)}
-              >
-                <Download className="w-4 h-4" />
-                Exportar {soldNotExported.length} Nova(s) Cartela(s)
-              </Button>
-            )}
-            {soldNotExported.length === 0 && sold.length > 0 && (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                Todas as {sold.length} cartelas vendidas já foram exportadas.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground text-center py-1">
+              ✅ As vendas são registradas automaticamente no sistema.
+            </p>
           </div>
         </div>
       )}
 
-      {showExport && (
-        <ExportSoldModal
-          game={game}
-          seller={seller}
-          soldCards={soldNotExported}
-          onClose={() => setShowExport(false)}
-          onExported={() => queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] })}
-        />
-      )}
+
     </div>
   );
 }
