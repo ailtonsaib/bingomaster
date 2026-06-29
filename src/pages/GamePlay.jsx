@@ -190,9 +190,9 @@ export default function GamePlay() {
     }
   };
 
-  // Para o sorteio automático quando o jogo é encerrado (cartela atingiu 20 pontos)
+  // Para o sorteio automático quando o jogo é encerrado ou reiniciado
   useEffect(() => {
-    if (game?.status === "finished" && autoDrawing) {
+    if ((game?.status === "finished" || game?.status === "waiting") && autoDrawing) {
       stopAutoDraw();
       setDrawMode("normal");
     }
@@ -274,8 +274,11 @@ export default function GamePlay() {
 
   const handleClearDraw = () => updateGame({ drawn_numbers: [] });
 
-  const handleReset = () =>
+  const handleReset = () => {
+    stopAutoDraw();
+    setDrawMode("normal");
     updateGame({ status: "waiting", drawn_numbers: [], prizes: (game.prizes || []).map(p => ({ name: p.name, description: p.description, awarded: false })) });
+  };
 
   const handleAwardPrize = async (idx) => {
     const prizes = [...(game.prizes || [])];
