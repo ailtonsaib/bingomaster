@@ -67,6 +67,8 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       {/* Telão é uma tela pública de exibição — não exige login */}
       <Route path="/telao/:gameId" element={<Telao />} />
+      {/* App do Comprador é público — acesso apenas com o celular da cartela */}
+      <Route path="/buyer" element={<BuyerApp />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Home />} />
         <Route path="/new-game" element={<NewGame />} />
@@ -86,7 +88,6 @@ const AuthenticatedApp = () => {
         <Route path="/rifas" element={<Rifas />} />
         <Route path="/rifas/:rifaId" element={<RifaDetail />} />
         <Route path="/rifas/print/:rifaId" element={<PrintRifa />} />
-        <Route path="/buyer" element={<BuyerApp />} />
         <Route path="/seller-report" element={<SellerReport />} />
         <Route path="/final-report" element={<FinalReport />} />
         <Route path="/financial-report" element={<FinancialReport />} />
