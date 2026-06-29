@@ -16,10 +16,22 @@ import BulkGenerateModal from "@/components/bingo/BulkGenerateModal";
 import SellCardModal from "@/components/bingo/SellCardModal";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
+import { useLicense } from "@/hooks/useLicense";
+
+const PLAN_MAX_CARDS = {
+  free: 50,
+  basic: 2000,
+  pro: 4000,
+  max: 8000,
+  ultra: 12000,
+  enterprise: 15000,
+  mega: 50000,
+};
 
 export default function GameCards() {
   const { gameId } = useParams();
   const queryClient = useQueryClient();
+  const { license } = useLicense();
   const [playerName, setPlayerName] = useState("");
   const [playerPhone, setPlayerPhone] = useState("");
   const [playerCity, setPlayerCity] = useState("");
@@ -73,9 +85,17 @@ export default function GameCards() {
     return result.sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
   }, [cards, sellers, sellerFilter]);
 
+  const planKey = license?.plan_key || "free";
+  const maxCards = license?.max_cards ?? (PLAN_MAX_CARDS[planKey] || 50);
+  const remainingCards = Math.max(0, maxCards - cards.length);
+
   const handleGenerate = async () => {
+    const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), remainingCards);
+    if (qty <= 0) {
+      alert(`Limite do plano ${license?.plan_name || "FREE"} atingido (${maxCards} cartelas). Faça upgrade para gerar mais.`);
+      return;
+    }
     setGenerating(true);
-    const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), 8000);
     const chancesNum = parseInt(chances);
     const nextNum = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) + 1 : 1;
 
@@ -109,7 +129,13 @@ export default function GameCards() {
     setGenerating(false);
   };
 
-  const handleBulkGenerate = async ({ quantity, chances, prefix }) => {
+  const handleBulkGenerate = async ({ quantity: reqQty, chances, prefix }) => {
+    const quantity = Math.min(reqQty, remainingCards);
+    if (quantity <= 0) {
+      alert(`Limite do plano ${license?.plan_name || "FREE"} atingido (${maxCards} cartelas). Faça upgrade para gerar mais.`);
+      setBulkOpen(false);
+      return;
+    }
     setGenerating(true);
     const nextNum = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) + 1 : 1;
     const BATCH_SIZE = 200;
@@ -404,16 +430,26 @@ export default function GameCards() {
                 <Input
                   type="number"
                   min="1"
-                  max="8000"
+                  max={remainingCards}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   className="w-28"
                 />
               </div>
 
-              <Button onClick={handleGenerate} disabled={generating} className="gap-1.5">
+              <Button onClick={handleGenerate} disabled={generating || remainingCards <= 0} className="gap-1.5">
                 {generating ? "Gerando..." : <><Plus className="w-4 h-4" /> Gerar</>}
               </Button>
+
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium">{cards.length}</span> / <span className="font-medium">{maxCards}</span> cartelas
+                {remainingCards <= 0 && (
+                  <span className="ml-2 text-destructive font-semibold">Limite atingido</span>
+                )}
+                {remainingCards > 0 && remainingCards <= maxCards * 0.1 && (
+                  <span className="ml-2 text-yellow-600 font-semibold">({remainingCards} restantes)</span>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
