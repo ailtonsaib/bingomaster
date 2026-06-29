@@ -46,6 +46,17 @@ export default function Home() {
   const [showDistribute, setShowDistribute] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [showCleanDialog, setShowCleanDialog] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+
+  // Games that were cancelled/restarted (waiting status) with leftover winner data
+  const cancelledGames = games.filter(g => g.status === "waiting");
+  const orphanCards = allCards.filter(c => {
+    const game = games.find(g => String(g.id) === String(c.game_id));
+    return !game || game.status === "waiting";
+  });
+  const cleanableCards = orphanCards.filter(c => c.is_winner || (c.won_prizes && c.won_prizes.length > 0));
+  const cleanableGames = cancelledGames.filter(g => g.prizes && g.prizes.some(p => p.awarded));
   const [showGamePicker, setShowGamePicker] = useState(false);
   const [showCardsPicker, setShowCardsPicker] = useState(false);
   const [showGameManager, setShowGameManager] = useState(false);
@@ -67,6 +78,51 @@ export default function Home() {
     }).filter(Boolean).sort((a, b) => b.distribuídas - a.distribuídas);
     return stats;
   }, [sellers, allCards, distributions]);
+
+  const handleCleanCancelledGames = async () => {
+    setCleaning(true);
+    try {
+      // 1. Reset winner data on cards from cancelled/restarted games or orphaned cards
+      for (const card of cleanableCards) {
+        try {
+          await base44.entities.BingoCard.update(card.id, {
+            is_winner: false,
+            won_prizes: [],
+          });
+        } catch (e) {
+          console.warn(`Erro ao limpar cartela ${card.id}:`, e);
+        }
+      }
+
+      // 2. Reset prize awards on cancelled/restarted games
+      for (const game of cleanableGames) {
+        try {
+          const resetPrizes = (game.prizes || []).map(p => ({
+            name: p.name,
+            description: p.description,
+            awarded: false,
+            awarded_card_id: undefined,
+            awarded_card_number: undefined,
+            awarded_player_name: undefined,
+            pedra_maior: undefined,
+          }));
+          await base44.entities.BingoGame.update(game.id, { prizes: resetPrizes });
+        } catch (e) {
+          console.warn(`Erro ao limpar prêmios do jogo ${game.id}:`, e);
+        }
+      }
+
+      await queryClient.invalidateQueries();
+      refetch();
+      setShowCleanDialog(false);
+      alert(`Limpeza concluída! ${cleanableCards.length} cartela(s) e ${cleanableGames.length} jogo(s) limpos.`);
+    } catch (error) {
+      console.error("Erro na limpeza:", error);
+      alert("Erro ao limpar dados. Tente novamente.");
+    } finally {
+      setCleaning(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     try {
@@ -261,6 +317,15 @@ export default function Home() {
               </Link>
               <Button
                 size="lg"
+                variant="outline"
+                className="gap-2 text-base px-8 border-orange-300 text-orange-700 hover:bg-orange-50"
+                onClick={() => setShowCleanDialog(true)}
+                disabled={cleanableCards.length === 0 && cleanableGames.length === 0}
+              >
+                <Trash2 className="w-5 h-5" /> Limpar Dados Cancelados
+              </Button>
+              <Button
+                size="lg"
                 variant="destructive"
                 className="gap-2 text-base px-8 bg-red-500 hover:bg-red-600 text-white border-0"
                 onClick={() => setShowResetDialog(true)}
@@ -397,6 +462,35 @@ export default function Home() {
           onSaved={refetch}
         />
       )}
+      <AlertDialog open={showCleanDialog} onOpenChange={setShowCleanDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Limpar Dados de Jogos Cancelados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá <strong>remover permanentemente</strong> os registros de prêmios e vencedores
+              de jogos que foram cancelados ou reiniciados (status "Aguardando").
+              <br /><br />
+              <strong>{cleanableCards.length}</strong> cartela(s) com dados de premiação serão limpas.
+              <br />
+              <strong>{cleanableGames.length}</strong> jogo(s) com prêmios entregues terão os prêmios resetados.
+              <br /><br />
+              As cartelas e jogos em si <strong>não serão excluídos</strong>, apenas os dados de premiação residuais.
+              <br /><br />
+              <strong>Tem certeza que deseja continuar?</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cleaning}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCleanCancelledGames}
+              disabled={cleaning}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              {cleaning ? "Limpando..." : "Sim, Limpar Dados"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
