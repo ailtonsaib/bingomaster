@@ -98,6 +98,24 @@ export function checkAllCardsForBingo(cards, drawnNumbers, prizes, drawType = "h
   return winners;
 }
 
+// Retorna o maior placar da cartela avaliando cada grade separadamente (20 números cada)
+// Uma cartela vence quando UMA grade tem todos os 20 números sorteados
+export function getCardMaxPoints(card, drawnSet) {
+  const grids = [
+    card.grid_1, card.grid_2, card.grid_3,
+    card.grid_1a, card.grid_1b, card.grid_1c, card.grid_1d, card.grid_1e,
+    card.grid_2a, card.grid_2b, card.grid_2c, card.grid_2d, card.grid_2e,
+    card.grid_3a, card.grid_3b, card.grid_3c, card.grid_3d, card.grid_3e,
+  ].filter((g) => Array.isArray(g) && g.length > 0);
+
+  let max = 0;
+  for (const grid of grids) {
+    const pts = grid.filter((n) => n !== 0 && drawnSet.has(n)).length;
+    if (pts > max) max = pts;
+  }
+  return max;
+}
+
 // Draw a random number not yet drawn
 export function drawNumber(drawnNumbers, maxNumber = 75) {
   const available = [];

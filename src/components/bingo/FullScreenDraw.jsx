@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBrandName } from "@/hooks/useBrandName";
 import { getBrandLetters } from "@/lib/brandConfig";
+import { getCardMaxPoints } from "@/lib/bingoUtils";
 import PointsRanking from "./PointsRanking";
 
 export default function FullScreenDraw({ game, cards, onClose, updateGame, autoDrawing, setAutoDrawing, autoInterval, setAutoInterval }) {
@@ -77,23 +78,12 @@ export default function FullScreenDraw({ game, cards, onClose, updateGame, autoD
     const winners = [];
 
     cards.forEach((card) => {
-      const allNumbers = new Set([
-        ...(card.grid_1 || []),
-        ...(card.grid_2 || []),
-        ...(card.grid_1a || []),
-        ...(card.grid_1b || []),
-        ...(card.grid_1c || []),
-        ...(card.grid_2a || []),
-        ...(card.grid_2b || []),
-        ...(card.grid_2c || []),
-      ].filter(n => n !== 0));
+      const points = getCardMaxPoints(card, drawnSet);
 
-      const points = Array.from(allNumbers).filter(n => drawnSet.has(n)).length;
-      
       if (!stats[points]) stats[points] = 0;
       stats[points]++;
 
-      if (points === 20) {
+      if (points >= 20) {
         winners.push({
           card,
           points,

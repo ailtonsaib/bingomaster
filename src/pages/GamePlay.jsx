@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2 } from "lucide-react";
-import { drawNumber, checkAllCardsForBingo } from "@/lib/bingoUtils";
+import { drawNumber, checkAllCardsForBingo, getCardMaxPoints } from "@/lib/bingoUtils";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
 import PrizesPanel from "@/components/bingo/PrizesPanel";
@@ -98,17 +98,11 @@ export default function GamePlay() {
         ? cards.filter((c) => c.player_phone || c.player_city)
         : cards;
 
-      // Verifica cartelas que atingiram 20 pontos (excluindo já vencedoras)
+      // Verifica cartelas que atingiram 20 pontos em uma única grade (excluindo já vencedoras)
       const drawnSet = new Set(newDrawn);
       const newWinners = filteredCards.filter((c) => {
         if (c.is_winner) return false;
-        const allNums = new Set([
-          ...(c.grid_1 || []), ...(c.grid_2 || []), ...(c.grid_3 || []),
-          ...(c.grid_1a || []), ...(c.grid_1b || []), ...(c.grid_1c || []), ...(c.grid_1d || []), ...(c.grid_1e || []),
-          ...(c.grid_2a || []), ...(c.grid_2b || []), ...(c.grid_2c || []), ...(c.grid_2d || []), ...(c.grid_2e || []),
-          ...(c.grid_3a || []), ...(c.grid_3b || []), ...(c.grid_3c || []), ...(c.grid_3d || []), ...(c.grid_3e || []),
-        ].filter(n => n !== 0));
-        return Array.from(allNums).filter(n => drawnSet.has(n)).length >= 20;
+        return getCardMaxPoints(c, drawnSet) >= 20;
       });
 
       // Atualiza números sorteados (sem auto-finalizar)
@@ -762,10 +756,7 @@ export default function GamePlay() {
                   className="bg-white/10 rounded-xl p-3 text-center hover:bg-white/20 transition-colors cursor-pointer"
                 >
                   <div className="text-2xl font-bold font-heading text-green-400">
-                    {cards.filter((c) => {
-                      const allNums = new Set([...(c.grid_1 || []), ...(c.grid_2 || []), ...(c.grid_1a || []), ...(c.grid_1b || []), ...(c.grid_1c || []), ...(c.grid_2a || []), ...(c.grid_2b || []), ...(c.grid_2c || [])].filter(n => n !== 0));
-                      return Array.from(allNums).filter(n => drawnNumbers.includes(n)).length === 20;
-                    }).length}
+                    {cards.filter((c) => getCardMaxPoints(c, new Set(drawnNumbers)) >= 20).length}
                   </div>
                   <div className="text-xs text-violet-300 mt-0.5">Vencedoras</div>
                 </button>
