@@ -86,16 +86,16 @@ export default function GameCards() {
         player_name: `Cartela ${nextNum + i}`,
         chances: chancesNum,
         grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
-        grid_1: generateBingoGrid(),
+        grid_1d: generateBingoGrid(), grid_1e: generateBingoGrid(),
         card_number: nextNum + i,
       };
       if (chancesNum >= 2) {
         cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
-        cardData.grid_2 = generateBingoGrid();
+        cardData.grid_2d = generateBingoGrid(); cardData.grid_2e = generateBingoGrid();
       }
       if (chancesNum >= 3) {
         cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
-        cardData.grid_3 = generateBingoGrid();
+        cardData.grid_3d = generateBingoGrid(); cardData.grid_3e = generateBingoGrid();
       }
       newCards.push(cardData);
     }
@@ -119,16 +119,16 @@ export default function GameCards() {
           player_name: `${prefix} ${nextNum + idx}`,
           chances,
           grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
-          grid_1: generateBingoGrid(),
+          grid_1d: generateBingoGrid(), grid_1e: generateBingoGrid(),
           card_number: nextNum + idx,
         };
         if (chances >= 2) {
           cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
-          cardData.grid_2 = generateBingoGrid();
+          cardData.grid_2d = generateBingoGrid(); cardData.grid_2e = generateBingoGrid();
         }
         if (chances >= 3) {
           cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
-          cardData.grid_3 = generateBingoGrid();
+          cardData.grid_3d = generateBingoGrid(); cardData.grid_3e = generateBingoGrid();
         }
         newCards.push(cardData);
       }
@@ -240,16 +240,16 @@ export default function GameCards() {
             player_state: item.player_state || "",
             chances: item.chances || 1,
             grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
-            grid_1: generateBingoGrid(),
+            grid_1d: generateBingoGrid(), grid_1e: generateBingoGrid(),
             card_number: item.card_number || (cards.length + newCards.length + 1),
           };
           if (item.chances >= 2) {
             cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
-            cardData.grid_2 = generateBingoGrid();
+            cardData.grid_2d = generateBingoGrid(); cardData.grid_2e = generateBingoGrid();
           }
           if (item.chances >= 3) {
             cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
-            cardData.grid_3 = generateBingoGrid();
+            cardData.grid_3d = generateBingoGrid(); cardData.grid_3e = generateBingoGrid();
           }
           newCards.push(cardData);
         }

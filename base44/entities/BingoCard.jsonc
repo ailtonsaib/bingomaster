@@ -36,7 +36,7 @@
     },
     "seller_name": {
       "type": "string",
-      "description": "Nome do vendedor que vendeu esta cartela (para exibi\u00e7\u00e3o r\u00e1pida)"
+      "description": "Nome do vendedor que vendeu esta cartela"
     },
     "chances": {
       "type": "number",
@@ -50,7 +50,7 @@
     },
     "exported_date": {
       "type": "string",
-      "description": "Data em que a cartela foi exportada pelo vendedor (ISO string). Vazio/null = n\u00e3o exportada."
+      "description": "Data em que a cartela foi exportada pelo vendedor"
     },
     "payment_receipt_url": {
       "type": "string",
@@ -63,75 +63,117 @@
         "paid"
       ],
       "default": "paid",
-      "description": "Status do pagamento: pending = aguardando confirma\u00e7\u00e3o, paid = pago e confirmado"
+      "description": "Status do pagamento"
     },
     "is_validated": {
       "type": "boolean",
       "default": false,
-      "description": "Indica se esta cartela est\u00e1 habilitada para concorrer aos pr\u00eamios no sorteio"
+      "description": "Indica se esta cartela est\u00e1 habilitada para concorrer aos pr\u00eamios"
     },
     "grid_1a": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Primeira chance - grid 1 (20 n\u00fameros)"
+      "description": "1\u00aa chance - grade pr\u00eamio 1"
     },
     "grid_1b": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Primeira chance - grid 2 (20 n\u00fameros)"
+      "description": "1\u00aa chance - grade pr\u00eamio 2"
     },
     "grid_1c": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Primeira chance - grid 3 (20 n\u00fameros)"
+      "description": "1\u00aa chance - grade pr\u00eamio 3"
+    },
+    "grid_1d": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "1\u00aa chance - grade pr\u00eamio 4"
+    },
+    "grid_1e": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "1\u00aa chance - grade pr\u00eamio 5"
     },
     "grid_2a": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Segunda chance - grid 1 (20 n\u00fameros)"
+      "description": "2\u00aa chance - grade pr\u00eamio 1"
     },
     "grid_2b": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Segunda chance - grid 2 (20 n\u00fameros)"
+      "description": "2\u00aa chance - grade pr\u00eamio 2"
     },
     "grid_2c": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Segunda chance - grid 3 (20 n\u00fameros)"
+      "description": "2\u00aa chance - grade pr\u00eamio 3"
+    },
+    "grid_2d": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "2\u00aa chance - grade pr\u00eamio 4"
+    },
+    "grid_2e": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "2\u00aa chance - grade pr\u00eamio 5"
     },
     "grid_3a": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Terceira chance - grid 1 (20 n\u00fameros)"
+      "description": "3\u00aa chance - grade pr\u00eamio 1"
     },
     "grid_3b": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Terceira chance - grid 2 (20 n\u00fameros)"
+      "description": "3\u00aa chance - grade pr\u00eamio 2"
     },
     "grid_3c": {
       "type": "array",
       "items": {
         "type": "number"
       },
-      "description": "Terceira chance - grid 3 (20 n\u00fameros)"
+      "description": "3\u00aa chance - grade pr\u00eamio 3"
+    },
+    "grid_3d": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "3\u00aa chance - grade pr\u00eamio 4"
+    },
+    "grid_3e": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "3\u00aa chance - grade pr\u00eamio 5"
     },
     "grid_1": {
       "type": "array",

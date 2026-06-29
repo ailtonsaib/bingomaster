@@ -42,13 +42,13 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   const { cols, size: circleSize } = layout;
   const gridGap = 20;
 
-  // Grades por chance
+  // Grades por chance (5 grades por chance = a/b/c/d/e, uma por prêmio)
   const baseGrid1 = card.grid_1a || card.grid_1 || [];
   const baseGrid2 = card.grid_2a || card.grid_2 || [];
   const baseGrid3 = card.grid_3a || card.grid_3 || [];
-  const gridFields1 = [card.grid_1a, card.grid_1b, card.grid_1c];
-  const gridFields2 = [card.grid_2a, card.grid_2b, card.grid_2c];
-  const gridFields3 = [card.grid_3a, card.grid_3b, card.grid_3c];
+  const gridFields1 = [card.grid_1a, card.grid_1b, card.grid_1c, card.grid_1d, card.grid_1e];
+  const gridFields2 = [card.grid_2a, card.grid_2b, card.grid_2c, card.grid_2d, card.grid_2e];
+  const gridFields3 = [card.grid_3a, card.grid_3b, card.grid_3c, card.grid_3d, card.grid_3e];
   const grids1 = Array.from({ length: numGrids }, (_, i) => gridFields1[i] || baseGrid1);
   const grids2 = Array.from({ length: numGrids }, (_, i) => gridFields2[i] || baseGrid2);
   const grids3 = Array.from({ length: numGrids }, (_, i) => gridFields3[i] || baseGrid3);
