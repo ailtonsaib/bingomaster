@@ -9,14 +9,19 @@ export default function PointsRanking({ cards, drawnNumbers, variant = "default"
     const w = [];
 
     cards.forEach((card) => {
-      const allNumbers = new Set([
-        ...(card.grid_1 || []), ...(card.grid_2 || []), ...(card.grid_3 || []),
-        ...(card.grid_1a || []), ...(card.grid_1b || []), ...(card.grid_1c || []), ...(card.grid_1d || []), ...(card.grid_1e || []),
-        ...(card.grid_2a || []), ...(card.grid_2b || []), ...(card.grid_2c || []), ...(card.grid_2d || []), ...(card.grid_2e || []),
-        ...(card.grid_3a || []), ...(card.grid_3b || []), ...(card.grid_3c || []), ...(card.grid_3d || []), ...(card.grid_3e || []),
-      ].filter((n) => n !== 0));
+      // Avalia cada grade separadamente (20 números cada) e usa o maior placar
+      const grids = [
+        card.grid_1, card.grid_2, card.grid_3,
+        card.grid_1a, card.grid_1b, card.grid_1c, card.grid_1d, card.grid_1e,
+        card.grid_2a, card.grid_2b, card.grid_2c, card.grid_2d, card.grid_2e,
+        card.grid_3a, card.grid_3b, card.grid_3c, card.grid_3d, card.grid_3e,
+      ].filter((g) => Array.isArray(g) && g.length > 0);
 
-      const points = Array.from(allNumbers).filter((n) => drawnSet.has(n)).length;
+      let points = 0;
+      grids.forEach((grid) => {
+        const gridPoints = grid.filter((n) => n !== 0 && drawnSet.has(n)).length;
+        if (gridPoints > points) points = gridPoints;
+      });
 
       if (points >= 17 && points <= 20) s[points]++;
 
