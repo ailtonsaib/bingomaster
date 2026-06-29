@@ -1,5 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import pg from 'npm:pg@8.11.3';
+import tls from 'node:tls';
+
+// Workaround: Deno's TLS polyfill doesn't support rejectUnauthorized.
+// Strip it before it reaches Deno.startTls().
+const originalConnect = tls.connect;
+tls.connect = function (options, ...args) {
+  if (options && typeof options === 'object') {
+    delete options.rejectUnauthorized;
+  }
+  return originalConnect.call(this, options, ...args);
+};
 
 Deno.serve(async (req) => {
   try {
@@ -15,7 +26,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'sql é obrigatório' }, { status: 400 });
     }
 
-    const ssl = Deno.env.get('PGSSL') === 'true' ? { rejectUnauthorized: false } : false;
+    const useSsl = Deno.env.get('PGSSL') === 'true';
 
     const client = new pg.Client({
       host: Deno.env.get('PGHOST'),
@@ -23,7 +34,7 @@ Deno.serve(async (req) => {
       user: Deno.env.get('PGUSER'),
       password: Deno.env.get('PGPASSWORD'),
       database: Deno.env.get('PGDATABASE'),
-      ssl,
+      ssl: useSsl ? true : false,
     });
 
     await client.connect();
