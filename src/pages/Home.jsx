@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import EditGameModal from "@/components/bingo/EditGameModal";
 import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
+import LiveStatsPanel from "@/components/bingo/LiveStatsPanel";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useBrandName } from "@/hooks/useBrandName";
 import { BRAND_OPTIONS } from "@/lib/brandConfig";
@@ -260,6 +261,11 @@ export default function Home() {
             </div>
           </motion.div>
         </div>
+      </div>
+
+      {/* Live Stats Panel */}
+      <div className="max-w-5xl mx-auto px-4 pt-8">
+        <LiveStatsPanel />
       </div>
 
       {/* Stats Chart */}
