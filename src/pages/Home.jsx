@@ -12,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import EditGameModal from "@/components/bingo/EditGameModal";
 import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
 import LiveStatsPanel from "@/components/bingo/LiveStatsPanel";
+import GameManagementModal from "@/components/bingo/GameManagementModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useBrandName } from "@/hooks/useBrandName";
 import { BRAND_OPTIONS } from "@/lib/brandConfig";
@@ -47,6 +48,7 @@ export default function Home() {
   const [resetting, setResetting] = useState(false);
   const [showGamePicker, setShowGamePicker] = useState(false);
   const [showCardsPicker, setShowCardsPicker] = useState(false);
+  const [showGameManager, setShowGameManager] = useState(false);
 
   const sellerStats = useMemo(() => {
     const stats = sellers.map((seller) => {
@@ -161,11 +163,13 @@ export default function Home() {
               ))}
             </div>
             <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
-              <Link to="/new-game">
-                <Button size="lg" className="gap-2 text-base px-8">
-                  <Plus className="w-5 h-5" /> Novo Jogo
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                className="gap-2 text-base px-8"
+                onClick={() => setShowGameManager(true)}
+              >
+                <Plus className="w-5 h-5" /> Novo Jogo
+              </Button>
               <Link to="/sellers">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8">
                   <UserCheck className="w-5 h-5" /> Vendedores
@@ -472,6 +476,13 @@ export default function Home() {
         <EditGameModal
           game={editingGame}
           onClose={() => setEditingGame(null)}
+          onSaved={refetch}
+        />
+      )}
+      {showGameManager && (
+        <GameManagementModal
+          games={games}
+          onClose={() => setShowGameManager(false)}
           onSaved={refetch}
         />
       )}
