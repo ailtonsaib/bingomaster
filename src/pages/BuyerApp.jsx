@@ -245,43 +245,29 @@ function WatchStep({ buyer, game, onBack }) {
     return nameMatch || phoneMatch;
   });
 
-  // Get grids for the CURRENT prize being drawn (chance 1 first, then chance 2 if needed)
-  // prizeIndex: index of the current prize (0-based)
-  // We show chance 1 grids for prize 0, 1, 2... and chance 2 grids after chance 1 prizes are exhausted
-  // Logic: alternate by prize — odd prizes use chance 2 if available, but simpler:
-  // Show chance 1 always for current prize; if card has chance 2 and current prize index >= number of chance-1-only prizes, show chance 2
-  // Actually simplest: show chance 1 grids while prize uses chance 1, chance 2 grids when prize uses chance 2
-  // We determine this by checking if the current prize index is within the first "chance 1" set or second "chance 2" set
+  // Retorna os grids correspondentes ao prêmio atual, um por chance da cartela.
+  // Cada chance tem 5 grids (a-e), um para cada prêmio. Ex: prêmio 0 → grid_1a, grid_2a, grid_3a
+  const GRID_SUFFIX = ["a", "b", "c", "d", "e"];
   const getGridsForPrize = (card, prizeIdx) => {
-    const hasChance1 = card.grid_1a?.length > 0;
-    const hasChance2 = card.grid_2a?.length > 0;
-    const hasLegacy = card.grid_1?.length > 0;
+    const suffix = GRID_SUFFIX[prizeIdx] || GRID_SUFFIX[0];
+    const chances = card.chances || 1;
 
-    // Count prizes — first half uses chance 1, second half uses chance 2 (if dual chance card)
-    const totalPrizes = prizes.length;
-    const halfPrizes = Math.ceil(totalPrizes / 2);
-    const useChance2 = hasChance2 && prizeIdx >= halfPrizes;
-
-    if (useChance2) {
+    if (card.grid_1a?.length > 0) {
+      // Formato multi-grid: um grid por prêmio por chance
+      const chanceLabels = ["1ª Chance", "2ª Chance", "3ª Chance"];
       const grids = [];
-      if (card.grid_2a?.length) grids.push({ nums: card.grid_2a, label: "2ª Chance - A" });
-      if (card.grid_2b?.length) grids.push({ nums: card.grid_2b, label: "2ª Chance - B" });
-      if (card.grid_2c?.length) grids.push({ nums: card.grid_2c, label: "2ª Chance - C" });
-      return grids;
-    }
-
-    if (hasChance1) {
-      const grids = [];
-      if (card.grid_1a?.length) grids.push({ nums: card.grid_1a, label: "1ª Chance - A" });
-      if (card.grid_1b?.length) grids.push({ nums: card.grid_1b, label: "1ª Chance - B" });
-      if (card.grid_1c?.length) grids.push({ nums: card.grid_1c, label: "1ª Chance - C" });
+      for (let c = 1; c <= chances; c++) {
+        const key = `grid_${c}${suffix}`;
+        if (card[key]?.length > 0) {
+          grids.push({ nums: card[key], label: chances > 1 ? chanceLabels[c - 1] : null });
+        }
+      }
       return grids;
     }
 
     // Legacy fallback
     const grids = [];
-    if (hasLegacy) grids.push({ nums: card.grid_1, label: "Grade 1" });
-    if (card.grid_2?.length) grids.push({ nums: card.grid_2, label: "Grade 2" });
+    if (card.grid_1?.length > 0) grids.push({ nums: card.grid_1, label: null });
     return grids;
   };
 
@@ -485,8 +471,14 @@ function WatchStep({ buyer, game, onBack }) {
                       <span className="font-bold text-lg font-heading">
                         #{String(card.card_number || "").padStart(4, "0")}
                       </span>
+                      {card.chances === 3 && (
+                        <Badge className="ml-2 text-xs bg-amber-100 text-amber-700 border-amber-300">Tripla Chance</Badge>
+                      )}
                       {card.chances === 2 && (
                         <Badge className="ml-2 text-xs bg-violet-100 text-violet-700 border-violet-300">Dupla Chance</Badge>
+                      )}
+                      {(!card.chances || card.chances === 1) && (
+                        <Badge className="ml-2 text-xs bg-slate-100 text-slate-600 border-slate-300">Chance Única</Badge>
                       )}
                     </div>
                     {currentPrize && (
