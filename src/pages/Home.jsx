@@ -198,6 +198,11 @@ export default function Home() {
                   <Trophy className="w-5 h-5" /> Prêmios & Vencedores
                 </Button>
               </Link>
+              <Link to="/sales-dashboard">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                  <BarChart3 className="w-5 h-5" /> Dashboard de Vendas
+                </Button>
+              </Link>
               <Link to="/seller-report">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
                   <FileBarChart2 className="w-5 h-5" /> Relatório de Vendas
