@@ -74,7 +74,6 @@ export default function GameCards() {
   }, [cards, sellers, sellerFilter]);
 
   const handleGenerate = async () => {
-    if (!playerName.trim()) return;
     setGenerating(true);
     const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), 20);
     const chancesNum = parseInt(chances);
@@ -85,10 +84,7 @@ export default function GameCards() {
       const g1a = generateBingoGrid();
       const cardData = {
         game_id: String(gameId),
-        player_name: playerName.trim(),
-        player_phone: playerPhone.trim(),
-        player_city: playerCity.trim(),
-        player_state: playerState.trim(),
+        player_name: `Cartela ${nextNum + i}`,
         chances: chancesNum,
         grid_1a: g1a, grid_1b: g1a, grid_1c: g1a,
         grid_1: g1a, // legacy compat
@@ -109,10 +105,6 @@ export default function GameCards() {
 
     await base44.entities.BingoCard.bulkCreate(newCards);
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
-    setPlayerName("");
-    setPlayerPhone("");
-    setPlayerCity("");
-    setPlayerState("");
     setGenerating(false);
   };
 
@@ -393,47 +385,7 @@ export default function GameCards() {
             </CardTitle>
           </UiCardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4 items-end">
-              <div className="space-y-1.5">
-                <Label className="text-sm">Nome do Jogador</Label>
-                <Input
-                  placeholder="Nome"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-sm">Telefone</Label>
-                <Input
-                  placeholder="(00) 00000-0000"
-                  value={playerPhone}
-                  onChange={(e) => setPlayerPhone(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-sm">Cidade</Label>
-                <Input
-                  placeholder="Cidade"
-                  value={playerCity}
-                  onChange={(e) => setPlayerCity(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-sm">Estado</Label>
-                <Input
-                  placeholder="UF"
-                  maxLength={2}
-                  value={playerState}
-                  onChange={(e) => setPlayerState(e.target.value.toUpperCase())}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-4 items-end mt-4">
-              <div className="md:col-span-1" />
+            <div className="flex flex-wrap gap-6 items-end">
               <div className="space-y-1.5">
                 <Label className="text-sm">Chances</Label>
                 <RadioGroup value={chances} onValueChange={setChances} className="flex gap-4 pt-1">
@@ -460,10 +412,11 @@ export default function GameCards() {
                   max="20"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
+                  className="w-28"
                 />
               </div>
 
-              <Button onClick={handleGenerate} disabled={!playerName.trim() || generating} className="gap-1.5">
+              <Button onClick={handleGenerate} disabled={generating} className="gap-1.5">
                 {generating ? "Gerando..." : <><Plus className="w-4 h-4" /> Gerar</>}
               </Button>
             </div>
