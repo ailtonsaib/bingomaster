@@ -19,7 +19,9 @@ export default function Telao() {
     refetchInterval: 1500,
   });
   const game = gameData?.game;
-  const cards = gameData?.cards || [];
+  const allCards = gameData?.cards || [];
+  // Ranking no telão usa apenas cartelas validadas (que estão concorrendo)
+  const cards = allCards.filter(c => c.is_validated);
 
   const drawnNumbers = game?.drawn_numbers || [];
   const drawnSet = new Set(drawnNumbers);

@@ -10,14 +10,10 @@ export default function PointsRanking({ cards, drawnNumbers, variant = "default"
 
     cards.forEach((card) => {
       const allNumbers = new Set([
-        ...(card.grid_1 || []),
-        ...(card.grid_2 || []),
-        ...(card.grid_1a || []),
-        ...(card.grid_1b || []),
-        ...(card.grid_1c || []),
-        ...(card.grid_2a || []),
-        ...(card.grid_2b || []),
-        ...(card.grid_2c || []),
+        ...(card.grid_1 || []), ...(card.grid_2 || []), ...(card.grid_3 || []),
+        ...(card.grid_1a || []), ...(card.grid_1b || []), ...(card.grid_1c || []), ...(card.grid_1d || []), ...(card.grid_1e || []),
+        ...(card.grid_2a || []), ...(card.grid_2b || []), ...(card.grid_2c || []), ...(card.grid_2d || []), ...(card.grid_2e || []),
+        ...(card.grid_3a || []), ...(card.grid_3b || []), ...(card.grid_3c || []), ...(card.grid_3d || []), ...(card.grid_3e || []),
       ].filter((n) => n !== 0));
 
       const points = Array.from(allNumbers).filter((n) => drawnSet.has(n)).length;
