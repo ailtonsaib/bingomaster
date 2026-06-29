@@ -30,9 +30,13 @@ export default function FinalReport() {
 
   const prizes = selectedGame?.prizes || [];
 
+  // Only show winners if the game is in progress or finished (not reset/waiting)
+  const isActiveGame = selectedGame?.status === "in_progress" || selectedGame?.status === "finished";
+  const validCards = isActiveGame ? cards : [];
+
   // Build flat list of all prize assignments
   const reportRows = prizes.map((prize, idx) => {
-    const winner = cards.find(
+    const winner = validCards.find(
       (c) => c.won_prizes && c.won_prizes.some((wp) => wp.prize_index === idx)
     );
     return { prize, idx, winner };
