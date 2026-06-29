@@ -10,7 +10,7 @@ import { useBrandName } from "@/hooks/useBrandName";
 import { getBrandLetters, COLUMN_BG } from "@/lib/brandConfig";
 import { cn } from "@/lib/utils";
 import {
-  Search, Phone, User, ChevronRight, ArrowLeft,
+  Phone, ChevronRight, ArrowLeft,
   Trophy, Ticket, MapPin, CheckCircle2, XCircle, Star
 } from "lucide-react";
 
@@ -70,13 +70,12 @@ function BuyerGrid({ numbers, drawnNumbers = [], label }) {
 // ─── Step 1: Identificação do comprador ─────────────────────────────────────
 function BuyerLoginStep({ onEnter }) {
   const [phone, setPhone] = useState(() => localStorage.getItem("buyer_phone") || "");
-  const [name, setName] = useState(() => localStorage.getItem("buyer_name") || "");
 
   const handleContinue = () => {
-    if (!phone.trim() && !name.trim()) return;
+    const raw = phone.replace(/\D/g, "");
+    if (raw.length < 10) return;
     localStorage.setItem("buyer_phone", phone.trim());
-    localStorage.setItem("buyer_name", name.trim());
-    onEnter({ phone: phone.trim(), name: name.trim() });
+    onEnter({ phone: phone.trim(), name: "" });
   };
 
   return (
@@ -87,25 +86,12 @@ function BuyerLoginStep({ onEnter }) {
             <Ticket className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold font-heading">App do Comprador</h1>
-          <p className="text-muted-foreground text-sm mt-1">Acompanhe suas cartelas em tempo real</p>
+          <p className="text-muted-foreground text-sm mt-1">Digite o celular cadastrado na compra da cartela</p>
         </div>
 
         <div className="space-y-4 bg-card rounded-2xl p-5 shadow-md border">
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Seu nome</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                className="pl-9 h-12 text-base"
-                placeholder="Nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleContinue()}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Seu telefone (opcional)</Label>
+            <Label className="text-sm font-medium">Número de celular</Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -114,13 +100,15 @@ function BuyerLoginStep({ onEnter }) {
                 value={phone}
                 onChange={(e) => setPhone(maskPhone(e.target.value))}
                 onKeyDown={(e) => e.key === "Enter" && handleContinue()}
+                inputMode="tel"
+                autoFocus
               />
             </div>
           </div>
           <Button
             className="w-full h-12 text-base gap-2 mt-2"
             onClick={handleContinue}
-            disabled={!phone.trim() && !name.trim()}
+            disabled={phone.replace(/\D/g, "").length < 10}
           >
             Buscar minhas cartelas <ChevronRight className="w-4 h-4" />
           </Button>
