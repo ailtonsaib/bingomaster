@@ -69,6 +69,8 @@ const AuthenticatedApp = () => {
       <Route path="/telao/:gameId" element={<Telao />} />
       {/* App do Comprador é público — acesso apenas com o celular da cartela */}
       <Route path="/buyer" element={<BuyerApp />} />
+      {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
+      <Route path="/sell" element={<SellApp />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Home />} />
         <Route path="/new-game" element={<NewGame />} />
@@ -77,7 +79,6 @@ const AuthenticatedApp = () => {
         <Route path="/display/:gameId" element={<GameDisplay />} />
         <Route path="/print/:gameId" element={<PrintCards />} />
         <Route path="/sellers" element={<Sellers />} />
-        <Route path="/sell" element={<SellApp />} />
         <Route path="/validate" element={<ValidateCards />} />
         <Route path="/past-games" element={<PastGames />} />
         <Route path="/game-analytics" element={<GameAnalytics />} />
