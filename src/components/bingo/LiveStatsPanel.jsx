@@ -32,10 +32,15 @@ export default function LiveStatsPanel() {
     const waitingGames = games.filter((g) => g.status === "waiting");
     const finishedGames = games.filter((g) => g.status === "finished");
 
+    const activeGameIds = new Set(
+      [...activeGames, ...finishedGames].map((g) => g.id)
+    );
     const totalCards = allCards.length;
     const soldCards = allCards.filter((c) => c.player_phone || c.player_city).length;
     const validatedCards = allCards.filter((c) => c.is_validated).length;
-    const winnerCards = allCards.filter((c) => c.is_winner).length;
+    const winnerCards = allCards.filter(
+      (c) => c.is_winner && activeGameIds.has(c.game_id)
+    ).length;
 
     const totalDrawn = games.reduce((sum, g) => sum + (g.drawn_numbers?.length || 0), 0);
     const totalPrizes = games.reduce((sum, g) => sum + (g.prizes?.length || 0), 0);
