@@ -75,32 +75,36 @@ export default function GameCards() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), 20);
+    const qty = Math.min(Math.max(parseInt(quantity) || 1, 1), 8000);
     const chancesNum = parseInt(chances);
     const nextNum = cards.length > 0 ? Math.max(...cards.map((c) => c.card_number || 0)) + 1 : 1;
 
-    const newCards = [];
-    for (let i = 0; i < qty; i++) {
-      const cardData = {
-        game_id: String(gameId),
-        player_name: `Cartela ${nextNum + i}`,
-        chances: chancesNum,
-        grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
-        grid_1d: generateBingoGrid(), grid_1e: generateBingoGrid(),
-        card_number: nextNum + i,
-      };
-      if (chancesNum >= 2) {
-        cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
-        cardData.grid_2d = generateBingoGrid(); cardData.grid_2e = generateBingoGrid();
+    const BATCH_SIZE = 200;
+    for (let batch = 0; batch < qty; batch += BATCH_SIZE) {
+      const batchCount = Math.min(BATCH_SIZE, qty - batch);
+      const newCards = [];
+      for (let i = 0; i < batchCount; i++) {
+        const idx = batch + i;
+        const cardData = {
+          game_id: String(gameId),
+          player_name: `Cartela ${nextNum + idx}`,
+          chances: chancesNum,
+          grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
+          grid_1d: generateBingoGrid(), grid_1e: generateBingoGrid(),
+          card_number: nextNum + idx,
+        };
+        if (chancesNum >= 2) {
+          cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
+          cardData.grid_2d = generateBingoGrid(); cardData.grid_2e = generateBingoGrid();
+        }
+        if (chancesNum >= 3) {
+          cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
+          cardData.grid_3d = generateBingoGrid(); cardData.grid_3e = generateBingoGrid();
+        }
+        newCards.push(cardData);
       }
-      if (chancesNum >= 3) {
-        cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
-        cardData.grid_3d = generateBingoGrid(); cardData.grid_3e = generateBingoGrid();
-      }
-      newCards.push(cardData);
+      await base44.entities.BingoCard.bulkCreate(newCards);
     }
-
-    await base44.entities.BingoCard.bulkCreate(newCards);
     queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
     setGenerating(false);
   };
@@ -400,7 +404,7 @@ export default function GameCards() {
                 <Input
                   type="number"
                   min="1"
-                  max="20"
+                  max="8000"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   className="w-28"
