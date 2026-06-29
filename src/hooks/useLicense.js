@@ -11,6 +11,14 @@ export function useLicense() {
 
   const initLicense = async () => {
     try {
+      // Check if user is admin — admins always get mega plan
+      const user = await base44.auth.me();
+      if (user?.role === "admin") {
+        setLicense({ plan_key: "mega", plan_name: "MEGA", max_cards: 50000, app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true });
+        setLoading(false);
+        return;
+      }
+
       // Get IP from public API
       let device_ip = "desconhecido";
       try {
