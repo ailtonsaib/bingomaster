@@ -86,14 +86,14 @@ export default function Telao() {
                   />
                 </>
               )}
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="popLayout">
                 {lastNumber ? (
                   <motion.div
                     key={lastNumber}
                     initial={{ scale: 0, rotate: -180, opacity: 0 }}
                     animate={{ scale: 1, rotate: 0, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0, rotate: 90 }}
-                    transition={{ type: "spring", stiffness: 160, damping: 13 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
                     className="relative"
                   >
                     <div className="w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-accent to-amber-600 shadow-2xl shadow-amber-500/40 flex flex-col items-center justify-center">
