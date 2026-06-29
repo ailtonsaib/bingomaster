@@ -81,24 +81,21 @@ export default function GameCards() {
 
     const newCards = [];
     for (let i = 0; i < qty; i++) {
-      const g1a = generateBingoGrid();
       const cardData = {
         game_id: String(gameId),
         player_name: `Cartela ${nextNum + i}`,
         chances: chancesNum,
-        grid_1a: g1a, grid_1b: g1a, grid_1c: g1a,
-        grid_1: g1a, // legacy compat
+        grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
+        grid_1: generateBingoGrid(),
         card_number: nextNum + i,
       };
       if (chancesNum >= 2) {
-        const g2a = generateBingoGrid();
-        cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
-        cardData.grid_2 = g2a;
+        cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
+        cardData.grid_2 = generateBingoGrid();
       }
       if (chancesNum >= 3) {
-        const g3a = generateBingoGrid();
-        cardData.grid_3a = g3a; cardData.grid_3b = g3a; cardData.grid_3c = g3a;
-        cardData.grid_3 = g3a;
+        cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
+        cardData.grid_3 = generateBingoGrid();
       }
       newCards.push(cardData);
     }
@@ -117,24 +114,21 @@ export default function GameCards() {
       const newCards = [];
       for (let i = 0; i < batchCount; i++) {
         const idx = batch + i;
-        const g1a = generateBingoGrid();
         const cardData = {
           game_id: String(gameId),
           player_name: `${prefix} ${nextNum + idx}`,
           chances,
-          grid_1a: g1a, grid_1b: g1a, grid_1c: g1a,
-          grid_1: g1a,
+          grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
+          grid_1: generateBingoGrid(),
           card_number: nextNum + idx,
         };
         if (chances >= 2) {
-          const g2a = generateBingoGrid();
-          cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
-          cardData.grid_2 = g2a;
+          cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
+          cardData.grid_2 = generateBingoGrid();
         }
         if (chances >= 3) {
-          const g3a = generateBingoGrid();
-          cardData.grid_3a = g3a; cardData.grid_3b = g3a; cardData.grid_3c = g3a;
-          cardData.grid_3 = g3a;
+          cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
+          cardData.grid_3 = generateBingoGrid();
         }
         newCards.push(cardData);
       }
@@ -238,7 +232,6 @@ export default function GameCards() {
 
         const newCards = [];
         for (const item of data) {
-          const g1a = generateBingoGrid();
           const cardData = {
             game_id: String(gameId),
             player_name: item.player_name || "",
@@ -246,19 +239,17 @@ export default function GameCards() {
             player_city: item.player_city || "",
             player_state: item.player_state || "",
             chances: item.chances || 1,
-            grid_1a: g1a, grid_1b: g1a, grid_1c: g1a,
-            grid_1: g1a,
+            grid_1a: generateBingoGrid(), grid_1b: generateBingoGrid(), grid_1c: generateBingoGrid(),
+            grid_1: generateBingoGrid(),
             card_number: item.card_number || (cards.length + newCards.length + 1),
           };
           if (item.chances >= 2) {
-            const g2a = generateBingoGrid();
-            cardData.grid_2a = g2a; cardData.grid_2b = g2a; cardData.grid_2c = g2a;
-            cardData.grid_2 = g2a;
+            cardData.grid_2a = generateBingoGrid(); cardData.grid_2b = generateBingoGrid(); cardData.grid_2c = generateBingoGrid();
+            cardData.grid_2 = generateBingoGrid();
           }
           if (item.chances >= 3) {
-            const g3a = generateBingoGrid();
-            cardData.grid_3a = g3a; cardData.grid_3b = g3a; cardData.grid_3c = g3a;
-            cardData.grid_3 = g3a;
+            cardData.grid_3a = generateBingoGrid(); cardData.grid_3b = generateBingoGrid(); cardData.grid_3c = generateBingoGrid();
+            cardData.grid_3 = generateBingoGrid();
           }
           newCards.push(cardData);
         }

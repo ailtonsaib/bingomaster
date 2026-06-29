@@ -24,7 +24,7 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
   };
 
   const cardNum = String(card.card_number || 1).padStart(6, "0");
-  const hasSecondChance = card.chances === 2;
+  const numChances = card.chances || 1;
 
   // Número de grades = número de prêmios (mínimo 1, máximo 6)
   const validPrizes = (prizes || []).filter(p => p && p.name && p.name.trim());
@@ -32,28 +32,30 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
 
   // Calcula layout ideal para preencher a página A4 (horizontal e vertical)
   const MM_TO_PX = 3.7795;
-  const availWidth = 210 * MM_TO_PX - 7 * MM_TO_PX * 2 - 4; // página - padding lateral - bordas
-  const availHeight = 297 * MM_TO_PX - (5 + 4) * MM_TO_PX;  // página - padding vertical
-  const fixedH = 230; // header + barra + barcode + rodapé + gaps
+  const availWidth = 210 * MM_TO_PX - 7 * MM_TO_PX * 2 - 4;
+  const availHeight = 297 * MM_TO_PX - (5 + 4) * MM_TO_PX;
+  const fixedH = 230;
   const chanceAreaH = availHeight - fixedH;
-  const numChances = hasSecondChance ? 2 : 1;
-  const chanceGap = hasSecondChance ? 50 : 0;
-  const gridAreaH = (chanceAreaH - chanceGap) / numChances - 55; // 55 = título + prêmio + padding
+  const chanceGap = numChances > 1 ? 30 : 0;
+  const gridAreaH = (chanceAreaH - chanceGap * (numChances - 1)) / numChances - 55;
   const layout = calculateGridLayout(numGrids, availWidth, gridAreaH);
   const { cols, size: circleSize } = layout;
   const gridGap = 20;
 
-  // Gera N grades — usa os campos existentes (grid_1a/b/c) e repete o primeiro para extras
+  // Grades por chance
   const baseGrid1 = card.grid_1a || card.grid_1 || [];
   const baseGrid2 = card.grid_2a || card.grid_2 || [];
+  const baseGrid3 = card.grid_3a || card.grid_3 || [];
   const gridFields1 = [card.grid_1a, card.grid_1b, card.grid_1c];
   const gridFields2 = [card.grid_2a, card.grid_2b, card.grid_2c];
+  const gridFields3 = [card.grid_3a, card.grid_3b, card.grid_3c];
   const grids1 = Array.from({ length: numGrids }, (_, i) => gridFields1[i] || baseGrid1);
   const grids2 = Array.from({ length: numGrids }, (_, i) => gridFields2[i] || baseGrid2);
+  const grids3 = Array.from({ length: numGrids }, (_, i) => gridFields3[i] || baseGrid3);
 
-  // Mesmos prêmios para primeira e segunda chance
   const prizes1 = validPrizes;
   const prizes2 = validPrizes;
+  const prizes3 = validPrizes;
 
   return (
     <div style={{
@@ -175,9 +177,16 @@ export default function PrintA4Sheet({ card, game, prizes = [], brandName = "BIN
       <ChanceSection title="PRIMEIRA CHANCE" grids={grids1} prizes={prizes1} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} availWidth={availWidth} />
 
       {/* ── SEGUNDA CHANCE ── */}
-      {hasSecondChance && (
+      {numChances >= 2 && (
         <div style={{ marginTop: chanceGap }}>
           <ChanceSection title="SEGUNDA CHANCE" grids={grids2} prizes={prizes2} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} availWidth={availWidth} />
+        </div>
+      )}
+
+      {/* ── TERCEIRA CHANCE ── */}
+      {numChances >= 3 && (
+        <div style={{ marginTop: chanceGap }}>
+          <ChanceSection title="TERCEIRA CHANCE" grids={grids3} prizes={prizes3} brandName={brandName} circleSize={circleSize} gridGap={gridGap} cols={cols} availWidth={availWidth} />
         </div>
       )}
 
