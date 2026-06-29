@@ -227,10 +227,10 @@ function WatchStep({ buyer, game, onBack }) {
     refetchInterval: POLL_MS,
   });
 
-  // Poll buyer cards
+  // Poll buyer cards — getGamePublic é público (sem login), retorna game + cards
   const { data: allCards = [] } = useQuery({
     queryKey: ["buyer-cards", game.id],
-    queryFn: () => base44.functions.invoke("getGameCards", { game_id: String(game.id) }).then((r) => r.data.cards),
+    queryFn: () => base44.functions.invoke("getGamePublic", { game_id: String(game.id) }).then((r) => r.data.cards || []),
     refetchInterval: POLL_MS,
   });
 
