@@ -254,6 +254,11 @@ export default function Home() {
                   <Trophy className="w-5 h-5" /> Prêmios & Vencedores
                 </Button>
               </Link>
+              <Link to="/monitor">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
+                  <Monitor className="w-5 h-5" /> Monitor de Jogos
+                </Button>
+              </Link>
               <Link to="/sales-dashboard">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
                   <BarChart3 className="w-5 h-5" /> Dashboard de Vendas
