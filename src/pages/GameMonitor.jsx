@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 const REFRESH_MS = 5000;
 
@@ -105,7 +104,7 @@ function GameCard({ game, allCards }) {
             {game.event_date && (
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                {format(new Date(game.event_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                {format(new Date(game.event_date), "dd/MM/yyyy HH:mm")}
               </span>
             )}
             {game.event_location && (
@@ -197,7 +196,7 @@ export default function GameMonitor() {
 
   const { data: allCards = [] } = useQuery({
     queryKey: ["monitor-cards"],
-    queryFn: () => base44.functions.invoke("getAllCards", {}).then((r) => r.data.cards),
+    queryFn: () => base44.entities.BingoCard.list(),
     refetchInterval: REFRESH_MS,
   });
 
