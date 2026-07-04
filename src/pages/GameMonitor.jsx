@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Activity, Eye, Search, Trophy, Ticket, Radio, Play, MapPin, Calendar,
-  Hash, Monitor, Smartphone, Filter,
+  Hash, Monitor, CheckSquare, Filter,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -183,10 +183,6 @@ function GameCard({ game, allCards }) {
       </Card>
     </motion.div>
   );
-}
-
-function CheckSquare({ className }) {
-  return <Activity className={className} />;
 }
 
 export default function GameMonitor() {
