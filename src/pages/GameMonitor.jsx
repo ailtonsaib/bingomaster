@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Activity, Eye, Search, Trophy, Ticket, Radio, Play, MapPin, Calendar,
-  Hash, Monitor, CheckSquare, Filter,
+  Hash, Monitor, CheckSquare, Filter, Pencil,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import EditGameModal from "@/components/bingo/EditGameModal";
 
 const REFRESH_MS = 5000;
 
@@ -46,7 +47,7 @@ const filters = [
   { key: "finished", label: "Finalizados" },
 ];
 
-function GameCard({ game, allCards }) {
+function GameCard({ game, allCards, onEdit }) {
   const cfg = statusConfig[game.status] || statusConfig.waiting;
   const StatusIcon = cfg.icon;
   const drawn = game.drawn_numbers?.length || 0;
@@ -177,6 +178,16 @@ function GameCard({ game, allCards }) {
                 <Eye className="w-3.5 h-3.5" /> Cartelas
               </Button>
             </Link>
+            {game.status !== "finished" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
+                onClick={() => onEdit(game)}
+              >
+                <Pencil className="w-3.5 h-3.5" /> Editar
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -185,8 +196,10 @@ function GameCard({ game, allCards }) {
 }
 
 export default function GameMonitor() {
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [editingGame, setEditingGame] = useState(null);
 
   const { data: games = [], isLoading } = useQuery({
     queryKey: ["monitor-games"],
@@ -291,11 +304,19 @@ export default function GameMonitor() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredGames.map((game) => (
-              <GameCard key={game.id} game={game} allCards={allCards} />
+              <GameCard key={game.id} game={game} allCards={allCards} onEdit={setEditingGame} />
             ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+            </div>
+            )}
+            </div>
+
+            {editingGame && (
+            <EditGameModal
+            game={editingGame}
+            onClose={() => setEditingGame(null)}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["monitor-games"] })}
+            />
+            )}
+            </div>
+            );
+            }
