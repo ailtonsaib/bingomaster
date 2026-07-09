@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import { motion } from "framer-motion";
@@ -333,6 +333,11 @@ export default function Home() {
               >
                 <Grid3x3 className="w-5 h-5" /> Cartelas
               </Button>
+              <Link to="/validador-sped">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-sky-300 text-sky-700 hover:bg-sky-50">
+                  <FileText className="w-5 h-5" /> Validador SPED
+                </Button>
+              </Link>
               <Link to="/info-planos">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
                   <Layers className="w-5 h-5" /> Planos & Info
