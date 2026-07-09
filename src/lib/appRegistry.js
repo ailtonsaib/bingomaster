@@ -19,4 +19,15 @@ export const APPS = [
     permission: "can_access_finance",
     external: false,
   },
+  {
+    id: "sped",
+    name: "Validador SPED",
+    icon: "FileText",
+    iconBg: "bg-[#DBEAFE]",
+    iconColor: "text-[#2563EB]",
+    url: "/validador-sped",
+    permission: null,
+    external: false,
+    customModal: "sped",
+  },
 ];

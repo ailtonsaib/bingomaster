@@ -1,20 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Grid3x3, Wallet, Settings, LogOut, KeyRound } from "lucide-react";
+import { Grid3x3, Wallet, FileText, Settings, LogOut, KeyRound } from "lucide-react";
 import { APPS } from "@/lib/appRegistry";
 import { getPortalUser, clearPortalUser, isPortalLoggedIn } from "@/lib/portalSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
+import SpedAccessModal from "@/components/portal/SpedAccessModal";
 
-const iconMap = { Grid3x3, Wallet };
+const iconMap = { Grid3x3, Wallet, FileText };
 
 export default function Portal() {
   const navigate = useNavigate();
   const user = getPortalUser();
   const loggedIn = isPortalLoggedIn();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showSpedModal, setShowSpedModal] = useState(false);
 
   const handleAppClick = (app) => {
+    if (app.customModal === "sped") {
+      setShowSpedModal(true);
+      return;
+    }
     if (!loggedIn) {
       navigate(`/portal-login?next=${app.url}`);
       return;
@@ -126,6 +132,10 @@ export default function Portal() {
           userEmail={user?.email}
           onClose={() => setShowChangePassword(false)}
         />
+      )}
+
+      {showSpedModal && (
+        <SpedAccessModal onClose={() => setShowSpedModal(false)} />
       )}
     </div>
   );
