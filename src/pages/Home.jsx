@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -185,6 +185,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Back to Portal */}
+      <div className="absolute top-4 left-4 z-50">
+        <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => window.location.href = '/'}>
+          <ArrowLeft className="w-4 h-4" /> Portal
+        </Button>
+      </div>
       {/* Hero */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.15),transparent_50%)]" />
