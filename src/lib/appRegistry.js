@@ -17,6 +17,6 @@ export const APPS = [
     icon: "Wallet",
     iconBg: "bg-emerald-100 group-hover:bg-emerald-200",
     iconColor: "text-emerald-600",
-    url: "https://SEU-APP-FINANCEIRO.base44.app",
+    url: "https://softpremier.com.br/controlefinanceiro",
   },
 ];
