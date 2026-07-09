@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: create user ───
     if (operation === 'createUser') {
-      const { admin_email, email, password, name, can_access_bingo, can_access_finance } = body;
+      const { admin_email, email, password, name, can_access_bingo, can_access_finance, bingo_plan, finance_full_access, finance_transaction_limit, finance_transactions_used, finance_release_requested } = body;
       const admin = await verifyAdmin(base44, admin_email);
       if (!admin) {
         return Response.json({ error: 'Acesso negado' }, { status: 403 });
@@ -134,11 +134,11 @@ Deno.serve(async (req) => {
         name,
         can_access_bingo: can_access_bingo ?? true,
         can_access_finance: can_access_finance ?? false,
-        bingo_plan: 'free',
-        finance_transaction_limit: 10,
-        finance_transactions_used: 0,
-        finance_full_access: false,
-        finance_release_requested: false,
+        bingo_plan: bingo_plan || 'free',
+        finance_transaction_limit: finance_transaction_limit ?? 10,
+        finance_transactions_used: finance_transactions_used ?? 0,
+        finance_full_access: finance_full_access ?? false,
+        finance_release_requested: finance_release_requested ?? false,
         is_active: true,
       });
       return Response.json({ user: stripPassword(created) });
