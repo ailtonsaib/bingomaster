@@ -288,6 +288,9 @@ Deno.serve(async (req) => {
       if (!email || !current_password || !new_password) {
         return Response.json({ error: 'Email, senha atual e nova senha são obrigatórios' }, { status: 400 });
       }
+      if (email === 'teste@softpremier.com.br') {
+        return Response.json({ error: 'A senha do usuário de teste não pode ser alterada' }, { status: 403 });
+      }
       const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
       if (users.length === 0) {
         return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
