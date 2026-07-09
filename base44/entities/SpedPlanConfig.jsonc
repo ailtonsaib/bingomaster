@@ -28,10 +28,11 @@
           "FISCAL",
           "CONTRIBUICOES",
           "ECD",
-          "ECF"
+          "ECF",
+          "DIMESC"
         ]
       },
-      "description": "Tipos de SPED liberados neste plano"
+      "description": "Tipos de SPED/liberados neste plano"
     },
     "description": {
       "type": "string",

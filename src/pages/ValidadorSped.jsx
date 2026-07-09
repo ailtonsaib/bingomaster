@@ -40,17 +40,18 @@ const SPED_TYPE_LABELS = {
   FISCAL: 'SPED Fiscal (ICMS/IPI)',
   CONTRIBUICOES: 'SPED Contribuições (PIS/COFINS)',
   ECD: 'SPED ECD (Contábil Digital)',
-  ECF: 'SPED ECF (Contábil Fiscal)'
+  ECF: 'SPED ECF (Contábil Fiscal)',
+  DIMESC: 'DIME-SC (Declaração ICMS Santa Catarina)'
 };
 
 const PLAN_SPED_TYPES = {
   free: ['FISCAL'],
   basic: ['FISCAL'],
   pro: ['FISCAL', 'CONTRIBUICOES'],
-  max: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
-  mega: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
-  ultra: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
-  enterprise: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF']
+  max: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF', 'DIMESC'],
+  mega: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF', 'DIMESC'],
+  ultra: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF', 'DIMESC'],
+  enterprise: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF', 'DIMESC']
 };
 
 const FREE_DOWNLOAD_LIMIT = 5;
