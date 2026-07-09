@@ -14,7 +14,7 @@ export function useLicense() {
       // Check if user is admin — admins always get mega plan
       const user = await base44.auth.me();
       if (user?.role === "admin") {
-        setLicense({ plan_key: "mega", plan_name: "MEGA", max_cards: 50000, app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true });
+        setLicense({ plan_key: "mega", plan_name: "MEGA", max_cards: 50000, app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true, is_admin: true });
         setLoading(false);
         return;
       }

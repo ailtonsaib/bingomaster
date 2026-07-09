@@ -567,7 +567,7 @@ export default function ValidadorSped() {
 
         {/* ABA: Planos */}
         {aba === 'planos' && (
-          <SpedPlanPanel planKey={planKey} downloadsUsed={downloadsUsed} />
+          <SpedPlanPanel planKey={planKey} downloadsUsed={downloadsUsed} isAdmin={license?.is_admin} />
         )}
 
         {/* ABA 2: Painel Admin */}
