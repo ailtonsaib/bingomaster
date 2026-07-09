@@ -29,10 +29,12 @@ import {
   Trash2,
   Lock,
   Check,
-  Crown
+  Crown,
+  ShieldCheck
 } from 'lucide-react';
 import { useLicense } from '@/hooks/useLicense';
 import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
+import SpedValidator from '@/components/sped/SpedValidator';
 
 const SPED_TYPE_LABELS = {
   FISCAL: 'SPED Fiscal (ICMS/IPI)',
@@ -280,6 +282,13 @@ export default function ValidadorSped() {
               className="gap-2"
             >
               <Zap className="h-4 w-4" /> Gerador SPED
+            </Button>
+            <Button
+              variant={aba === 'validador' ? 'default' : 'outline'}
+              onClick={() => setAba('validador')}
+              className="gap-2"
+            >
+              <ShieldCheck className="h-4 w-4" /> Validador
             </Button>
             <Button
               variant={aba === 'planos' ? 'default' : 'outline'}
@@ -549,6 +558,11 @@ export default function ValidadorSped() {
               )}
             </div>
           </div>
+        )}
+
+        {/* ABA: Validador */}
+        {aba === 'validador' && (
+          <SpedValidator planKey={planKey} limitReached={limitReached} />
         )}
 
         {/* ABA: Planos */}
