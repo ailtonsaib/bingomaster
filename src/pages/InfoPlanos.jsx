@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Check, Copy, ArrowLeft, Zap, Star, Crown, Rocket, Shield, Trophy, Settings, ChevronDown, AlertTriangle, RefreshCw, Lock, Ban, Smartphone, HelpCircle, Phone, Mail, MessageCircle, Send, Loader2, CheckCircle } from "lucide-react";
 import { useLicense } from "@/hooks/useLicense";
@@ -60,11 +60,35 @@ export default function InfoPlanos() {
   const [upgradeMsg, setUpgradeMsg] = useState("");
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeDone, setUpgradeDone] = useState(null);
+  const [dbPlans, setDbPlans] = useState([]);
   const { license, loading: licenseLoading } = useLicense();
   const { toast } = useToast();
 
+  useEffect(() => {
+    base44.entities.PlanConfig.list().then(setDbPlans).catch(() => setDbPlans([]));
+  }, []);
+
+  // Merge DB plan config (apps, price, max_cards, description) into local PLANS
+  const mergedPlans = PLANS.map(plan => {
+    const db = dbPlans.find(p => p.plan_key === plan.key);
+    if (!db) return plan;
+    return {
+      ...plan,
+      price: db.price ? Number(db.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : plan.price,
+      cards: db.max_cards ? `${Number(db.max_cards).toLocaleString("pt-BR")} cartelas` : plan.cards,
+      desc: db.description || plan.desc,
+      apps: {
+        app_generator: db.app_generator ?? plan.apps.app_generator,
+        app_seller: db.app_seller ?? plan.apps.app_seller,
+        app_buyer: db.app_buyer ?? plan.apps.app_buyer,
+        app_telao: db.app_telao ?? plan.apps.app_telao,
+        app_rifa: db.app_rifa ?? plan.apps.app_rifa,
+      },
+    };
+  });
+
   const currentPlanKey = license?.plan_key || "free";
-  const currentPlan = PLANS.find(p => p.key === currentPlanKey) || PLANS[0];
+  const currentPlan = mergedPlans.find(p => p.key === currentPlanKey) || mergedPlans[0];
 
   const getFullUrl = (path) => `${window.location.origin}${path}`;
 
@@ -199,7 +223,7 @@ export default function InfoPlanos() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PLANS.map((plan) => {
+          {mergedPlans.map((plan) => {
             const Icon = plan.icon;
             return (
               <div
