@@ -169,8 +169,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- 1a. Verificar unicidade de 0000 e 9999 ---
+    const count0000 = linhas.filter((l) => l.split('|').filter((c) => c !== '')[0] === '0000').length;
+    const count9999 = linhas.filter((l) => l.split('|').filter((c) => c !== '')[0] === '9999').length;
+    if (count0000 > 1) {
+      erros.push({
+        linha: 0, registro: '0000',
+        mensagem: `Existe mais de um registro |0000| no arquivo (${count0000} ocorrências). Deve haver exatamente um.`,
+        severidade: 'erro'
+      });
+    }
+    if (count9999 > 1) {
+      erros.push({
+        linha: 0, registro: '9999',
+        mensagem: `Existe mais de um registro |9999| no arquivo (${count9999} ocorrências). Deve haver exatamente um.`,
+        severidade: 'erro'
+      });
+    }
+
     // --- 2. Primeira passada: coletar estatísticas e detectar tipo ---
     let linhaAtual = 0;
+    let blocoAnterior = '';
+    let entrouBloco9 = false;
+    const registros9900 = [];
     for (const linha of linhas) {
       linhaAtual++;
       const campos = linha.split('|').filter((c) => c !== '');
@@ -189,6 +210,44 @@ Deno.serve(async (req) => {
           mensagem: 'Linha mal formatada: deve iniciar e terminar com o caractere | (pipe).',
           severidade: 'erro'
         });
+      }
+
+      // Validar tamanho máximo da linha (Guia Prático SPED: 4500 caracteres)
+      if (linha.length > 4500) {
+        erros.push({
+          linha: linhaAtual,
+          registro,
+          mensagem: `Linha excede o limite máximo de 4500 caracteres estabelecido pelo Guia Prático do SPED (encontrados ${linha.length} caracteres).`,
+          severidade: 'erro'
+        });
+      }
+
+      // Validar ordenação de blocos (ordem alfabética crescente; bloco 9 é sempre o último)
+      if (entrouBloco9 && bloco !== '9') {
+        erros.push({
+          linha: linhaAtual,
+          registro,
+          mensagem: `Registro "${registro}" do bloco "${bloco}" aparece após o início do bloco 9. O bloco 9 deve ser o último do arquivo.`,
+          severidade: 'erro'
+        });
+      }
+      if (bloco === '9') {
+        entrouBloco9 = true;
+      } else if (!entrouBloco9 && blocoAnterior && bloco < blocoAnterior) {
+        erros.push({
+          linha: linhaAtual,
+          registro,
+          mensagem: `Bloco "${bloco}" aparece após o bloco "${blocoAnterior}". Os blocos devem seguir a ordem alfabética crescente conforme o leiaute do SPED.`,
+          severidade: 'erro'
+        });
+      }
+      if (!entrouBloco9 && (!blocoAnterior || bloco > blocoAnterior)) {
+        blocoAnterior = bloco;
+      }
+
+      // Coletar registros 9900 para validação cruzada
+      if (registro === '9900') {
+        registros9900.push({ registroDeclarado: campos[1], qtdDeclarada: parseInt(campos[2], 10) || 0 });
       }
 
       // Validar contador do registro 9999
@@ -711,27 +770,91 @@ Deno.serve(async (req) => {
       if (bloco === '9' && !estatisticas.registros['9999'] && !estatisticas.registros['9001']) continue;
       const abertura = `${bloco}001`;
       const encerramento = `${bloco}990`;
-      const temAbertura = !!estatisticas.registros[abertura] || bloco === '0'; // Bloco 0 não tem 0001 obrigatório em todos
+      const temAbertura = !!estatisticas.registros[abertura] || bloco === '0';
       const temEncerramento = !!estatisticas.registros[encerramento];
 
       if (estatisticas.blocos[bloco] > 0) {
         if (!temAbertura && !['0','9'].includes(bloco)) {
-          avisos.push({
+          erros.push({
             linha: 0,
             registro: abertura,
-            mensagem: `Bloco ${bloco} possui registros mas não possui o registro de abertura |${abertura}|.`,
-            severidade: 'aviso'
+            mensagem: `Bloco ${bloco} possui registros mas não possui o registro de abertura |${abertura}| (obrigatório conforme leiaute SPED).`,
+            severidade: 'erro'
           });
         }
         if (!temEncerramento && !['9'].includes(bloco)) {
-          avisos.push({
+          erros.push({
             linha: 0,
             registro: encerramento,
-            mensagem: `Bloco ${bloco} possui registros mas não possui o registro de encerramento |${encerramento}|.`,
+            mensagem: `Bloco ${bloco} possui registros mas não possui o registro de encerramento |${encerramento}| (obrigatório conforme leiaute SPED).`,
+            severidade: 'erro'
+          });
+        }
+      }
+    }
+
+    // --- 5a. Validar bloco 0 obrigatório ---
+    if (!estatisticas.registros['0001']) {
+      erros.push({
+        linha: 0, registro: '0001',
+        mensagem: 'Registro |0001| (abertura do bloco 0) é obrigatório e não foi encontrado.',
+        severidade: 'erro'
+      });
+    }
+    if (!estatisticas.registros['0990']) {
+      erros.push({
+        linha: 0, registro: '0990',
+        mensagem: 'Registro |0990| (encerramento do bloco 0) é obrigatório e não foi encontrado.',
+        severidade: 'erro'
+      });
+    }
+
+    // --- 5b. Validar registro 9900 (totalizadores por tipo de registro) ---
+    if (registros9900.length === 0) {
+      erros.push({
+        linha: 0, registro: '9900',
+        mensagem: 'Registro |9900| (totalizadores) não foi encontrado. É obrigatório informar os totais de cada tipo de registro.',
+        severidade: 'erro'
+      });
+    } else {
+      for (const item of registros9900) {
+        const qtdReal = estatisticas.registros[item.registroDeclarado] || 0;
+        if (qtdReal !== item.qtdDeclarada) {
+          erros.push({
+            linha: 0, registro: '9900',
+            mensagem: `Contador do registro 9900 para "${item.registroDeclarado}" (${item.qtdDeclarada}) não confere com a quantidade real encontrada (${qtdReal}).`,
+            severidade: 'erro'
+          });
+        }
+      }
+      // Verificar se todos os registros presentes estão declarados no 9900
+      for (const [reg, qtd] of Object.entries(estatisticas.registros)) {
+        if (reg === '9900' || reg === '9999' || reg === '9001' || reg === '9990') continue;
+        const declarado = registros9900.find((r) => r.registroDeclarado === reg);
+        if (!declarado) {
+          avisos.push({
+            linha: 0, registro: '9900',
+            mensagem: `Registro "${reg}" aparece ${qtd} vez(es) no arquivo mas não está declarado no registro 9900.`,
             severidade: 'aviso'
           });
         }
       }
+    }
+
+    // --- 5c. Validar bloco 9 obrigatório (9001, 9990, 9900, 9999) ---
+    if (!estatisticas.registros['9001']) {
+      erros.push({
+        linha: 0, registro: '9001',
+        mensagem: 'Registro |9001| (abertura do bloco 9) é obrigatório e não foi encontrado.',
+        severidade: 'erro'
+      });
+    }
+    if (!estatisticas.registros['9990']) {
+      erros.push({
+        linha: 0, registro: '9990',
+        mensagem: 'Registro |9990| (encerramento do bloco 9) é obrigatório e não foi encontrado.',
+        severidade: 'erro'
+      });
     }
 
     estatisticas.linhasComErro = erros.length;
