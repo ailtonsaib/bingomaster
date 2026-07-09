@@ -17,6 +17,6 @@ export const APPS = [
     icon: "Wallet",
     iconBg: "bg-emerald-100 group-hover:bg-emerald-200",
     iconColor: "text-emerald-600",
-    url: "https://softpremier.com.br/controlefinanceiro",
+    url: "https://hospitable-financia-smart-flow.base44.app",
   },
 ];
