@@ -47,7 +47,7 @@ export default function Portal() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12 relative"
+        className="text-center mb-8 relative"
       >
         <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-foreground">
           SoftPremier
@@ -56,6 +56,28 @@ export default function Portal() {
           Olá, {user?.name}! Selecione um aplicativo para começar
         </p>
       </motion.div>
+
+      {/* Test user info panel */}
+      {!user?.is_admin && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 max-w-md w-full text-center"
+        >
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">
+            Conta de Teste
+          </p>
+          <p className="text-sm text-amber-800 font-medium">{user?.email}</p>
+          <div className="flex items-center justify-center gap-4 mt-2 text-xs text-amber-700">
+            <span>Plano: {user?.bingo_plan?.toUpperCase()}</span>
+            {!user?.finance_full_access && (
+              <span>Finanças: {user?.finance_transactions_used}/{user?.finance_transaction_limit}</span>
+            )}
+            {user?.finance_full_access && <span>Finanças: Completo</span>}
+          </div>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-2xl w-full relative">
         {visibleApps.map((app, idx) => {

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Lock, Clock, LogOut, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { Lock, Clock, LogOut, ArrowLeft, Mail, MessageCircle, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function LockScreen({ user, onRefresh, onLogout, transactions }) {
   const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(user.finance_release_requested);
   const navigate = useNavigate();
 
   const handleRequest = async () => {
@@ -16,6 +17,7 @@ export default function LockScreen({ user, onRefresh, onLogout, transactions }) 
         operation: 'requestRelease',
         email: user.email,
       });
+      setRequested(true);
       await onRefresh();
     } catch (e) {
       alert("Erro ao solicitar liberação");
@@ -33,58 +35,93 @@ export default function LockScreen({ user, onRefresh, onLogout, transactions }) 
 
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-            {user.finance_release_requested ? (
-              <Clock className="w-8 h-8 text-amber-600" />
-            ) : (
-              <Lock className="w-8 h-8 text-amber-600" />
-            )}
+            <Lock className="w-8 h-8 text-amber-600" />
           </div>
-          <h1 className="text-2xl font-bold font-heading mb-2">
-            {user.finance_release_requested ? "Aguardando Aprovação" : "Limite Atingido"}
-          </h1>
+          <h1 className="text-2xl font-bold font-heading mb-2">Seu teste foi finalizado</h1>
           <p className="text-sm text-muted-foreground">
-            {user.finance_release_requested
-              ? "Sua solicitação de liberação foi enviada. Aguarde a aprovação do administrador para acesso completo."
-              : `Você utilizou todas as ${user.finance_transaction_limit} movimentações disponíveis no plano gratuito.`}
+            Você utilizou todas as {user.finance_transaction_limit} movimentações disponíveis no período de teste.
+            Para continuar usando o aplicativo com acesso completo, entre em contato e faça seu registro.
           </p>
         </div>
 
+        {/* Contact options */}
         <Card className="mb-4">
-          <CardContent className="p-6">
-            {!user.finance_release_requested ? (
-              <Button className="w-full gap-2" onClick={handleRequest} disabled={requesting}>
-                <Lock className="w-4 h-4" />
-                {requesting ? "Solicitando..." : "Solicitar Liberação ao Administrador"}
-              </Button>
-            ) : (
-              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center">
-                <Clock className="w-6 h-6 text-amber-600 mx-auto mb-2" />
-                <p className="text-sm text-amber-700">Solicitação enviada. O administrador foi notificado.</p>
+          <CardContent className="p-6 space-y-3">
+            <p className="text-sm font-semibold text-center text-foreground mb-2">
+              Entre em contato para se registrar:
+            </p>
+            <a
+              href="https://wa.me/5592999999999?text=Ol%C3%A1!%20Gostaria%20de%20registrar%20meu%20acesso%20ao%20Controle%20de%20Finan%C3%A7as."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
               </div>
-            )}
-            <Button variant="outline" className="w-full mt-3 gap-2" onClick={onLogout}>
-              <LogOut className="w-4 h-4" /> Sair
-            </Button>
+              <div>
+                <p className="text-sm font-semibold text-emerald-700">WhatsApp</p>
+                <p className="text-xs text-emerald-600">Clique para conversar agora</p>
+              </div>
+            </a>
+            <a
+              href="mailto:contato@softpremier.com.br?subject=Registro%20-%20Controle%20de%20Finan%C3%A7as"
+              className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                <Mail className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary">E-mail</p>
+                <p className="text-xs text-muted-foreground">contato@softpremier.com.br</p>
+              </div>
+            </a>
           </CardContent>
         </Card>
 
-        {transactions && transactions.length > 0 && (
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-3">Suas movimentações:</p>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="flex justify-between text-sm py-1">
-                    <span className="truncate">{tx.description}</span>
-                    <span className={tx.type === 'income' ? 'text-emerald-600 font-medium' : 'text-red-600 font-medium'}>
-                      {tx.type === 'income' ? '+' : '-'} R$ {parseFloat(tx.amount).toFixed(2)}
-                    </span>
+        {/* How it works */}
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+              Como funciona o registro
+            </p>
+            <div className="space-y-3">
+              {[
+                "Entre em contato via WhatsApp ou e-mail informando o plano desejado.",
+                "O administrador criará seu usuário com uma senha de primeiro acesso.",
+                "O aplicativo será liberado de acordo com o plano contratado.",
+                "Você fará login com a nova senha e terá acesso completo.",
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-primary">{i + 1}</span>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <p className="text-sm text-foreground">{step}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {requested && (
+          <div className="mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <p className="text-sm text-emerald-700">
+              Sua solicitação foi enviada ao administrador. Aguarde o contato.
+            </p>
+          </div>
         )}
+
+        {!requested && (
+          <Button variant="outline" className="w-full mb-3 gap-2" onClick={handleRequest} disabled={requesting}>
+            <Clock className="w-4 h-4" />
+            {requesting ? "Enviando..." : "Avisar o administrador que quero registrar"}
+          </Button>
+        )}
+
+        <Button variant="ghost" className="w-full gap-2" onClick={onLogout}>
+          <LogOut className="w-4 h-4" /> Sair
+        </Button>
       </div>
     </div>
   );
