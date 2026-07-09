@@ -282,6 +282,29 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── CHANGE PASSWORD (self) ───
+    if (operation === 'changePassword') {
+      const { email, current_password, new_password } = body;
+      if (!email || !current_password || !new_password) {
+        return Response.json({ error: 'Email, senha atual e nova senha são obrigatórios' }, { status: 400 });
+      }
+      const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
+      if (users.length === 0) {
+        return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      }
+      const user = users[0];
+      const valid = await bcrypt.compare(current_password, user.password_hash);
+      if (!valid) {
+        return Response.json({ error: 'Senha atual incorreta' }, { status: 401 });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(new_password, salt);
+      await base44.asServiceRole.entities.PortalUser.update(user.id, {
+        password_hash: hash,
+      });
+      return Response.json({ success: true });
+    }
+
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

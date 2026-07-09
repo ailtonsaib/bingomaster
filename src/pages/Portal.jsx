@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Grid3x3, Wallet, Settings, LogOut } from "lucide-react";
+import { Grid3x3, Wallet, Settings, LogOut, KeyRound } from "lucide-react";
 import { APPS } from "@/lib/appRegistry";
 import { getPortalUser, clearPortalUser, isPortalLoggedIn } from "@/lib/portalSession";
+import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 
 const iconMap = { Grid3x3, Wallet };
 
@@ -10,6 +12,7 @@ export default function Portal() {
   const navigate = useNavigate();
   const user = getPortalUser();
   const loggedIn = isPortalLoggedIn();
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const handleAppClick = (app) => {
     if (!loggedIn) {
@@ -43,6 +46,15 @@ export default function Portal() {
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#E9E4F5] hover:bg-[#DDD4F0] text-[#6b3fa0] font-medium text-sm transition-colors"
           >
             <Settings className="w-4 h-4" /> Painel Admin
+          </button>
+        )}
+        {loggedIn && (
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+            title="Alterar Senha"
+          >
+            <KeyRound className="w-5 h-5 text-[#666677]" />
           </button>
         )}
         {loggedIn && (
@@ -106,6 +118,13 @@ export default function Portal() {
         >
           Faça login ao selecionar um aplicativo para acessá-lo
         </motion.p>
+      )}
+
+      {showChangePassword && (
+        <ChangePasswordModal
+          userEmail={user?.email}
+          onClose={() => setShowChangePassword(false)}
+        />
       )}
     </div>
   );
