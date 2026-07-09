@@ -8,7 +8,8 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { xmls, clienteId } = body;
+    const { xmls, clienteId, spedType } = body;
+    const tipoSped = spedType || 'FISCAL';
 
     if (!xmls || xmls.length === 0) {
       return Response.json({ success: false, error: 'Nenhum arquivo XML enviado.' }, { status: 400 });
@@ -227,7 +228,8 @@ Deno.serve(async (req) => {
       total_produtos: Object.keys(mapaProdutos).length,
       debitos: totalDebitosSaidas.toFixed(2),
       creditos: totalCreditosEntradas.toFixed(2),
-      saldo: saldoTexto
+      saldo: saldoTexto,
+      sped_type: tipoSped
     });
 
     return Response.json({

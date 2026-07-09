@@ -26,8 +26,32 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
-  Trash2
+  Trash2,
+  Lock,
+  Check,
+  Crown
 } from 'lucide-react';
+import { useLicense } from '@/hooks/useLicense';
+import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
+
+const SPED_TYPE_LABELS = {
+  FISCAL: 'SPED Fiscal (ICMS/IPI)',
+  CONTRIBUICOES: 'SPED Contribuições (PIS/COFINS)',
+  ECD: 'SPED ECD (Contábil Digital)',
+  ECF: 'SPED ECF (Contábil Fiscal)'
+};
+
+const PLAN_SPED_TYPES = {
+  free: ['FISCAL'],
+  basic: ['FISCAL'],
+  pro: ['FISCAL', 'CONTRIBUICOES'],
+  max: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
+  mega: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
+  ultra: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
+  enterprise: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF']
+};
+
+const FREE_DOWNLOAD_LIMIT = 5;
 
 export default function ValidadorSped() {
   const [aba, setAba] = useState('gerador');
@@ -38,6 +62,8 @@ export default function ValidadorSped() {
   const [clientes, setClientes] = useState([]);
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const [consultandoCnpj, setConsultandoCnpj] = useState(false);
+  const [spedType, setSpedType] = useState('FISCAL');
+  const { license, loading: loadingLicense } = useLicense();
 
   // Form Admin
   const [razaoSocial, setRazaoSocial] = useState('');
@@ -47,6 +73,15 @@ export default function ValidadorSped() {
   const [municipio, setMunicipio] = useState('');
   const [regime, setRegime] = useState('NORMAL');
   const [perfil, setPerfil] = useState('PRESUMIDO');
+
+  const planKey = license?.plan_key || 'free';
+  const allowedTypes = PLAN_SPED_TYPES[planKey] || ['FISCAL'];
+  const isFreePlan = planKey === 'free';
+  const downloadsUsed = historico.length;
+  const downloadsRemaining = isFreePlan
+    ? Math.max(0, FREE_DOWNLOAD_LIMIT - downloadsUsed)
+    : null;
+  const limitReached = isFreePlan && downloadsUsed >= FREE_DOWNLOAD_LIMIT;
 
   const carregarDados = useCallback(async () => {
     try {
@@ -149,6 +184,11 @@ export default function ValidadorSped() {
       return;
     }
 
+    if (!allowedTypes.includes(spedType)) {
+      alert('Seu plano não inclui este tipo de SPED. Faça upgrade!');
+      return;
+    }
+
     setLoading(true);
     setStatus(`Lendo ${arquivos.length} arquivos XML...`);
     setResultado(null);
@@ -171,7 +211,8 @@ export default function ValidadorSped() {
 
       const response = await base44.functions.invoke('gerarSped', {
         xmls: listaXmls,
-        clienteId: clienteSelecionado
+        clienteId: clienteSelecionado,
+        spedType
       });
       const dados = response.data;
 
@@ -190,6 +231,10 @@ export default function ValidadorSped() {
   };
 
   const handleDownload = (arq) => {
+    if (limitReached) {
+      alert(`⚠ Limite de ${FREE_DOWNLOAD_LIMIT} downloads do plano FREE atingido!\n\nFaça upgrade para o plano BÁSICO para downloads ilimitados.`);
+      return;
+    }
     const blob = new Blob([arq.conteudo], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -220,6 +265,13 @@ export default function ValidadorSped() {
             <p className="text-sm text-muted-foreground">
               Gere arquivos SPED Fiscal de acordo com o regime tributário do contribuinte.
             </p>
+            {!loadingLicense && license && (
+              <Badge className="mt-2" variant={isFreePlan ? 'secondary' : 'default'}>
+                <Crown className="h-3 w-3 mr-1" />
+                Plano {license.plan_name || planKey.toUpperCase()}
+                {isFreePlan && ` · ${downloadsRemaining} downloads restantes`}
+              </Badge>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
@@ -228,6 +280,13 @@ export default function ValidadorSped() {
               className="gap-2"
             >
               <Zap className="h-4 w-4" /> Gerador SPED
+            </Button>
+            <Button
+              variant={aba === 'planos' ? 'default' : 'outline'}
+              onClick={() => setAba('planos')}
+              className="gap-2"
+            >
+              <Crown className="h-4 w-4" /> Planos
             </Button>
             <Button
               variant={aba === 'admin' ? 'default' : 'outline'}
@@ -264,6 +323,66 @@ export default function ValidadorSped() {
                     )}
                   </SelectContent>
                 </Select>
+              </CardContent>
+            </Card>
+
+            {/* Seletor de tipo SPED + aviso de limite */}
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                <div>
+                  <Label className="mb-2 block text-sm font-bold">Tipo de SPED:</Label>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {Object.entries(SPED_TYPE_LABELS).map(([key, label]) => {
+                      const allowed = allowedTypes.includes(key);
+                      const selected = spedType === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => allowed && setSpedType(key)}
+                          disabled={!allowed}
+                          className={`relative rounded-lg border p-3 text-left transition-all ${
+                            selected
+                              ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                              : allowed
+                                ? 'border-border hover:border-primary/50 cursor-pointer'
+                                : 'border-muted bg-muted/30 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">{label.split(' (')[0]}</span>
+                            {allowed ? (
+                              selected && <Check className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Lock className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {label.split(' (')[1]?.replace(')', '') || ''}
+                          </p>
+                          {!allowed && (
+                            <p className="mt-1 text-xs font-semibold text-amber-600">
+                              Plano {planKey === 'free' || planKey === 'basic' ? 'PRO' : 'MAX'}+
+                            </p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {isFreePlan && (
+                  <div className={`rounded-lg border p-3 text-sm ${
+                    limitReached
+                      ? 'border-red-300 bg-red-50 text-red-700'
+                      : 'border-amber-300 bg-amber-50 text-amber-700'
+                  }`}>
+                    {limitReached ? (
+                      <strong>⚠ Limite de {FREE_DOWNLOAD_LIMIT} downloads atingido! Faça upgrade no plano BÁSICO para continuar.</strong>
+                    ) : (
+                      <>Plano FREE: {downloadsRemaining} de {FREE_DOWNLOAD_LIMIT} downloads restantes.</>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -381,6 +500,7 @@ export default function ValidadorSped() {
                     <thead className="border-b bg-muted">
                       <tr>
                         <th className="p-3">Nome do Arquivo</th>
+                        <th className="p-3">Tipo</th>
                         <th className="p-3">Cliente</th>
                         <th className="p-3">Tamanho</th>
                         <th className="p-3 text-center">Ações</th>
@@ -393,6 +513,11 @@ export default function ValidadorSped() {
                           className={idx % 2 === 0 ? 'bg-white' : 'bg-muted/30'}
                         >
                           <td className="p-3 font-mono text-xs">{arq.nome_arquivo}</td>
+                          <td className="p-3">
+                            <Badge variant="outline" className="text-xs">
+                              {arq.sped_type || 'FISCAL'}
+                            </Badge>
+                          </td>
                           <td className="p-3 text-muted-foreground">{arq.cliente_nome}</td>
                           <td className="p-3 text-muted-foreground">
                             {arq.tamanho_kb?.toFixed(2)} KB
@@ -424,6 +549,11 @@ export default function ValidadorSped() {
               )}
             </div>
           </div>
+        )}
+
+        {/* ABA: Planos */}
+        {aba === 'planos' && (
+          <SpedPlanPanel planKey={planKey} downloadsUsed={downloadsUsed} />
         )}
 
         {/* ABA 2: Painel Admin */}
