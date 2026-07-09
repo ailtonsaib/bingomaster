@@ -1,0 +1,52 @@
+{
+  "name": "ClienteSped",
+  "type": "object",
+  "properties": {
+    "razao_social": {
+      "type": "string",
+      "description": "Raz\u00e3o Social do contribuinte"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ (apenas n\u00fameros)"
+    },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual",
+      "default": ""
+    },
+    "uf": {
+      "type": "string",
+      "description": "Estado (UF)",
+      "default": "GO"
+    },
+    "municipio": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio",
+      "default": ""
+    },
+    "regime": {
+      "type": "string",
+      "enum": [
+        "SIMPLES",
+        "NORMAL"
+      ],
+      "default": "NORMAL",
+      "description": "Regime tribut\u00e1rio"
+    },
+    "perfil": {
+      "type": "string",
+      "enum": [
+        "PRESUMIDO",
+        "REAL"
+      ],
+      "default": "PRESUMIDO",
+      "description": "Perfil (Lucro Presumido ou Real) - apenas para regime NORMAL"
+    }
+  },
+  "required": [
+    "razao_social",
+    "cnpj",
+    "regime"
+  ]
+}

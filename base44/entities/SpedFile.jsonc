@@ -1,0 +1,63 @@
+{
+  "name": "SpedFile",
+  "type": "object",
+  "properties": {
+    "cliente_id": {
+      "type": "string",
+      "description": "ID do cliente associado"
+    },
+    "cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "nome_arquivo": {
+      "type": "string",
+      "description": "Nome do arquivo SPED gerado"
+    },
+    "conteudo": {
+      "type": "string",
+      "description": "Conte\u00fado completo do arquivo SPED (.txt)"
+    },
+    "tamanho_kb": {
+      "type": "number",
+      "description": "Tamanho do arquivo em KB",
+      "default": 0
+    },
+    "linhas": {
+      "type": "number",
+      "description": "Quantidade de linhas escrituradas",
+      "default": 0
+    },
+    "total_participantes": {
+      "type": "number",
+      "description": "Total de participantes mapeados",
+      "default": 0
+    },
+    "total_produtos": {
+      "type": "number",
+      "description": "Total de produtos catalogados",
+      "default": 0
+    },
+    "debitos": {
+      "type": "string",
+      "description": "Total de d\u00e9bitos de ICMS",
+      "default": "0.00"
+    },
+    "creditos": {
+      "type": "string",
+      "description": "Total de cr\u00e9ditos de ICMS",
+      "default": "0.00"
+    },
+    "saldo": {
+      "type": "string",
+      "description": "Resultado da apura\u00e7\u00e3o",
+      "default": ""
+    }
+  },
+  "required": [
+    "cliente_id",
+    "cliente_nome",
+    "nome_arquivo",
+    "conteudo"
+  ]
+}
