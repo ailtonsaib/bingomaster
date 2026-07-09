@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
           finance_transactions_used: 0,
           finance_full_access: true,
           finance_release_requested: false,
+          finance_plan_price: 49.90,
           is_active: true,
         });
         created.push('admin');
@@ -61,6 +62,7 @@ Deno.serve(async (req) => {
           finance_transactions_used: 0,
           finance_full_access: false,
           finance_release_requested: false,
+          finance_plan_price: 49.90,
           is_active: true,
         });
         created.push('teste');
@@ -139,6 +141,7 @@ Deno.serve(async (req) => {
         finance_transactions_used: finance_transactions_used ?? 0,
         finance_full_access: finance_full_access ?? false,
         finance_release_requested: finance_release_requested ?? false,
+        finance_plan_price: body.finance_plan_price ?? 49.90,
         is_active: true,
       });
       return Response.json({ user: stripPassword(created) });

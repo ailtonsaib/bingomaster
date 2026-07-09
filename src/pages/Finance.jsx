@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
+import PlanInfoCard from "@/components/finance/PlanInfoCard";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -147,6 +148,11 @@ export default function Finance() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Plan Info */}
+        <div className="mb-6">
+          <PlanInfoCard user={user} />
+        </div>
+
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>

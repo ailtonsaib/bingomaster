@@ -54,6 +54,11 @@
       "default": false,
       "description": "Se solicitou libera\u00e7\u00e3o de acesso completo"
     },
+    "finance_plan_price": {
+      "type": "number",
+      "default": 49.9,
+      "description": "Valor do plano de acesso completo \u00e0s finan\u00e7as (definido pelo admin)"
+    },
     "is_active": {
       "type": "boolean",
       "default": true,

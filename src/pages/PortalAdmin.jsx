@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 
@@ -265,6 +265,25 @@ export default function PortalAdmin() {
                             <span className="text-xs text-muted-foreground">
                               {u.finance_transactions_used}/{u.finance_transaction_limit} usadas
                             </span>
+                          )}
+                          {u.can_access_finance && !u.is_admin && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <DollarSign className="w-3 h-3 text-muted-foreground" />
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={u.finance_plan_price ?? 49.90}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val) && val >= 0) {
+                                    updateUser(u.id, { finance_plan_price: val });
+                                  }
+                                }}
+                                className="w-20 h-7 rounded border border-input bg-transparent px-2 text-xs"
+                                title="Valor do plano de acesso completo"
+                              />
+                            </div>
                           )}
                         </div>
                       </td>
