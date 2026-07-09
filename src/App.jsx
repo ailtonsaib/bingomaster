@@ -79,8 +79,9 @@ const AuthenticatedApp = () => {
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
       <Route path="/portal-login" element={<PortalLogin />} />
+      {/* Portal principal é público — login só ao clicar num app */}
+      <Route path="/" element={<Portal />} />
       <Route element={<PortalGuard />}>
-        <Route path="/" element={<Portal />} />
         <Route path="/finance" element={<Finance />} />
       </Route>
       <Route element={<PortalGuard requireAdmin />}>

@@ -36,7 +36,9 @@ export default function PortalLogin() {
       });
       if (res.data.user) {
         setPortalUser(res.data.user);
-        window.location.href = '/';
+        const urlParams = new URLSearchParams(window.location.search);
+        const next = urlParams.get('next') || '/';
+        window.location.href = next;
       }
     } catch (err) {
       setError(err.response?.data?.error || "Email ou senha inválidos");
