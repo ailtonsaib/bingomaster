@@ -1,4 +1,335 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { XMLParser } from 'npm:fast-xml-parser@4.5.1';
+
+// ===================== REGISTROS REINF (XML) =====================
+
+const EVENTOS_REINF = [
+  'R-1000','R-1070','R-2010','R-2020','R-2030','R-2040',
+  'R-2050','R-2060','R-2070','R-2098','R-2099',
+  'R-3010','R-5001','R-9000'
+];
+
+function parseXMLEventTag(tagName) {
+  // evtR1000 -> R-1000, evtR2060 -> R-2060, evtR2099 -> R-2099
+  const m = tagName.match(/^evtR?(\d{4})$/i);
+  if (!m) return null;
+  const num = m[1];
+  if (num === '1000' || num === '1070') return `R-${num}`;
+  if (num.startsWith('20')) return `R-${num}`;
+  if (num.startsWith('30')) return `R-${num}`;
+  if (num.startsWith('50')) return `R-${num}`;
+  if (num.startsWith('90')) return `R-${num}`;
+  return null;
+}
+
+function validarReinf(conteudo, nomeArquivo) {
+  const erros = [];
+  const avisos = [];
+  const estatisticas = {
+    totalLinhas: 0,
+    blocos: {},
+    registros: {},
+    linhasComErro: 0,
+    linhasComAviso: 0
+  };
+  const eventosEncontrados = [];
+
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    parseTagValue: true,
+    parseAttributeValue: true,
+    trimValues: true
+  });
+
+  let xmlDoc;
+  try {
+    xmlDoc = parser.parse(conteudo);
+  } catch (e) {
+    return Response.json({
+      success: false,
+      error: `Erro ao parsear XML do REINF: ${e.message}`
+    }, { status: 400 });
+  }
+
+  // O REINF pode vir como <Reinf><evtR1000>...</evtR1000></Reinf>
+  // ou como <Reinf><loteEventos><evento>...</evento></loteEventos></Reinf>
+  // ou múltiplos eventos Raiz
+  const reinfRoot = xmlDoc.Reinf || xmlDoc.reinf;
+  if (!reinfRoot) {
+    return Response.json({
+      success: false,
+      error: 'Arquivo XML não possui elemento raiz <Reinf>. Não é um arquivo REINF válido.'
+    }, { status: 400 });
+  }
+
+  // Coleta todos os elementos de evento (evtRxxxx)
+  const coletarEventos = (obj, depth = 0) => {
+    if (depth > 10 || !obj || typeof obj !== 'object') return;
+    for (const key of Object.keys(obj)) {
+      const evento = parseXMLEventTag(key);
+      if (evento) {
+        eventosEncontrados.push({ tag: key, tipo: evento, dados: obj[key] });
+      }
+      if (typeof obj[key] === 'object' && obj[key] !== null) {
+        coletarEventos(obj[key], depth + 1);
+      }
+    }
+  };
+
+  // Processar loteEventos se existir
+  const lote = reinfRoot.loteEventos || reinfRoot.LoteEventos;
+  if (lote) {
+    const eventos = lote.evento || lote.Evento;
+    const arr = Array.isArray(eventos) ? eventos : [eventos];
+    for (const ev of arr) {
+      if (!ev || typeof ev !== 'object') continue;
+      coletarEventos(ev);
+    }
+  } else {
+    coletarEventos(reinfRoot);
+  }
+
+  estatisticas.totalLinhas = eventosEncontrados.length;
+
+  if (eventosEncontrados.length === 0) {
+    erros.push({
+      linha: 0, registro: 'XML',
+      mensagem: 'Nenhum evento REINF (evtR1000, evtR2010, etc.) encontrado no arquivo XML.',
+      severidade: 'erro'
+    });
+  }
+
+  let idx = 0;
+  for (const ev of eventosEncontrados) {
+    idx++;
+    estatisticas.registros[ev.tipo] = (estatisticas.registros[ev.tipo] || 0) + 1;
+
+    if (!EVENTOS_REINF.includes(ev.tipo)) {
+      avisos.push({
+        linha: idx, registro: ev.tipo,
+        mensagem: `Evento "${ev.tipo}" não é reconhecido na estrutura REINF vigente.`,
+        severidade: 'aviso'
+      });
+      continue;
+    }
+
+    const d = ev.dados || {};
+
+    // --- Validar ideEvento (presente em todos os eventos) ---
+    const ideEvento = d.ideEvento;
+    if (!ideEvento) {
+      erros.push({
+        linha: idx, registro: ev.tipo,
+        mensagem: `Evento ${ev.tipo}: elemento <ideEvento> obrigatório não encontrado.`,
+        severidade: 'erro'
+      });
+    } else {
+      // indRetif: 1=original, 2=retificadora
+      if (ideEvento.indRetif === undefined) {
+        avisos.push({
+          linha: idx, registro: ev.tipo,
+          mensagem: `Evento ${ev.tipo}: <indRetif> não informado em ideEvento.`,
+          severidade: 'aviso'
+        });
+      }
+      // tpAmb: 1=produção, 2=produção restrita
+      if (ideEvento.tpAmb === undefined) {
+        erros.push({
+          linha: idx, registro: ev.tipo,
+          mensagem: `Evento ${ev.tipo}: <tpAmb> (tipo de ambiente) obrigatório não informado em ideEvento.`,
+          severidade: 'erro'
+        });
+      }
+      // Para eventos periódicos: perApur (período de apuração)
+      if (['R-2010','R-2020','R-2030','R-2040','R-2050','R-2060','R-2070','R-2099'].includes(ev.tipo)) {
+        if (!ideEvento.perApur) {
+          erros.push({
+            linha: idx, registro: ev.tipo,
+            mensagem: `Evento ${ev.tipo}: <perApur> (período de apuração) obrigatório não informado em ideEvento.`,
+            severidade: 'erro'
+          });
+        } else {
+          // Formato esperado: AAAA-MM (mensal) ou AAAA (anual para R-2099)
+          const per = String(ideEvento.perApur);
+          const regexMensal = /^\d{4}-(0[1-9]|1[0-2])$/;
+          const regexAnual = /^\d{4}$/;
+          if (!regexMensal.test(per) && !(ev.tipo === 'R-2099' && regexAnual.test(per))) {
+            erros.push({
+              linha: idx, registro: ev.tipo,
+              mensagem: `Evento ${ev.tipo}: <perApur> com formato inválido: "${per}". Esperado AAAA-MM.`,
+              severidade: 'erro'
+            });
+          }
+        }
+      }
+    }
+
+    // --- Validar ideContri (identificação do contribuinte) ---
+    const ideContri = d.ideContri;
+    if (!ideContri) {
+      if (!['R-9000'].includes(ev.tipo)) {
+        erros.push({
+          linha: idx, registro: ev.tipo,
+          mensagem: `Evento ${ev.tipo}: elemento <ideContri> obrigatório não encontrado.`,
+          severidade: 'erro'
+        });
+      }
+    } else {
+      // tpInsc: 1=CNPJ, 2=CPF
+      if (ideContri.tpInsc === undefined) {
+        erros.push({
+          linha: idx, registro: ev.tipo,
+          mensagem: `Evento ${ev.tipo}: <tpInsc> obrigatório não informado em ideContri.`,
+          severidade: 'erro'
+        });
+      }
+      if (!ideContri.nrInsc) {
+        erros.push({
+          linha: idx, registro: ev.tipo,
+          mensagem: `Evento ${ev.tipo}: <nrInsc> (CNPJ/CPF do contribuinte) obrigatório não informado em ideContri.`,
+          severidade: 'erro'
+        });
+      } else {
+        const doc = String(ideContri.nrInsc).replace(/\D/g, '');
+        const tpInsc = String(ideContri.tpInsc);
+        if (tpInsc === '1' && doc.length !== 14) {
+          erros.push({
+            linha: idx, registro: ev.tipo,
+            mensagem: `Evento ${ev.tipo}: CNPJ inválido em <nrInsc>: "${ideContri.nrInsc}" (esperado 14 dígitos, encontrado ${doc.length}).`,
+            severidade: 'erro'
+          });
+        }
+        if (tpInsc === '2' && doc.length !== 11) {
+          erros.push({
+            linha: idx, registro: ev.tipo,
+            mensagem: `Evento ${ev.tipo}: CPF inválido em <nrInsc>: "${ideContri.nrInsc}" (esperado 11 dígitos, encontrado ${doc.length}).`,
+            severidade: 'erro'
+          });
+        }
+      }
+    }
+
+    // --- Validações específicas por evento ---
+
+    if (ev.tipo === 'R-1000') {
+      const infoContri = d.infoContri;
+      if (!infoContri) {
+        erros.push({
+          linha: idx, registro: 'R-1000',
+          mensagem: 'Evento R-1000: <infoContri> obrigatório não encontrado.',
+          severidade: 'erro'
+        });
+      } else {
+        // Deve ter inclusao, alteracao ou exclusao
+        if (!infoContri.inclusao && !infoContri.alteracao && !infoContri.exclusao) {
+          erros.push({
+            linha: idx, registro: 'R-1000',
+            mensagem: 'Evento R-1000: <infoContri> deve conter <inclusao>, <alteracao> ou <exclusao>.',
+            severidade: 'erro'
+          });
+        }
+        const operacao = infoContri.inclusao || infoContri.alteracao || infoContri.exclusao;
+        if (operacao && !operacao.idePeriodo) {
+          erros.push({
+            linha: idx, registro: 'R-1000',
+            mensagem: 'Evento R-1000: <idePeriodo> (período de validade) obrigatório não encontrado.',
+            severidade: 'erro'
+          });
+        }
+      }
+    }
+
+    if (ev.tipo === 'R-2010') {
+      if (!d.infoTomador) {
+        erros.push({
+          linha: idx, registro: 'R-2010',
+          mensagem: 'Evento R-2010: <infoTomador> obrigatório não encontrado.',
+          severidade: 'erro'
+        });
+      }
+    }
+
+    if (ev.tipo === 'R-2020') {
+      if (!d.infoPrestador) {
+        erros.push({
+          linha: idx, registro: 'R-2020',
+          mensagem: 'Evento R-2020: <infoPrestador> obrigatório não encontrado.',
+          severidade: 'erro'
+        });
+      }
+    }
+
+    if (ev.tipo === 'R-2060') {
+      if (!d.infoCPRB) {
+        erros.push({
+          linha: idx, registro: 'R-2060',
+          mensagem: 'Evento R-2060: <infoCPRB> obrigatório não encontrado.',
+          severidade: 'erro'
+        });
+      }
+    }
+
+    if (ev.tipo === 'R-2099') {
+      if (!d.infoFechamento) {
+        erros.push({
+          linha: idx, registro: 'R-2099',
+          mensagem: 'Evento R-2099: <infoFechamento> obrigatório não encontrado.',
+          severidade: 'erro'
+        });
+      } else {
+        const fech = d.infoFechamento;
+        // evtFech tem indExcApuracao: 1=sim, 2=não
+        if (fech.fechFisco === undefined && fech.evtFech === undefined) {
+          avisos.push({
+            linha: idx, registro: 'R-2099',
+            mensagem: 'Evento R-2099: detalhes do fechamento podem estar incompletos.',
+            severidade: 'aviso'
+          });
+        }
+      }
+    }
+
+    // Validar atributo Id do evento (formato ID1XXXXXXXXXXX)
+    const idAttr = d['@_id'] || d['@_Id'];
+    if (!idAttr) {
+      avisos.push({
+        linha: idx, registro: ev.tipo,
+        mensagem: `Evento ${ev.tipo}: atributo "id" não encontrado no elemento do evento.`,
+        severidade: 'aviso'
+      });
+    }
+  }
+
+  // --- Verificar presença de R-2099 (fechamento) ---
+  if (eventosEncontrados.length > 0 && !eventosEncontrados.some((e) => e.tipo === 'R-2099')) {
+    avisos.push({
+      linha: 0, registro: 'R-2099',
+      mensagem: 'Evento de Fechamento (R-2099) não encontrado. É obrigatório para fechamento do período.',
+      severidade: 'aviso'
+    });
+  }
+
+  estatisticas.linhasComErro = erros.length;
+  estatisticas.linhasComAviso = avisos.length;
+
+  return Response.json({
+    success: true,
+    nomeArquivo: nomeArquivo || 'arquivo_reinf.xml',
+    tipoDetectado: 'REINF',
+    isValid: erros.length === 0,
+    erros,
+    avisos,
+    estatisticas,
+    resumo: {
+      totalLinhas: eventosEncontrados.length,
+      totalErros: erros.length,
+      totalAvisos: avisos.length,
+      blocosEncontrados: [...new Set(eventosEncontrados.map((e) => e.tipo.substring(0, 3)))],
+      registrosUnicos: Object.keys(estatisticas.registros).length
+    }
+  });
+}
 
 // ===================== REGISTROS CONHECIDOS POR TIPO =====================
 
@@ -377,6 +708,12 @@ Deno.serve(async (req) => {
     const linhas = conteudo.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (linhas.length === 0) {
       return Response.json({ success: false, error: 'Arquivo vazio ou sem linhas válidas.' }, { status: 400 });
+    }
+
+    // --- Detecção de REINF (formato XML) ---
+    const conteudoTrim = conteudo.trim();
+    if (conteudoTrim.startsWith('<?xml') || conteudoTrim.startsWith('<Reinf') || conteudoTrim.startsWith('<reinf')) {
+      return validarReinf(conteudo, nomeArquivo);
     }
 
     // --- Detecção de DIME-SC (formato estadual de Santa Catarina) ---

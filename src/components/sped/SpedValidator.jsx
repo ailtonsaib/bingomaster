@@ -31,8 +31,8 @@ export default function SpedValidator({ planKey, limitReached }) {
     setErro('');
     setResultado(null);
 
-    if (!file.name.toLowerCase().endsWith('.txt')) {
-      setErro('Por favor, selecione um arquivo .txt no formato SPED ou DIME-SC.');
+    if (!file.name.toLowerCase().endsWith('.txt') && !file.name.toLowerCase().endsWith('.xml')) {
+      setErro('Por favor, selecione um arquivo .txt (SPED/DIME-SC) ou .xml (REINF).');
       return;
     }
 
@@ -134,7 +134,7 @@ export default function SpedValidator({ planKey, limitReached }) {
 
             <div>
               <p className="text-sm font-semibold text-foreground">
-                {arquivo ? arquivo.name : 'Selecione um arquivo SPED ou DIME-SC para validar'}
+                {arquivo ? arquivo.name : 'Selecione um arquivo SPED, DIME-SC (.txt) ou REINF (.xml) para validar'}
               </p>
               {arquivo && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -146,7 +146,7 @@ export default function SpedValidator({ planKey, limitReached }) {
             <Input
               ref={inputRef}
               type="file"
-              accept=".txt"
+              accept=".txt,.xml"
               onChange={handleFileSelect}
               className="hidden"
               id="input-validar-sped"

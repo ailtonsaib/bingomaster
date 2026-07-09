@@ -29,7 +29,8 @@
           "CONTRIBUICOES",
           "ECD",
           "ECF",
-          "DIMESC"
+          "DIMESC",
+          "REINF"
         ]
       },
       "description": "Tipos de SPED/liberados neste plano"
