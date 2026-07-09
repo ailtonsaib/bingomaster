@@ -1,0 +1,68 @@
+{
+  "name": "PortalUser",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio (login)"
+    },
+    "password_hash": {
+      "type": "string",
+      "description": "Hash bcrypt da senha"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome completo do usu\u00e1rio"
+    },
+    "is_admin": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 administrador do portal"
+    },
+    "can_access_bingo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se tem acesso ao BingoMaster"
+    },
+    "can_access_finance": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso ao Controle de Finan\u00e7as"
+    },
+    "bingo_plan": {
+      "type": "string",
+      "default": "free",
+      "description": "Plano do bingo"
+    },
+    "finance_transaction_limit": {
+      "type": "number",
+      "default": 10,
+      "description": "Limite de movimenta\u00e7\u00f5es financeiras"
+    },
+    "finance_transactions_used": {
+      "type": "number",
+      "default": 0,
+      "description": "Movimenta\u00e7\u00f5es j\u00e1 utilizadas"
+    },
+    "finance_full_access": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso completo \u00e0s finan\u00e7as (liberado pelo admin)"
+    },
+    "finance_release_requested": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se solicitou libera\u00e7\u00e3o de acesso completo"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o usu\u00e1rio est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "email",
+    "password_hash",
+    "name"
+  ]
+}

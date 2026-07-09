@@ -37,6 +37,10 @@ import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import PortalLogin from '@/pages/PortalLogin';
+import Finance from '@/pages/Finance';
+import PortalAdmin from '@/pages/PortalAdmin';
+import PortalGuard from '@/components/PortalGuard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -74,7 +78,14 @@ const AuthenticatedApp = () => {
       <Route path="/buyer" element={<BuyerApp />} />
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
-      <Route path="/" element={<Portal />} />
+      <Route path="/portal-login" element={<PortalLogin />} />
+      <Route element={<PortalGuard />}>
+        <Route path="/" element={<Portal />} />
+        <Route path="/finance" element={<Finance />} />
+      </Route>
+      <Route element={<PortalGuard requireAdmin />}>
+        <Route path="/portal-admin" element={<PortalAdmin />} />
+      </Route>
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/app" element={<Home />} />
         <Route path="/new-game" element={<NewGame />} />
