@@ -30,11 +30,13 @@ import {
   Lock,
   Check,
   Crown,
-  ShieldCheck
+  ShieldCheck,
+  FileDown
 } from 'lucide-react';
 import { useLicense } from '@/hooks/useLicense';
 import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
 import SpedValidator from '@/components/sped/SpedValidator';
+import DimeScGenerator from '@/components/sped/DimeScGenerator';
 
 const SPED_TYPE_LABELS = {
   FISCAL: 'SPED Fiscal (ICMS/IPI)',
@@ -290,6 +292,13 @@ export default function ValidadorSped() {
               className="gap-2"
             >
               <ShieldCheck className="h-4 w-4" /> Validador
+            </Button>
+            <Button
+              variant={aba === 'dime' ? 'default' : 'outline'}
+              onClick={() => setAba('dime')}
+              className="gap-2"
+            >
+              <FileDown className="h-4 w-4" /> DIME-SC
             </Button>
             <Button
               variant={aba === 'planos' ? 'default' : 'outline'}
@@ -564,6 +573,11 @@ export default function ValidadorSped() {
         {/* ABA: Validador */}
         {aba === 'validador' && (
           <SpedValidator planKey={planKey} limitReached={limitReached} />
+        )}
+
+        {/* ABA: DIME-SC */}
+        {aba === 'dime' && (
+          <DimeScGenerator planKey={planKey} allowedTypes={allowedTypes} />
         )}
 
         {/* ABA: Planos */}

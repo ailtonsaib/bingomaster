@@ -59,7 +59,8 @@
         "FISCAL",
         "CONTRIBUICOES",
         "ECD",
-        "ECF"
+        "ECF",
+        "DIMESC"
       ],
       "default": "FISCAL",
       "description": "Tipo de SPED gerado"
