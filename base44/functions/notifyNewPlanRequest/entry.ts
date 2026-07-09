@@ -37,6 +37,13 @@ Deno.serve(async (req) => {
       `
     });
 
+    // Send WhatsApp notification (non-blocking — failures don't break the flow)
+    try {
+      await base44.asServiceRole.functions.invoke('sendWhatsAppMessage', {
+        message: `🎯 *Nova Solicitação de Plano*\n\nUsuário: ${data.user_name || '—'}\nE-mail: ${data.user_email || '—'}\nPlano atual: ${currentPlan}\nPlano solicitado: ${requestedPlan}\nValor: ${price}${data.message ? `\nMensagem: ${data.message}` : ''}\n\nAcesse o painel administrativo para aprovar ou recusar.`
+      });
+    } catch (_) {}
+
     return Response.json({ ok: true });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

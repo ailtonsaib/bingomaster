@@ -257,9 +257,26 @@ Deno.serve(async (req) => {
       if (users.length === 0) {
         return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
       }
-      await base44.asServiceRole.entities.PortalUser.update(users[0].id, {
+      const user = users[0];
+      await base44.asServiceRole.entities.PortalUser.update(user.id, {
         finance_release_requested: true,
       });
+
+      // Notify admin by email
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        to: "ailtonsaib@gmail.com",
+        from_name: "SoftPremier Portal",
+        subject: `🔓 Solicitação de Liberação — ${user.name || email}`,
+        body: `O usuário ${user.name || '—'} (${email}) solicitou liberação de acesso completo ao Controle de Finanças.\n\nData: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+      });
+
+      // Notify admin by WhatsApp (non-blocking)
+      try {
+        await base44.asServiceRole.functions.invoke('sendWhatsAppMessage', {
+          message: `🔓 *Solicitação de Liberação — Finance*\n\nUsuário: ${user.name || '—'}\nE-mail: ${email}\n\nAcesse o painel administrativo para liberar o acesso.`
+        });
+      } catch (_) {}
+
       return Response.json({ success: true });
     }
 

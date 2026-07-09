@@ -29,6 +29,15 @@ export function useLicense() {
 
       const result = await base44.functions.invoke("notifyLogin", { device_ip });
       setLicense(result.data);
+
+      // Send WhatsApp notification on first access
+      if (result.data?.is_new) {
+        try {
+          await base44.functions.invoke("sendWhatsAppMessage", {
+            message: `🆕 *Novo usuário cadastrado*\n\nNome: ${user?.full_name || "Não informado"}\nE-mail: ${user?.email || "—"}\nIP: ${device_ip}\n\nPlano inicial: FREE (50 cartelas)`
+          });
+        } catch (_) {}
+      }
     } catch (e) {
       // Default to free on error
       setLicense({ plan_key: "free", plan_name: "FREE", max_cards: 50 });
