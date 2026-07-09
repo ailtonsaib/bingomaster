@@ -260,6 +260,25 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── ADMIN: reset password ───
+    if (operation === 'resetPassword') {
+      const { admin_email, user_email, new_password } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+      const users = await base44.asServiceRole.entities.PortalUser.filter({ email: user_email });
+      if (users.length === 0) {
+        return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(new_password, salt);
+      await base44.asServiceRole.entities.PortalUser.update(users[0].id, {
+        password_hash: hash,
+      });
+      return Response.json({ success: true });
+    }
+
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
