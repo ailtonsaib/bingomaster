@@ -142,10 +142,7 @@ export default function PortalLogin() {
           <div className="flex items-start gap-2">
             <Info className="w-4 h-4 text-[#7E57C2] flex-shrink-0 mt-0.5" />
             <div className="text-xs text-[#71717A] space-y-1">
-              <p className="font-semibold text-[#333333]">Admin:</p>
-              <p>Email: <span className="font-mono text-[#7E57C2]">ailtonsaib@gmail.com</span></p>
-              <p>Senha: <span className="font-mono text-[#7E57C2]">premier2026</span></p>
-              <p className="font-semibold text-[#333333] mt-2">Teste:</p>
+              <p className="font-semibold text-[#333333]">Credenciais de teste:</p>
               <p>Email: <span className="font-mono text-[#7E57C2]">teste@softpremier.com.br</span></p>
               <p>Senha: <span className="font-mono text-[#7E57C2]">teste123</span></p>
             </div>
