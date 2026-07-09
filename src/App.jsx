@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import Home from '@/pages/Home';
+import Portal from '@/pages/Portal';
 import NewGame from '@/pages/NewGame';
 import GamePlay from '@/pages/GamePlay';
 import GameCards from '@/pages/GameCards';
@@ -73,8 +74,9 @@ const AuthenticatedApp = () => {
       <Route path="/buyer" element={<BuyerApp />} />
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
+      <Route path="/" element={<Portal />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/" element={<Home />} />
+        <Route path="/app" element={<Home />} />
         <Route path="/new-game" element={<NewGame />} />
         <Route path="/game/:gameId" element={<GamePlay />} />
         <Route path="/cards/:gameId" element={<GameCards />} />
