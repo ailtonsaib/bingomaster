@@ -36,7 +36,7 @@ const DEFAULT_PLANS = [
     plan_name: 'MAX',
     price: 199.90,
     downloads_limit: null,
-    sped_types: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'],
+    sped_types: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF', 'DIMESC', 'REINF'],
     description: 'Todos os m\u00f3dulos SPED',
     is_active: true,
     order: 4

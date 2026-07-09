@@ -12,14 +12,16 @@ const SPED_TYPES = [
   { key: 'FISCAL', label: 'SPED Fiscal', desc: 'ICMS / IPI' },
   { key: 'CONTRIBUICOES', label: 'SPED Contribuições', desc: 'PIS / COFINS' },
   { key: 'ECD', label: 'SPED ECD', desc: 'Escrituração Contábil Digital' },
-  { key: 'ECF', label: 'SPED ECF', desc: 'Escrituração Contábil Fiscal' }
+  { key: 'ECF', label: 'SPED ECF', desc: 'Escrituração Contábil Fiscal' },
+  { key: 'DIMESC', label: 'DIME-SC', desc: 'Declaração ICMS Santa Catarina' },
+  { key: 'REINF', label: 'SPED REINF', desc: 'Retenções e Informações Fiscais' }
 ];
 
 const FALLBACK_PLANS = [
   { plan_key: 'free', plan_name: 'FREE', price: 0, downloads_limit: 5, sped_types: ['FISCAL'], description: 'Para testes e pequenas operações', is_active: true, order: 1 },
   { plan_key: 'basic', plan_name: 'BÁSICO', price: 49.90, downloads_limit: null, sped_types: ['FISCAL'], description: 'SPED Fiscal ilimitado', is_active: true, order: 2 },
   { plan_key: 'pro', plan_name: 'PRO', price: 99.90, downloads_limit: null, sped_types: ['FISCAL', 'CONTRIBUICOES'], description: 'SPED Fiscal + Contribuições', is_active: true, order: 3 },
-  { plan_key: 'max', plan_name: 'MAX', price: 199.90, downloads_limit: null, sped_types: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF'], description: 'Todos os módulos SPED', is_active: true, order: 4 }
+  { plan_key: 'max', plan_name: 'MAX', price: 199.90, downloads_limit: null, sped_types: ['FISCAL', 'CONTRIBUICOES', 'ECD', 'ECF', 'DIMESC', 'REINF'], description: 'Todos os módulos SPED', is_active: true, order: 4 }
 ];
 
 const PLAN_COLORS = {
@@ -192,7 +194,7 @@ export default function SpedPlanPanel({ planKey, downloadsUsed, isAdmin }) {
           <CardTitle className="text-base">Módulos SPED Disponíveis no Seu Plano</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {SPED_TYPES.map((tipo) => {
               const available = (effectivePlan?.sped_types || []).includes(tipo.key);
               return (
