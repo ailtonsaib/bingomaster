@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   UploadCloud,
   FileText,
@@ -15,11 +16,15 @@ import {
   ShieldAlert,
   FileCheck2,
   Download,
+  Pencil,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function SpedValidator({ planKey, limitReached }) {
   const [arquivo, setArquivo] = useState(null);
   const [conteudo, setConteudo] = useState('');
+  const [conteudoEditado, setConteudoEditado] = useState('');
+  const [modoEdicao, setModoEdicao] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState('');
@@ -39,30 +44,28 @@ export default function SpedValidator({ planKey, limitReached }) {
     setArquivo(file);
     const leitor = new FileReader();
     leitor.onload = (ev) => {
-      setConteudo(ev.target.result);
+      const texto = ev.target.result;
+      setConteudo(texto);
+      setConteudoEditado(texto);
     };
     leitor.onerror = () => setErro('Erro ao ler o arquivo.');
     leitor.readAsText(file, 'utf-8');
   };
 
-  const handleValidar = async () => {
-    if (!conteudo) {
-      setErro('Selecione um arquivo primeiro.');
-      return;
-    }
-
+  const validarConteudo = async (conteudoParaValidar, nome) => {
     setLoading(true);
     setErro('');
 
     try {
       const response = await base44.functions.invoke('validarSped', {
-        conteudo,
-        nomeArquivo: arquivo?.name || 'arquivo_sped.txt',
+        conteudo: conteudoParaValidar,
+        nomeArquivo: nome,
       });
       const dados = response.data;
 
       if (dados.success) {
         setResultado(dados);
+        setConteudo(conteudoParaValidar);
       } else {
         setErro(dados.error || 'Erro na validação.');
       }
@@ -73,11 +76,39 @@ export default function SpedValidator({ planKey, limitReached }) {
     }
   };
 
+  const handleValidar = () => {
+    if (!conteudo) {
+      setErro('Selecione um arquivo primeiro.');
+      return;
+    }
+    validarConteudo(conteudo, arquivo?.name || 'arquivo_sped.txt');
+  };
+
+  const handleRevalidar = () => {
+    if (!conteudoEditado.trim()) {
+      setErro('O conteúdo não pode estar vazio.');
+      return;
+    }
+    validarConteudo(conteudoEditado, arquivo?.name || 'arquivo_sped.txt');
+  };
+
+  const handleBaixarCorrigido = () => {
+    const blob = new Blob([conteudoEditado], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (arquivo?.name || 'arquivo_sped').replace(/\.(txt|xml)$/, '') + '_corrigido.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleLimpar = () => {
     setArquivo(null);
     setConteudo('');
+    setConteudoEditado('');
     setResultado(null);
     setErro('');
+    setModoEdicao(false);
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -182,6 +213,18 @@ export default function SpedValidator({ planKey, limitReached }) {
                   )}
                 </Button>
               )}
+              {resultado && !resultado.isValid && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-amber-400 text-amber-700 hover:bg-amber-50"
+                  onClick={() => setModoEdicao(!modoEdicao)}
+                  disabled={loading}
+                >
+                  <Pencil className="h-4 w-4" />
+                  {modoEdicao ? 'Fechar Editor' : 'Corrigir Arquivo'}
+                </Button>
+              )}
               {resultado && (
                 <Button
                   variant="secondary"
@@ -189,7 +232,7 @@ export default function SpedValidator({ planKey, limitReached }) {
                   className="gap-2"
                   onClick={baixarRelatorio}
                 >
-                  <Download className="h-4 w-4" /> Baixar Relatório
+                  <Download className="h-4 w-4" /> Relatório
                 </Button>
               )}
               {(arquivo || resultado) && (
@@ -362,6 +405,60 @@ export default function SpedValidator({ planKey, limitReached }) {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Editor / Correção */}
+          {modoEdicao && (
+            <Card className="border-primary/40">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-primary" />
+                  Corrigir e Revalidar Arquivo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Edite o conteúdo abaixo para corrigir os erros encontrados. Use as informações da lista de erros acima para localizar as linhas problemáticas. Após editar, clique em "Revalidar" para verificar novamente.
+                </p>
+                <Textarea
+                  value={conteudoEditado}
+                  onChange={(e) => setConteudoEditado(e.target.value)}
+                  className="font-mono text-xs min-h-[400px] resize-y"
+                  spellCheck={false}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleRevalidar}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Revalidando...</>
+                    ) : (
+                      <><RefreshCw className="h-4 w-4" /> Revalidar</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleBaixarCorrigido}
+                    disabled={loading}
+                  >
+                    <Download className="h-4 w-4" /> Baixar Corrigido
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setConteudoEditado(conteudo); }}
+                    disabled={loading}
+                  >
+                    Restaurar Original
+                  </Button>
                 </div>
               </CardContent>
             </Card>
