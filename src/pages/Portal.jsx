@@ -37,33 +37,34 @@ export default function Portal() {
     : APPS;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_50%_20%,#FFFFFF_0%,#F3F0F9_70%)] flex flex-col items-center justify-center p-6 relative">
+    <div className="min-h-screen bg-[#FAFAFB] flex flex-col items-center justify-center p-6 relative">
       {/* Top-right controls */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
         {loggedIn && user?.is_admin && (
           <button
             onClick={() => navigate('/portal-admin')}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#E9E4F5] hover:bg-[#DDD4F0] text-[#6b3fa0] font-medium text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#6B7280] text-sm transition-colors shadow-sm"
+            title="Painel Admin"
           >
-            <Settings className="w-4 h-4" /> Painel Admin
+            <Settings className="w-4 h-4" />
           </button>
         )}
         {loggedIn && (
           <button
             onClick={() => setShowChangePassword(true)}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#6B7280] text-sm transition-colors shadow-sm"
             title="Alterar Senha"
           >
-            <KeyRound className="w-5 h-5 text-[#666677]" />
+            <KeyRound className="w-4 h-4" />
           </button>
         )}
         {loggedIn && (
           <button
             onClick={handleLogout}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#6B7280] text-sm transition-colors shadow-sm"
             title="Sair"
           >
-            <LogOut className="w-5 h-5 text-[#666677]" />
+            <LogOut className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -72,12 +73,12 @@ export default function Portal() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-10 relative"
+        className="text-center mb-12 relative"
       >
-        <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1a1a2e]">
+        <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1D1D21]">
           SoftPremier
         </h1>
-        <p className="mt-3 text-[#666677]">
+        <p className="mt-3 text-[#6B7280]">
           {loggedIn
             ? `Olá, ${user?.name}! Selecione um aplicativo para começar`
             : "Selecione um aplicativo para começar"}
@@ -85,7 +86,7 @@ export default function Portal() {
       </motion.div>
 
       {/* App grid */}
-      <div className="flex flex-wrap items-start justify-center gap-6 max-w-2xl">
+      <div className="flex flex-wrap items-start justify-center gap-6">
         {visibleApps.map((app, idx) => {
           const Icon = iconMap[app.icon] || Grid3x3;
           return (
@@ -97,12 +98,12 @@ export default function Portal() {
               transition={{ delay: idx * 0.1 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
-              className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.1)] transition-all cursor-pointer w-44"
+              className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white border border-[#F0F0F2] shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all cursor-pointer w-48"
             >
               <div className={`w-20 h-20 rounded-2xl flex items-center justify-center ${app.iconBg}`}>
                 <Icon className={`w-10 h-10 ${app.iconColor}`} />
               </div>
-              <span className="font-bold text-sm text-center text-[#1a1a2e]">{app.name}</span>
+              <span className="font-bold text-sm text-center text-[#1D1D21]">{app.name}</span>
             </motion.button>
           );
         })}
@@ -114,7 +115,7 @@ export default function Portal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-8 text-xs text-[#9999AA]"
+          className="mt-8 text-xs text-[#9CA3AF]"
         >
           Faça login ao selecionar um aplicativo para acessá-lo
         </motion.p>
