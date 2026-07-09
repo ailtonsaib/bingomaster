@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
 import PlanInfoCard from "@/components/finance/PlanInfoCard";
+import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function Finance() {
   const [type, setType] = useState("expense");
   const [category, setCategory] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -140,12 +142,19 @@ export default function Finance() {
                 ? "Acesso Completo"
                 : `${user.finance_transactions_used}/${user.finance_transaction_limit} movimentações`}
             </Badge>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <Button variant="ghost" size="icon" onClick={() => setShowChangePassword(true)} title="Alterar Senha">
+              <KeyRound className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </div>
+
+      {showChangePassword && (
+        <ChangePasswordModal userEmail={user.email} onClose={() => setShowChangePassword(false)} />
+      )}
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Plan Info */}
