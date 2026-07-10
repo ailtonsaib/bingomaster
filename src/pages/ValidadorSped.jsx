@@ -31,8 +31,10 @@ import {
   Check,
   Crown,
   ShieldCheck,
-  FileDown
+  FileDown,
+  History
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useLicense } from '@/hooks/useLicense';
 import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
 import SpedValidator from '@/components/sped/SpedValidator';
@@ -323,6 +325,11 @@ export default function ValidadorSped() {
             >
               <Settings className="h-4 w-4" /> Painel Admin
             </Button>
+            <Link to="/sped-validations">
+              <Button variant="outline" className="gap-2">
+                <History className="h-4 w-4" /> Histórico
+              </Button>
+            </Link>
           </div>
         </header>
 
@@ -581,7 +588,12 @@ export default function ValidadorSped() {
 
         {/* ABA: Validador */}
         {aba === 'validador' && (
-          <SpedValidator planKey={planKey} limitReached={limitReached} />
+          <SpedValidator
+            planKey={planKey}
+            limitReached={limitReached}
+            clienteId={clienteSelecionado}
+            clienteNome={clientes.find(c => c.id === clienteSelecionado)?.razao_social || ''}
+          />
         )}
 
         {/* ABA: DIME-SC */}

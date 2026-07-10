@@ -1,0 +1,72 @@
+{
+  "name": "SpedValidation",
+  "type": "object",
+  "properties": {
+    "arquivo_nome": {
+      "type": "string",
+      "description": "Nome do arquivo validado"
+    },
+    "tipo_detectado": {
+      "type": "string",
+      "enum": [
+        "FISCAL",
+        "CONTRIBUICOES",
+        "ECD",
+        "ECF",
+        "DIMESC",
+        "REINF",
+        "DESCONHECIDO"
+      ],
+      "default": "DESCONHECIDO",
+      "description": "Tipo SPED detectado na valida\u00e7\u00e3o"
+    },
+    "is_valid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o arquivo passou na valida\u00e7\u00e3o sem erros cr\u00edticos"
+    },
+    "total_erros": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de erros cr\u00edticos encontrados"
+    },
+    "total_avisos": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de avisos encontrados"
+    },
+    "total_linhas": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de linhas do arquivo validado"
+    },
+    "foi_corrigido": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o arquivo foi editado/corrigido durante a valida\u00e7\u00e3o"
+    },
+    "conteudo_final": {
+      "type": "string",
+      "description": "Conte\u00fado final do arquivo (ap\u00f3s corre\u00e7\u00e3o, se houver)"
+    },
+    "cliente_id": {
+      "type": "string",
+      "description": "ID do cliente associado (opcional)"
+    },
+    "cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente associado (opcional)"
+    },
+    "validated_by": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que realizou a valida\u00e7\u00e3o"
+    },
+    "validation_date": {
+      "type": "string",
+      "description": "Data/hora da valida\u00e7\u00e3o (ISO)"
+    }
+  },
+  "required": [
+    "arquivo_nome"
+  ]
+}

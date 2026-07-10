@@ -20,7 +20,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-export default function SpedValidator({ planKey, limitReached }) {
+export default function SpedValidator({ planKey, limitReached, clienteId, clienteNome }) {
   const [arquivo, setArquivo] = useState(null);
   const [conteudo, setConteudo] = useState('');
   const [conteudoEditado, setConteudoEditado] = useState('');
@@ -28,6 +28,7 @@ export default function SpedValidator({ planKey, limitReached }) {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState('');
+  const [foiCorrigido, setFoiCorrigido] = useState(false);
   const inputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -52,6 +53,33 @@ export default function SpedValidator({ planKey, limitReached }) {
     leitor.readAsText(file, 'utf-8');
   };
 
+  const salvarValidacao = async (dados, nome, conteudoFinal, corrigido) => {
+    try {
+      let userEmail = '';
+      try {
+        const user = await base44.auth.me();
+        userEmail = user?.email || '';
+      } catch (_) {}
+
+      await base44.entities.SpedValidation.create({
+        arquivo_nome: nome,
+        tipo_detectado: dados.tipoDetectado || 'DESCONHECIDO',
+        is_valid: !!dados.isValid,
+        total_erros: dados.erros?.length || 0,
+        total_avisos: dados.avisos?.length || 0,
+        total_linhas: dados.estatisticas?.totalLinhas || 0,
+        foi_corrigido: corrigido,
+        conteudo_final: conteudoFinal,
+        cliente_id: clienteId || '',
+        cliente_nome: clienteNome || '',
+        validated_by: userEmail,
+        validation_date: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Erro ao salvar validação:', e);
+    }
+  };
+
   const validarConteudo = async (conteudoParaValidar, nome) => {
     setLoading(true);
     setErro('');
@@ -66,6 +94,7 @@ export default function SpedValidator({ planKey, limitReached }) {
       if (dados.success) {
         setResultado(dados);
         setConteudo(conteudoParaValidar);
+        await salvarValidacao(dados, nome, conteudoParaValidar, foiCorrigido);
       } else {
         setErro(dados.error || 'Erro na validação.');
       }
@@ -89,6 +118,7 @@ export default function SpedValidator({ planKey, limitReached }) {
       setErro('O conteúdo não pode estar vazio.');
       return;
     }
+    setFoiCorrigido(true);
     validarConteudo(conteudoEditado, arquivo?.name || 'arquivo_sped.txt');
   };
 
@@ -109,6 +139,7 @@ export default function SpedValidator({ planKey, limitReached }) {
     setResultado(null);
     setErro('');
     setModoEdicao(false);
+    setFoiCorrigido(false);
     if (inputRef.current) inputRef.current.value = '';
   };
 

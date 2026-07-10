@@ -25,6 +25,7 @@ import AdminPlanos from '@/pages/AdminPlanos';
 import AdminSolicitacoes from '@/pages/AdminSolicitacoes';
 import AdminFinancialPanel from '@/pages/AdminFinancialPanel';
 import ValidadorSped from '@/pages/ValidadorSped';
+import SpedValidations from '@/pages/SpedValidations';
 import Rifas from '@/pages/Rifas';
 import RifaDetail from '@/pages/RifaDetail';
 import PrintRifa from '@/pages/PrintRifa';
@@ -114,6 +115,7 @@ const AuthenticatedApp = () => {
         <Route path="/monitor" element={<GameMonitor />} />
         <Route path="/admin-financial" element={<AdminFinancialPanel />} />
         <Route path="/validador-sped" element={<ValidadorSped />} />
+        <Route path="/sped-validations" element={<SpedValidations />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
