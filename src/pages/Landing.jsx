@@ -298,7 +298,8 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-gray-100 py-8 mt-12">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-sm text-[#71717A]">© {new Date().getFullYear()} SoftPremier — {CONTACT.domain}</p>
+          <p className="text-sm text-[#71717A]">© {new Date().getFullYear()} SoftPremier — {CONTACT.domain}. Todos os direitos reservados.</p>
+          <p className="text-xs text-[#A1A1AA] mt-1">Este software, sua marca, design, código e funcionalidades são protegidos por direitos autorais. Reprodução ou uso não autorizado é proibido.</p>
           <div className="mt-3 flex justify-center gap-4">
             <a href={CONTACT.whatsapp} target="_blank" rel="noreferrer" className="text-xs text-[#71717A] hover:text-[#25D366]">WhatsApp</a>
             <a href={`mailto:${CONTACT.email}`} className="text-xs text-[#71717A] hover:text-[#6200EA]">Email</a>
