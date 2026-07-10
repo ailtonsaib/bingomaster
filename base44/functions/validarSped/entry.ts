@@ -354,20 +354,38 @@ const REG_FISCAL = [
 ];
 
 const REG_CONTRIBUICOES = [
-  '0000','0001','0035','0100','0150','0175','0190','0200','0205','0206','0208','0210','0220',
+  // Bloco 0: Abertura, Identificação e Referências
+  '0000','0001','0035','0100','0110','0111','0120','0140','0150','0175','0180','0190','0200','0205','0206','0208','0210','0220',
   '0300','0305','0400','0450','0460','0500','0600','0990',
-  'A001','A010','A100','A110','A111','A120','A170','A990',
-  'C001','C010','C100','C110','C120','C130','C140','C160','C165','C170','C171','C172','C173','C174','C175',
-  'C176','C177','C178','C179','C180','C190','C195','C197','C990',
+  // Bloco A: Documentos Fiscais – Serviços (ISS)
+  'A001','A010','A100','A110','A111','A112','A120','A170','A990',
+  // Bloco C: Documentos Fiscais I – Mercadorias (ICMS/IPI)
+  'C001','C010','C100','C110','C111','C112','C113','C114','C115','C116','C117','C118','C119','C120','C130','C140','C141',
+  'C160','C165','C170','C171','C172','C173','C174','C175','C176','C177','C178','C179','C180','C181','C185','C188',
+  'C190','C191','C195','C198','C199','C380','C381','C385','C390','C395','C396','C400','C405','C410','C420','C425',
+  'C460','C465','C470','C490','C495','C500','C510','C590','C600','C601','C610','C690','C700','C800','C810','C850',
+  'C860','C890','C990',
+  // Bloco D: Documentos Fiscais II – Serviços (ICMS)
   'D001','D010','D100','D101','D110','D120','D130','D140','D150','D160','D161','D162','D170','D180','D190',
-  'D195','D300','D301','D310','D350','D360','D370','D390','D400','D410','D411','D420','D500','D510','D520',
-  'D530','D590','D990',
-  'F001','F010','F100','F111','F120','F130','F150','F200','F500','F525','F550','F560','F600','F700','F800','F990',
-  'M001','M010','M100','M105','M110','M115','M200','M205','M210','M215','M220','M225','M230','M300','M350','M400',
-  'M410','M500','M505','M510','M515','M520','M525','M530','M550','M600','M700','M800','M810','M990',
-  '1001','1010','1020','1050','1100','1105','1110','1115','1120','1500','1501','1505','1510','1700','1800','1900','1990',
+  'D195','D197','D198','D199','D300','D301','D310','D350','D360','D370','D390','D400','D410','D411','D420',
+  'D500','D501','D510','D520','D530','D590','D990',
+  // Bloco F: Outras Receitas e Operações
+  'F001','F010','F100','F111','F120','F130','F150','F200','F205','F210','F211','F500','F510','F525','F530',
+  'F550','F560','F570','F580','F590','F600','F700','F800','F990',
+  // Bloco I: Instituições Financeiras e Assemelhadas
+  'I001','I010','I100','I200','I300','I990',
+  // Bloco M: Apuração da Contribuição (PIS/COFINS)
+  'M001','M010','M100','M105','M110','M115','M200','M205','M210','M211','M215','M220','M225','M230','M300','M350','M400',
+  'M410','M500','M505','M510','M515','M600','M605','M610','M611','M615','M620','M625','M630','M700','M800','M810','M990',
+  // Bloco P: Apuração da Contribuição Previdenciária sobre a Receita Bruta
+  'P001','P010','P100','P110','P199','P200','P210','P220','P230','P990',
+  // Bloco 1: Controle de Saldos
+  '1001','1010','1020','1050','1100','1101','1105','1110','1115','1120','1150','1160','1165','1200','1210','1220',
+  '1250','1255','1300','1310','1320','1350','1360','1370','1390','1400','1500','1501','1505','1510','1520',
+  '1600','1601','1700','1800','1900','1990',
   '1C001','1C010','1C100','1C110','1C120','1C170','1C180','1C190','1C300','1C310','1C350','1C500','1C990',
   '1D001','1D010','1D100','1D300','1D350','1D500','1D990',
+  // Bloco 9: Encerramento
   '9001','9900','9990','9999'
 ];
 
@@ -413,7 +431,7 @@ const REGISTROS_POR_TIPO = {
 // Sequência oficial de blocos por tipo de SPED (EFD-ICMS/IPI, Contribuições, ECD, ECF)
 const BLOCOS_POR_TIPO = {
   FISCAL: ['0','B','C','D','E','G','H','K','1','9'],
-  CONTRIBUICOES: ['0','A','C','D','F','M','1','9'],
+  CONTRIBUICOES: ['0','A','C','D','F','I','M','P','1','9'],
   ECD: ['0','I','J','9'],
   ECF: ['0','A','C','E','G','K','L','M','P','Q','T','U','Y','9']
 };
@@ -1005,7 +1023,18 @@ Deno.serve(async (req) => {
 
     // --- 3. Detectar tipo de SPED ---
     let tipoDetectado = 'FISCAL';
-    if (estatisticas.registros['M200'] || estatisticas.registros['M600'] || estatisticas.registros['F100'] || estatisticas.registros['A100']) {
+    // SPED Contribuiões: presença de registros característicos (A100, F100, M200, M600)
+    // ou blocos específicos (A, F, I, M, P) sem blocos fiscais (B, E, G, H, K)
+    const temBlocoA = !!estatisticas.blocos['A'];
+    const temBlocoF = !!estatisticas.blocos['F'];
+    const temBlocoM = !!estatisticas.registros['M001'] || !!estatisticas.registros['M200'];
+    const temBlocoP = !!estatisticas.blocos['P'];
+    const temBlocoI = !!estatisticas.blocos['I'];
+    const temBlocoB = !!estatisticas.blocos['B'];
+    const temBlocoE = !!estatisticas.registros['E001'] || !!estatisticas.registros['E110'];
+    const tem0110 = !!estatisticas.registros['0110'];
+    if (estatisticas.registros['M200'] || estatisticas.registros['M600'] || estatisticas.registros['F100'] || estatisticas.registros['A100'] ||
+        temBlocoA || temBlocoF || temBlocoM || temBlocoP || temBlocoI || tem0110) {
       // Distingue Contribuições de ECF: ECF tem U100/Y612/0010, Contribuições tem F100/F200/M200/M600
       if (estatisticas.registros['U100'] || estatisticas.registros['Y612'] || estatisticas.registros['0010']) {
         tipoDetectado = 'ECF';
@@ -1148,6 +1177,236 @@ Deno.serve(async (req) => {
           });
         }
         validarValorNumerico(campos, 2, 14, 'E110', linhaAtual, erros);
+      }
+
+      // === SPED CONTRIBUIÇÕES: 0110, 0140, A010, C010, D100, F500, F600, M100, M500, P100, P200, 1100, 1500 ===
+
+      if (registro === '0110' && tipoDetectado === 'CONTRIBUICOES') {
+        // |0110|COD_INC_TRIB|COD_TIPO_CONT|IND_REG_CUM|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: '0110',
+            mensagem: `Registro 0110 incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // COD_INC_TRIB (índice 1): 1=Cumulativo, 2=Não-cumulativo, 3=Ambos
+        if (campos[1] && !['1','2','3'].includes(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: '0110',
+            mensagem: `COD_INC_TRIB inválido: "${campos[1]}" (deve ser 1=Cumulativo, 2=Não-cumulativo ou 3=Ambos).`,
+            severidade: 'erro'
+          });
+        }
+        // COD_TIPO_CONT (índice 2): 1=Aliq. Base faturamento, 2=Aliq. Receita bruta
+        if (campos[2] && !['1','2'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: '0110',
+            mensagem: `COD_TIPO_CONT inválido: "${campos[2]}" (deve ser 1 ou 2).`,
+            severidade: 'erro'
+          });
+        }
+        // IND_REG_CUM (índice 3): 1=Reg. Caixa, 2=Reg. Competência
+        if (campos[3] && !['1','2'].includes(campos[3])) {
+          erros.push({
+            linha: linhaAtual, registro: '0110',
+            mensagem: `IND_REG_CUM inválido: "${campos[3]}" (deve ser 1=Caixa ou 2=Competência).`,
+            severidade: 'erro'
+          });
+        }
+      }
+
+      if (registro === '0140' && tipoDetectado === 'CONTRIBUICOES') {
+        // |0140|CNPJ|NOME|...
+        if (campos.length < 3) {
+          avisos.push({
+            linha: linhaAtual, registro: '0140',
+            mensagem: `Registro 0140 incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarCpfCnpj(campos[1], '0140', linhaAtual, erros, 'CNPJ estabelecimento');
+      }
+
+      if (registro === 'A010' && tipoDetectado === 'CONTRIBUICOES') {
+        validarCpfCnpj(campos[1], 'A010', linhaAtual, erros, 'CNPJ estabelecimento');
+      }
+
+      if (registro === 'C010' && tipoDetectado === 'CONTRIBUICOES') {
+        validarCpfCnpj(campos[1], 'C010', linhaAtual, erros, 'CNPJ estabelecimento');
+      }
+
+      if (registro === 'D100' && tipoDetectado === 'CONTRIBUICOES') {
+        // |D100|IND_OPER|IND_EMIT|COD_PART|COD_MOD|COD_SIT|SER|SUB|NUM_DOC|CHV_DOC|DT_DOC|DT_AP|VL_DOC|...
+        if (campos.length < 14) {
+          avisos.push({
+            linha: linhaAtual, registro: 'D100',
+            mensagem: `Registro D100 incompleto: esperado mínimo de 14 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        if (campos[1] && !['0','1'].includes(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: 'D100',
+            mensagem: `IND_OPER inválido: "${campos[1]}" (deve ser 0=Entrada ou 1=Saída).`,
+            severidade: 'erro'
+          });
+        }
+        if (campos[2] && !['0','1'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: 'D100',
+            mensagem: `IND_EMIT inválido: "${campos[2]}" (deve ser 0=Emissão própria ou 1=Terceiros).`,
+            severidade: 'erro'
+          });
+        }
+        if (campos[12]) {
+          const valor = campos[12].replace(',', '.');
+          if (isNaN(parseFloat(valor))) {
+            erros.push({
+              linha: linhaAtual, registro: 'D100',
+              mensagem: `VL_DOC inválido: "${campos[12]}" não é um valor numérico válido.`,
+              severidade: 'erro'
+            });
+          }
+        }
+      }
+
+      if (registro === 'F500' && tipoDetectado === 'CONTRIBUICOES') {
+        // |F500|COD_REC|VL_REC|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'F500',
+            mensagem: `Registro F500 incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarValorNumerico(campos, 2, 3, 'F500', linhaAtual, erros);
+      }
+
+      if (registro === 'F600' && tipoDetectado === 'CONTRIBUICOES') {
+        // |F600|IND_NAT_REC|COD_REC|VL_CONT|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'F600',
+            mensagem: `Registro F600 incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // IND_NAT_REC (índice 1): 01-12
+        if (campos[1] && !/^0[1-9]$|^1[0-2]$/.test(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: 'F600',
+            mensagem: `IND_NAT_REC inválido: "${campos[1]}" (deve estar entre 01 e 12).`,
+            severidade: 'erro'
+          });
+        }
+        validarValorNumerico(campos, 3, 4, 'F600', linhaAtual, erros);
+      }
+
+      if (registro === 'M100' && tipoDetectado === 'CONTRIBUICOES') {
+        // |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|VL_PIS|...
+        if (campos.length < 8) {
+          avisos.push({
+            linha: linhaAtual, registro: 'M100',
+            mensagem: `Registro M100 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // COD_CRED (índice 1): 1-7
+        if (campos[1] && !['1','2','3','4','5','6','7'].includes(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: 'M100',
+            mensagem: `COD_CRED inválido: "${campos[1]}" (deve estar entre 1 e 7).`,
+            severidade: 'erro'
+          });
+        }
+        // IND_CRED_ORI (índice 2): 0=Oper. próprio, 1=Eventos extemporâneos
+        if (campos[2] && !['0','1'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: 'M100',
+            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0 ou 1).`,
+            severidade: 'erro'
+          });
+        }
+        validarValorNumerico(campos, 3, 6, 'M100', linhaAtual, erros);
+      }
+
+      if (registro === 'M500' && tipoDetectado === 'CONTRIBUICOES') {
+        // |M500|COD_CRED|IND_CRED_ORI|VL_BC_COFINS|ALIQ_COFINS|VL_COFINS|...
+        if (campos.length < 8) {
+          avisos.push({
+            linha: linhaAtual, registro: 'M500',
+            mensagem: `Registro M500 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        if (campos[1] && !['1','2','3','4','5','6','7'].includes(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: 'M500',
+            mensagem: `COD_CRED inválido: "${campos[1]}" (deve estar entre 1 e 7).`,
+            severidade: 'erro'
+          });
+        }
+        if (campos[2] && !['0','1'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: 'M500',
+            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0 ou 1).`,
+            severidade: 'erro'
+          });
+        }
+        validarValorNumerico(campos, 3, 6, 'M500', linhaAtual, erros);
+      }
+
+      if (registro === 'P100' && tipoDetectado === 'CONTRIBUICOES') {
+        // |P100|DT_INI|DT_FIN|VL_REC|VL_REC_SEN|VL_BRT_NC|...
+        if (campos.length < 7) {
+          avisos.push({
+            linha: linhaAtual, registro: 'P100',
+            mensagem: `Registro P100 incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'P100', linhaAtual, erros);
+        validarData8(campos[2], 'P100', linhaAtual, erros);
+        validarValorNumerico(campos, 3, 6, 'P100', linhaAtual, erros);
+      }
+
+      if (registro === 'P200' && tipoDetectado === 'CONTRIBUICOES') {
+        // |P200|DT_INI|DT_FIN|VL_CONT|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'P200',
+            mensagem: `Registro P200 incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'P200', linhaAtual, erros);
+        validarData8(campos[2], 'P200', linhaAtual, erros);
+        validarValorNumerico(campos, 3, 4, 'P200', linhaAtual, erros);
+      }
+
+      if (registro === '1100' && tipoDetectado === 'CONTRIBUICOES') {
+        // |1100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|VL_PIS|...
+        if (campos.length < 8) {
+          avisos.push({
+            linha: linhaAtual, registro: '1100',
+            mensagem: `Registro 1100 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarValorNumerico(campos, 3, 6, '1100', linhaAtual, erros);
+      }
+
+      if (registro === '1500' && tipoDetectado === 'CONTRIBUICOES') {
+        // |1500|COD_CRED|IND_CRED_ORI|VL_BC_COFINS|ALIQ_COFINS|VL_COFINS|...
+        if (campos.length < 8) {
+          avisos.push({
+            linha: linhaAtual, registro: '1500',
+            mensagem: `Registro 1500 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarValorNumerico(campos, 3, 6, '1500', linhaAtual, erros);
       }
 
       // === SPED CONTRIBUIÇÕES: A100, A170, F100, F200, M200, M600, M400, M800 ===
