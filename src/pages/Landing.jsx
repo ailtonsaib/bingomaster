@@ -315,10 +315,27 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 text-center">
           <p className="text-sm text-[#71717A]">© {new Date().getFullYear()} SoftPremier — {CONTACT.domain}. Todos os direitos reservados.</p>
           <p className="text-xs text-[#A1A1AA] mt-1">Este software, sua marca, design, código e funcionalidades são protegidos por direitos autorais. Reprodução ou uso não autorizado é proibido.</p>
-          <div className="mt-3 flex justify-center gap-4">
-            <a href={CONTACT.whatsapp} target="_blank" rel="noreferrer" className="text-xs text-[#71717A] hover:text-[#25D366]">WhatsApp</a>
-            <a href={`mailto:${CONTACT.email}`} className="text-xs text-[#71717A] hover:text-[#6200EA]">Email</a>
-            <span className="text-xs text-[#71717A]">{CONTACT.phone}</span>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <a
+              href={CONTACT.whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#25D366]/90 text-white text-sm font-medium transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" /> Suporte WhatsApp
+            </a>
+            <a
+              href={`mailto:${CONTACT.email}`}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6200EA] hover:bg-[#6200EA]/90 text-white text-sm font-medium transition-colors"
+            >
+              <Mail className="w-4 h-4" /> {CONTACT.email}
+            </a>
+            <a
+              href={`tel:+${CONTACT.phone.replace(/\D/g, '')}`}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-gray-200 text-[#52525B] text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              <Phone className="w-4 h-4" /> {CONTACT.phone}
+            </a>
           </div>
         </div>
       </footer>
