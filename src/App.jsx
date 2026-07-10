@@ -82,40 +82,50 @@ const AuthenticatedApp = () => {
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
       <Route path="/portal-login" element={<PortalLogin />} />
-      {/* Portal principal é público — login só ao clicar num app */}
+      {/* Portal principal — exige login do portal */}
       <Route path="/" element={<Portal />} />
-      <Route element={<PortalGuard />}>
-        <Route path="/finance" element={<Finance />} />
-      </Route>
+      {/* Painel admin — exige login + admin */}
       <Route element={<PortalGuard requireAdmin />}>
         <Route path="/portal-admin" element={<PortalAdmin />} />
       </Route>
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/app" element={<Home />} />
-        <Route path="/new-game" element={<NewGame />} />
-        <Route path="/game/:gameId" element={<GamePlay />} />
-        <Route path="/cards/:gameId" element={<GameCards />} />
-        <Route path="/display/:gameId" element={<GameDisplay />} />
-        <Route path="/print/:gameId" element={<PrintCards />} />
-        <Route path="/sellers" element={<Sellers />} />
-        <Route path="/validate" element={<ValidateCards />} />
-        <Route path="/past-games" element={<PastGames />} />
-        <Route path="/game-analytics" element={<GameAnalytics />} />
-        <Route path="/winners" element={<WinnerSummary />} />
-        <Route path="/info-planos" element={<InfoPlanos />} />
-        <Route path="/admin-planos" element={<AdminPlanos />} />
-        <Route path="/admin-solicitacoes" element={<AdminSolicitacoes />} />
-        <Route path="/rifas" element={<Rifas />} />
-        <Route path="/rifas/:rifaId" element={<RifaDetail />} />
-        <Route path="/rifas/print/:rifaId" element={<PrintRifa />} />
-        <Route path="/seller-report" element={<SellerReport />} />
-        <Route path="/final-report" element={<FinalReport />} />
-        <Route path="/financial-report" element={<FinancialReport />} />
-        <Route path="/sales-dashboard" element={<SalesDashboard />} />
-        <Route path="/monitor" element={<GameMonitor />} />
-        <Route path="/admin-financial" element={<AdminFinancialPanel />} />
-        <Route path="/validador-sped" element={<ValidadorSped />} />
-        <Route path="/sped-validations" element={<SpedValidations />} />
+      {/* Finance — exige login + permissão financeira */}
+      <Route element={<PortalGuard permission="can_access_finance" />}>
+        <Route path="/finance" element={<Finance />} />
+      </Route>
+      {/* Validador SPED — exige login + permissão SPED + auth Base44 */}
+      <Route element={<PortalGuard permission="can_access_sped" />}>
+        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+          <Route path="/validador-sped" element={<ValidadorSped />} />
+          <Route path="/sped-validations" element={<SpedValidations />} />
+        </Route>
+      </Route>
+      {/* BingoMaster — exige login + permissão bingo + auth Base44 */}
+      <Route element={<PortalGuard permission="can_access_bingo" />}>
+        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+          <Route path="/app" element={<Home />} />
+          <Route path="/new-game" element={<NewGame />} />
+          <Route path="/game/:gameId" element={<GamePlay />} />
+          <Route path="/cards/:gameId" element={<GameCards />} />
+          <Route path="/display/:gameId" element={<GameDisplay />} />
+          <Route path="/print/:gameId" element={<PrintCards />} />
+          <Route path="/sellers" element={<Sellers />} />
+          <Route path="/validate" element={<ValidateCards />} />
+          <Route path="/past-games" element={<PastGames />} />
+          <Route path="/game-analytics" element={<GameAnalytics />} />
+          <Route path="/winners" element={<WinnerSummary />} />
+          <Route path="/info-planos" element={<InfoPlanos />} />
+          <Route path="/admin-planos" element={<AdminPlanos />} />
+          <Route path="/admin-solicitacoes" element={<AdminSolicitacoes />} />
+          <Route path="/rifas" element={<Rifas />} />
+          <Route path="/rifas/:rifaId" element={<RifaDetail />} />
+          <Route path="/rifas/print/:rifaId" element={<PrintRifa />} />
+          <Route path="/seller-report" element={<SellerReport />} />
+          <Route path="/final-report" element={<FinalReport />} />
+          <Route path="/financial-report" element={<FinancialReport />} />
+          <Route path="/sales-dashboard" element={<SalesDashboard />} />
+          <Route path="/monitor" element={<GameMonitor />} />
+          <Route path="/admin-financial" element={<AdminFinancialPanel />} />
+        </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -34,7 +34,9 @@ Deno.serve(async (req) => {
           is_admin: true,
           can_access_bingo: true,
           can_access_finance: true,
+          can_access_sped: true,
           bingo_plan: 'free',
+          sped_plan: 'max',
           finance_transaction_limit: 10,
           finance_transactions_used: 0,
           finance_full_access: true,
@@ -57,7 +59,9 @@ Deno.serve(async (req) => {
           is_admin: false,
           can_access_bingo: true,
           can_access_finance: true,
+          can_access_sped: false,
           bingo_plan: 'free',
+          sped_plan: 'free',
           finance_transaction_limit: 10,
           finance_transactions_used: 0,
           finance_full_access: false,
@@ -119,7 +123,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: create user ───
     if (operation === 'createUser') {
-      const { admin_email, email, password, name, can_access_bingo, can_access_finance, bingo_plan, finance_full_access, finance_transaction_limit, finance_transactions_used, finance_release_requested } = body;
+      const { admin_email, email, password, name, can_access_bingo, can_access_finance, can_access_sped, bingo_plan, sped_plan, finance_full_access, finance_transaction_limit, finance_transactions_used, finance_release_requested } = body;
       const admin = await verifyAdmin(base44, admin_email);
       if (!admin) {
         return Response.json({ error: 'Acesso negado' }, { status: 403 });
@@ -136,7 +140,9 @@ Deno.serve(async (req) => {
         name,
         can_access_bingo: can_access_bingo ?? true,
         can_access_finance: can_access_finance ?? false,
+        can_access_sped: can_access_sped ?? false,
         bingo_plan: bingo_plan || 'free',
+        sped_plan: sped_plan || 'free',
         finance_transaction_limit: finance_transaction_limit ?? 10,
         finance_transactions_used: finance_transactions_used ?? 0,
         finance_full_access: finance_full_access ?? false,

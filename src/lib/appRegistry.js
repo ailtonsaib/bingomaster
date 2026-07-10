@@ -26,8 +26,7 @@ export const APPS = [
     iconBg: "bg-[#DBEAFE]",
     iconColor: "text-[#2563EB]",
     url: "/validador-sped",
-    permission: null,
+    permission: "can_access_sped",
     external: false,
-    customModal: "sped",
   },
 ];

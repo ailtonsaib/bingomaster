@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 
 const BINGO_PLANS = ["free", "basic", "pro", "max", "ultra", "enterprise", "mega"];
+const SPED_PLANS = ["free", "basic", "pro", "max"];
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
@@ -76,6 +77,10 @@ export default function PortalAdmin() {
     });
   };
 
+  const handleSpedPlan = async (userId, plan) => {
+    await updateUser(userId, { sped_plan: plan });
+  };
+
   const handleDelete = async (userId) => {
     if (!confirm("Excluir este usuário permanentemente?")) return;
     try {
@@ -106,6 +111,7 @@ export default function PortalAdmin() {
   const pendingReleases = users.filter((u) => u.finance_release_requested);
   const bingoUsers = users.filter((u) => u.can_access_bingo);
   const financeUsers = users.filter((u) => u.can_access_finance);
+  const spedUsers = users.filter((u) => u.can_access_sped);
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,7 +135,7 @@ export default function PortalAdmin() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -163,6 +169,17 @@ export default function PortalAdmin() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">SPED</p>
+                <p className="text-lg font-bold">{spedUsers.length}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {pendingReleases.length > 0 && (
@@ -191,6 +208,7 @@ export default function PortalAdmin() {
                     <th className="text-left p-3 font-medium">Usuário</th>
                     <th className="text-left p-3 font-medium">BingoMaster</th>
                     <th className="text-left p-3 font-medium">Finanças</th>
+                    <th className="text-left p-3 font-medium">SPED</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-right p-3 font-medium">Ações</th>
                   </tr>
@@ -284,6 +302,35 @@ export default function PortalAdmin() {
                                 title="Valor do plano de acesso completo"
                               />
                             </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* SPED permissions */}
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={u.can_access_sped}
+                              disabled={u.is_admin}
+                              onChange={() => handleToggle(u.id, 'can_access_sped', u.can_access_sped)}
+                              className="w-3.5 h-3.5"
+                            />
+                            <span className={u.can_access_sped ? 'text-foreground' : 'text-muted-foreground'}>
+                              {u.can_access_sped ? 'Com acesso' : 'Sem acesso'}
+                            </span>
+                          </label>
+                          {u.can_access_sped && !u.is_admin && (
+                            <select
+                              value={u.sped_plan || 'free'}
+                              onChange={(e) => handleSpedPlan(u.id, e.target.value)}
+                              className="h-7 rounded border border-input bg-transparent px-2 text-xs"
+                            >
+                              {SPED_PLANS.map((p) => (
+                                <option key={p} value={p}>{p.toUpperCase()}</option>
+                              ))}
+                            </select>
                           )}
                         </div>
                       </td>

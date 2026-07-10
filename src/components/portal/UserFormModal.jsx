@@ -20,6 +20,13 @@ const FINANCE_PLANS = [
   { key: "full", label: "Completo", desc: "Acesso ilimitado" },
 ];
 
+const SPED_PLANS = [
+  { key: "free", label: "FREE", desc: "5 downloads" },
+  { key: "basic", label: "BASIC", desc: "Fiscal ilimitado" },
+  { key: "pro", label: "PRO", desc: "Fiscal + Contribuições" },
+  { key: "max", label: "MAX", desc: "Todos os módulos" },
+];
+
 export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,6 +35,8 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [bingoPlan, setBingoPlan] = useState("free");
   const [canAccessFinance, setCanAccessFinance] = useState(false);
   const [financePlan, setFinancePlan] = useState("test");
+  const [canAccessSped, setCanAccessSped] = useState(false);
+  const [spedPlan, setSpedPlan] = useState("free");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -37,7 +46,9 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
       const data = {
         can_access_bingo: canAccessBingo,
         can_access_finance: canAccessFinance,
+        can_access_sped: canAccessSped,
         bingo_plan: canAccessBingo ? bingoPlan : "free",
+        sped_plan: canAccessSped ? spedPlan : "free",
         finance_full_access: canAccessFinance && financePlan === "full",
         finance_transaction_limit: canAccessFinance && financePlan === "test" ? 10 : 0,
         finance_transactions_used: 0,
@@ -109,6 +120,25 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
                 className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
               >
                 {FINANCE_PLANS.map((p) => (
+                  <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* SPED permissions */}
+          <div className="pt-2 border-t">
+            <label className="flex items-center gap-2 text-sm font-medium mb-2">
+              <input type="checkbox" checked={canAccessSped} onChange={(e) => setCanAccessSped(e.target.checked)} className="w-4 h-4" />
+              Validador SPED
+            </label>
+            {canAccessSped && (
+              <select
+                value={spedPlan}
+                onChange={(e) => setSpedPlan(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                {SPED_PLANS.map((p) => (
                   <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
                 ))}
               </select>

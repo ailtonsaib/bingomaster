@@ -29,10 +29,20 @@
       "default": false,
       "description": "Se tem acesso ao Controle de Finan\u00e7as"
     },
+    "can_access_sped": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso ao Validador SPED"
+    },
     "bingo_plan": {
       "type": "string",
       "default": "free",
       "description": "Plano do bingo"
+    },
+    "sped_plan": {
+      "type": "string",
+      "default": "free",
+      "description": "Plano do Validador SPED"
     },
     "finance_transaction_limit": {
       "type": "number",
