@@ -1257,80 +1257,86 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'M100' && tipoDetectado === 'CONTRIBUICOES') {
-        // Layout M100: |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|QUANT_BC_PIS|ALIQ_PIS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
-        if (campos.length < 8) {
+        // M100 possui campos opcionais vazios (VL_BC_PIS, ALIQ_PIS, QUANT_BC_PIS, ALIQ_PIS_QUANT, VL_CRED_DESC) — split SEM filtro para preservar índices
+        // Layout: |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|QUANT_BC_PIS|ALIQ_PIS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
+        const cM100 = linha.split('|');
+        const f = cM100.slice(1, cM100[cM100.length - 1] === '' ? -1 : undefined);
+        if (f.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'M100',
-            mensagem: `Registro M100 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro M100 incompleto: esperado mínimo de 8 campos, encontrado ${f.length}.`,
             severidade: 'aviso'
           });
         }
         // COD_CRED (índice 1): 3 dígitos, conforme Tabela 4.3.6
-        if (campos[1] && !/^\d{3}$/.test(campos[1])) {
+        if (f[1] && !/^\d{3}$/.test(f[1])) {
           erros.push({
             linha: linhaAtual, registro: 'M100',
-            mensagem: `COD_CRED inválido: "${campos[1]}" (deve ter 3 dígitos numéricos conforme Tabela 4.3.6).`,
+            mensagem: `COD_CRED inválido: "${f[1]}" (deve ter 3 dígitos numéricos conforme Tabela 4.3.6).`,
             severidade: 'erro'
           });
         }
         // IND_CRED_ORI (índice 2): 0=Oper. próprio, 1=Eventos de incorporação/cisão/fusão
-        if (campos[2] && !['0','1'].includes(campos[2])) {
+        if (f[2] && !['0','1'].includes(f[2])) {
           erros.push({
             linha: linhaAtual, registro: 'M100',
-            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0=Operações próprias ou 1=Incorporação/cisão/fusão).`,
+            mensagem: `IND_CRED_ORI inválido: "${f[2]}" (deve ser 0=Operações próprias ou 1=Incorporação/cisão/fusão).`,
             severidade: 'erro'
           });
         }
         // VL_BC_PIS(3), ALIQ_PIS(4), QUANT_BC_PIS(5), ALIQ_PIS_QUANT(6), VL_CRED(7), VL_AJUS_ACRES(8), VL_AJUS_REDUC(9), VL_CRED_DIF(10), VL_CRED_DISP(11)
-        validarValorNumerico(campos, 3, 12, 'M100', linhaAtual, erros);
+        validarValorNumerico(f, 3, 12, 'M100', linhaAtual, erros);
         // IND_DESC_CRED (índice 12): 0=Total, 1=Parcial
-        if (campos[12] && !['0','1'].includes(campos[12])) {
+        if (f[12] && !['0','1'].includes(f[12])) {
           erros.push({
             linha: linhaAtual, registro: 'M100',
-            mensagem: `IND_DESC_CRED inválido: "${campos[12]}" (deve ser 0=Total ou 1=Parcial).`,
+            mensagem: `IND_DESC_CRED inválido: "${f[12]}" (deve ser 0=Total ou 1=Parcial).`,
             severidade: 'erro'
           });
         }
         // VL_CRED_DESC(13), SLD_CRED(14)
-        validarValorNumerico(campos, 13, 15, 'M100', linhaAtual, erros);
+        validarValorNumerico(f, 13, 15, 'M100', linhaAtual, erros);
       }
 
       if (registro === 'M500' && tipoDetectado === 'CONTRIBUICOES') {
-        // Layout M500: |M500|COD_CRED|IND_CRED_ORI|VL_BC_COFINS|ALIQ_COFINS|QUANT_BC_COFINS|ALIQ_COFINS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
-        if (campos.length < 8) {
+        // M500 possui campos opcionais vazios (VL_BC_COFINS, ALIQ_COFINS, QUANT_BC_COFINS, ALIQ_COFINS_QUANT, VL_CRED_DESC) — split SEM filtro para preservar índices
+        // Layout: |M500|COD_CRED|IND_CRED_ORI|VL_BC_COFINS|ALIQ_COFINS|QUANT_BC_COFINS|ALIQ_COFINS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
+        const cM500 = linha.split('|');
+        const f = cM500.slice(1, cM500[cM500.length - 1] === '' ? -1 : undefined);
+        if (f.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'M500',
-            mensagem: `Registro M500 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro M500 incompleto: esperado mínimo de 8 campos, encontrado ${f.length}.`,
             severidade: 'aviso'
           });
         }
         // COD_CRED (índice 1): 3 dígitos, conforme Tabela 4.3.6
-        if (campos[1] && !/^\d{3}$/.test(campos[1])) {
+        if (f[1] && !/^\d{3}$/.test(f[1])) {
           erros.push({
             linha: linhaAtual, registro: 'M500',
-            mensagem: `COD_CRED inválido: "${campos[1]}" (deve ter 3 dígitos numéricos conforme Tabela 4.3.6).`,
+            mensagem: `COD_CRED inválido: "${f[1]}" (deve ter 3 dígitos numéricos conforme Tabela 4.3.6).`,
             severidade: 'erro'
           });
         }
-        if (campos[2] && !['0','1'].includes(campos[2])) {
+        if (f[2] && !['0','1'].includes(f[2])) {
           erros.push({
             linha: linhaAtual, registro: 'M500',
-            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0=Operações próprias ou 1=Incorporação/cisão/fusão).`,
+            mensagem: `IND_CRED_ORI inválido: "${f[2]}" (deve ser 0=Operações próprias ou 1=Incorporação/cisão/fusão).`,
             severidade: 'erro'
           });
         }
         // VL_BC_COFINS(3), ALIQ_COFINS(4), QUANT_BC_COFINS(5), ALIQ_COFINS_QUANT(6), VL_CRED(7), VL_AJUS_ACRES(8), VL_AJUS_REDUC(9), VL_CRED_DIF(10), VL_CRED_DISP(11)
-        validarValorNumerico(campos, 3, 12, 'M500', linhaAtual, erros);
+        validarValorNumerico(f, 3, 12, 'M500', linhaAtual, erros);
         // IND_DESC_CRED (índice 12): 0=Total, 1=Parcial
-        if (campos[12] && !['0','1'].includes(campos[12])) {
+        if (f[12] && !['0','1'].includes(f[12])) {
           erros.push({
             linha: linhaAtual, registro: 'M500',
-            mensagem: `IND_DESC_CRED inválido: "${campos[12]}" (deve ser 0=Total ou 1=Parcial).`,
+            mensagem: `IND_DESC_CRED inválido: "${f[12]}" (deve ser 0=Total ou 1=Parcial).`,
             severidade: 'erro'
           });
         }
         // VL_CRED_DESC(13), SLD_CRED(14)
-        validarValorNumerico(campos, 13, 15, 'M500', linhaAtual, erros);
+        validarValorNumerico(f, 13, 15, 'M500', linhaAtual, erros);
       }
 
       if (registro === 'P100' && tipoDetectado === 'CONTRIBUICOES') {
