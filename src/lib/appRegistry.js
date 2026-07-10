@@ -104,8 +104,8 @@ export const APPS = [
 ];
 
 export const CONTACT = {
-  whatsapp: "https://wa.me/5562981500805?text=Ol%C3%A1!%20Tenho%20interesse%20nos%20aplicativos%20SoftPremier",
+  whatsapp: "https://wa.me/5562996099697?text=Ol%C3%A1!%20Tenho%20interesse%20nos%20aplicativos%20SoftPremier",
   email: "ailtonsaib@gmail.com",
-  phone: "(62) 98150-0805",
+  phone: "(62) 99609-9697",
   domain: "softpremier.com.br",
 };
