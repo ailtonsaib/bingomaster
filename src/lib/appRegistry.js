@@ -6,8 +6,29 @@ export const APPS = [
     iconBg: "bg-[#E9E5FF]",
     iconColor: "text-[#7C3AED]",
     url: "/app",
+    entryRoute: "/bingo",
     permission: "can_access_bingo",
     external: false,
+    tagline: "Plataforma completa de bingo",
+    description:
+      "Gere cartelas personalizadas com até 3 chances e 5 prêmios. Venda via app do vendedor, acompanhe pelo app do comprador, projete no telão e valide cartelas em tempo real. Inclui rifas, relatórios de vendas e financeiros.",
+    features: [
+      "Geração de cartelas com até 3 chances",
+      "Sistema de até 5 prêmios por jogo",
+      "App do Vendedor (venda por celular)",
+      "App do Comprador (acompanhamento)",
+      "Telão para projetor",
+      "Validação e conferência de cartelas",
+      "Relatórios de vendas e financeiros",
+      "Geração de rifas",
+    ],
+    plans: [
+      { name: "Free", price: 0, max_cards: 100, apps: ["Gerador"] },
+      { name: "Basic", price: 49.9, max_cards: 500, apps: ["Gerador", "Vendedor"] },
+      { name: "Pro", price: 99.9, max_cards: 2000, apps: ["Gerador", "Vendedor", "Comprador", "Telão"] },
+      { name: "Max", price: 199.9, max_cards: 10000, apps: ["Gerador", "Vendedor", "Comprador", "Telão", "Rifas"] },
+    ],
+    accent: "#7C3AED",
   },
   {
     id: "financeiro",
@@ -16,8 +37,24 @@ export const APPS = [
     iconBg: "bg-[#D1FAE5]",
     iconColor: "text-[#059669]",
     url: "/finance",
+    entryRoute: "/financ",
     permission: "can_access_finance",
     external: false,
+    tagline: "Gestão financeira simplificada",
+    description:
+      "Controle suas receitas e despesas com categorias personalizadas. Acompanhe seu fluxo de caixa, organize suas finanças e gere relatórios. Comece grátis com 10 movimentações e faça upgrade para uso ilimitado.",
+    features: [
+      "Registro de receitas e despesas",
+      "Categorias personalizadas",
+      "Relatórios e resumos",
+      "Controle de fluxo de caixa",
+      "Interface simples e intuitiva",
+    ],
+    plans: [
+      { name: "Free", price: 0, limit: "10 movimentações" },
+      { name: "Full", price: 49.9, limit: "Movimentações ilimitadas" },
+    ],
+    accent: "#059669",
   },
   {
     id: "sped",
@@ -26,8 +63,29 @@ export const APPS = [
     iconBg: "bg-[#DBEAFE]",
     iconColor: "text-[#2563EB]",
     url: "/validador-sped",
+    entryRoute: "/validador",
     permission: "can_access_sped",
     external: false,
+    tagline: "Validação fiscal automatizada",
+    description:
+      "Valide arquivos SPED Fiscal, Contribuições, ECD e ECF com correção automática. Inclui validação DIME-SC e REINF. Gere XMLs conformes e mantenha sua empresa em dia com a legislação fiscal.",
+    features: [
+      "SPED Fiscal (ICMS/IPI)",
+      "SPED Contribuições (PIS/COFINS)",
+      "SPED Contábil (ECD)",
+      "SPED ECF",
+      "DIME-SC",
+      "REINF",
+      "Correção automática de erros",
+      "Geração de XML fiscal",
+    ],
+    plans: [
+      { name: "Free", price: 0, downloads: 5, types: ["Fiscal"] },
+      { name: "Basic", price: 49.9, downloads: null, types: ["Fiscal"] },
+      { name: "Pro", price: 99.9, downloads: null, types: ["Fiscal", "Contribuições"] },
+      { name: "Max", price: 199.9, downloads: null, types: ["Fiscal", "Contribuições", "ECD", "ECF"] },
+    ],
+    accent: "#2563EB",
   },
   {
     id: "admin",
@@ -36,7 +94,15 @@ export const APPS = [
     iconBg: "bg-[#FEF3C7]",
     iconColor: "text-[#D97706]",
     url: "/portal-admin",
+    entryRoute: "/portal",
     adminOnly: true,
     external: false,
   },
 ];
+
+export const CONTACT = {
+  whatsapp: "https://wa.me/5562981500805?text=Ol%C3%A1!%20Tenho%20interesse%20nos%20aplicativos%20SoftPremier",
+  email: "ailtonsaib@gmail.com",
+  phone: "(62) 98150-0805",
+  domain: "softpremier.com.br",
+};

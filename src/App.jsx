@@ -7,7 +7,11 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import Home from '@/pages/Home';
+import Landing from '@/pages/Landing';
 import Portal from '@/pages/Portal';
+import BingoLogin from '@/pages/BingoLogin';
+import FinanceLogin from '@/pages/FinanceLogin';
+import ValidadorLogin from '@/pages/ValidadorLogin';
 import NewGame from '@/pages/NewGame';
 import GamePlay from '@/pages/GamePlay';
 import GameCards from '@/pages/GameCards';
@@ -82,8 +86,14 @@ const AuthenticatedApp = () => {
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
       <Route path="/portal-login" element={<PortalLogin />} />
-      {/* Portal principal — exige login do portal */}
-      <Route path="/" element={<Portal />} />
+      {/* Portal principal (admin) — exige login do portal */}
+      <Route path="/portal" element={<Portal />} />
+      {/* Landing page pública — mostra todos os aplicativos */}
+      <Route path="/" element={<Landing />} />
+      {/* Entrada de cada app — login específico por aplicativo */}
+      <Route path="/bingo" element={<BingoLogin />} />
+      <Route path="/financ" element={<FinanceLogin />} />
+      <Route path="/validador" element={<ValidadorLogin />} />
       {/* Painel admin — exige login + admin */}
       <Route element={<PortalGuard requireAdmin />}>
         <Route path="/portal-admin" element={<PortalAdmin />} />

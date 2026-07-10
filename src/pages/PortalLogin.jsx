@@ -37,7 +37,7 @@ export default function PortalLogin() {
       if (res.data.user) {
         setPortalUser(res.data.user);
         const urlParams = new URLSearchParams(window.location.search);
-        const next = urlParams.get('next') || '/';
+        const next = urlParams.get('next') || '/portal';
         window.location.href = next;
       }
     } catch (err) {

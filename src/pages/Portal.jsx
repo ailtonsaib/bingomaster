@@ -16,7 +16,7 @@ export default function Portal() {
 
   useEffect(() => {
     if (!user) {
-      navigate('/portal-login?next=/');
+      navigate('/portal-login?next=/portal');
     }
   }, [user, navigate]);
 
