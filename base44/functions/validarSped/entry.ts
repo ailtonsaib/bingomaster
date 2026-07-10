@@ -268,11 +268,11 @@ function validarReinf(conteudo, nomeArquivo, autoFix) {
 // ===================== REGISTROS CONHECIDOS POR TIPO =====================
 
 const REG_FISCAL = [
-  '0000','0001','0002','0005','0015','0100','0150','0175','0190','0200','0205','0206','0210','0220',
+  '0000','0001','0002','0005','0015','0100','0150','0175','0190','0200','0205','0206','0210','0220','0221',
   '0300','0305','0400','0450','0460','0500','0600','0990',
-  '1001','1010','1020','1050','1100','1105','1110','1115','1120','1150','1160','1165','1200','1210','1220','1250','1255','1300','1310','1320','1350','1360','1370','1390','1400','1500','1510','1520','1600','1601','1700','1800','1809','1900','1990',
+  '1001','1010','1020','1050','1100','1105','1110','1115','1120','1150','1160','1165','1200','1210','1220','1300','1310','1320','1350','1360','1370','1390','1400','1500','1510','1600','1601','1700','1800','1900','1990',
   'B001','B020','B025','B030','B035','B350','B420','B440','B460','B470','B500','B510','B990',
-  'C001','C100','C101','C105','C106','C107','C108','C109','C110','C111','C112','C113','C114','C115','C116','C117','C118','C119','C120','C130','C140','C160','C165','C170','C171','C172','C173',
+  'C001','C100','C101','C105','C106','C107','C108','C109','C110','C111','C112','C113','C114','C115','C116','C117','C118','C119','C120','C130','C140','C141','C160','C165','C170','C171','C172','C173',
   'C174','C175','C176','C177','C178','C179','C180','C181','C185','C186','C190','C191','C195','C197','C500','C510','C520','C530','C590','C700','C790','C800','C810','C850','C860','C880','C890','C990',
   'D001','D010','D100','D101','D110','D120','D130','D140','D150','D160','D161','D162','D170','D180','D190','D195','D197','D300','D301','D310','D350','D360','D370','D390','D400','D410','D411','D420','D500','D510','D520','D530','D590','D990',
   'E001','E100','E110','E111','E112','E113','E115','E116','E200','E210','E220','E230','E240',
@@ -1244,6 +1244,146 @@ Deno.serve(async (req) => {
           });
         }
         validarValorNumerico(campos, 2, 14, 'E110', linhaAtual, erros);
+      }
+
+      // === SPED FISCAL: Bloco B (Documentos Fiscais - Serviços/ISS) ===
+
+      if (registro === 'B020' && tipoDetectado === 'FISCAL') {
+        // |B020|IND_OPER|COD_PART|COD_MOD|COD_SIT|SER|NUM_DOC|DT_DOC|VL_DOC|VL_DESC|...
+        if (campos.length < 10) {
+          avisos.push({ linha: linhaAtual, registro: 'B020', mensagem: `Registro B020 incompleto: esperado mínimo de 10 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        if (campos[1] && !['0','1'].includes(campos[1])) {
+          erros.push({ linha: linhaAtual, registro: 'B020', mensagem: `IND_OPER inválido: "${campos[1]}" (deve ser 0=Entrada ou 1=Saída).`, severidade: 'erro' });
+        }
+        validarValorNumerico(campos, 8, 10, 'B020', linhaAtual, erros);
+      }
+
+      if (registro === 'B350' && tipoDetectado === 'FISCAL') {
+        // |B350|COD_PART|DT_DOC|VL_BC_ISS|ALIQ_ISS|VL_ISS|...
+        if (campos.length < 6) {
+          avisos.push({ linha: linhaAtual, registro: 'B350', mensagem: `Registro B350 incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarValorNumerico(campos, 3, 6, 'B350', linhaAtual, erros);
+      }
+
+      // === SPED FISCAL: Bloco D (Documentos Fiscais - Serviços/ICMS) ===
+
+      if (registro === 'D100' && tipoDetectado === 'FISCAL') {
+        // |D100|IND_OPER|IND_EMIT|COD_PART|COD_MOD|COD_SIT|SER|SUB|NUM_DOC|CHV_DOC|DT_DOC|DT_AP|VL_DOC|...
+        if (campos.length < 14) {
+          avisos.push({ linha: linhaAtual, registro: 'D100', mensagem: `Registro D100 incompleto: esperado mínimo de 14 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        if (campos[1] && !['0','1'].includes(campos[1])) {
+          erros.push({ linha: linhaAtual, registro: 'D100', mensagem: `IND_OPER inválido: "${campos[1]}" (deve ser 0=Entrada ou 1=Saída).`, severidade: 'erro' });
+        }
+        if (campos[2] && !['0','1'].includes(campos[2])) {
+          erros.push({ linha: linhaAtual, registro: 'D100', mensagem: `IND_EMIT inválido: "${campos[2]}" (deve ser 0=Emissão própria ou 1=Terceiros).`, severidade: 'erro' });
+        }
+        const codSitValidosD = ['00','01','02','03','06','07','08'];
+        if (campos[5] && !codSitValidosD.includes(campos[5])) {
+          erros.push({ linha: linhaAtual, registro: 'D100', mensagem: `COD_SIT inválido: "${campos[5]}" (deve ser: ${codSitValidosD.join(', ')}).`, severidade: 'erro' });
+        }
+        if (campos[12]) {
+          const valor = campos[12].replace(',', '.');
+          if (isNaN(parseFloat(valor))) {
+            erros.push({ linha: linhaAtual, registro: 'D100', mensagem: `VL_DOC inválido: "${campos[12]}" não é um valor numérico válido.`, severidade: 'erro' });
+          }
+        }
+      }
+
+      if (registro === 'D500' && tipoDetectado === 'FISCAL') {
+        // |D500|IND_OPER|IND_EMIT|COD_PART|COD_MOD|COD_SIT|SER|SUB|NUM_DOC|DT_DOC|DT_AP|VL_DOC|...
+        if (campos.length < 13) {
+          avisos.push({ linha: linhaAtual, registro: 'D500', mensagem: `Registro D500 incompleto: esperado mínimo de 13 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        if (campos[1] && !['0','1'].includes(campos[1])) {
+          erros.push({ linha: linhaAtual, registro: 'D500', mensagem: `IND_OPER inválido: "${campos[1]}" (deve ser 0=Entrada ou 1=Saída).`, severidade: 'erro' });
+        }
+        validarValorNumerico(campos, 11, 13, 'D500', linhaAtual, erros);
+      }
+
+      // === SPED FISCAL: Bloco G (CIAP - Ativo Permanente) ===
+
+      if (registro === 'G110' && tipoDetectado === 'FISCAL') {
+        // |G110|DT_INI|DT_FIN|SALDO_IN_ICMS|SOM_PARC|VL_IMOB_ICMS_OP|VL_IMOB_ICMS_ST|VL_IMOB_ICMS_FRT|VL_IMOB_ICMS_DIF|...
+        if (campos.length < 8) {
+          avisos.push({ linha: linhaAtual, registro: 'G110', mensagem: `Registro G110 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarData8(campos[1], 'G110', linhaAtual, erros);
+        validarData8(campos[2], 'G110', linhaAtual, erros);
+        validarValorNumerico(campos, 3, 8, 'G110', linhaAtual, erros);
+      }
+
+      if (registro === 'G125' && tipoDetectado === 'FISCAL') {
+        // |G125|COD_IND_BEM|DT_MOV|TIPO_MOV|VL_IMOB_ICMS_OP|VL_IMOB_ICMS_ST|VL_IMOB_ICMS_FRT|VL_IMOB_ICMS_DIF|NUM_PARC|VL_PARC_PASS|...
+        if (campos.length < 10) {
+          avisos.push({ linha: linhaAtual, registro: 'G125', mensagem: `Registro G125 incompleto: esperado mínimo de 10 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarData8(campos[2], 'G125', linhaAtual, erros);
+        // TIPO_MOV (índice 3): CI=Imobilização, MP=Manual, etc.
+        const tiposMovValidos = ['CI','MP','MC','IA','ST','DT','BA','OT','PE'];
+        if (campos[3] && !tiposMovValidos.includes(campos[3])) {
+          erros.push({ linha: linhaAtual, registro: 'G125', mensagem: `TIPO_MOV inválido: "${campos[3]}" (deve ser um de: ${tiposMovValidos.join(', ')}).`, severidade: 'erro' });
+        }
+        validarValorNumerico(campos, 4, 10, 'G125', linhaAtual, erros);
+      }
+
+      // === SPED FISCAL: Bloco H (Estoque) ===
+
+      if (registro === 'H005' && tipoDetectado === 'FISCAL') {
+        // |H005|DT_INV|VL_INV|...
+        if (campos.length < 3) {
+          avisos.push({ linha: linhaAtual, registro: 'H005', mensagem: `Registro H005 incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarData8(campos[1], 'H005', linhaAtual, erros);
+        validarValorNumerico(campos, 2, 3, 'H005', linhaAtual, erros);
+      }
+
+      if (registro === 'H010' && tipoDetectado === 'FISCAL') {
+        // |H010|COD_ITEM|UNID|QTD|VL_UNIT|VL_ITEM|IND_PROP|COD_PART|TXT_COMPL|COD_CTA|...
+        if (campos.length < 7) {
+          avisos.push({ linha: linhaAtual, registro: 'H010', mensagem: `Registro H010 incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarValorNumerico(campos, 3, 6, 'H010', linhaAtual, erros);
+        // IND_PROP (índice 6): 0=Informante, 1=Terceiros em poder do informante, 2=Do informante em poder de terceiros
+        if (campos[6] && !['0','1','2'].includes(campos[6])) {
+          erros.push({ linha: linhaAtual, registro: 'H010', mensagem: `IND_PROP inválido: "${campos[6]}" (deve ser 0=Informante, 1=Em poder de terceiros ou 2=Em poder do informante).`, severidade: 'erro' });
+        }
+      }
+
+      // === SPED FISCAL: Bloco 1 (Outras Informações) ===
+
+      if (registro === '1100' && tipoDetectado === 'FISCAL') {
+        // |1100|COD_IND_BEM|DT_MOV|TIPO_MOV|VL_IMOB_ICMS_OP|VL_IMOB_ICMS_ST|VL_IMOB_ICMS_FRT|VL_IMOB_ICMS_DIF|NUM_PARC|VL_PARC_PASS|...
+        if (campos.length < 10) {
+          avisos.push({ linha: linhaAtual, registro: '1100', mensagem: `Registro 1100 incompleto: esperado mínimo de 10 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarData8(campos[2], '1100', linhaAtual, erros);
+        validarValorNumerico(campos, 4, 10, '1100', linhaAtual, erros);
+      }
+
+      if (registro === '1600' && tipoDetectado === 'FISCAL') {
+        // |1600|COD_PART|TOT_CREDITO|TOT_DEBITO|...
+        if (campos.length < 4) {
+          avisos.push({ linha: linhaAtual, registro: '1600', mensagem: `Registro 1600 incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarValorNumerico(campos, 2, 4, '1600', linhaAtual, erros);
+      }
+
+      // === SPED FISCAL: Bloco K (Controle de Produção e Estoque) ===
+
+      if (registro === 'K200' && tipoDetectado === 'FISCAL') {
+        // |K200|DT_EST|COD_ITEM|QTD|IND_EST|COD_PART|...
+        if (campos.length < 5) {
+          avisos.push({ linha: linhaAtual, registro: 'K200', mensagem: `Registro K200 incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+        }
+        validarData8(campos[1], 'K200', linhaAtual, erros);
+        validarValorNumerico(campos, 3, 4, 'K200', linhaAtual, erros);
+        // IND_EST (índice 4): 0=Estoque próprio, 1=Estoque de terceiros em poder do informante, 2=Estoque do informante em poder de terceiros
+        if (campos[4] && !['0','1','2'].includes(campos[4])) {
+          erros.push({ linha: linhaAtual, registro: 'K200', mensagem: `IND_EST inválido: "${campos[4]}" (deve ser 0, 1 ou 2).`, severidade: 'erro' });
+        }
       }
 
       // === SPED CONTRIBUIÇÕES: 0110, 0140, A010, C010, D100, F500, F600, M100, M500, P100, P200, 1100, 1500 ===
