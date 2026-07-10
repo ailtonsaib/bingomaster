@@ -18,7 +18,18 @@ import {
   Download,
   Pencil,
   RefreshCw,
+  Wrench,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function SpedValidator({ planKey, limitReached, clienteId, clienteNome }) {
   const [arquivo, setArquivo] = useState(null);
@@ -29,6 +40,7 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState('');
   const [foiCorrigido, setFoiCorrigido] = useState(false);
+  const [showAjusteDialog, setShowAjusteDialog] = useState(false);
   const inputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -94,6 +106,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
       if (dados.success) {
         setResultado(dados);
         setConteudo(conteudoParaValidar);
+        if (dados.erros?.length > 0 || dados.avisos?.length > 0) {
+          setShowAjusteDialog(true);
+        }
         await salvarValidacao(dados, nome, conteudoParaValidar, foiCorrigido);
       } else {
         setErro(dados.error || 'Erro na validação.');
@@ -132,6 +147,43 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
     URL.revokeObjectURL(url);
   };
 
+  const handleAutoAjuste = async () => {
+    setShowAjusteDialog(false);
+    setLoading(true);
+    setErro('');
+    try {
+      const response = await base44.functions.invoke('validarSped', {
+        conteudo: conteudoEditado || conteudo,
+        nomeArquivo: arquivo?.name || 'arquivo_sped.txt',
+        autoFix: true,
+      });
+      const dados = response.data;
+      if (dados.success && dados.conteudo_corrigido) {
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const blob = new Blob([dados.conteudo_corrigido], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AJUST${dd}${mm}${yyyy}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setConteudoEditado(dados.conteudo_corrigido);
+        setFoiCorrigido(true);
+        setResultado(dados);
+        await salvarValidacao(dados, arquivo?.name || 'arquivo_sped.txt', dados.conteudo_corrigido, true);
+      } else {
+        setErro('Não foi possível ajustar o arquivo automaticamente.');
+      }
+    } catch (err) {
+      setErro('Erro ao ajustar: ' + (err.message || ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLimpar = () => {
     setArquivo(null);
     setConteudo('');
@@ -140,6 +192,7 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
     setErro('');
     setModoEdicao(false);
     setFoiCorrigido(false);
+    setShowAjusteDialog(false);
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -496,6 +549,27 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
           )}
         </>
       )}
+
+      {/* Dialog de Ajuste Automático */}
+      <AlertDialog open={showAjusteDialog} onOpenChange={setShowAjusteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-amber-500" />
+              Arquivo contém erros e avisos
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Foram encontrados {resultado?.erros?.length || 0} erro(s) e {resultado?.avisos?.length || 0} aviso(s) no arquivo. Deseja que o sistema faça os ajustes automáticos e gere um novo arquivo corrigido?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, mostrar relatório</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAutoAjuste}>
+              Sim, ajustar automaticamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

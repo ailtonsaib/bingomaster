@@ -22,7 +22,7 @@ function parseXMLEventTag(tagName) {
   return null;
 }
 
-function validarReinf(conteudo, nomeArquivo) {
+function validarReinf(conteudo, nomeArquivo, autoFix) {
   const erros = [];
   const avisos = [];
   const estatisticas = {
@@ -313,7 +313,7 @@ function validarReinf(conteudo, nomeArquivo) {
   estatisticas.linhasComErro = erros.length;
   estatisticas.linhasComAviso = avisos.length;
 
-  return Response.json({
+  const resultadoReinf = {
     success: true,
     nomeArquivo: nomeArquivo || 'arquivo_reinf.xml',
     tipoDetectado: 'REINF',
@@ -328,7 +328,11 @@ function validarReinf(conteudo, nomeArquivo) {
       blocosEncontrados: [...new Set(eventosEncontrados.map((e) => e.tipo.substring(0, 3)))],
       registrosUnicos: Object.keys(estatisticas.registros).length
     }
-  });
+  };
+  if (autoFix && (erros.length > 0 || avisos.length > 0)) {
+    resultadoReinf.conteudo_corrigido = corrigirConteudo(conteudo, 'REINF');
+  }
+  return Response.json(resultadoReinf);
 }
 
 // ===================== REGISTROS CONHECIDOS POR TIPO =====================
@@ -463,7 +467,7 @@ function isNumDime(val) {
   return !isNaN(parseFloat(val.replace(',', '.')));
 }
 
-function validarDimeSC(linhas, nomeArquivo) {
+function validarDimeSC(linhas, nomeArquivo, autoFix, conteudoOriginal) {
   const erros = [];
   const avisos = [];
   const estatisticas = {
@@ -672,7 +676,7 @@ function validarDimeSC(linhas, nomeArquivo) {
   estatisticas.linhasComErro = erros.length;
   estatisticas.linhasComAviso = avisos.length;
 
-  return Response.json({
+  const resultadoDime = {
     success: true,
     nomeArquivo: nomeArquivo || 'arquivo_dime.txt',
     tipoDetectado: 'DIME-SC',
@@ -687,7 +691,88 @@ function validarDimeSC(linhas, nomeArquivo) {
       blocosEncontrados: [],
       registrosUnicos: Object.keys(estatisticas.registros).length
     }
+  };
+  if (autoFix && (erros.length > 0 || avisos.length > 0)) {
+    resultadoDime.conteudo_corrigido = corrigirConteudo(conteudoOriginal || linhas.join('\n'), 'DIME-SC');
+  }
+  return Response.json(resultadoDime);
+}
+
+// ===================== CORREÇÃO AUTOMÁTICA =====================
+
+function corrigirConteudo(conteudo, tipoDetectado) {
+  if (tipoDetectado === 'REINF') {
+    // Add missing indRetif and tpAmb in ideEvento blocks
+    return conteudo.replace(/<ideEvento(\s[^>]*)?>([\s\S]*?)<\/ideEvento>/g, (match, attrs, inner) => {
+      let fixed = inner;
+      if (!/<indRetif>/.test(fixed)) fixed = '<indRetif>1</indRetif>' + fixed;
+      if (!/<tpAmb>/.test(fixed)) fixed = fixed + '<tpAmb>2</tpAmb>';
+      return '<ideEvento' + (attrs || '') + '>' + fixed + '</ideEvento>';
+    });
+  }
+
+  // Pipe-delimited (SPED and DIME-SC)
+  let linhas = conteudo.split(/\r?\n/).filter(l => l.trim().length > 0);
+
+  // Fix line formatting - ensure each line starts and ends with |
+  linhas = linhas.map(linha => {
+    let c = linha.trim();
+    if (!c.startsWith('|')) c = '|' + c;
+    if (!c.endsWith('|')) c = c + '|';
+    return c;
   });
+
+  // Collect record counts
+  const registros = {};
+  for (const linha of linhas) {
+    const campos = linha.split('|').filter(c => c !== '');
+    if (campos.length === 0) continue;
+    registros[campos[0]] = (registros[campos[0]] || 0) + 1;
+  }
+
+  if (tipoDetectado === 'DIME-SC') {
+    // Fix 90 counter to match actual line count
+    const total = linhas.length;
+    linhas = linhas.map(linha => {
+      const campos = linha.split('|').filter(c => c !== '');
+      if (campos[0] === '90' && campos.length >= 2) {
+        campos[1] = String(total);
+        return '|' + campos.join('|') + '|';
+      }
+      return linha;
+    });
+    return linhas.join('\n');
+  }
+
+  // SPED: rebuild 9900 totalizers and fix 9999 counter
+  const sem9900 = linhas.filter(linha => {
+    const campos = linha.split('|').filter(c => c !== '');
+    return campos[0] !== '9900';
+  });
+
+  const novas9900 = [];
+  for (const [reg, qtd] of Object.entries(registros)) {
+    if (['9900', '9999', '9001', '9990'].includes(reg)) continue;
+    novas9900.push('|9900|' + reg + '|' + qtd + '|');
+  }
+  const total9900Entries = novas9900.length + 2;
+  novas9900.push('|9900|9900|' + total9900Entries + '|');
+  novas9900.push('|9900|9999|1|');
+
+  const novoTotal = sem9900.length + novas9900.length;
+
+  const resultado = [];
+  for (const linha of sem9900) {
+    const campos = linha.split('|').filter(c => c !== '');
+    if (campos[0] === '9999') {
+      resultado.push.apply(resultado, novas9900);
+      campos[1] = String(novoTotal);
+      resultado.push('|' + campos.join('|') + '|');
+    } else {
+      resultado.push(linha);
+    }
+  }
+  return resultado.join('\n');
 }
 
 // ===================== FUNÇÃO PRINCIPAL =====================
@@ -713,14 +798,14 @@ Deno.serve(async (req) => {
     // --- Detecção de REINF (formato XML) ---
     const conteudoTrim = conteudo.trim();
     if (conteudoTrim.startsWith('<?xml') || conteudoTrim.startsWith('<Reinf') || conteudoTrim.startsWith('<reinf')) {
-      return validarReinf(conteudo, nomeArquivo);
+      return validarReinf(conteudo, nomeArquivo, body.autoFix);
     }
 
     // --- Detecção de DIME-SC (formato estadual de Santa Catarina) ---
     // DIME-SC: primeiro registro é "01" (não "0000" como no SPED)
     const camposDetect = linhas[0].split('|').filter((c) => c !== '');
     if (camposDetect[0] === '01') {
-      return validarDimeSC(linhas, nomeArquivo);
+      return validarDimeSC(linhas, nomeArquivo, body.autoFix, conteudo);
     }
 
     const erros = [];
@@ -1447,7 +1532,7 @@ Deno.serve(async (req) => {
 
     const isValid = erros.length === 0;
 
-    return Response.json({
+    const resultadoSped = {
       success: true,
       nomeArquivo: nomeArquivo || 'arquivo_sped.txt',
       tipoDetectado,
@@ -1462,7 +1547,11 @@ Deno.serve(async (req) => {
         blocosEncontrados: Object.keys(estatisticas.blocos).sort(),
         registrosUnicos: Object.keys(estatisticas.registros).length
       }
-    });
+    };
+    if (body.autoFix && (erros.length > 0 || avisos.length > 0)) {
+      resultadoSped.conteudo_corrigido = corrigirConteudo(conteudo, tipoDetectado);
+    }
+    return Response.json(resultadoSped);
   } catch (error) {
     return Response.json({ success: false, error: error.message }, { status: 500 });
   }
