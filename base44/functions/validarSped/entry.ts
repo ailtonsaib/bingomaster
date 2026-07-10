@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { XMLParser } from 'npm:fast-xml-parser@4.5.1';
+import { validarDimeSC } from './dime_sc.ts';
 
 // ===================== REGISTROS REINF (XML) =====================
 // Validação conforme Guia Prático da EFD-REINF
@@ -551,250 +552,7 @@ function validarEcfRegistro(reg, campos, linhaAtual, erros, avisos) {
   }
 }
 
-// ===================== VALIDAÇÃO DIME-SC =====================
-
-const REG_DIMESC = [
-  '01','03','04','05','11','14',
-  '20','21','30','31','35',
-  '45','46','50','51',
-  '80','81','90'
-];
-
-function isNumDime(val) {
-  if (!val || val.length === 0) return true;
-  return !isNaN(parseFloat(val.replace(',', '.')));
-}
-
-function validarDimeSC(linhas, nomeArquivo, autoFix, conteudoOriginal) {
-  const erros = [];
-  const avisos = [];
-  const estatisticas = {
-    totalLinhas: linhas.length,
-    registros: {},
-    linhasComErro: 0,
-    linhasComAviso: 0
-  };
-
-  // Abertura e encerramento
-  const camposPrim = linhas[0].split('|').filter((c) => c !== '');
-  if (camposPrim[0] !== '01') {
-    erros.push({
-      linha: 1, registro: camposPrim[0] || '?',
-      mensagem: 'O arquivo DIME-SC deve começar com o registro |01| (Identificação do Contribuinte).',
-      severidade: 'erro'
-    });
-  }
-  const camposUlt = linhas[linhas.length - 1].split('|').filter((c) => c !== '');
-  if (camposUlt[0] !== '90') {
-    erros.push({
-      linha: linhas.length, registro: camposUlt[0] || '?',
-      mensagem: 'O arquivo DIME-SC deve terminar com o registro |90| (Encerramento).',
-      severidade: 'erro'
-    });
-  }
-
-  let linhaAtual = 0;
-  let regAnterior = '';
-
-  for (const linha of linhas) {
-    linhaAtual++;
-    const campos = linha.split('|').filter((c) => c !== '');
-    if (campos.length === 0) continue;
-    const reg = campos[0];
-
-    estatisticas.registros[reg] = (estatisticas.registros[reg] || 0) + 1;
-
-    // Formato: deve iniciar e terminar com pipe
-    if (!linha.startsWith('|') || !linha.endsWith('|')) {
-      erros.push({
-        linha: linhaAtual, registro: reg,
-        mensagem: 'Linha mal formatada: deve iniciar e terminar com o caractere | (pipe).',
-        severidade: 'erro'
-      });
-    }
-
-    // Ordenação: registros devem estar em ordem não-decrescente
-    if (regAnterior && reg < regAnterior) {
-      erros.push({
-        linha: linhaAtual, registro: reg,
-        mensagem: `Registro "${reg}" aparece após "${regAnterior}". Os registros da DIME-SC devem seguir ordem crescente.`,
-        severidade: 'erro'
-      });
-    }
-    if (reg > regAnterior) regAnterior = reg;
-
-    // --- Registro 01: Identificação do Contribuinte ---
-    if (reg === '01') {
-      // |01|CNPJ/CPF|IE|RazaoSocial|UF|Municipio|Regime|MesAno|...
-      if (campos.length < 8) {
-        avisos.push({
-          linha: linhaAtual, registro: '01',
-          mensagem: `Registro 01 incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
-          severidade: 'aviso'
-        });
-      }
-      // CNPJ (14 dígitos) ou CPF (11 dígitos)
-      if (campos[1]) {
-        const doc = campos[1].replace(/\D/g, '');
-        if (doc.length !== 14 && doc.length !== 11) {
-          erros.push({
-            linha: linhaAtual, registro: '01',
-            mensagem: `CNPJ/CPF inválido: "${campos[1]}" (esperado 11 ou 14 dígitos, encontrado ${doc.length}).`,
-            severidade: 'erro'
-          });
-        }
-      }
-      // UF deve ter 2 caracteres
-      if (campos[4] && campos[4].length !== 2) {
-        erros.push({
-          linha: linhaAtual, registro: '01',
-          mensagem: `UF inválida: "${campos[4]}" (deve ter 2 caracteres).`,
-          severidade: 'erro'
-        });
-      }
-      // Mês/Ano de apuração (MMAAAA) — aceita 6 dígitos ou formato MM/AAAA
-      if (campos[7]) {
-        const ma = campos[7].replace(/\D/g, '');
-        if (ma.length !== 6) {
-          erros.push({
-            linha: linhaAtual, registro: '01',
-            mensagem: `Mês/Ano de apuração inválido: "${campos[7]}" (formato esperado: MMAAAA).`,
-            severidade: 'erro'
-          });
-        } else {
-          const mes = parseInt(ma.substring(0, 2), 10);
-          if (mes < 1 || mes > 12) {
-            erros.push({
-              linha: linhaAtual, registro: '01',
-              mensagem: `Mês de apuração inválido: ${mes} (deve estar entre 01 e 12).`,
-              severidade: 'erro'
-            });
-          }
-        }
-      }
-    }
-
-    // --- Registro 03: Apuração do ICMS (normal) ---
-    if (reg === '03') {
-      // Campos 2+ são valores numéricos de débitos/créditos
-      for (let i = 2; i < campos.length; i++) {
-        if (!isNumDime(campos[i])) {
-          erros.push({
-            linha: linhaAtual, registro: '03',
-            mensagem: `Valor numérico inválido no campo ${i + 1}: "${campos[i]}".`,
-            severidade: 'erro'
-          });
-        }
-      }
-    }
-
-    // --- Registro 04: Operações próprias por CFOP ---
-    if (reg === '04') {
-      // |04|CFOP|ValorContabil|BaseCalculo|ImpostoDebitado|IsentasNaoTrib|Outras|
-      if (campos.length < 7) {
-        avisos.push({
-          linha: linhaAtual, registro: '04',
-          mensagem: `Registro 04 incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
-          severidade: 'aviso'
-        });
-      }
-      // CFOP deve ter 4 dígitos
-      if (campos[1] && !/^\d{4}$/.test(campos[1])) {
-        erros.push({
-          linha: linhaAtual, registro: '04',
-          mensagem: `CFOP inválido: "${campos[1]}" (deve ter 4 dígitos numéricos).`,
-          severidade: 'erro'
-        });
-      }
-      // Validar valores numéricos (campos 2-6)
-      for (let i = 2; i < Math.min(campos.length, 7); i++) {
-        if (!isNumDime(campos[i])) {
-          erros.push({
-            linha: linhaAtual, registro: '04',
-            mensagem: `Valor numérico inválido no campo ${i + 1}: "${campos[i]}".`,
-            severidade: 'erro'
-          });
-        }
-      }
-    }
-
-    // --- Registro 05: Apuração da Substituição Tributária ---
-    if (reg === '05') {
-      for (let i = 2; i < campos.length; i++) {
-        if (!isNumDime(campos[i])) {
-          erros.push({
-            linha: linhaAtual, registro: '05',
-            mensagem: `Valor numérico inválido no campo ${i + 1}: "${campos[i]}".`,
-            severidade: 'erro'
-          });
-        }
-      }
-    }
-
-    // --- Registro 90: Encerramento ---
-    if (reg === '90') {
-      if (campos[1]) {
-        const totalDeclarado = parseInt(campos[1], 10);
-        if (!isNaN(totalDeclarado) && totalDeclarado !== linhas.length) {
-          erros.push({
-            linha: linhaAtual, registro: '90',
-            mensagem: `Total de registros no registro 90 (${totalDeclarado}) não confere com o total de linhas processadas (${linhas.length}).`,
-            severidade: 'erro'
-          });
-        }
-      }
-    }
-
-    // Registro desconhecido
-    if (!REG_DIMESC.includes(reg)) {
-      avisos.push({
-        linha: linhaAtual, registro: reg,
-        mensagem: `Registro "${reg}" não é reconhecido na estrutura DIME-SC.`,
-        severidade: 'aviso'
-      });
-    }
-  }
-
-  // Unicidade de 01 e 90
-  if ((estatisticas.registros['01'] || 0) > 1) {
-    erros.push({
-      linha: 0, registro: '01',
-      mensagem: `Existe mais de um registro |01| no arquivo (${estatisticas.registros['01']} ocorrências). Deve haver exatamente um.`,
-      severidade: 'erro'
-    });
-  }
-  if ((estatisticas.registros['90'] || 0) > 1) {
-    erros.push({
-      linha: 0, registro: '90',
-      mensagem: `Existe mais de um registro |90| no arquivo (${estatisticas.registros['90']} ocorrências). Deve haver exatamente um.`,
-      severidade: 'erro'
-    });
-  }
-
-  estatisticas.linhasComErro = erros.length;
-  estatisticas.linhasComAviso = avisos.length;
-
-  const resultadoDime = {
-    success: true,
-    nomeArquivo: nomeArquivo || 'arquivo_dime.txt',
-    tipoDetectado: 'DIME-SC',
-    isValid: erros.length === 0,
-    erros,
-    avisos,
-    estatisticas,
-    resumo: {
-      totalLinhas: linhas.length,
-      totalErros: erros.length,
-      totalAvisos: avisos.length,
-      blocosEncontrados: [],
-      registrosUnicos: Object.keys(estatisticas.registros).length
-    }
-  };
-  if (autoFix && (erros.length > 0 || avisos.length > 0)) {
-    resultadoDime.conteudo_corrigido = corrigirConteudo(conteudoOriginal || linhas.join('\n'), 'DIME-SC');
-  }
-  return Response.json(resultadoDime);
-}
+// validarDimeSC is imported from ./dime_sc.ts (fixed-width layout per Anexo II Portaria SEF SC)
 
 // ===================== CORREÇÃO AUTOMÁTICA =====================
 
@@ -826,20 +584,6 @@ function corrigirConteudo(conteudo, tipoDetectado) {
     const campos = linha.split('|').filter(c => c !== '');
     if (campos.length === 0) continue;
     registros[campos[0]] = (registros[campos[0]] || 0) + 1;
-  }
-
-  if (tipoDetectado === 'DIME-SC') {
-    // Fix 90 counter to match actual line count
-    const total = linhas.length;
-    linhas = linhas.map(linha => {
-      const campos = linha.split('|').filter(c => c !== '');
-      if (campos[0] === '90' && campos.length >= 2) {
-        campos[1] = String(total);
-        return '|' + campos.join('|') + '|';
-      }
-      return linha;
-    });
-    return linhas.join('\n');
   }
 
   // SPED: rebuild 9900 totalizers and fix 9999 counter
@@ -910,10 +654,12 @@ Deno.serve(async (req) => {
       return validarReinf(conteudo, nomeArquivo, body.autoFix);
     }
 
-    // --- Detecção de DIME-SC (formato estadual de Santa Catarina) ---
-    // DIME-SC: primeiro registro é "01" (não "0000" como no SPED)
-    const camposDetect = linhas[0].split('|').filter((c) => c !== '');
-    if (camposDetect[0] === '01') {
+    // --- Detecção de DIME-SC (formato fixed-width, Anexo II - Portaria SEF SC) ---
+    // DIME-SC: arquivo de posição fixa, começa com "20" (Contabilista) ou "21" (Início Declaração)
+    // e NÃO contém pipes (|)
+    const primeirosTipos = linhas[0].substring(0, 2);
+    const temPipes = linhas[0].includes('|');
+    if (!temPipes && (primeirosTipos === '20' || primeirosTipos === '21')) {
       return validarDimeSC(linhas, nomeArquivo, body.autoFix, conteudo);
     }
 
