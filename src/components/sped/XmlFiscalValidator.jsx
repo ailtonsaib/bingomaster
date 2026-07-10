@@ -17,6 +17,10 @@ import {
   Download,
   Truck,
   FileSpreadsheet,
+  Building2,
+  Users,
+  Calculator,
+  Package,
 } from 'lucide-react';
 
 export default function XmlFiscalValidator({ planKey }) {
@@ -198,6 +202,216 @@ export default function XmlFiscalValidator({ planKey }) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Dados Extraídos - Emitente, Destinatário, Totais */}
+          {resultado.documentos && resultado.documentos.length > 0 && (
+            <div className="space-y-4">
+              {resultado.documentos.map((doc, docIdx) => (
+                <div key={docIdx} className="space-y-4">
+                  {/* Chave de acesso */}
+                  {doc.chave_acesso && (
+                    <Card className="border-primary/30 bg-primary/5">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <FileText className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Chave de Acesso</p>
+                            <p className="text-sm font-mono break-all">{doc.chave_acesso.match(/.{1,4}/g)?.join(' ') || doc.chave_acesso}</p>
+                            {doc.ide && (
+                              <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                                {doc.ide.numero && <span>NF: <strong className="text-foreground">{doc.ide.numero}</strong></span>}
+                                {doc.ide.serie && <span>Série: <strong className="text-foreground">{doc.ide.serie}</strong></span>}
+                                {doc.ide.modelo && <span>Modelo: <strong className="text-foreground">{doc.ide.modelo === '55' ? 'NF-e' : doc.ide.modelo === '65' ? 'NFC-e' : doc.ide.modelo}</strong></span>}
+                                {doc.ide.dhEmi && <span>Emissão: <strong className="text-foreground">{new Date(doc.ide.dhEmi).toLocaleString('pt-BR')}</strong></span>}
+                                {doc.ide.tpNF && <Badge variant="outline" className="text-xs">{doc.ide.tpNF}</Badge>}
+                                {doc.ide.tpAmb && <Badge variant="outline" className="text-xs">{doc.ide.tpAmb}</Badge>}
+                                {doc.ide.finNFe && <Badge variant="outline" className="text-xs">{doc.ide.finNFe}</Badge>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Emitente e Destinatário */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {/* Emitente */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" /> Emitente</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-1.5 text-sm">
+                        {doc.emitente ? (
+                          <>
+                            <p className="font-semibold text-foreground">{doc.emitente.nome || '—'}</p>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-xs">{doc.emitente.tipo_doc || '—'}</Badge>
+                              <span className="text-muted-foreground font-mono text-xs">{doc.emitente.documento || '—'}</span>
+                            </div>
+                            {doc.emitente.ie && <p className="text-xs text-muted-foreground">IE: {doc.emitente.ie}</p>}
+                            {doc.emitente.crt && (
+                              <p className="text-xs text-muted-foreground">CRT: {doc.emitente.crt === '1' ? 'Simples Nacional' : doc.emitente.crt === '2' ? 'Simples Nacional (sublimite)' : doc.emitente.crt === '3' ? 'Regime Normal' : doc.emitente.crt}</p>
+                            )}
+                            {doc.emitente.endereco && (
+                              <p className="text-xs text-muted-foreground">{doc.emitente.endereco.logradouro}, {doc.emitente.endereco.numero} - {doc.emitente.endereco.bairro}</p>
+                            )}
+                            {doc.emitente.municipio && (
+                              <p className="text-xs text-muted-foreground">{doc.emitente.municipio} - {doc.emitente.uf}</p>
+                            )}
+                            {doc.emitente.cep && (
+                              <p className="text-xs text-muted-foreground">CEP: {doc.emitente.cep}</p>
+                            )}
+                          </>
+                        ) : <p className="text-muted-foreground text-xs">Emitente não encontrado</p>}
+                      </CardContent>
+                    </Card>
+
+                    {/* Destinatário */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Destinatário</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-1.5 text-sm">
+                        {doc.destinatario ? (
+                          <>
+                            <p className="font-semibold text-foreground">{doc.destinatario.nome || '—'}</p>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-xs">{doc.destinatario.tipo_doc || '—'}</Badge>
+                              <span className="text-muted-foreground font-mono text-xs">{doc.destinatario.documento || '—'}</span>
+                            </div>
+                            {doc.destinatario.ie && <p className="text-xs text-muted-foreground">IE: {doc.destinatario.ie}</p>}
+                            {doc.destinatario.indIEDest && (
+                              <p className="text-xs text-muted-foreground">{doc.destinatario.indIEDest === '1' ? 'Contribuinte ICMS' : doc.destinatario.indIEDest === '2' ? 'Isento' : doc.destinatario.indIEDest === '9' ? 'Não contribuinte' : ''}</p>
+                            )}
+                            {doc.destinatario.endereco && (
+                              <p className="text-xs text-muted-foreground">{doc.destinatario.endereco.logradouro}, {doc.destinatario.endereco.numero} - {doc.destinatario.endereco.bairro}</p>
+                            )}
+                            {doc.destinatario.municipio && (
+                              <p className="text-xs text-muted-foreground">{doc.destinatario.municipio} - {doc.destinatario.uf}</p>
+                            )}
+                          </>
+                        ) : <p className="text-muted-foreground text-xs">Destinatário não encontrado</p>}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Totais */}
+                  {doc.totais && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-2"><Calculator className="w-4 h-4 text-primary" /> Valores Totais</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Valor dos Produtos</p>
+                            <p className="font-semibold">R$ {doc.totais.vProd.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Descontos</p>
+                            <p className="font-semibold text-red-600">- R$ {doc.totais.vDesc.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Frete</p>
+                            <p className="font-semibold">R$ {doc.totais.vFrete.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Seguro</p>
+                            <p className="font-semibold">R$ {doc.totais.vSeg.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Outras Despesas</p>
+                            <p className="font-semibold">R$ {doc.totais.vOutro.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Base ICMS</p>
+                            <p className="font-semibold">R$ {doc.totais.vBC.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Valor ICMS</p>
+                            <p className="font-semibold">R$ {doc.totais.vICMS.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Valor ST</p>
+                            <p className="font-semibold">R$ {doc.totais.vST.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">IPI</p>
+                            <p className="font-semibold">R$ {doc.totais.vIPI.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">PIS</p>
+                            <p className="font-semibold">R$ {doc.totais.vPIS.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">COFINS</p>
+                            <p className="font-semibold">R$ {doc.totais.vCOFINS.toFixed(2)}</p>
+                          </div>
+                          <div className="space-y-0.5 rounded-lg bg-primary/10 px-3 py-2 -m-1">
+                            <p className="text-xs text-muted-foreground font-semibold">Valor Total da Nota</p>
+                            <p className="font-bold text-primary text-lg">R$ {doc.totais.vNF.toFixed(2)}</p>
+                          </div>
+                        </div>
+
+                        {/* Verificação cruzada */}
+                        <div className="mt-3 flex items-center gap-2 text-xs">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">
+                            {doc.total_itens} item(ns) | Soma dos itens: R$ {doc.soma_vProd_itens.toFixed(2)}
+                          </span>
+                          {Math.abs(doc.soma_vProd_itens - doc.totais.vProd) <= 0.01 ? (
+                            <Badge variant="outline" className="text-xs border-emerald-400 text-emerald-700">Soma confere ✓</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs border-red-400 text-red-700">Divergência!</Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Itens */}
+                  {doc.itens && doc.itens.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-2"><Package className="w-4 h-4 text-primary" /> Itens da Nota ({doc.itens.length})</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="max-h-64 overflow-y-auto rounded-lg border">
+                          <table className="w-full text-xs">
+                            <thead className="bg-muted/50 sticky top-0">
+                              <tr>
+                                <th className="text-left p-2 font-semibold">#</th>
+                                <th className="text-left p-2 font-semibold">Código</th>
+                                <th className="text-left p-2 font-semibold">Descrição</th>
+                                <th className="text-center p-2 font-semibold">CFOP</th>
+                                <th className="text-right p-2 font-semibold">Qtde</th>
+                                <th className="text-right p-2 font-semibold">V. Unit.</th>
+                                <th className="text-right p-2 font-semibold">V. Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {doc.itens.map((item, i) => (
+                                <tr key={i} className="border-t hover:bg-muted/30">
+                                  <td className="p-2 text-muted-foreground">{item.nItem}</td>
+                                  <td className="p-2 font-mono">{item.cProd}</td>
+                                  <td className="p-2 max-w-xs truncate" title={item.xProd}>{item.xProd}</td>
+                                  <td className="p-2 text-center font-mono">{item.CFOP}</td>
+                                  <td className="p-2 text-right">{item.qCom.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                  <td className="p-2 text-right">{item.vUnCom.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                  <td className="p-2 text-right font-semibold">{item.vProd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Estatísticas */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

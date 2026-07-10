@@ -248,6 +248,165 @@ function validarNFe(nfe, idx, erros, avisos) {
   }
 }
 
+// ===================== EXTRAÇÃO DE DADOS NF-e =====================
+
+function extrairDoc(emitOrDest) {
+  if (!emitOrDest) return null;
+  const doc = emitOrDest.CNPJ || emitOrDest.CPF || '';
+  const end = emitOrDest.enderEmit || emitOrDest.enderDest || null;
+  return {
+    tipo_doc: emitOrDest.CNPJ ? 'CNPJ' : (emitOrDest.CPF ? 'CPF' : ''),
+    documento: String(doc).replace(/\D/g, ''),
+    nome: emitOrDest.xNome || '',
+    ie: emitOrDest.IE || '',
+    uf: (end && end.UF) || (emitOrDest.UF) || '',
+    municipio: (end && end.xMun) || (emitOrDest.xMun) || '',
+    cMun: (end && end.cMun) || (emitOrDest.cMun) || '',
+    cep: (end && end.CEP) || '',
+    endereco: end ? {
+      logradouro: end.xLgr || '',
+      numero: end.nro || '',
+      bairro: end.xBairro || '',
+      complemento: end.xCpl || '',
+      cMun: end.cMun || '',
+      xMun: end.xMun || '',
+      uf: end.UF || '',
+      cep: end.CEP || '',
+    } : null,
+    crt: emitOrDest.CRT || '',
+    indIEDest: emitOrDest.indIEDest || '',
+  };
+}
+
+function extrairTotais(icmstot) {
+  if (!icmstot) return null;
+  return {
+    vProd: parseFloat(String(icmstot.vProd || '0').replace(',', '.')) || 0,
+    vNF: parseFloat(String(icmstot.vNF || '0').replace(',', '.')) || 0,
+    vDesc: parseFloat(String(icmstot.vDesc || '0').replace(',', '.')) || 0,
+    vFrete: parseFloat(String(icmstot.vFrete || '0').replace(',', '.')) || 0,
+    vSeg: parseFloat(String(icmstot.vSeg || '0').replace(',', '.')) || 0,
+    vOutro: parseFloat(String(icmstot.vOutro || '0').replace(',', '.')) || 0,
+    vBC: parseFloat(String(icmstot.vBC || '0').replace(',', '.')) || 0,
+    vICMS: parseFloat(String(icmstot.vICMS || '0').replace(',', '.')) || 0,
+    vBCST: parseFloat(String(icmstot.vBCST || '0').replace(',', '.')) || 0,
+    vST: parseFloat(String(icmstot.vST || '0').replace(',', '.')) || 0,
+    vIPI: parseFloat(String(icmstot.vIPI || '0').replace(',', '.')) || 0,
+    vPIS: parseFloat(String(icmstot.vPIS || '0').replace(',', '.')) || 0,
+    vCOFINS: parseFloat(String(icmstot.vCOFINS || '0').replace(',', '.')) || 0,
+    vFCP: parseFloat(String(icmstot.vFCP || '0').replace(',', '.')) || 0,
+    vFCPST: parseFloat(String(icmstot.vFCPST || '0').replace(',', '.')) || 0,
+    vFCPSTRet: parseFloat(String(icmstot.vFCPSTRet || '0').replace(',', '.')) || 0,
+  };
+}
+
+function extrairIde(ide) {
+  if (!ide) return null;
+  return {
+    cUF: ide.cUF || '',
+    natOp: ide.natOp || '',
+    modelo: ide.mod || '',
+    serie: ide.serie || '',
+    numero: ide.nNF || '',
+    dhEmi: ide.dhEmi || '',
+    tpNF: ide.tpNF === '0' ? 'Entrada' : (ide.tpNF === '1' ? 'Saída' : ''),
+    tpAmb: ide.tpAmb === '1' ? 'Produção' : (ide.tpAmb === '2' ? 'Homologação' : ''),
+    finNFe: ide.finNFe === '1' ? 'Normal' : (ide.finNFe === '2' ? 'Complementar' : (ide.finNFe === '3' ? 'Ajuste' : (ide.finNFe === '4' ? 'Devolução' : ''))),
+    indFinal: ide.indFinal === '1' ? 'Consumidor Final' : (ide.indFinal === '0' ? 'Não Consumidor Final' : ''),
+    indPres: ide.indPres || '',
+    chave_acesso: '',
+  };
+}
+
+function extrairDadosNFe(nfe, idx, erros, avisos) {
+  const infNFe = nfe.infNFe;
+  if (!infNFe) return null;
+
+  const dados = {
+    ide: extrairIde(infNFe.ide),
+    emitente: extrairDoc(infNFe.emit),
+    destinatario: extrairDoc(infNFe.dest),
+    totais: null,
+    itens: [],
+    chave_acesso: '',
+    total_itens: 0,
+    soma_vProd_itens: 0,
+  };
+
+  // Chave de acesso
+  const idAttr = infNFe['@_Id'] || infNFe['@_id'];
+  if (idAttr && /^NFe\d{44}$/.test(String(idAttr))) {
+    dados.chave_acesso = String(idAttr).substring(3);
+    if (dados.ide) dados.ide.chave_acesso = dados.chave_acesso;
+  }
+
+  // Itens
+  const dets = infNFe.det;
+  if (dets) {
+    const detArr = Array.isArray(dets) ? dets : [dets];
+    for (const det of detArr) {
+      if (!det || !det.prod) continue;
+      const prod = det.prod;
+      const vProd = parseFloat(String(prod.vProd || '0').replace(',', '.')) || 0;
+      dados.itens.push({
+        nItem: det['@_nItem'] || (dados.itens.length + 1),
+        cProd: prod.cProd || '',
+        xProd: prod.xProd || '',
+        NCM: prod.NCM || '',
+        CFOP: prod.CFOP || '',
+        uCom: prod.uCom || '',
+        qCom: parseFloat(String(prod.qCom || '0').replace(',', '.')) || 0,
+        vUnCom: parseFloat(String(prod.vUnCom || '0').replace(',', '.')) || 0,
+        vProd: vProd,
+        vDesc: parseFloat(String(prod.vDesc || '0').replace(',', '.')) || 0,
+        vFrete: parseFloat(String(prod.vFrete || '0').replace(',', '.')) || 0,
+        vSeg: parseFloat(String(prod.vSeg || '0').replace(',', '.')) || 0,
+        vOutro: parseFloat(String(prod.vOutro || '0').replace(',', '.')) || 0,
+        indTot: prod.indTot || '',
+      });
+      dados.soma_vProd_itens += vProd;
+    }
+  }
+  dados.total_itens = dados.itens.length;
+
+  // Totais
+  const icmstot = infNFe.total && infNFe.total.ICMSTot;
+  dados.totais = extrairTotais(icmstot);
+
+  // === Validação cruzada: soma dos itens vs total ===
+  if (dados.totais) {
+    const diff = Math.abs(dados.soma_vProd_itens - dados.totais.vProd);
+    if (diff > 0.01) {
+      erros.push({
+        linha: idx, registro: 'NF-e/total/ICMSTot',
+        mensagem: `Soma dos valores dos itens (vProd: ${dados.soma_vProd_itens.toFixed(2)}) não confere com o total da nota (vProd: ${dados.totais.vProd.toFixed(2)}). Diferença: ${diff.toFixed(2)}.`,
+        severidade: 'erro'
+      });
+    }
+
+    // vNF = vProd - vDesc + vFrete + vSeg + vOutro + vST + vIPI + vFCPST + vFCPSTRet
+    const vNFCalculado = dados.totais.vProd
+      - dados.totais.vDesc
+      + dados.totais.vFrete
+      + dados.totais.vSeg
+      + dados.totais.vOutro
+      + dados.totais.vST
+      + dados.totais.vIPI
+      + dados.totais.vFCPST
+      + dados.totais.vFCPSTRet;
+    const diffNF = Math.abs(vNFCalculado - dados.totais.vNF);
+    if (diffNF > 0.01) {
+      erros.push({
+        linha: idx, registro: 'NF-e/total/ICMSTot',
+        mensagem: `Valor total da nota (vNF: ${dados.totais.vNF.toFixed(2)}) não confere com o valor calculado (${vNFCalculado.toFixed(2)} = vProd - vDesc + vFrete + vSeg + vOutro + vST + vIPI + vFCPST + vFCPSTRet). Diferença: ${diffNF.toFixed(2)}.`,
+        severidade: 'erro'
+      });
+    }
+  }
+
+  return dados;
+}
+
 // ===================== VALIDAÇÃO CT-e =====================
 
 const MOD_CTE_VALIDOS = ['57'];
@@ -466,6 +625,13 @@ Deno.serve(async (req) => {
       estatisticas.documentos[`CT-e ${i + 1}`] = 1;
     }
 
+    // Extrair dados estruturados das NF-e
+    const documentosExtraidos = [];
+    for (let i = 0; i < nfes.length; i++) {
+      const dadosExtraidos = extrairDadosNFe(nfes[i], i + 1, erros, avisos);
+      if (dadosExtraidos) documentosExtraidos.push(dadosExtraidos);
+    }
+
     estatisticas.totalDocumentos = nfes.length + ctes.length;
     estatisticas.linhasComErro = erros.length;
     estatisticas.linhasComAviso = avisos.length;
@@ -478,6 +644,7 @@ Deno.serve(async (req) => {
       erros,
       avisos,
       estatisticas,
+      documentos: documentosExtraidos,
       resumo: {
         totalDocumentos: estatisticas.totalDocumentos,
         totalErros: erros.length,
