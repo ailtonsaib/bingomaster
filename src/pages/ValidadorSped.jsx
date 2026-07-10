@@ -37,6 +37,7 @@ import { useLicense } from '@/hooks/useLicense';
 import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
 import SpedValidator from '@/components/sped/SpedValidator';
 import DimeScGenerator from '@/components/sped/DimeScGenerator';
+import ReinfGenerator from '@/components/sped/ReinfGenerator';
 
 const SPED_TYPE_LABELS = {
   FISCAL: 'SPED Fiscal (ICMS/IPI)',
@@ -300,6 +301,13 @@ export default function ValidadorSped() {
               className="gap-2"
             >
               <FileDown className="h-4 w-4" /> DIME-SC
+            </Button>
+            <Button
+              variant={aba === 'reinf' ? 'default' : 'outline'}
+              onClick={() => setAba('reinf')}
+              className="gap-2"
+            >
+              <TrendingUp className="h-4 w-4" /> REINF
             </Button>
             <Button
               variant={aba === 'planos' ? 'default' : 'outline'}
@@ -579,6 +587,11 @@ export default function ValidadorSped() {
         {/* ABA: DIME-SC */}
         {aba === 'dime' && (
           <DimeScGenerator planKey={planKey} allowedTypes={allowedTypes} />
+        )}
+
+        {/* ABA: REINF */}
+        {aba === 'reinf' && (
+          <ReinfGenerator planKey={planKey} allowedTypes={allowedTypes} clienteId={clienteSelecionado} />
         )}
 
         {/* ABA: Planos */}
