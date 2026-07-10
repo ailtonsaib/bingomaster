@@ -1257,7 +1257,7 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'M100' && tipoDetectado === 'CONTRIBUICOES') {
-        // |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|VL_PIS|...
+        // Layout M100: |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|QUANT_BC_PIS|ALIQ_PIS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
         if (campos.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'M100',
@@ -1265,27 +1265,38 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        // COD_CRED (índice 1): 1-7
-        if (campos[1] && !['1','2','3','4','5','6','7'].includes(campos[1])) {
+        // COD_CRED (índice 1): 3 dígitos, conforme Tabela 4.3.6
+        if (campos[1] && !/^\d{3}$/.test(campos[1])) {
           erros.push({
             linha: linhaAtual, registro: 'M100',
-            mensagem: `COD_CRED inválido: "${campos[1]}" (deve estar entre 1 e 7).`,
+            mensagem: `COD_CRED inválido: "${campos[1]}" (deve ter 3 dígitos numéricos conforme Tabela 4.3.6).`,
             severidade: 'erro'
           });
         }
-        // IND_CRED_ORI (índice 2): 0=Oper. próprio, 1=Eventos extemporâneos
+        // IND_CRED_ORI (índice 2): 0=Oper. próprio, 1=Eventos de incorporação/cisão/fusão
         if (campos[2] && !['0','1'].includes(campos[2])) {
           erros.push({
             linha: linhaAtual, registro: 'M100',
-            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0 ou 1).`,
+            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0=Operações próprias ou 1=Incorporação/cisão/fusão).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 3, 6, 'M100', linhaAtual, erros);
+        // VL_BC_PIS(3), ALIQ_PIS(4), QUANT_BC_PIS(5), ALIQ_PIS_QUANT(6), VL_CRED(7), VL_AJUS_ACRES(8), VL_AJUS_REDUC(9), VL_CRED_DIF(10), VL_CRED_DISP(11)
+        validarValorNumerico(campos, 3, 12, 'M100', linhaAtual, erros);
+        // IND_DESC_CRED (índice 12): 0=Total, 1=Parcial
+        if (campos[12] && !['0','1'].includes(campos[12])) {
+          erros.push({
+            linha: linhaAtual, registro: 'M100',
+            mensagem: `IND_DESC_CRED inválido: "${campos[12]}" (deve ser 0=Total ou 1=Parcial).`,
+            severidade: 'erro'
+          });
+        }
+        // VL_CRED_DESC(13), SLD_CRED(14)
+        validarValorNumerico(campos, 13, 15, 'M100', linhaAtual, erros);
       }
 
       if (registro === 'M500' && tipoDetectado === 'CONTRIBUICOES') {
-        // |M500|COD_CRED|IND_CRED_ORI|VL_BC_COFINS|ALIQ_COFINS|VL_COFINS|...
+        // Layout M500: |M500|COD_CRED|IND_CRED_ORI|VL_BC_COFINS|ALIQ_COFINS|QUANT_BC_COFINS|ALIQ_COFINS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
         if (campos.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'M500',
@@ -1293,21 +1304,33 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        if (campos[1] && !['1','2','3','4','5','6','7'].includes(campos[1])) {
+        // COD_CRED (índice 1): 3 dígitos, conforme Tabela 4.3.6
+        if (campos[1] && !/^\d{3}$/.test(campos[1])) {
           erros.push({
             linha: linhaAtual, registro: 'M500',
-            mensagem: `COD_CRED inválido: "${campos[1]}" (deve estar entre 1 e 7).`,
+            mensagem: `COD_CRED inválido: "${campos[1]}" (deve ter 3 dígitos numéricos conforme Tabela 4.3.6).`,
             severidade: 'erro'
           });
         }
         if (campos[2] && !['0','1'].includes(campos[2])) {
           erros.push({
             linha: linhaAtual, registro: 'M500',
-            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0 ou 1).`,
+            mensagem: `IND_CRED_ORI inválido: "${campos[2]}" (deve ser 0=Operações próprias ou 1=Incorporação/cisão/fusão).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 3, 6, 'M500', linhaAtual, erros);
+        // VL_BC_COFINS(3), ALIQ_COFINS(4), QUANT_BC_COFINS(5), ALIQ_COFINS_QUANT(6), VL_CRED(7), VL_AJUS_ACRES(8), VL_AJUS_REDUC(9), VL_CRED_DIF(10), VL_CRED_DISP(11)
+        validarValorNumerico(campos, 3, 12, 'M500', linhaAtual, erros);
+        // IND_DESC_CRED (índice 12): 0=Total, 1=Parcial
+        if (campos[12] && !['0','1'].includes(campos[12])) {
+          erros.push({
+            linha: linhaAtual, registro: 'M500',
+            mensagem: `IND_DESC_CRED inválido: "${campos[12]}" (deve ser 0=Total ou 1=Parcial).`,
+            severidade: 'erro'
+          });
+        }
+        // VL_CRED_DESC(13), SLD_CRED(14)
+        validarValorNumerico(campos, 13, 15, 'M500', linhaAtual, erros);
       }
 
       if (registro === 'P100' && tipoDetectado === 'CONTRIBUICOES') {
