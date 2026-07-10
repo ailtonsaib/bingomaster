@@ -4,9 +4,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText, Settings } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
+import PlanManagement from "@/components/portal/PlanManagement";
 
 const BINGO_PLANS = ["free", "basic", "pro", "max", "ultra", "enterprise", "mega"];
 const SPED_PLANS = ["free", "basic", "pro", "max"];
@@ -17,6 +18,7 @@ export default function PortalAdmin() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("users");
 
   useEffect(() => {
     if (!user || !user.is_admin) {
@@ -113,27 +115,54 @@ export default function PortalAdmin() {
   const financeUsers = users.filter((u) => u.can_access_finance);
   const spedUsers = users.filter((u) => u.can_access_sped);
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold font-heading">Gerenciar Usuários</h1>
-              <p className="text-xs text-muted-foreground">{user.name}</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" />
+  const TabBar = (
+    <div className="flex gap-2 mb-6 border-b">
+      <button onClick={() => setActiveTab("users")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "users" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+        <Users className="w-4 h-4" /> Usuários
+      </button>
+      <button onClick={() => setActiveTab("plans")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "plans" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+        <Settings className="w-4 h-4" /> Planos e Manutenção
+      </button>
+    </div>
+  );
+
+  const Header = (
+    <div className="border-b bg-card">
+      <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-5 h-5" />
           </Button>
+          <div>
+            <h1 className="text-xl font-bold font-heading">Painel Administrador</h1>
+            <p className="text-xs text-muted-foreground">{user.name}</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" onClick={handleLogout}>
+          <LogOut className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (activeTab === "plans") {
+    return (
+      <div className="min-h-screen bg-background">
+        {Header}
+        <div className="max-w-5xl mx-auto px-4 py-6">
+          {TabBar}
+          <PlanManagement />
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {Header}
 
       <div className="max-w-5xl mx-auto px-4 py-6">
+        {TabBar}
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <Card>
