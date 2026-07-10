@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ const BRL = (v) => (v || 0).toLocaleData?.("pt-BR", { style: "currency", currenc
 export default function AdminFinancialPanel() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  useEffect(() => {
+    base44.auth.me().then(u => { setCurrentUser(u); setUserLoading(false); }).catch(() => setUserLoading(false));
+  }, []);
 
   const { data: planRequests = [], isLoading: loadingPR } = useQuery({
     queryKey: ["admin-financial-plan-requests"],
@@ -84,6 +90,18 @@ export default function AdminFinancialPanel() {
       t.category?.toLowerCase().includes(search.toLowerCase())
     );
   }, [finTransactions, search]);
+
+  if (userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return <Navigate to="/app" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
