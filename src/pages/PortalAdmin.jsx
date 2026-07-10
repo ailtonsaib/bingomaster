@@ -317,14 +317,15 @@ export default function PortalAdmin() {
                             <div className="flex items-center gap-1 mt-1">
                               <DollarSign className="w-3 h-3 text-muted-foreground" />
                               <input
-                                type="number"
-                                step="0.01"
-                                min="0"
+                                type="text"
+                                inputMode="decimal"
                                 value={u.finance_plan_price ?? 49.90}
                                 onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
+                                  const val = parseFloat(e.target.value.replace(',', '.'));
                                   if (!isNaN(val) && val >= 0) {
                                     updateUser(u.id, { finance_plan_price: val });
+                                  } else if (e.target.value === '') {
+                                    updateUser(u.id, { finance_plan_price: 0 });
                                   }
                                 }}
                                 className="w-20 h-7 rounded border border-input bg-transparent px-2 text-xs"
