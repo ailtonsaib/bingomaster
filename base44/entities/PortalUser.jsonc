@@ -44,6 +44,15 @@
       "default": "free",
       "description": "Plano do Validador SPED"
     },
+    "finance_plan": {
+      "type": "string",
+      "enum": [
+        "free",
+        "full"
+      ],
+      "default": "free",
+      "description": "Plano do Controle de Finan\u00e7as (free=10 mov., full=ilimitado)"
+    },
     "finance_transaction_limit": {
       "type": "number",
       "default": 10,
@@ -68,6 +77,25 @@
       "type": "number",
       "default": 49.9,
       "description": "Valor do plano de acesso completo \u00e0s finan\u00e7as (definido pelo admin)"
+    },
+    "device_ip": {
+      "type": "string",
+      "description": "IP da m\u00e1quina do \u00faltimo login"
+    },
+    "last_login_at": {
+      "type": "string",
+      "description": "Data/hora do \u00faltimo login (ISO)"
+    },
+    "current_app": {
+      "type": "string",
+      "enum": [
+        "portal",
+        "bingo",
+        "finance",
+        "sped"
+      ],
+      "default": "portal",
+      "description": "Aplicativo que o usu\u00e1rio est\u00e1 usando no momento"
     },
     "is_active": {
       "type": "boolean",

@@ -12,6 +12,18 @@ async function verifyAdmin(base44, admin_email) {
   return admins.length > 0 && admins[0].is_admin ? admins[0] : null;
 }
 
+// Extrai o IP real do cliente a partir dos headers do request
+function getClientIp(req) {
+  const headers = req.headers;
+  const forwarded = headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  const realIp = headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+  const cfIp = headers.get('cf-connecting-ip');
+  if (cfIp) return cfIp.trim();
+  return 'unknown';
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -97,7 +109,34 @@ Deno.serve(async (req) => {
       if (!valid) {
         return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
       }
-      return Response.json({ user: stripPassword(user) });
+      // Registra IP da máquina e data/hora do login
+      const clientIp = getClientIp(req);
+      const now = new Date().toISOString();
+      await base44.asServiceRole.entities.PortalUser.update(user.id, {
+        device_ip: clientIp,
+        last_login_at: now,
+        current_app: 'portal',
+      });
+      const updated = { ...user, device_ip: clientIp, last_login_at: now, current_app: 'portal' };
+      return Response.json({ user: stripPassword(updated) });
+    }
+
+    // ─── TRACK APP USAGE ───
+    if (operation === 'trackApp') {
+      const { email, app } = body;
+      if (!email || !app) {
+        return Response.json({ error: 'Email e aplicativo obrigatórios' }, { status: 400 });
+      }
+      const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
+      if (users.length === 0) {
+        return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      }
+      const clientIp = getClientIp(req);
+      await base44.asServiceRole.entities.PortalUser.update(users[0].id, {
+        current_app: app,
+        device_ip: clientIp,
+      });
+      return Response.json({ success: true });
     }
 
     // ─── GET USER (refresh) ───

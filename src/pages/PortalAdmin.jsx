@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText, Settings, Search } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText, Settings, Search, Globe, Clock, Monitor } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
@@ -276,6 +276,7 @@ export default function PortalAdmin() {
                     <th className="text-left p-3 font-medium">BingoMaster</th>
                     <th className="text-left p-3 font-medium">Finanças</th>
                     <th className="text-left p-3 font-medium">SPED</th>
+                    <th className="text-left p-3 font-medium">Acesso</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-right p-3 font-medium">Ações</th>
                   </tr>
@@ -400,6 +401,24 @@ export default function PortalAdmin() {
                               ))}
                             </select>
                           )}
+                        </div>
+                      </td>
+
+                      {/* Acesso: IP, último login, app atual */}
+                      <td className="p-3 min-w-[140px]">
+                        <div className="flex flex-col gap-1 text-xs">
+                          <span className="flex items-center gap-1 text-muted-foreground" title="IP da máquina">
+                            <Globe className="w-3 h-3" />
+                            {u.device_ip || '—'}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground" title="Último login">
+                            <Clock className="w-3 h-3" />
+                            {u.last_login_at ? new Date(u.last_login_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground" title="App atual">
+                            <Monitor className="w-3 h-3" />
+                            {u.current_app ? u.current_app.toUpperCase() : '—'}
+                          </span>
                         </div>
                       </td>
 

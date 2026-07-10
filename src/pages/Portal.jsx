@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Grid3x3, Wallet, FileText, Shield, LogOut, KeyRound } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import { APPS } from "@/lib/appRegistry";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
@@ -21,7 +22,15 @@ export default function Portal() {
 
   if (!user) return null;
 
-  const handleAppClick = (app) => {
+  const handleAppClick = async (app) => {
+    // Registra qual aplicativo o usuário está acessando
+    try {
+      await base44.functions.invoke('portalAuth', {
+        operation: 'trackApp',
+        email: user.email,
+        app: app.id,
+      });
+    } catch (_) {}
     navigate(app.url);
   };
 
