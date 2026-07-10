@@ -4,7 +4,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText, Settings } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText, Settings, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 import PlanManagement from "@/components/portal/PlanManagement";
@@ -19,6 +20,8 @@ export default function PortalAdmin() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     if (!user || !user.is_admin) {
@@ -111,6 +114,19 @@ export default function PortalAdmin() {
   }
 
   const pendingReleases = users.filter((u) => u.finance_release_requested);
+
+  const filteredUsers = users.filter((u) => {
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = !term ||
+      (u.name && u.name.toLowerCase().includes(term)) ||
+      (u.email && u.email.toLowerCase().includes(term));
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && u.is_active && !u.finance_release_requested) ||
+      (statusFilter === "inactive" && !u.is_active) ||
+      (statusFilter === "pending" && u.finance_release_requested);
+    return matchesSearch && matchesStatus;
+  });
   const bingoUsers = users.filter((u) => u.can_access_bingo);
   const financeUsers = users.filter((u) => u.can_access_finance);
   const spedUsers = users.filter((u) => u.can_access_sped);
@@ -220,11 +236,33 @@ export default function PortalAdmin() {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold">Usuários</h2>
-          <Button className="gap-2" onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4" /> Novo Usuário
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por nome ou e-mail..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 w-full sm:w-64"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            >
+              <option value="all">Todos</option>
+              <option value="active">Ativos</option>
+              <option value="inactive">Inativos</option>
+              <option value="pending">Pendentes de plano</option>
+            </select>
+            <Button className="gap-2" onClick={() => setShowForm(true)}>
+              <Plus className="w-4 h-4" /> Novo Usuário
+            </Button>
+          </div>
         </div>
 
         {/* User Table */}
@@ -243,7 +281,7 @@ export default function PortalAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <tr key={u.id} className="border-t hover:bg-muted/20">
                       {/* User info */}
                       <td className="p-3 min-w-[160px]">
