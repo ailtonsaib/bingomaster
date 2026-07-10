@@ -285,37 +285,32 @@ const REG_FISCAL = [
 
 const REG_CONTRIBUICOES = [
   // Bloco 0: Abertura, Identificação e Referências
-  '0000','0001','0035','0100','0110','0111','0120','0140','0150','0175','0180','0190','0200','0205','0206','0208','0210','0220',
-  '0300','0305','0400','0450','0460','0500','0600','0990',
+  '0000','0001','0035','0100','0110','0111','0120','0140','0145','0150','0190','0200','0205','0206','0208',
+  '0400','0450','0500','0600','0900','0990',
   // Bloco A: Documentos Fiscais – Serviços (ISS)
-  'A001','A010','A100','A110','A111','A112','A120','A170','A990',
+  'A001','A010','A100','A110','A111','A120','A170','A990',
   // Bloco C: Documentos Fiscais I – Mercadorias (ICMS/IPI)
-  'C001','C010','C100','C110','C111','C112','C113','C114','C115','C116','C117','C118','C119','C120','C130','C140','C141',
-  'C160','C165','C170','C171','C172','C173','C174','C175','C176','C177','C178','C179','C180','C181','C185','C188',
-  'C190','C191','C195','C198','C199','C380','C381','C385','C390','C395','C396','C400','C405','C410','C420','C425',
-  'C460','C465','C470','C490','C495','C500','C510','C590','C600','C601','C610','C690','C700','C800','C810','C850',
-  'C860','C890','C990',
+  'C001','C010','C100','C110','C111','C120','C170','C175','C180','C181','C185','C188','C190','C191','C195','C198','C199',
+  'C380','C381','C385','C395','C396','C400','C405','C481','C485','C489','C490','C491','C495','C499',
+  'C500','C501','C505','C509','C600','C601','C605','C609','C800','C810','C820','C830','C860','C870','C880','C890','C990',
   // Bloco D: Documentos Fiscais II – Serviços (ICMS)
-  'D001','D010','D100','D101','D110','D120','D130','D140','D150','D160','D161','D162','D170','D180','D190',
-  'D195','D197','D198','D199','D300','D301','D310','D350','D360','D370','D390','D400','D410','D411','D420',
-  'D500','D501','D510','D520','D530','D590','D990',
-  // Bloco F: Outras Receitas e Operações
-  'F001','F010','F100','F111','F120','F130','F150','F200','F205','F210','F211','F500','F510','F525','F530',
-  'F550','F560','F570','F580','F590','F600','F700','F800','F990',
+  'D001','D010','D100','D101','D105','D111','D200','D201','D205','D209','D300','D309','D350','D359',
+  'D500','D501','D505','D509','D600','D601','D605','D609','D990',
+  // Bloco F: Demais Documentos e Operações
+  'F001','F010','F100','F111','F120','F129','F130','F139','F150','F200','F205','F210','F211',
+  'F500','F509','F510','F519','F525','F550','F559','F560','F569','F600','F700','F800','F990',
   // Bloco I: Instituições Financeiras e Assemelhadas
-  'I001','I010','I100','I200','I300','I990',
+  'I001','I010','I100','I199','I200','I299','I300','I399','I990',
   // Bloco M: Apuração da Contribuição (PIS/COFINS)
-  'M001','M010','M100','M105','M110','M115','M200','M205','M210','M211','M215','M220','M225','M230','M300','M350','M400',
-  'M410','M500','M505','M510','M515','M600','M605','M610','M611','M615','M620','M625','M630','M700','M800','M810','M990',
+  'M001','M100','M105','M110','M115','M200','M205','M210','M211','M215','M220','M225','M230',
+  'M300','M350','M400','M410','M500','M505','M510','M515','M600','M605','M610','M611','M615',
+  'M620','M625','M630','M700','M800','M810','M990',
   // Bloco P: Apuração da Contribuição Previdenciária sobre a Receita Bruta
-  'P001','P010','P100','P110','P199','P200','P210','P220','P230','P990',
-  // Bloco 1: Controle de Saldos
-  '1001','1010','1020','1050','1100','1101','1105','1110','1115','1120','1150','1160','1165','1200','1210','1220',
-  '1250','1255','1300','1310','1320','1350','1360','1370','1390','1400','1500','1501','1505','1510','1520',
-  '1600','1601','1700','1800','1900','1990',
-  '1C001','1C010','1C100','1C110','1C120','1C170','1C180','1C190','1C300','1C310','1C350','1C500','1C990',
-  '1D001','1D010','1D100','1D300','1D350','1D500','1D990',
-  // Bloco 9: Encerramento
+  'P001','P010','P100','P110','P199','P200','P210','P990',
+  // Bloco 1: Complemento da Escrituração – Controle de Saldos
+  '1001','1010','1011','1020','1050','1100','1101','1102','1200','1210','1220','1300',
+  '1500','1501','1502','1600','1610','1620','1700','1800','1809','1900','1990',
+  // Bloco 9: Controle e Encerramento
   '9001','9900','9990','9999'
 ];
 
@@ -2105,14 +2100,19 @@ Deno.serve(async (req) => {
       }
 
       // === Verificar registro desconhecido para o tipo detectado ===
-      // Apenas alerta se o bloco do registro não pertencer ao conjunto válido do tipo detectado.
-      // Registros individuais não listados são aceitos silenciosamente, pois o leiaute oficial
-      // do SPED possui centenas de registros e nem todos estão catalogados nesta lista.
+      // Alerta se o registro não pertence ao conjunto válido do tipo detectado.
       {
         const blocoReg = registro.charAt(0);
         const blocosValidosTipo = BLOCOS_POR_TIPO[tipoDetectado] || BLOCOS_POR_TIPO.FISCAL;
         if (!blocosValidosTipo.includes(blocoReg) && registro !== '9999') {
           // já reportado no teste de blocos (seção 3a) — não duplica o erro aqui
+        } else if (!registrosValidos.includes(registro) && !['9900','9999','9001','9990'].includes(registro)) {
+          avisos.push({
+            linha: linhaAtual,
+            registro,
+            mensagem: `Registro "${registro}" não é reconhecido no leiaute do SPED ${tipoDetectado}. Verifique se o arquivo está no formato correto.`,
+            severidade: 'aviso'
+          });
         }
       }
     }
