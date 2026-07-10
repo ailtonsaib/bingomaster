@@ -31,12 +31,13 @@ const PLAN_COLORS = {
   max: 'bg-emerald-100 text-emerald-700 border-emerald-300'
 };
 
-export default function SpedPlanPanel({ planKey, downloadsUsed, isAdmin }) {
+export default function SpedPlanPanel({ planKey, downloadsUsed, isAdmin: isAdminProp }) {
   const [plans, setPlans] = useState(FALLBACK_PLANS);
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState({});
+  const [isAdmin, setIsAdmin] = useState(isAdminProp || false);
 
   const carregarPlanos = async () => {
     try {
@@ -54,6 +55,16 @@ export default function SpedPlanPanel({ planKey, downloadsUsed, isAdmin }) {
   useEffect(() => {
     carregarPlanos();
   }, []);
+
+  useEffect(() => {
+    if (isAdminProp) {
+      setIsAdmin(true);
+      return;
+    }
+    base44.auth.me()
+      .then((user) => setIsAdmin(user?.role === 'admin'))
+      .catch(() => setIsAdmin(false));
+  }, [isAdminProp]);
 
   const iniciarEdicao = (plano) => {
     setEditando(plano.plan_key);
@@ -84,16 +95,20 @@ export default function SpedPlanPanel({ planKey, downloadsUsed, isAdmin }) {
   const salvarPlano = async () => {
     setSalvando(true);
     try {
-      await base44.functions.invoke('manageSpedPlans', {
+      const res = await base44.functions.invoke('manageSpedPlans', {
         ...form,
         action: 'save'
       });
-      // The function uses req.method, but invoke sends POST by default
+      if (res.data && !res.data.success) {
+        alert('Erro ao salvar: ' + (res.data.error || 'erro desconhecido'));
+        return;
+      }
       await carregarPlanos();
       setEditando(null);
       setForm({});
     } catch (e) {
-      alert('Erro ao salvar: ' + (e.message || 'erro desconhecido'));
+      const msg = e?.response?.data?.error || e?.message || 'erro desconhecido';
+      alert('Erro ao salvar: ' + msg);
     } finally {
       setSalvando(false);
     }
