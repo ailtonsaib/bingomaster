@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, KeyRound, X } from "lucide-react";
 
-export default function ChangePasswordModal({ userEmail, onClose }) {
+export default function ChangePasswordModal({ userEmail, onClose, onPasswordChanged }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -42,7 +42,8 @@ export default function ChangePasswordModal({ userEmail, onClose }) {
         new_password: newPassword,
       });
       if (res.data?.success) {
-        onClose();
+        if (onPasswordChanged) onPasswordChanged();
+        else onClose();
       } else {
         setError(res.data?.error || "Erro ao alterar senha.");
       }

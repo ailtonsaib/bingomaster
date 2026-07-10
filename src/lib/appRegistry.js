@@ -10,6 +10,7 @@ export const APPS = [
     permission: "can_access_bingo",
     external: false,
     tagline: "Plataforma completa de bingo",
+    image: "https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=800&auto=format&fit=crop&q=80",
     description:
       "Gere cartelas personalizadas com até 3 chances e 5 prêmios. Venda via app do vendedor, acompanhe pelo app do comprador, projete no telão e valide cartelas em tempo real. Inclui rifas, relatórios de vendas e financeiros.",
     features: [
@@ -41,6 +42,7 @@ export const APPS = [
     permission: "can_access_finance",
     external: false,
     tagline: "Gestão financeira simplificada",
+    image: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?w=800&auto=format&fit=crop&q=80",
     description:
       "Controle suas receitas e despesas com categorias personalizadas. Acompanhe seu fluxo de caixa, organize suas finanças e gere relatórios. Comece grátis com 10 movimentações e faça upgrade para uso ilimitado.",
     features: [
@@ -67,6 +69,7 @@ export const APPS = [
     permission: "can_access_sped",
     external: false,
     tagline: "Validação fiscal automatizada",
+    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop&q=80",
     description:
       "Valide arquivos SPED Fiscal, Contribuições, ECD e ECF com correção automática. Inclui validação DIME-SC e REINF. Gere XMLs conformes e mantenha sua empresa em dia com a legislação fiscal.",
     features: [

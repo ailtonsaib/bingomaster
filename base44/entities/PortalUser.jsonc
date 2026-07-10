@@ -97,6 +97,11 @@
       "default": "portal",
       "description": "Aplicativo que o usu\u00e1rio est\u00e1 usando no momento"
     },
+    "must_change_password": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o usu\u00e1rio deve trocar a senha no pr\u00f3ximo acesso"
+    },
     "is_active": {
       "type": "boolean",
       "default": true,

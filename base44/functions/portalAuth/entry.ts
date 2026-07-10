@@ -172,11 +172,13 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Email já cadastrado' }, { status: 409 });
       }
       const salt = await bcrypt.genSalt(10);
-      const hash = await bcrypt.hash(password, salt);
+      const finalPassword = password || 'Premier@123';
+      const hash = await bcrypt.hash(finalPassword, salt);
       const created = await base44.asServiceRole.entities.PortalUser.create({
         email,
         password_hash: hash,
         name,
+        must_change_password: true,
         can_access_bingo: can_access_bingo ?? true,
         can_access_finance: can_access_finance ?? false,
         can_access_sped: can_access_sped ?? false,
@@ -366,6 +368,27 @@ Deno.serve(async (req) => {
       const hash = await bcrypt.hash(new_password, salt);
       await base44.asServiceRole.entities.PortalUser.update(user.id, {
         password_hash: hash,
+        must_change_password: false,
+      });
+      return Response.json({ success: true });
+    }
+
+    // ─── ADMIN: reset password (back to default) ───
+    if (operation === 'resetToDefault') {
+      const { admin_email, user_email } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+      const users = await base44.asServiceRole.entities.PortalUser.filter({ email: user_email });
+      if (users.length === 0) {
+        return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash('Premier@123', salt);
+      await base44.asServiceRole.entities.PortalUser.update(users[0].id, {
+        password_hash: hash,
+        must_change_password: true,
       });
       return Response.json({ success: true });
     }

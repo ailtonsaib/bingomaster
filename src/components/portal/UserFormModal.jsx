@@ -30,7 +30,7 @@ const SPED_PLANS = [
 export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("Premier@123");
   const [canAccessBingo, setCanAccessBingo] = useState(true);
   const [bingoPlan, setBingoPlan] = useState("free");
   const [canAccessFinance, setCanAccessFinance] = useState(false);
@@ -86,6 +86,7 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
           <div>
             <Label>Senha de Primeiro Acesso</Label>
             <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Senha temporária" />
+            <p className="text-xs text-muted-foreground mt-1">Padrão: <span className="font-mono font-semibold">Premier@123</span> — o usuário poderá trocar no primeiro acesso.</p>
           </div>
 
           {/* BingoMaster permissions */}

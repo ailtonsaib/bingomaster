@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { APPS, CONTACT } from "@/lib/appRegistry";
 import { setPortalUser } from "@/lib/portalSession";
+import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,8 @@ export default function AppLogin({ appId }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [loggedInEmail, setLoggedInEmail] = useState("");
 
   if (!app) return null;
   const Icon = iconMap[app.icon];
@@ -48,6 +51,12 @@ export default function AppLogin({ appId }) {
           return;
         }
         setPortalUser(user);
+        if (user.must_change_password) {
+          setLoggedInEmail(user.email);
+          setMustChangePassword(true);
+          setLoading(false);
+          return;
+        }
         // Track app usage
         try {
           await base44.functions.invoke("portalAuth", {
@@ -150,6 +159,17 @@ export default function AppLogin({ appId }) {
           </div>
         </div>
       </div>
+
+      {mustChangePassword && (
+        <ChangePasswordModal
+          userEmail={loggedInEmail}
+          onClose={() => setMustChangePassword(false)}
+          onPasswordChanged={() => {
+            setMustChangePassword(false);
+            window.location.href = app.url;
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -39,7 +39,20 @@ function AppCard({ app, onOpenPlans }) {
             <p className="text-sm text-[#71717A]">{app.tagline}</p>
           </div>
         </div>
-        <p className="mt-4 text-sm text-[#52525B] leading-relaxed">{app.description}</p>
+      </div>
+
+      {/* Illustrative image */}
+      <div className="relative mx-6 mb-4 rounded-xl overflow-hidden h-40">
+        <img
+          src={app.image}
+          alt={app.name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
+
+      <div className="px-8 pb-2">
+        <p className="text-sm text-[#52525B] leading-relaxed">{app.description}</p>
       </div>
 
       {/* Features */}
@@ -177,7 +190,7 @@ export default function Landing() {
     <div className="min-h-screen bg-[#FAFAFB]">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold font-display tracking-tight text-[#1B1C21]">SoftPremier</span>
           </div>
@@ -194,7 +207,7 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 pt-20 pb-12 text-center">
+        <div className="max-w-7xl mx-auto px-6 pt-20 pb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1B1C21]">
               Soluções digitais para sua empresa
@@ -218,7 +231,7 @@ export default function Landing() {
       </section>
 
       {/* Apps grid */}
-      <section id="apps" className="max-w-6xl mx-auto px-6 py-12">
+      <section id="apps" className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {publicApps.map((app) => (
             <AppCard key={app.id} app={app} onOpenPlans={setPlansApp} />
@@ -227,7 +240,7 @@ export default function Landing() {
       </section>
 
       {/* How it works */}
-      <section className="max-w-4xl mx-auto px-6 py-12">
+      <section className="max-w-6xl mx-auto px-6 py-12">
         <h2 className="text-2xl font-bold font-display text-center text-[#1B1C21] mb-8">Como funciona</h2>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
           {[
@@ -255,7 +268,7 @@ export default function Landing() {
       </section>
 
       {/* Contact CTA */}
-      <section className="max-w-4xl mx-auto px-6 py-12">
+      <section className="max-w-6xl mx-auto px-6 py-12">
         <div className="bg-gradient-to-r from-[#6200EA] to-[#7C3AED] rounded-3xl p-8 text-center text-white">
           <h2 className="text-2xl font-bold mb-2">Pronto para começar?</h2>
           <p className="text-white/80 mb-6">Entre em contato e receba seu acesso em minutos.</p>
@@ -276,7 +289,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-gray-100 py-8 mt-12">
-        <div className="max-w-6xl mx-auto px-6 text-center">
+        <div className="max-w-7xl mx-auto px-6 text-center">
           <p className="text-sm text-[#71717A]">© {new Date().getFullYear()} SoftPremier — {CONTACT.domain}</p>
           <div className="mt-3 flex justify-center gap-4">
             <a href={CONTACT.whatsapp} target="_blank" rel="noreferrer" className="text-xs text-[#71717A] hover:text-[#25D366]">WhatsApp</a>
