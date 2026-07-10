@@ -116,8 +116,8 @@ export default function PlanManagement() {
     setSavingBingo(true);
     try {
       const updated = {
-        price: Number(bingoForm.price),
-        max_cards: Number(bingoForm.max_cards),
+        price: Number(String(bingoForm.price).replace(',', '.')) || 0,
+        max_cards: Number(String(bingoForm.max_cards).replace('.', '')) || 0,
         description: bingoForm.description,
         app_generator: !!bingoForm.app_generator,
         app_seller: !!bingoForm.app_seller,
@@ -158,7 +158,13 @@ export default function PlanManagement() {
   const saveSpedPlan = async () => {
     setSavingSped(true);
     try {
-      const res = await base44.functions.invoke("manageSpedPlans", { ...spedForm, action: "save" });
+      const payload = {
+        ...spedForm,
+        action: "save",
+        price: Number(String(spedForm.price).replace(',', '.')) || 0,
+        downloads_limit: spedForm.downloads_limit === "" || spedForm.downloads_limit === null ? null : Number(String(spedForm.downloads_limit).replace('.', '')) || null,
+      };
+      const res = await base44.functions.invoke("manageSpedPlans", payload);
       if (res.data && !res.data.success) { alert("Erro: " + (res.data.error || "")); return; }
       await loadSpedPlans();
       setEditingSped(null);
