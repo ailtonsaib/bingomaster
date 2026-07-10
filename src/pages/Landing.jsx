@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { APPS, CONTACT } from "@/lib/appRegistry";
 import { getPortalUser } from "@/lib/portalSession";
+import { useDynamicPlans } from "@/hooks/useDynamicPlans";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle, Mail, Phone, X, Check, Sparkles } from "lucide-react";
 
@@ -184,7 +185,14 @@ function PlansModal({ app, onClose }) {
 export default function Landing() {
   const navigate = useNavigate();
   const [plansApp, setPlansApp] = useState(null);
-  const publicApps = APPS.filter((a) => !a.adminOnly);
+  const { bingoPlans, spedPlans } = useDynamicPlans();
+
+  // Sobrescreve planos hardcoded com dados reais do banco
+  const publicApps = APPS.filter((a) => !a.adminOnly).map((app) => {
+    if (app.id === "bingo" && bingoPlans) return { ...app, plans: bingoPlans };
+    if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
+    return app;
+  });
 
   return (
     <div className="min-h-screen bg-[#FAFAFB]">
