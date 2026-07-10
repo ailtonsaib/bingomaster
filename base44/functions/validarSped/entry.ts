@@ -390,13 +390,18 @@ const REG_CONTRIBUICOES = [
 ];
 
 const REG_ECD = [
-  '0000','0001','0007','0020','0100','0150','0180','0200','0205','0990',
+  // Bloco 0: Abertura, Identificação e Referências
+  '0000','0001','0007','0020','0100','0150','0175','0180','0200','0205','0990',
+  // Bloco I: Lançamentos Contábeis
   'I001','I010','I012','I015','I020','I030','I050','I051','I052','I053','I075','I100','I150','I151','I155',
-  'I157','I200','I250','I300','I310','I350','I355','I990',
-  'J001','J005','J030','J050','J051','J052','J053','J100','J150','J200','J210','J215','J300','J310','J400',
+  'I157','I200','I250','I300','I310','I350','I355','I500','I510','I550','I555','I990',
+  // Bloco J: Demonstrações Contábeis
+  'J001','J005','J100','J150','J200','J210','J215','J300','J310','J400',
   'J410','J420','J430','J435','J450','J460','J470','J480','J500','J510','J520','J530','J532','J800','J801',
-  'J900','J930','J932','J990',
-  'K001','K100','K200','K300','K990',
+  'J900','J930','J932','J935','J990',
+  // Bloco K: Conglomerados Econômicos
+  'K001','K030','K100','K110','K115','K200','K210','K220','K230','K240','K250','K260','K270','K275','K280','K990',
+  // Bloco 9: Controle e Encerramento
   '9001','9900','9990','9999'
 ];
 
@@ -432,7 +437,7 @@ const REGISTROS_POR_TIPO = {
 const BLOCOS_POR_TIPO = {
   FISCAL: ['0','B','C','D','E','G','H','K','1','9'],
   CONTRIBUICOES: ['0','A','C','D','F','I','M','P','1','9'],
-  ECD: ['0','I','J','9'],
+  ECD: ['0','I','J','K','9'],
   ECF: ['0','A','C','E','G','K','L','M','P','Q','T','U','Y','9']
 };
 
@@ -1022,29 +1027,23 @@ Deno.serve(async (req) => {
     }
 
     // --- 3. Detectar tipo de SPED ---
+    // ECD deve ser verificado ANTES de Contribuiões, pois ambos podem ter bloco I
     let tipoDetectado = 'FISCAL';
-    // SPED Contribuiões: presença de registros característicos (A100, F100, M200, M600)
-    // ou blocos específicos (A, F, I, M, P) sem blocos fiscais (B, E, G, H, K)
-    const temBlocoA = !!estatisticas.blocos['A'];
-    const temBlocoF = !!estatisticas.blocos['F'];
-    const temBlocoM = !!estatisticas.registros['M001'] || !!estatisticas.registros['M200'];
-    const temBlocoP = !!estatisticas.blocos['P'];
-    const temBlocoI = !!estatisticas.blocos['I'];
-    const temBlocoB = !!estatisticas.blocos['B'];
-    const temBlocoE = !!estatisticas.registros['E001'] || !!estatisticas.registros['E110'];
-    const tem0110 = !!estatisticas.registros['0110'];
-    if (estatisticas.registros['M200'] || estatisticas.registros['M600'] || estatisticas.registros['F100'] || estatisticas.registros['A100'] ||
-        temBlocoA || temBlocoF || temBlocoM || temBlocoP || temBlocoI || tem0110) {
-      // Distingue Contribuições de ECF: ECF tem U100/Y612/0010, Contribuições tem F100/F200/M200/M600
-      if (estatisticas.registros['U100'] || estatisticas.registros['Y612'] || estatisticas.registros['0010']) {
-        tipoDetectado = 'ECF';
-      } else {
+    if (estatisticas.registros['I030'] || estatisticas.registros['I050'] || estatisticas.registros['J100'] || estatisticas.registros['J930'] || estatisticas.registros['J900']) {
+      tipoDetectado = 'ECD';
+    } else if (estatisticas.registros['Y612'] || estatisticas.registros['U100'] || estatisticas.registros['U150'] || estatisticas.registros['0010']) {
+      tipoDetectado = 'ECF';
+    } else {
+      const temBlocoA = !!estatisticas.blocos['A'];
+      const temBlocoF = !!estatisticas.blocos['F'];
+      const temBlocoM = !!estatisticas.registros['M001'] || !!estatisticas.registros['M200'];
+      const temBlocoP = !!estatisticas.blocos['P'];
+      const temBlocoI = !!estatisticas.blocos['I'];
+      const tem0110 = !!estatisticas.registros['0110'];
+      if (estatisticas.registros['M200'] || estatisticas.registros['M600'] || estatisticas.registros['F100'] || estatisticas.registros['A100'] ||
+          temBlocoA || temBlocoF || temBlocoM || temBlocoP || temBlocoI || tem0110) {
         tipoDetectado = 'CONTRIBUICOES';
       }
-    } else if (estatisticas.registros['I030'] || estatisticas.registros['I050'] || estatisticas.registros['J100'] || estatisticas.registros['J930']) {
-      tipoDetectado = 'ECD';
-    } else if (estatisticas.registros['Y612'] || estatisticas.registros['U100'] || estatisticas.registros['U150']) {
-      tipoDetectado = 'ECF';
     }
 
     const registrosValidos = REGISTROS_POR_TIPO[tipoDetectado] || REG_FISCAL;
@@ -1514,7 +1513,45 @@ Deno.serve(async (req) => {
         validarValorNumerico(campos, 3, 4, 'M800', linhaAtual, erros);
       }
 
-      // === SPED ECD: I030, I050, I150, I155, I200, I250, J005, J100, J930 ===
+      // === SPED ECD: I010, I012, I030, I050, I051, I100, I150, I155, I200, I250, I300, I310, I350, I355 ===
+
+      if (registro === 'I010' && tipoDetectado === 'ECD') {
+        // |I010|IND_ESC|COD_VER_LC|
+        if (campos.length < 3) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I010',
+            mensagem: `Registro I010 (identificação da escrituração) incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // IND_ESC (índice 1): G, R, A, B ou Z
+        if (campos[1] && !['G','R','A','B','Z'].includes(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I010',
+            mensagem: `IND_ESC inválido: "${campos[1]}" (deve ser G=Diário Completo, R=Diário Resumido, A=Diário Auxiliar, B=Balancetes Diários ou Z=Razão Auxiliar).`,
+            severidade: 'erro'
+          });
+        }
+      }
+
+      if (registro === 'I012' && tipoDetectado === 'ECD') {
+        // |I012|NUM_ORD|NAT_LIVR|TIPO|COD_HASH_AUX|
+        if (campos.length < 5) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I012',
+            mensagem: `Registro I012 (livros auxiliares) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // TIPO (índice 3): 0=Digital, 1=Outros
+        if (campos[3] && !['0','1'].includes(campos[3])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I012',
+            mensagem: `TIPO inválido: "${campos[3]}" (deve ser 0=Digital ou 1=Outros).`,
+            severidade: 'erro'
+          });
+        }
+      }
 
       if (registro === 'I030' && tipoDetectado === 'ECD') {
         // Termo de abertura: |I030|NUM_ORD|NAT_LIVRO|TIPO_ESCRIT|DATA_INI|DATA_FIN|NOME|CNPJ|...
@@ -1531,7 +1568,7 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'I050' && tipoDetectado === 'ECD') {
-        // Plano de contas
+        // |I050|DT_ALT|COD_NAT|IND_CTA|NIVEL|COD_CTA|COD_CTA_SUP|CTA|
         if (campos.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'I050',
@@ -1541,18 +1578,62 @@ Deno.serve(async (req) => {
         }
         // DT_ALT (índice 1)
         validarData8(campos[1], 'I050', linhaAtual, erros);
-        // IND_NAT (índice 4) deve ser 01-10
-        if (campos[4] && !/^0[1-9]$|^10$/.test(campos[4])) {
+        // COD_NAT (índice 2): 01-10 (natureza da conta)
+        if (campos[2] && !/^0[1-9]$|^10$/.test(campos[2])) {
           erros.push({
             linha: linhaAtual, registro: 'I050',
-            mensagem: `IND_NAT_GRUPO inválido: "${campos[4]}" (deve estar entre 01 e 10).`,
+            mensagem: `COD_NAT inválido: "${campos[2]}" (deve estar entre 01 e 10).`,
+            severidade: 'erro'
+          });
+        }
+        // IND_CTA (índice 3): S=Sintética, A=Analítica
+        if (campos[3] && !['S','A'].includes(campos[3])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I050',
+            mensagem: `IND_CTA inválido: "${campos[3]}" (deve ser S=Sintética ou A=Analítica).`,
             severidade: 'erro'
           });
         }
       }
 
+      if (registro === 'I051' && tipoDetectado === 'ECD') {
+        // |I051|COD_ENT_REF|COD_CCUS|COD_CTA_REF|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I051',
+            mensagem: `Registro I051 (plano de contas referencial) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+      }
+
+      if (registro === 'I100' && tipoDetectado === 'ECD') {
+        // |I100|DT_ALT|COD_CCUS|CCUS|
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I100',
+            mensagem: `Registro I100 (centro de custos) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'I100', linhaAtual, erros);
+      }
+
+      if (registro === 'I150' && tipoDetectado === 'ECD') {
+        // |I150|DT_INI|DT_FIN|
+        if (campos.length < 3) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I150',
+            mensagem: `Registro I150 (saldos periódicos) incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'I150', linhaAtual, erros);
+        validarData8(campos[2], 'I150', linhaAtual, erros);
+      }
+
       if (registro === 'I155' && tipoDetectado === 'ECD') {
-        // Detalhes de saldos
+        // |I155|COD_CTA|COD_CCUS|DT_INI|DT_FIN|VL_SLD_INI|IND_DC_INI|VL_DEB|VL_CRED|VL_SLD_FIN|IND_DC_FIN|
         if (campos.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: 'I155',
@@ -1560,23 +1641,62 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        // IND_DC (índice 6) deve ser D ou C
+        // IND_DC_INI (índice 6) e IND_DC_FIN (índice 9) devem ser D ou C
         if (campos[6] && !['D','C'].includes(campos[6])) {
           erros.push({
             linha: linhaAtual, registro: 'I155',
+            mensagem: `IND_DC_INI inválido: "${campos[6]}" (deve ser D=Devedor ou C=Credor).`,
+            severidade: 'erro'
+          });
+        }
+        if (campos[10] && !['D','C'].includes(campos[10])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I155',
+            mensagem: `IND_DC_FIN inválido: "${campos[10]}" (deve ser D=Devedor ou C=Credor).`,
+            severidade: 'erro'
+          });
+        }
+        // VL_SLD_INI (índice 5), VL_DEB (índice 7), VL_CRED (índice 8), VL_SLD_FIN (índice 9)
+        validarValorNumerico(campos, 5, 6, 'I155', linhaAtual, erros);
+        validarValorNumerico(campos, 7, 10, 'I155', linhaAtual, erros);
+      }
+
+      if (registro === 'I200' && tipoDetectado === 'ECD') {
+        // |I200|NUM_LCTO|DT_LCTO|IND_LCTO|HIST|VL_LCTO|IND_DC|...
+        if (campos.length < 5) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I200',
+            mensagem: `Registro I200 (lançamento contábil) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // DT_LCTO (índice 2)
+        validarData8(campos[2], 'I200', linhaAtual, erros);
+        // IND_LCTO (índice 3): N=Normal, E=Exttemporal, R=Reclassificação
+        if (campos[3] && !['N','E','R'].includes(campos[3])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I200',
+            mensagem: `IND_LCTO inválido: "${campos[3]}" (deve ser N=Normal, E=Extemporal ou R=Reclassificação).`,
+            severidade: 'erro'
+          });
+        }
+        // VL_LCTO (índice 5) e IND_DC (índice 6)
+        validarValorNumerico(campos, 5, 6, 'I200', linhaAtual, erros);
+        if (campos[6] && !['D','C'].includes(campos[6])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I200',
             mensagem: `IND_DC inválido: "${campos[6]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 5, 6, 'I155', linhaAtual, erros);
       }
 
       if (registro === 'I250' && tipoDetectado === 'ECD') {
-        // Lançamento contábil
+        // |I250|COD_CTA|COD_CCUS|VL_LCTO|IND_DC|NUM_LCTO|HIST|COD_PART|
         if (campos.length < 5) {
           avisos.push({
             linha: linhaAtual, registro: 'I250',
-            mensagem: `Registro I250 (lançamento contábil) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I250 (partidas do lançamento) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
             severidade: 'aviso'
           });
         }
@@ -1592,15 +1712,102 @@ Deno.serve(async (req) => {
         validarValorNumerico(campos, 3, 4, 'I250', linhaAtual, erros);
       }
 
+      if (registro === 'I300' && tipoDetectado === 'ECD') {
+        // |I300|DT_BCTE|
+        if (campos.length < 2) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I300',
+            mensagem: `Registro I300 (balancetes diários) incompleto: esperado mínimo de 2 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'I300', linhaAtual, erros);
+      }
+
+      if (registro === 'I310' && tipoDetectado === 'ECD') {
+        // |I310|COD_CTA|COD_CCUS|VL_SLD_FIN|IND_DC|
+        if (campos.length < 5) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I310',
+            mensagem: `Registro I310 (detalhes do balancete diário) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        if (campos[4] && !['D','C'].includes(campos[4])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I310',
+            mensagem: `IND_DC inválido: "${campos[4]}" (deve ser D=Devedor ou C=Credor).`,
+            severidade: 'erro'
+          });
+        }
+        validarValorNumerico(campos, 3, 4, 'I310', linhaAtual, erros);
+      }
+
+      if (registro === 'I350' && tipoDetectado === 'ECD') {
+        // |I350|DT_RES|
+        if (campos.length < 2) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I350',
+            mensagem: `Registro I350 (saldos de resultado antes do encerramento) incompleto: esperado mínimo de 2 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'I350', linhaAtual, erros);
+      }
+
+      if (registro === 'I355' && tipoDetectado === 'ECD') {
+        // |I355|COD_CTA|VL_CTA|IND_DC|
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'I355',
+            mensagem: `Registro I355 (detalhes dos saldos de resultado) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        if (campos[3] && !['D','C'].includes(campos[3])) {
+          erros.push({
+            linha: linhaAtual, registro: 'I355',
+            mensagem: `IND_DC inválido: "${campos[3]}" (deve ser D=Devedor ou C=Credor).`,
+            severidade: 'erro'
+          });
+        }
+        validarValorNumerico(campos, 2, 3, 'I355', linhaAtual, erros);
+      }
+
+      // === SPED ECD: J005, J100, J150, J200, J210, J900, J930, J932, J935 ===
+
+      if (registro === 'J005' && tipoDetectado === 'ECD') {
+        // |J005|DT_INI|DT_FIN|COD_DEM|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'J005',
+            mensagem: `Registro J005 (demonstrações contábeis) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'J005', linhaAtual, erros);
+        validarData8(campos[2], 'J005', linhaAtual, erros);
+        // COD_DEM (índice 3): 1=Balanço, 2=DRE, 3=DLPA/DMPL, 4=Fluxo de Caixa, 5=Valor Adicionado
+        if (campos[3] && !['1','2','3','4','5'].includes(campos[3])) {
+          erros.push({
+            linha: linhaAtual, registro: 'J005',
+            mensagem: `COD_DEM inválido: "${campos[3]}" (deve ser 1=Balanço, 2=DRE, 3=DLPA/DMPL, 4=Fluxo de Caixa ou 5=Valor Adicionado).`,
+            severidade: 'erro'
+          });
+        }
+      }
+
       if (registro === 'J100' && tipoDetectado === 'ECD') {
         // |J100|DT_INI|DT_FIN|COD_CTA|COD_CTA_RES|VL_SLD_FIN|IND_DC|...
         if (campos.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: 'J100',
-            mensagem: `Registro J100 (balancete) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J100 (balanço patrimonial) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
             severidade: 'aviso'
           });
         }
+        validarData8(campos[1], 'J100', linhaAtual, erros);
+        validarData8(campos[2], 'J100', linhaAtual, erros);
         if (campos[6] && !['D','C'].includes(campos[6])) {
           erros.push({
             linha: linhaAtual, registro: 'J100',
@@ -1609,6 +1816,7 @@ Deno.serve(async (req) => {
           });
         }
         validarValorNumerico(campos, 5, 6, 'J100', linhaAtual, erros);
+        validarValorNumerico(campos, 7, 8, 'J100', linhaAtual, erros);
       }
 
       if (registro === 'J150' && tipoDetectado === 'ECD') {
@@ -1616,10 +1824,12 @@ Deno.serve(async (req) => {
         if (campos.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'J150',
-            mensagem: `Registro J150 (demonstração do resultado) incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J150 (DRE) incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
             severidade: 'aviso'
           });
         }
+        validarData8(campos[1], 'J150', linhaAtual, erros);
+        validarData8(campos[2], 'J150', linhaAtual, erros);
         if (campos[7] && !['D','C'].includes(campos[7])) {
           erros.push({
             linha: linhaAtual, registro: 'J150',
@@ -1628,6 +1838,55 @@ Deno.serve(async (req) => {
           });
         }
         validarValorNumerico(campos, 5, 7, 'J150', linhaAtual, erros);
+        validarValorNumerico(campos, 8, 9, 'J150', linhaAtual, erros);
+      }
+
+      if (registro === 'J200' && tipoDetectado === 'ECD') {
+        // |J200|COD_AGL|IND_GRP|DESC_COD_AGL|VL_AGL|
+        if (campos.length < 5) {
+          avisos.push({
+            linha: linhaAtual, registro: 'J200',
+            mensagem: `Registro J200 (aglutinação) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // IND_GRP (índice 2): A=Ativo, P=Passivo, R=Receita, D=Despesa
+        if (campos[2] && !['A','P','R','D'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: 'J200',
+            mensagem: `IND_GRP inválido: "${campos[2]}" (deve ser A=Ativo, P=Passivo, R=Receita ou D=Despesa).`,
+            severidade: 'erro'
+          });
+        }
+        validarValorNumerico(campos, 4, 5, 'J200', linhaAtual, erros);
+      }
+
+      if (registro === 'J210' && tipoDetectado === 'ECD') {
+        // |J210|DT_INI|DT_FIN|COD_AGL|IND_GRP|DESC_COD_AGL|VL_AGL|
+        if (campos.length < 7) {
+          avisos.push({
+            linha: linhaAtual, registro: 'J210',
+            mensagem: `Registro J210 (DLPA/DMPL) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'J210', linhaAtual, erros);
+        validarData8(campos[2], 'J210', linhaAtual, erros);
+        validarValorNumerico(campos, 6, 7, 'J210', linhaAtual, erros);
+      }
+
+      if (registro === 'J900' && tipoDetectado === 'ECD') {
+        // |J900|NUM_ORD|NAT_LIVR|DT_INI|DT_FIN|NOME|CNPJ|...
+        if (campos.length < 7) {
+          avisos.push({
+            linha: linhaAtual, registro: 'J900',
+            mensagem: `Registro J900 (termo de encerramento) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[3], 'J900', linhaAtual, erros);
+        validarData8(campos[4], 'J900', linhaAtual, erros);
+        validarCpfCnpj(campos[6], 'J900', linhaAtual, erros, 'CNPJ');
       }
 
       if (registro === 'J930' && tipoDetectado === 'ECD') {
@@ -1635,7 +1894,7 @@ Deno.serve(async (req) => {
         if (campos.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'J930',
-            mensagem: `Registro J930 (signatários) incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J930 (signatários da escrituração) incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`,
             severidade: 'aviso'
           });
         }
@@ -1648,6 +1907,122 @@ Deno.serve(async (req) => {
               severidade: 'erro'
             });
           }
+        }
+        // COD_ASSIN (índice 5): deve estar entre 1 e 9
+        if (campos[5] && !['1','2','3','4','5','6','7','8','9'].includes(campos[5])) {
+          erros.push({
+            linha: linhaAtual, registro: 'J930',
+            mensagem: `COD_ASSIN inválido: "${campos[5]}" (deve estar entre 1 e 9).`,
+            severidade: 'erro'
+          });
+        }
+      }
+
+      if (registro === 'J932' && tipoDetectado === 'ECD') {
+        // |J932|NOME|CPF|IDENT_QUALIF|QUALIF|COD_ASSIN|...
+        if (campos.length < 6) {
+          avisos.push({
+            linha: linhaAtual, registro: 'J932',
+            mensagem: `Registro J932 (signatários do termo de verificação) incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        if (campos[2]) {
+          const cpf = campos[2].replace(/\D/g, '');
+          if (cpf.length !== 11) {
+            erros.push({
+              linha: linhaAtual, registro: 'J932',
+              mensagem: `CPF inválido no registro J932: "${campos[2]}" (esperado 11 dígitos).`,
+              severidade: 'erro'
+            });
+          }
+        }
+      }
+
+      if (registro === 'J935' && tipoDetectado === 'ECD') {
+        // |J935|CPF_CNPJ|NOME|COD_QUALIF|...
+        if (campos.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'J935',
+            mensagem: `Registro J935 (identificação dos auditores independentes) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarCpfCnpj(campos[1], 'J935', linhaAtual, erros, 'CPF/CNPJ do auditor');
+      }
+
+      // === SPED ECD: K030, K100, K110, K200 ===
+
+      if (registro === 'K030' && tipoDetectado === 'ECD') {
+        // |K030|DT_INI|DT_FIN|
+        if (campos.length < 3) {
+          avisos.push({
+            linha: linhaAtual, registro: 'K030',
+            mensagem: `Registro K030 (período da escrituração consolidada) incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarData8(campos[1], 'K030', linhaAtual, erros);
+        validarData8(campos[2], 'K030', linhaAtual, erros);
+      }
+
+      if (registro === 'K100' && tipoDetectado === 'ECD') {
+        // |K100|COD_PAIS|EMP_COD|CNPJ|NOME|PER_PART|EVENTO|PER_CONS|DATA_INI_EMP|DATA_FIN_EMP|
+        if (campos.length < 10) {
+          avisos.push({
+            linha: linhaAtual, registro: 'K100',
+            mensagem: `Registro K100 (empresas consolidadas) incompleto: esperado mínimo de 10 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // EVENTO (índice 6): S=Sim, N=Não
+        if (campos[6] && !['S','N'].includes(campos[6])) {
+          erros.push({
+            linha: linhaAtual, registro: 'K100',
+            mensagem: `EVENTO inválido: "${campos[6]}" (deve ser S=Sim ou N=Não).`,
+            severidade: 'erro'
+          });
+        }
+        validarData8(campos[8], 'K100', linhaAtual, erros);
+        validarData8(campos[9], 'K100', linhaAtual, erros);
+      }
+
+      if (registro === 'K110' && tipoDetectado === 'ECD') {
+        // |K110|EVENTO|DT_EVENTO|
+        if (campos.length < 3) {
+          avisos.push({
+            linha: linhaAtual, registro: 'K110',
+            mensagem: `Registro K110 (eventos societários) incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // EVENTO (índice 1): 1-8
+        if (campos[1] && !['1','2','3','4','5','6','7','8'].includes(campos[1])) {
+          erros.push({
+            linha: linhaAtual, registro: 'K110',
+            mensagem: `EVENTO inválido: "${campos[1]}" (deve estar entre 1=Aquisição e 8=Constituição).`,
+            severidade: 'erro'
+          });
+        }
+        validarData8(campos[2], 'K110', linhaAtual, erros);
+      }
+
+      if (registro === 'K200' && tipoDetectado === 'ECD') {
+        // |K200|COD_NAT|IND_CTA|NIVEL|COD_CTA|COD_CTA_SUP|CTA|
+        if (campos.length < 7) {
+          avisos.push({
+            linha: linhaAtual, registro: 'K200',
+            mensagem: `Registro K200 (plano de contas consolidado) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // IND_CTA (índice 2): S=Sintética, A=Analítica
+        if (campos[2] && !['S','A'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: 'K200',
+            mensagem: `IND_CTA inválido: "${campos[2]}" (deve ser S=Sintética ou A=Analítica).`,
+            severidade: 'erro'
+          });
         }
       }
 
