@@ -439,14 +439,14 @@ function validarData8(dig, registro, linhaAtual, erros) {
   }
 }
 
-function validarCnpj(cnpjRaw, registro, linhaAtual, erros, campo) {
-  if (cnpjRaw && cnpjRaw.length > 0) {
-    const cnpj = cnpjRaw.replace(/\D/g, '');
-    if (cnpj.length !== 14) {
+function validarCpfCnpj(docRaw, registro, linhaAtual, erros, campo) {
+  if (docRaw && docRaw.length > 0) {
+    const doc = docRaw.replace(/\D/g, '');
+    if (doc.length !== 11 && doc.length !== 14) {
       erros.push({
         linha: linhaAtual,
         registro,
-        mensagem: `CNPJ inválido${campo ? ` no campo ${campo}` : ''}: "${cnpjRaw}" (esperado 14 dígitos, encontrado ${cnpj.length}).`,
+        mensagem: `CPF/CNPJ inválido${campo ? ` no campo ${campo}` : ''}: "${docRaw}" (esperado 11 dígitos para CPF ou 14 para CNPJ, encontrado ${doc.length}).`,
         severidade: 'erro'
       });
     }
@@ -983,17 +983,17 @@ Deno.serve(async (req) => {
         // Posições de CNPJ e datas variam conforme o tipo de SPED
         if (tipoDetectado === 'ECD') {
           // |0000|LECD|DT_INI|DT_FIN|NOME|CNPJ|UF|...  → DT_INI=idx2, DT_FIN=idx3, CNPJ=idx5
-          validarCnpj(campos[5], '0000', linhaAtual, erros, 'CNPJ');
+          validarCpfCnpj(campos[5], '0000', linhaAtual, erros, 'CPF/CNPJ');
           validarData8(campos[2], '0000', linhaAtual, erros);
           validarData8(campos[3], '0000', linhaAtual, erros);
         } else if (tipoDetectado === 'ECF') {
           // |0000|COD_SIT|DT_INI|DT_FIN|NOME|CNPJ|UF|...  → DT_INI=idx2, DT_FIN=idx3, CNPJ=idx5
-          validarCnpj(campos[5], '0000', linhaAtual, erros, 'CNPJ');
+          validarCpfCnpj(campos[5], '0000', linhaAtual, erros, 'CPF/CNPJ');
           validarData8(campos[2], '0000', linhaAtual, erros);
           validarData8(campos[3], '0000', linhaAtual, erros);
         } else {
           // Fiscal / Contribuições: |0000|COD_VER|COD_FIN|DT_INI|DT_FIN|NOME|CNPJ|...  → DT_INI=idx3, DT_FIN=idx4, CNPJ=idx6
-          validarCnpj(campos[6], '0000', linhaAtual, erros, 'CNPJ');
+          validarCpfCnpj(campos[6], '0000', linhaAtual, erros, 'CPF/CNPJ');
           validarData8(campos[3], '0000', linhaAtual, erros);
           validarData8(campos[4], '0000', linhaAtual, erros);
         }
@@ -1007,7 +1007,7 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        validarCnpj(campos[4], '0150', linhaAtual, erros, 'CNPJ');
+        validarCpfCnpj(campos[4], '0150', linhaAtual, erros, 'CPF/CNPJ');
       }
 
       if (registro === '0200') {
@@ -1096,7 +1096,7 @@ Deno.serve(async (req) => {
             severidade: 'erro'
           });
         }
-        validarCnpj(campos[4], 'A100', linhaAtual, erros, 'CNPJ participante');
+        validarCpfCnpj(campos[4], 'A100', linhaAtual, erros, 'CPF/CNPJ participante');
       }
 
       if (registro === 'A170' && tipoDetectado === 'CONTRIBUICOES') {
@@ -1196,7 +1196,7 @@ Deno.serve(async (req) => {
         }
         validarData8(campos[4], 'I030', linhaAtual, erros);
         validarData8(campos[5], 'I030', linhaAtual, erros);
-        validarCnpj(campos[7], 'I030', linhaAtual, erros, 'CNPJ');
+        validarCpfCnpj(campos[7], 'I030', linhaAtual, erros, 'CPF/CNPJ');
       }
 
       if (registro === 'I050' && tipoDetectado === 'ECD') {
