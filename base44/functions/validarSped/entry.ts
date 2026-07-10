@@ -1619,25 +1619,58 @@ Deno.serve(async (req) => {
       // === SPED CONTRIBUIÇÕES: A100, A170, F100, F200, M200, M600, M400, M800 ===
 
       if (registro === 'A100' && tipoDetectado === 'CONTRIBUICOES') {
-        if (campos.length < 14) {
+        // Layout A100: REG|IND_OPER|IND_EMIT|COD_PART|COD_SIT|SER|SUB|NUM_DOC|CHV_NFSE|DT_DOC|DT_EXE_SERV|VL_DOC|IND_PGTO|VL_DESC|VL_BC_PIS|VL_PIS|VL_BC_COFINS|VL_COFINS|VL_PIS_RET|VL_COFINS_RET|VL_ISS
+        if (campos.length < 18) {
           avisos.push({
             linha: linhaAtual, registro: 'A100',
-            mensagem: `Registro A100 incompleto: esperado mínimo de 14 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro A100 incompleto: esperado mínimo de 18 campos, encontrado ${campos.length}.`,
             severidade: 'aviso'
           });
         }
-        // IND_OPER campo 3 (índice 2)
-        if (campos[2] && !['0','1'].includes(campos[2])) {
+        // IND_OPER (índice 1): 0=Serviço Contratado, 1=Serviço Prestado
+        if (campos[1] && !['0','1'].includes(campos[1])) {
           erros.push({
             linha: linhaAtual, registro: 'A100',
-            mensagem: `IND_OPER inválido: "${campos[2]}" (deve ser 0=Entrada ou 1=Saída).`,
+            mensagem: `IND_OPER inválido: "${campos[1]}" (deve ser 0=Serviço Contratado ou 1=Serviço Prestado).`,
             severidade: 'erro'
           });
         }
-        validarCpfCnpj(campos[4], 'A100', linhaAtual, erros, 'CPF/CNPJ participante');
+        // IND_EMIT (índice 2): 0=Emissão Própria, 1=Emissão de Terceiros
+        if (campos[2] && !['0','1'].includes(campos[2])) {
+          erros.push({
+            linha: linhaAtual, registro: 'A100',
+            mensagem: `IND_EMIT inválido: "${campos[2]}" (deve ser 0=Emissão Própria ou 1=Emissão de Terceiros).`,
+            severidade: 'erro'
+          });
+        }
+        // COD_SIT (índice 4): 00=Regular, 02=Cancelado
+        const codSitA100 = ['00','02'];
+        if (campos[4] && !codSitA100.includes(campos[4])) {
+          erros.push({
+            linha: linhaAtual, registro: 'A100',
+            mensagem: `COD_SIT inválido: "${campos[4]}" (deve ser 00=Documento regular ou 02=Documento cancelado).`,
+            severidade: 'erro'
+          });
+        }
+        // DT_DOC (índice 9) e DT_EXE_SERV (índice 10)
+        validarData8(campos[9], 'A100', linhaAtual, erros);
+        validarData8(campos[10], 'A100', linhaAtual, erros);
+        // VL_DOC (índice 11)
+        validarValorNumerico(campos, 11, 12, 'A100', linhaAtual, erros);
+        // IND_PGTO (índice 12): 0=À vista, 1=A prazo, 9=Sem pagamento
+        if (campos[12] && !['0','1','9'].includes(campos[12])) {
+          erros.push({
+            linha: linhaAtual, registro: 'A100',
+            mensagem: `IND_PGTO inválido: "${campos[12]}" (deve ser 0=À vista, 1=A prazo ou 9=Sem pagamento).`,
+            severidade: 'erro'
+          });
+        }
+        // VL_DESC (índice 13, opcional), VL_BC_PIS (14), VL_PIS (15), VL_BC_COFINS (16), VL_COFINS (17)
+        validarValorNumerico(campos, 13, 18, 'A100', linhaAtual, erros);
       }
 
       if (registro === 'A170' && tipoDetectado === 'CONTRIBUICOES') {
+        // Layout A170: REG|NUM_ITEM|COD_ITEM|DESCR_COMPL|VL_ITEM|VL_DESC|NAT_BC_CRED|IND_ORIG_CRED|CST_PIS|VL_BC_PIS|ALIQ_PIS|VL_PIS|CST_COFINS|VL_BC_COFINS|ALIQ_COFINS|VL_COFINS|COD_CTA|COD_CCUS
         if (campos.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'A170',
@@ -1645,8 +1678,36 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        // VL_ITEM campo 4 (índice 3), VL_DESC campo 5 (índice 4)
-        validarValorNumerico(campos, 3, 5, 'A170', linhaAtual, erros);
+        // NUM_ITEM (índice 1): numérico
+        validarValorNumerico(campos, 1, 2, 'A170', linhaAtual, erros);
+        // VL_ITEM (índice 4) e VL_DESC (índice 5, opcional)
+        validarValorNumerico(campos, 4, 6, 'A170', linhaAtual, erros);
+        // IND_ORIG_CRED (índice 7, opcional): 0=Mercado Interno, 1=Importação
+        if (campos[7] && !['0','1'].includes(campos[7])) {
+          erros.push({
+            linha: linhaAtual, registro: 'A170',
+            mensagem: `IND_ORIG_CRED inválido: "${campos[7]}" (deve ser 0=Operação no Mercado Interno ou 1=Operação de Importação).`,
+            severidade: 'erro'
+          });
+        }
+        // CST_PIS (índice 8) e CST_COFINS (índice 12): obrigatórios, 2 dígitos
+        if (campos[8] && !/^\d{2}$/.test(campos[8])) {
+          erros.push({
+            linha: linhaAtual, registro: 'A170',
+            mensagem: `CST_PIS inválido: "${campos[8]}" (deve ter 2 dígitos numéricos conforme Tabela 4.3.3).`,
+            severidade: 'erro'
+          });
+        }
+        if (campos[12] && !/^\d{2}$/.test(campos[12])) {
+          erros.push({
+            linha: linhaAtual, registro: 'A170',
+            mensagem: `CST_COFINS inválido: "${campos[12]}" (deve ter 2 dígitos numéricos conforme Tabela 4.3.4).`,
+            severidade: 'erro'
+          });
+        }
+        // VL_BC_PIS (9), ALIQ_PIS (10), VL_PIS (11), VL_BC_COFINS (13), ALIQ_COFINS (14), VL_COFINS (15)
+        validarValorNumerico(campos, 9, 12, 'A170', linhaAtual, erros);
+        validarValorNumerico(campos, 13, 16, 'A170', linhaAtual, erros);
       }
 
       if (registro === 'F100' && tipoDetectado === 'CONTRIBUICOES') {
