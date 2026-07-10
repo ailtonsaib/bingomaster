@@ -1289,15 +1289,15 @@ Deno.serve(async (req) => {
       }
 
       if (registro === '0140' && tipoDetectado === 'CONTRIBUICOES') {
-        // |0140|CNPJ|NOME|...
-        if (campos.length < 3) {
+        // |0140|COD_ESTAB|NOME|CNPJ|UF|IE|COD_MUN|...
+        if (campos.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: '0140',
-            mensagem: `Registro 0140 incompleto: esperado mínimo de 3 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro 0140 incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
             severidade: 'aviso'
           });
         }
-        validarCpfCnpj(campos[1], '0140', linhaAtual, erros, 'CNPJ estabelecimento');
+        validarCpfCnpj(campos[3], '0140', linhaAtual, erros, 'CNPJ estabelecimento');
       }
 
       if (registro === 'A010' && tipoDetectado === 'CONTRIBUICOES') {
