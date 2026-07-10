@@ -602,6 +602,7 @@ export default function ValidadorSped() {
             limitReached={limitReached}
             clienteId={clienteSelecionado}
             clienteNome={clientes.find(c => c.id === clienteSelecionado)?.razao_social || ''}
+            onClienteCadastrado={carregarDados}
           />
         )}
 

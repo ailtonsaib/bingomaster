@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function SpedValidator({ planKey, limitReached, clienteId, clienteNome }) {
+export default function SpedValidator({ planKey, limitReached, clienteId, clienteNome, onClienteCadastrado }) {
   const [arquivo, setArquivo] = useState(null);
   const [conteudo, setConteudo] = useState('');
   const [conteudoEditado, setConteudoEditado] = useState('');
@@ -111,6 +111,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
           setShowAjusteDialog(true);
         }
         await salvarValidacao(dados, nome, conteudoParaValidar, foiCorrigido);
+        if (dados.cliente && onClienteCadastrado) {
+          onClienteCadastrado();
+        }
       } else {
         setErro(dados.error || 'Erro na validação.');
       }
