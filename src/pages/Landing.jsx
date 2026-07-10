@@ -17,7 +17,7 @@ function currency(v) {
   return v === 0 ? "Grátis" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
-function AppCard({ app, onOpenPlans }) {
+function AppCard({ app, onOpenPlans, loading }) {
   const navigate = useNavigate();
   const Icon = iconMap[app.icon];
   const user = getPortalUser();
@@ -71,11 +71,19 @@ function AppCard({ app, onOpenPlans }) {
       {/* Plans preview */}
       <div className="px-8 pb-4">
         <div className="flex flex-wrap gap-1.5">
-          {app.plans?.map((plan, i) => (
-            <span key={i} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: `${app.accent}15`, color: app.accent }}>
-              {plan.name}: {currency(plan.price)}
-            </span>
-          ))}
+          {loading ? (
+            <>
+              <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
+              <div className="h-6 w-24 rounded-full bg-gray-100 animate-pulse" />
+              <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
+            </>
+          ) : (
+            app.plans?.map((plan, i) => (
+              <span key={i} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: `${app.accent}15`, color: app.accent }}>
+                {plan.name}: {currency(plan.price)}
+              </span>
+            ))
+          )}
         </div>
       </div>
 
@@ -92,6 +100,7 @@ function AppCard({ app, onOpenPlans }) {
         <Button
           onClick={() => onOpenPlans(app)}
           variant="outline"
+          disabled={loading}
           className="h-10 rounded-xl border-gray-200 text-[#52525B] hover:bg-gray-50"
         >
           Ver Planos
@@ -150,6 +159,7 @@ function PlansModal({ app, onClose }) {
                     {currency(plan.price)}
                     {plan.price !== 0 && <span className="text-xs font-normal text-[#71717A]">/mês</span>}
                   </p>
+                  {plan.description && <p className="text-xs text-[#71717A] mb-3">{plan.description}</p>}
                   <ul className="space-y-1.5">
                     {plan.max_cards && <li className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />{plan.max_cards} cartelas</li>}
                     {plan.limit && <li className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />{plan.limit}</li>}
@@ -185,7 +195,7 @@ function PlansModal({ app, onClose }) {
 export default function Landing() {
   const navigate = useNavigate();
   const [plansApp, setPlansApp] = useState(null);
-  const { bingoPlans, spedPlans } = useDynamicPlans();
+  const { bingoPlans, spedPlans, loading } = useDynamicPlans();
 
   // Sobrescreve planos hardcoded com dados reais do banco
   const publicApps = APPS.filter((a) => !a.adminOnly).map((app) => {
@@ -193,6 +203,11 @@ export default function Landing() {
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
     return app;
   });
+
+  // Aplica loading skeleton no preview de planos
+  const appsToShow = loading
+    ? publicApps.map((app) => ({ ...app, plans: [] }))
+    : publicApps;
 
   return (
     <div className="min-h-screen bg-[#FAFAFB]">
@@ -241,8 +256,8 @@ export default function Landing() {
       {/* Apps grid */}
       <section id="apps" className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {publicApps.map((app) => (
-            <AppCard key={app.id} app={app} onOpenPlans={setPlansApp} />
+          {appsToShow.map((app) => (
+            <AppCard key={app.id} app={app} onOpenPlans={setPlansApp} loading={loading} />
           ))}
         </div>
       </section>

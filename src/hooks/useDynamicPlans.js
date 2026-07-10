@@ -17,8 +17,17 @@ export function useDynamicPlans() {
           base44.entities.PlanConfig.list(),
           base44.entities.SpedPlanConfig.list(),
         ]);
-        setBingoPlans(bingo || []);
-        setSpedPlans(sped || []);
+
+        // Ordena bingo por max_cards crescente e SPED por order crescente
+        const sortedBingo = [...(bingo || [])].sort(
+          (a, b) => (a.max_cards ?? 0) - (b.max_cards ?? 0)
+        );
+        const sortedSped = [...(sped || [])].sort(
+          (a, b) => (a.order ?? 0) - (b.order ?? 0)
+        );
+
+        setBingoPlans(sortedBingo);
+        setSpedPlans(sortedSped);
       } catch (_) {
         // fallback: arrays vazios, Landing usa planos do appRegistry
       } finally {
@@ -38,38 +47,44 @@ export function useDynamicPlans() {
   };
 
   /** Converte planos do banco (PlanConfig) para o formato da Landing */
-  const mappedBingoPlans = bingoPlans.map((p) => {
-    const apps = Object.entries(APP_LABELS)
-      .filter(([key]) => p[key])
-      .map(([, label]) => label);
-    return {
-      name: p.plan_name || p.plan_key,
-      price: p.price ?? 0,
-      max_cards: p.max_cards,
-      apps,
-    };
-  });
+  const mappedBingoPlans = bingoPlans
+    .filter((p) => p.is_active !== false)
+    .map((p) => {
+      const apps = Object.entries(APP_LABELS)
+        .filter(([key]) => p[key])
+        .map(([, label]) => label);
+      return {
+        name: p.plan_name || p.plan_key,
+        price: p.price ?? 0,
+        max_cards: p.max_cards,
+        apps,
+        description: p.description || "",
+      };
+    });
 
   /** Converte planos do banco (SpedPlanConfig) para o formato da Landing */
-  const mappedSpedPlans = spedPlans.map((p) => {
-    const typeLabels = (p.sped_types || []).map((t) => {
-      const map = {
-        FISCAL: "Fiscal",
-        CONTRIBUICOES: "Contribuições",
-        ECD: "ECD",
-        ECF: "ECF",
-        DIMESC: "DIME-SC",
-        REINF: "REINF",
+  const mappedSpedPlans = spedPlans
+    .filter((p) => p.is_active !== false)
+    .map((p) => {
+      const typeLabels = (p.sped_types || []).map((t) => {
+        const map = {
+          FISCAL: "Fiscal",
+          CONTRIBUICOES: "Contribuições",
+          ECD: "ECD",
+          ECF: "ECF",
+          DIMESC: "DIME-SC",
+          REINF: "REINF",
+        };
+        return map[t] || t;
+      });
+      return {
+        name: p.plan_name || p.plan_key,
+        price: p.price ?? 0,
+        downloads: p.downloads_limit,
+        types: typeLabels,
+        description: p.description || "",
       };
-      return map[t] || t;
     });
-    return {
-      name: p.plan_name || p.plan_key,
-      price: p.price ?? 0,
-      downloads: p.downloads_limit,
-      types: typeLabels,
-    };
-  });
 
   return {
     bingoPlans: mappedBingoPlans.length ? mappedBingoPlans : null,
