@@ -1074,6 +1074,53 @@ Deno.serve(async (req) => {
 
     const registrosValidos = REGISTROS_POR_TIPO[tipoDetectado] || REG_FISCAL;
 
+    // --- 3b. Extrair CNPJ do registro 0000 e verificar/cadastrar cliente automaticamente ---
+    const campos0000 = linhas[0].split('|').filter((c) => c !== '');
+    let cnpjArquivo = '';
+    let razaoSocialArquivo = '';
+    if (tipoDetectado === 'ECD' || tipoDetectado === 'ECF') {
+      cnpjArquivo = (campos0000[5] || '').replace(/\D/g, '');
+      razaoSocialArquivo = campos0000[4] || '';
+    } else {
+      cnpjArquivo = (campos0000[6] || '').replace(/\D/g, '');
+      razaoSocialArquivo = campos0000[5] || '';
+    }
+
+    let clienteInfo = null;
+    if (cnpjArquivo.length === 14) {
+      try {
+        const clientesExistentes = await base44.asServiceRole.entities.ClienteSped.filter({ cnpj: cnpjArquivo });
+        if (clientesExistentes && clientesExistentes.length > 0) {
+          clienteInfo = { ...clientesExistentes[0], auto_cadastrado: false };
+        } else {
+          // Buscar dados na Receita Federal via BrasilAPI
+          const apiResp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjArquivo}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            signal: AbortSignal.timeout(10000)
+          });
+          if (apiResp.ok) {
+            const dadosReceita = await apiResp.json();
+            const isSimples = dadosReceita.opcao_pelo_simples && !dadosReceita.opcao_pelo_simples.data_exclusao;
+            const ie = dadosReceita.inscricoes_estaduais && Array.isArray(dadosReceita.inscricoes_estaduais) && dadosReceita.inscricoes_estaduais.length > 0
+              ? (dadosReceita.inscricoes_estaduais[0].inscricao_estadual || '')
+              : '';
+            const novoCliente = await base44.asServiceRole.entities.ClienteSped.create({
+              razao_social: dadosReceita.razao_social || razaoSocialArquivo || '',
+              cnpj: cnpjArquivo,
+              ie: ie || '',
+              uf: dadosReceita.uf || '',
+              municipio: dadosReceita.codigo_municipio || '',
+              regime: isSimples ? 'SIMPLES' : 'NORMAL',
+              perfil: 'PRESUMIDO'
+            });
+            clienteInfo = { ...novoCliente, auto_cadastrado: true };
+          }
+        }
+      } catch (e) {
+        // Falha no cadastro do cliente não é crítica para a validação
+      }
+    }
+
     // --- 3a. Validar blocos válidos e sequência para o tipo detectado ---
     const blocosEsperados = BLOCOS_POR_TIPO[tipoDetectado] || BLOCOS_POR_TIPO.FISCAL;
     const blocosEncontradosLista = Object.keys(estatisticas.blocos);
@@ -2176,6 +2223,8 @@ Deno.serve(async (req) => {
       erros,
       avisos,
       estatisticas,
+      cliente: clienteInfo,
+      regime: clienteInfo?.regime || null,
       resumo: {
         totalLinhas: linhas.length,
         totalErros: erros.length,

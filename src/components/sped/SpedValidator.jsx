@@ -19,6 +19,7 @@ import {
   Pencil,
   RefreshCw,
   Wrench,
+  Building2,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -82,8 +83,8 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         total_linhas: dados.estatisticas?.totalLinhas || 0,
         foi_corrigido: corrigido,
         conteudo_final: conteudoFinal,
-        cliente_id: clienteId || '',
-        cliente_nome: clienteNome || '',
+        cliente_id: dados.cliente?.id || clienteId || '',
+        cliente_nome: dados.cliente?.razao_social || clienteNome || '',
         validated_by: userEmail,
         validation_date: new Date().toISOString()
       });
@@ -439,6 +440,46 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
               </div>
             </CardContent>
           </Card>
+
+          {/* Cliente detectado / cadastrado */}
+          {resultado.cliente && (
+            <Card className={resultado.cliente.auto_cadastrado ? 'border-emerald-300 bg-emerald-50' : 'border-primary/30'}>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-primary" />
+                  Cliente {resultado.cliente.auto_cadastrado ? 'Cadastrado Automaticamente' : 'Vinculado'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Razão Social</p>
+                    <p className="text-sm font-semibold">{resultado.cliente.razao_social || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">CNPJ</p>
+                    <p className="text-sm font-mono">{(resultado.cliente.cnpj || '').replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Regime Tributário</p>
+                    <Badge variant={resultado.cliente.regime === 'SIMPLES' ? 'secondary' : 'default'} className="mt-0.5">
+                      {resultado.cliente.regime === 'SIMPLES' ? 'Simples Nacional' : 'Lucro Normal'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">UF / IE</p>
+                    <p className="text-sm">{resultado.cliente.uf || '—'} {resultado.cliente.ie && `| IE: ${resultado.cliente.ie}`}</p>
+                  </div>
+                </div>
+                {resultado.cliente.auto_cadastrado && (
+                  <p className="text-xs text-emerald-700 mt-3 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Cliente não estava cadastrado. Dados obtidos automaticamente da Receita Federal e registrados no sistema.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Lista de Erros */}
           {resultado.erros.length > 0 && (
