@@ -32,7 +32,8 @@ import {
   Crown,
   ShieldCheck,
   FileDown,
-  History
+  History,
+  FileCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLicense } from '@/hooks/useLicense';
@@ -40,6 +41,7 @@ import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
 import SpedValidator from '@/components/sped/SpedValidator';
 import DimeScGenerator from '@/components/sped/DimeScGenerator';
 import ReinfGenerator from '@/components/sped/ReinfGenerator';
+import XmlFiscalValidator from '@/components/sped/XmlFiscalValidator';
 
 const SPED_TYPE_LABELS = {
   FISCAL: 'SPED Fiscal (ICMS/IPI)',
@@ -296,6 +298,13 @@ export default function ValidadorSped() {
               className="gap-2"
             >
               <ShieldCheck className="h-4 w-4" /> Validador
+            </Button>
+            <Button
+              variant={aba === 'xmlfiscal' ? 'default' : 'outline'}
+              onClick={() => setAba('xmlfiscal')}
+              className="gap-2"
+            >
+              <FileCheck className="h-4 w-4" /> NF-e / CT-e
             </Button>
             <Button
               variant={aba === 'dime' ? 'default' : 'outline'}
@@ -594,6 +603,11 @@ export default function ValidadorSped() {
             clienteId={clienteSelecionado}
             clienteNome={clientes.find(c => c.id === clienteSelecionado)?.razao_social || ''}
           />
+        )}
+
+        {/* ABA: NF-e / CT-e */}
+        {aba === 'xmlfiscal' && (
+          <XmlFiscalValidator planKey={planKey} />
         )}
 
         {/* ABA: DIME-SC */}
