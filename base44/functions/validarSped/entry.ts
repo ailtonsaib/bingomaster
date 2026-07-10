@@ -410,6 +410,14 @@ const REGISTROS_POR_TIPO = {
   ECF: REG_ECF
 };
 
+// Sequência oficial de blocos por tipo de SPED (EFD-ICMS/IPI, Contribuições, ECD, ECF)
+const BLOCOS_POR_TIPO = {
+  FISCAL: ['0','B','C','D','E','G','H','K','1','9'],
+  CONTRIBUICOES: ['0','A','C','D','F','M','1','9'],
+  ECD: ['0','I','J','9'],
+  ECF: ['0','A','C','E','G','K','L','M','P','Q','T','U','Y','9']
+};
+
 // ===================== VALIDADORES DE REGISTRO =====================
 
 function validarValorNumerico(campos, inicio, fim, registro, linhaAtual, erros) {
@@ -1011,6 +1019,20 @@ Deno.serve(async (req) => {
     }
 
     const registrosValidos = REGISTROS_POR_TIPO[tipoDetectado] || REG_FISCAL;
+
+    // --- 3a. Validar blocos válidos e sequência para o tipo detectado ---
+    const blocosEsperados = BLOCOS_POR_TIPO[tipoDetectado] || BLOCOS_POR_TIPO.FISCAL;
+    const blocosEncontradosLista = Object.keys(estatisticas.blocos);
+    for (const bloco of blocosEncontradosLista) {
+      if (!blocosEsperados.includes(bloco)) {
+        erros.push({
+          linha: 0,
+          registro: bloco,
+          mensagem: `Bloco "${bloco}" não é válido para SPED ${tipoDetectado}. Blocos válidos: ${blocosEsperados.join(' → ')}.`,
+          severidade: 'erro'
+        });
+      }
+    }
 
     // --- 4. Segunda passada: validações específicas por registro ---
     linhaAtual = 0;
