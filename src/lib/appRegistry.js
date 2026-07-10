@@ -10,7 +10,7 @@ export const APPS = [
     permission: "can_access_bingo",
     external: false,
     tagline: "Plataforma completa de bingo",
-    image: "https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=800&auto=format&fit=crop&q=80",
+    image: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/635419225_generated_image.png",
     description:
       "Gere cartelas personalizadas com até 3 chances e 5 prêmios. Venda via app do vendedor, acompanhe pelo app do comprador, projete no telão e valide cartelas em tempo real. Inclui rifas, relatórios de vendas e financeiros.",
     features: [
