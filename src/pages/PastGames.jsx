@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,10 +11,12 @@ import { motion } from "framer-motion";
 
 export default function PastGames() {
   const [selectedGame, setSelectedGame] = useState(null);
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [], isLoading } = useQuery({
-    queryKey: ["past-games"],
-    queryFn: () => base44.entities.BingoGame.filter({ status: "finished" }, "-created_date"),
+    queryKey: ["past-games", userId],
+    queryFn: () => base44.entities.BingoGame.filter(scope({ status: "finished" }), "-created_date"),
+    enabled,
   });
 
   const { data: selectedGameData } = useQuery({
@@ -24,7 +27,7 @@ export default function PastGames() {
 
   const { data: cards = [] } = useQuery({
     queryKey: ["past-game-cards", selectedGame?.id],
-    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(selectedGame?.id) }),
+    queryFn: () => base44.entities.BingoCard.filter(scope({ game_id: String(selectedGame?.id) })),
     enabled: !!selectedGame?.id,
   });
 

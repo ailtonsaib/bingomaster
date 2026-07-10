@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,16 +14,18 @@ import {
 export default function WinnerSummary() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [showGamePicker, setShowGamePicker] = useState(false);
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [] } = useQuery({
-    queryKey: ["winner-games"],
-    queryFn: () => base44.entities.BingoGame.list("-created_date"),
+    queryKey: ["winner-games", userId],
+    queryFn: () => base44.entities.BingoGame.filter(scope(), "-created_date"),
+    enabled,
   });
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["winner-cards", selectedGame?.id],
     queryFn: () => base44.entities.BingoCard.filter(
-      { game_id: String(selectedGame.id), is_winner: true },
+      scope({ game_id: String(selectedGame.id), is_winner: true }),
       "card_number"
     ),
     enabled: !!selectedGame,

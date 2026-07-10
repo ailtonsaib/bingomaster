@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,10 +114,12 @@ export default function Sellers() {
   const [shareSeller, setShareSeller] = useState(null);
   const [receiptSeller, setReceiptSeller] = useState(null);
   const [search, setSearch] = useState("");
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: sellers = [], isLoading } = useQuery({
-    queryKey: ["sellers"],
-    queryFn: () => base44.entities.Seller.list("-created_date"),
+    queryKey: ["sellers", userId],
+    queryFn: () => base44.entities.Seller.filter(scope(), "-created_date"),
+    enabled,
   });
 
   const handleDelete = async (id) => {

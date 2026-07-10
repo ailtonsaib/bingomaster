@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -200,16 +201,19 @@ export default function GameMonitor() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [editingGame, setEditingGame] = useState(null);
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [], isLoading } = useQuery({
-    queryKey: ["monitor-games"],
-    queryFn: () => base44.entities.BingoGame.list("-created_date"),
+    queryKey: ["monitor-games", userId],
+    queryFn: () => base44.entities.BingoGame.filter(scope(), "-created_date"),
+    enabled,
     refetchInterval: REFRESH_MS,
   });
 
   const { data: allCards = [] } = useQuery({
-    queryKey: ["monitor-cards"],
-    queryFn: () => base44.entities.BingoCard.list(),
+    queryKey: ["monitor-cards", userId],
+    queryFn: () => base44.entities.BingoCard.filter(scope(), "created_date", 100000),
+    enabled,
     refetchInterval: REFRESH_MS,
   });
 

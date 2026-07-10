@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,15 +22,17 @@ export default function ValidateCards() {
   const [unvalidating, setUnvalidating] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [] } = useQuery({
-    queryKey: ["validate-games"],
-    queryFn: () => base44.entities.BingoGame.list("-created_date"),
+    queryKey: ["validate-games", userId],
+    queryFn: () => base44.entities.BingoGame.filter(scope(), "-created_date"),
+    enabled,
   });
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["validate-cards", selectedGame?.id],
-    queryFn: () => base44.entities.BingoCard.filter({ game_id: String(selectedGame.id) }, "card_number"),
+    queryFn: () => base44.entities.BingoCard.filter(scope({ game_id: String(selectedGame.id) }), "card_number"),
     enabled: !!selectedGame,
   });
 

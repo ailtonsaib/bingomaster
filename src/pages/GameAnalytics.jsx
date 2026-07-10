@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,20 +11,24 @@ import { motion } from "framer-motion";
 
 export default function GameAnalytics() {
   const [selectedGame, setSelectedGame] = useState(null);
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [], isLoading: gamesLoading } = useQuery({
-    queryKey: ["analytics-games"],
-    queryFn: () => base44.entities.BingoGame.list("-created_date"),
+    queryKey: ["analytics-games", userId],
+    queryFn: () => base44.entities.BingoGame.filter(scope(), "-created_date"),
+    enabled,
   });
 
   const { data: cards = [], isLoading: cardsLoading } = useQuery({
-    queryKey: ["analytics-cards"],
-    queryFn: () => base44.functions.invoke("getAllCards", {}).then(r => r.data.cards),
+    queryKey: ["analytics-cards", userId],
+    queryFn: () => base44.entities.BingoCard.filter(scope(), "created_date", 100000),
+    enabled,
   });
 
   const { data: sellers = [], isLoading: sellersLoading } = useQuery({
-    queryKey: ["analytics-sellers"],
-    queryFn: () => base44.entities.Seller.list(),
+    queryKey: ["analytics-sellers", userId],
+    queryFn: () => base44.entities.Seller.filter(scope()),
+    enabled,
   });
 
   const gameStats = useMemo(() => {

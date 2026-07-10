@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useUserScope } from "@/hooks/useUserScope";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +15,12 @@ export default function Rifas() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingRifa, setEditingRifa] = useState(null);
+  const { userId, scope, enabled } = useUserScope();
 
   const { data: rifas = [], isLoading } = useQuery({
-    queryKey: ["rifas"],
-    queryFn: () => base44.entities.Rifa.list("-created_date", 50),
+    queryKey: ["rifas", userId],
+    queryFn: () => base44.entities.Rifa.filter(scope(), "-created_date", 50),
+    enabled,
   });
 
   const deleteMutation = useMutation({

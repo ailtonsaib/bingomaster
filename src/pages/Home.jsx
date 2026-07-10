@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useUserScope } from "@/hooks/useUserScope";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -29,22 +30,27 @@ export default function Home() {
   const queryClient = useQueryClient();
   const { brandName, setBrandName } = useBrandName();
   const { user: authUser } = useAuth();
+  const { userId, scope, enabled } = useUserScope();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const { data: games = [], isLoading, refetch } = useQuery({
-    queryKey: ["bingo-games"],
-    queryFn: () => base44.entities.BingoGame.list("-created_date"),
+    queryKey: ["bingo-games", userId],
+    queryFn: () => base44.entities.BingoGame.filter(scope(), "-created_date"),
+    enabled,
   });
   const { data: sellers = [] } = useQuery({
-    queryKey: ["sellers-stats"],
-    queryFn: () => base44.entities.Seller.list(),
+    queryKey: ["sellers-stats", userId],
+    queryFn: () => base44.entities.Seller.filter(scope()),
+    enabled,
   });
   const { data: allCards = [] } = useQuery({
-    queryKey: ["all-cards-stats"],
-    queryFn: () => base44.functions.invoke("getAllCards", {}).then(r => r.data.cards),
+    queryKey: ["all-cards-stats", userId],
+    queryFn: () => base44.entities.BingoCard.filter(scope(), "created_date", 100000),
+    enabled,
   });
   const { data: distributions = [] } = useQuery({
-    queryKey: ["all-distributions"],
-    queryFn: () => base44.entities.SellerDistribution.list(),
+    queryKey: ["all-distributions", userId],
+    queryFn: () => base44.entities.SellerDistribution.filter(scope()),
+    enabled,
   });
   const [editingGame, setEditingGame] = useState(null);
   const [showDistribute, setShowDistribute] = useState(false);
@@ -151,9 +157,8 @@ export default function Home() {
   const handleResetAll = async () => {
     setResetting(true);
     try {
-      // Delete all cards first
-      const allCardsRes = await base44.functions.invoke("getAllCards", {});
-      const allCards = allCardsRes.data.cards;
+      // Delete all cards (only current user's)
+      const allCards = await base44.entities.BingoCard.filter(scope(), "created_date", 100000);
       if (allCards.length > 0) {
         for (const card of allCards) {
           try {
@@ -163,9 +168,8 @@ export default function Home() {
           }
         }
       }
-      // Delete all games
-      const allGamesRes = await base44.functions.invoke("getAllGames", {});
-      const allGames = allGamesRes.data.games;
+      // Delete all games (only current user's)
+      const allGames = await base44.entities.BingoGame.filter(scope(), "created_date", 10000);
       if (allGames.length > 0) {
         for (const game of allGames) {
           try {
