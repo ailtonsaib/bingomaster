@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import DivergenceReport from '@/components/sped/DivergenceReport';
 import {
   UploadCloud,
   FileText,
@@ -537,6 +538,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
               </CardContent>
             </Card>
           )}
+
+          {/* Relatório Resumido de Divergências */}
+          <DivergenceReport resultado={resultado} />
 
           {/* Editor / Correção */}
           {modoEdicao && (
