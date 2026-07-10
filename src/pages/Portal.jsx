@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Grid3x3, Wallet, FileText, Settings, LogOut, KeyRound } from "lucide-react";
+import { Grid3x3, Wallet, FileText, Shield, LogOut, KeyRound } from "lucide-react";
 import { APPS } from "@/lib/appRegistry";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 
-const iconMap = { Grid3x3, Wallet, FileText };
+const iconMap = { Grid3x3, Wallet, FileText, Shield };
 
 export default function Portal() {
   const navigate = useNavigate();
@@ -30,22 +30,16 @@ export default function Portal() {
     navigate('/portal-login');
   };
 
-  // Show only apps the user has permission for
-  const visibleApps = APPS.filter((app) => !app.permission || user[app.permission]);
+  // Show only apps the user has permission for; admin-only apps require is_admin
+  const visibleApps = APPS.filter((app) => {
+    if (app.adminOnly) return user?.is_admin;
+    return !app.permission || user[app.permission];
+  });
 
   return (
     <div className="min-h-screen bg-[#FAFAFB] flex flex-col items-center justify-center p-6 relative">
       {/* Top-right controls */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-        {user?.is_admin && (
-          <button
-            onClick={() => navigate('/portal-admin')}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#6B7280] text-sm transition-colors shadow-sm"
-            title="Painel Admin"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        )}
         <button
           onClick={() => setShowChangePassword(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#6B7280] text-sm transition-colors shadow-sm"

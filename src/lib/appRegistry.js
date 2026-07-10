@@ -29,4 +29,14 @@ export const APPS = [
     permission: "can_access_sped",
     external: false,
   },
+  {
+    id: "admin",
+    name: "Painel Administrador",
+    icon: "Shield",
+    iconBg: "bg-[#FEF3C7]",
+    iconColor: "text-[#D97706]",
+    url: "/portal-admin",
+    adminOnly: true,
+    external: false,
+  },
 ];
