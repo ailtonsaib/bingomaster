@@ -212,11 +212,11 @@ export default function PlanManagement() {
                         <div className="flex flex-1 flex-wrap gap-3 items-end">
                           <div className="flex flex-col gap-1 min-w-[120px]">
                             <label className="text-xs font-medium text-muted-foreground">Preço (R$)</label>
-                            <Input type="number" min="0" value={bingoForm.price} onChange={e => setBingoForm(v => ({ ...v, price: e.target.value }))} className="h-8 text-sm" />
+                            <Input type="text" inputMode="decimal" value={bingoForm.price} onChange={e => setBingoForm(v => ({ ...v, price: e.target.value }))} className="h-8 text-sm" />
                           </div>
                           <div className="flex flex-col gap-1 min-w-[140px]">
                             <label className="text-xs font-medium text-muted-foreground">Máx. Cartelas</label>
-                            <Input type="number" min="1" value={bingoForm.max_cards} onChange={e => setBingoForm(v => ({ ...v, max_cards: e.target.value }))} className="h-8 text-sm" />
+                            <Input type="text" inputMode="numeric" value={bingoForm.max_cards} onChange={e => setBingoForm(v => ({ ...v, max_cards: e.target.value }))} className="h-8 text-sm" />
                           </div>
                           <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
                             <label className="text-xs font-medium text-muted-foreground">Descrição</label>
@@ -315,7 +315,7 @@ export default function PlanManagement() {
                       {spedPlans.map(p => (
                         <td key={p.plan_key} className="p-3 text-center">
                           {editingSped === p.plan_key ? (
-                            <Input type="number" value={spedForm.downloads_limit ?? ""} onChange={e => setSpedForm({ ...spedForm, downloads_limit: e.target.value === "" ? null : e.target.value })} placeholder="Vazio = ilimitado" className="h-8 text-center text-xs" />
+                            <Input type="text" inputMode="numeric" value={spedForm.downloads_limit ?? ""} onChange={e => setSpedForm({ ...spedForm, downloads_limit: e.target.value === "" ? null : e.target.value })} placeholder="Vazio = ilimitado" className="h-8 text-center text-xs" />
                           ) : p.downloads_limit != null ? `${p.downloads_limit} arquivos` : "Ilimitado"}
                         </td>
                       ))}
@@ -325,7 +325,7 @@ export default function PlanManagement() {
                       {spedPlans.map(p => (
                         <td key={p.plan_key} className="p-3 text-center">
                           {editingSped === p.plan_key ? (
-                            <Input type="number" step="0.01" value={spedForm.price} onChange={e => setSpedForm({ ...spedForm, price: e.target.value })} className="h-8 text-center text-xs" />
+                            <Input type="text" inputMode="decimal" value={spedForm.price} onChange={e => setSpedForm({ ...spedForm, price: e.target.value })} className="h-8 text-center text-xs" />
                           ) : fmtPrice(p.price)}
                         </td>
                       ))}
