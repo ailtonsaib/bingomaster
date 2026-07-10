@@ -777,6 +777,17 @@ function corrigirConteudo(conteudo, tipoDetectado) {
 
 // ===================== FUNÇÃO PRINCIPAL =====================
 
+// Retorna a posição canônica do bloco na sequência oficial do SPED:
+// 0 → blocos alfabéticos (A-Z) → 1 → 9
+// Isso garante que "1" venha após todos os blocos alfabéticos (ex: P vem antes de 1)
+function blocoOrdem(bloco) {
+  if (bloco === '0') return 0;
+  if (bloco === '9') return 99;
+  if (bloco === '1') return 50;
+  if (/[A-Z]/.test(bloco)) return bloco.charCodeAt(0) - 54; // A=11, Z=36
+  return 50;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -892,7 +903,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Validar ordenação de blocos (ordem alfabética crescente; bloco 9 é sempre o último)
+      // Validar ordenação de blocos (sequência oficial do SPED: 0 → A-Z → 1 → 9)
       if (entrouBloco9 && bloco !== '9') {
         erros.push({
           linha: linhaAtual,
@@ -903,15 +914,15 @@ Deno.serve(async (req) => {
       }
       if (bloco === '9') {
         entrouBloco9 = true;
-      } else if (!entrouBloco9 && blocoAnterior && bloco < blocoAnterior) {
+      } else if (!entrouBloco9 && blocoAnterior && blocoOrdem(bloco) < blocoOrdem(blocoAnterior)) {
         erros.push({
           linha: linhaAtual,
           registro,
-          mensagem: `Bloco "${bloco}" aparece após o bloco "${blocoAnterior}". Os blocos devem seguir a ordem alfabética crescente conforme o leiaute do SPED.`,
+          mensagem: `Bloco "${bloco}" aparece após o bloco "${blocoAnterior}". Os blocos devem seguir a sequência oficial do SPED (0 → A-Z → 1 → 9).`,
           severidade: 'erro'
         });
       }
-      if (!entrouBloco9 && (!blocoAnterior || bloco > blocoAnterior)) {
+      if (!entrouBloco9 && (!blocoAnterior || blocoOrdem(bloco) > blocoOrdem(blocoAnterior))) {
         blocoAnterior = bloco;
       }
 
