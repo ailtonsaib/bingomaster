@@ -439,6 +439,38 @@ function validarData8(dig, registro, linhaAtual, erros) {
   }
 }
 
+function validarDigitoCpf(cpf) {
+  if (!/^(\d)\1{10}$/.test(cpf)) {
+    let soma = 0;
+    for (let i = 0; i < 9; i++) soma += parseInt(cpf[i], 10) * (10 - i);
+    let dv1 = (soma * 10) % 11;
+    if (dv1 === 10) dv1 = 0;
+    if (dv1 !== parseInt(cpf[9], 10)) return false;
+    soma = 0;
+    for (let i = 0; i < 10; i++) soma += parseInt(cpf[i], 10) * (11 - i);
+    let dv2 = (soma * 10) % 11;
+    if (dv2 === 10) dv2 = 0;
+    if (dv2 !== parseInt(cpf[10], 10)) return false;
+  }
+  return true;
+}
+
+function validarDigitoCnpj(cnpj) {
+  const pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let soma = 0;
+  for (let i = 0; i < 12; i++) soma += parseInt(cnpj[i], 10) * pesos1[i];
+  let dv1 = soma % 11;
+  dv1 = dv1 < 2 ? 0 : 11 - dv1;
+  if (dv1 !== parseInt(cnpj[12], 10)) return false;
+  soma = 0;
+  for (let i = 0; i < 13; i++) soma += parseInt(cnpj[i], 10) * pesos2[i];
+  let dv2 = soma % 11;
+  dv2 = dv2 < 2 ? 0 : 11 - dv2;
+  if (dv2 !== parseInt(cnpj[13], 10)) return false;
+  return true;
+}
+
 function validarCpfCnpj(docRaw, registro, linhaAtual, erros, campo) {
   if (docRaw && docRaw.length > 0) {
     const doc = docRaw.replace(/\D/g, '');
@@ -449,6 +481,24 @@ function validarCpfCnpj(docRaw, registro, linhaAtual, erros, campo) {
         mensagem: `CPF/CNPJ inválido${campo ? ` no campo ${campo}` : ''}: "${docRaw}" (esperado 11 dígitos para CPF ou 14 para CNPJ, encontrado ${doc.length}).`,
         severidade: 'erro'
       });
+    } else if (doc.length === 11) {
+      if (!validarDigitoCpf(doc)) {
+        erros.push({
+          linha: linhaAtual,
+          registro,
+          mensagem: `CPF inválido${campo ? ` no campo ${campo}` : ''}: "${docRaw}" (dígitos verificadores não conferem).`,
+          severidade: 'erro'
+        });
+      }
+    } else if (doc.length === 14) {
+      if (!validarDigitoCnpj(doc)) {
+        erros.push({
+          linha: linhaAtual,
+          registro,
+          mensagem: `CNPJ inválido${campo ? ` no campo ${campo}` : ''}: "${docRaw}" (dígitos verificadores não conferem).`,
+          severidade: 'erro'
+        });
+      }
     }
   }
 }
