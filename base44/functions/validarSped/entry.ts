@@ -406,22 +406,42 @@ const REG_ECD = [
 ];
 
 const REG_ECF = [
-  '0000','0001','0010','0020','0021','0030','0040','0045','0050','0060','0070','0080','0090','0100','0110',
-  '0120','0140','0150','0175','0180','0190','0200','0205','0208','0400','0450','0500','0600','0990',
-  'A001','A010','A100','A110','A111','A120','A170','A990',
-  'C001','C010','C100','C110','C120','C130','C140','C150','C160','C170','C180','C190','C195','C197','C990',
-  'E001','E010','E020','E030','E040','E050','E060','E080','E090','E100','E110','E111','E115','E116','E200',
-  'E210','E220','E230','E240','E250','E300','E310','E311','E312','E313','E316','E500','E510','E520','E530','E990',
-  'G001','G110','G125','G130','G140','G990',
-  'K001','K030','K100','K155','K156','K200','K990',
+  // Bloco 0: Abertura, Identificação e Referências
+  '0000','0001','0010','0020','0021','0030','0035','0930','0990',
+  // Bloco C: Informações Recuperadas da ECD (Referencial)
+  'C001','C040','C050','C051','C053','C100','C150','C155','C157','C350','C355','C990',
+  // Bloco E: Saldos Recuperados da ECF Anterior
+  'E001','E010','E015','E020','E030','E155','E355','E990',
+  // Bloco J: Plano de Contas do Contribuinte
+  'J001','J050','J051','J053','J100','J990',
+  // Bloco K: Saldos Contábeis (Depois do Encerramento do Resultado)
+  'K001','K030','K155','K156','K355','K356','K915','K935','K990',
+  // Bloco L: Lucro Líquido - Lucro Real (Balanço, DRE)
   'L001','L010','L030','L100','L200','L210','L300','L990',
+  // Bloco M: e-Lalur e e-Lacs
   'M001','M010','M030','M100','M200','M300','M350','M400','M410','M500','M510','M550','M600','M700','M800','M810','M990',
+  // Bloco N: e-Lalur/e-Lacs Parte B (Controle de Saldos)
+  'N001','N010','N030','N600','N610','N630','N650','N660','N670','N680','N990',
+  // Bloco P: Lucro Presumido (Balanço, DRE)
   'P001','P030','P100','P200','P990',
+  // Bloco Q: Livro Caixa (Lucro Presumido sem ECD)
   'Q001','Q010','Q100','Q200','Q990',
+  // Bloco T: Lucro Arbitrado (Balanço, DRE)
   'T001','T010','T020','T030','T990',
+  // Bloco U: Imunes e Isentas
   'U001','U010','U030','U040','U080','U081','U100','U150','U180','U990',
+  // Bloco V: Derex
+  'V001','V010','V020','V030','V990',
+  // Bloco W: Declaração País-a-País (CBC Report)
+  'W001','W100','W200','W300','W990',
+  // Bloco X: Informações Econômicas
+  'X001','X280','X293','X312','X320','X330','X340','X350','X351','X352','X353','X354','X355','X356','X390',
+  'X400','X410','X420','X430','X450','X460','X470','X480','X490','X500','X510','X520','X530','X550','X560',
+  'X590','X600','X700','X790','X800','X990',
+  // Bloco Y: Informações Gerais
   'Y001','Y010','Y020','Y030','Y040','Y050','Y530','Y540','Y550','Y560','Y570','Y580','Y590','Y600','Y612',
   'Y620','Y630','Y640','Y650','Y660','Y665','Y670','Y680','Y690','Y720','Y730','Y750','Y760','Y800','Y820','Y990',
+  // Bloco 9: Controle e Encerramento
   '9001','9900','9990','9999'
 ];
 
@@ -438,7 +458,7 @@ const BLOCOS_POR_TIPO = {
   FISCAL: ['0','B','C','D','E','G','H','K','1','9'],
   CONTRIBUICOES: ['0','A','C','D','F','I','M','P','1','9'],
   ECD: ['0','I','J','K','9'],
-  ECF: ['0','A','C','E','G','K','L','M','P','Q','T','U','Y','9']
+  ECF: ['0','C','E','J','K','L','M','N','P','Q','T','U','V','W','X','Y','9']
 };
 
 // ===================== VALIDADORES DE REGISTRO =====================
@@ -531,6 +551,78 @@ function validarCpfCnpj(docRaw, registro, linhaAtual, erros, campo) {
         });
       }
     }
+  }
+}
+
+// ===================== VALIDAÇÃO ECF (data-driven) =====================
+// Tipos: D=Data8, E=enum(vals[],nome), C=CpfCnpj(label), F=CPF11(label), R=regex(padrao,nome), X=DC(nome), N=num(ini,fim)
+const ECF_RULES = {
+  '0000': { min: 11, c: [[1,'E',['LECF'],'NOME_ESC'],[3,'C','CNPJ'],[5,'E',['0','1','2','3','4','5','6','7'],'IND_SIT_INI_PER'],[6,'E',['0','1','2','3','4','5','6','7','8','9'],'SIT_ESPECIAL'],[9,'D'],[10,'D'],[11,'E',['S','N','F'],'RETIFICADORA'],[13,'E',['0','1','2'],'TIP_ECF']] },
+  '0010': { min: 4, c: [[1,'E',['T','A'],'FORMA_APUR'],[2,'E',['1','2','3','4','5','6'],'FORMA_TRIB']] },
+  '0020': { min: 3, c: [[1,'E',['1','2','3','4','5'],'IND_QUALIF_PJ']] },
+  '0930': { min: 5, c: [[2,'F','CPF do signatário'],[4,'E',['1','2','3','4','5','6','7','8','9'],'COD_ASSIN']] },
+  'C050': { min: 8, c: [[1,'D'],[2,'R','^0[1-9]$|^10$','COD_NAT'],[3,'E',['S','A'],'IND_CTA']] },
+  'C155': { min: 7, c: [[6,'X','IND_DC_INI'],[10,'X','IND_DC_FIN'],[5,'N',5,6],[7,'N',7,10]] },
+  'E020': { min: 3, c: [[1,'E',['R','C'],'IND_GRP_SLD'],[2,'D']] },
+  'E155': { min: 7, c: [[6,'X','IND_DC_INI'],[10,'X','IND_DC_FIN'],[5,'N',5,6],[7,'N',7,10]] },
+  'E355': { min: 4, c: [[3,'X','IND_DC'],[2,'N',2,3]] },
+  'J050': { min: 8, c: [[1,'D'],[2,'R','^0[1-9]$|^10$','COD_NAT'],[3,'E',['S','A'],'IND_CTA']] },
+  'K030': { min: 4, c: [[1,'D'],[2,'D'],[3,'R','^A(0[0]|0[1-9]|1[0-2])$|^T0[1-4]$','PER_APUR']] },
+  'K155': { min: 5, c: [[4,'X','IND_DC'],[3,'N',3,4]] },
+  'K355': { min: 4, c: [[3,'X','IND_DC'],[2,'N',2,3]] },
+  'L030': { min: 4, c: [[1,'D'],[2,'D'],[3,'R','^A(0[0]|0[1-9]|1[0-2])$|^T0[1-4]$','PER_APUR']] },
+  'L100': { min: 11, c: [[3,'E',['S','A'],'TIPO'],[8,'X','IND_VAL_CTA_REF_INI'],[10,'X','IND_VAL_CTA_REF_FIN'],[7,'N',7,8],[9,'N',9,10]] },
+  'L200': { min: 2, c: [[1,'E',['1','2','3','4','5','6','7'],'IND_AVAL_ESTOQ']] },
+  'M010': { min: 9, c: [[3,'D'],[5,'D'],[6,'E',['I','C'],'COD_TRIBUTO'],[8,'X','IND_VL_SALDO_INI'],[7,'N',7,8]] },
+  'M030': { min: 4, c: [[1,'D'],[2,'D'],[3,'R','^A(0[0]|0[1-9]|1[0-2])$|^T0[1-4]$','PER_APUR']] },
+  'M300': { min: 4, c: [[3,'X','IND_VAL_LALUR'],[2,'N',2,3]] },
+  'M350': { min: 4, c: [[3,'X','IND_VAL_LACS'],[2,'N',2,3]] },
+  'M410': { min: 4, c: [[3,'X','IND_DC'],[2,'N',2,3]] },
+  'M500': { min: 4, c: [[3,'X','IND_DC'],[2,'N',2,3]] },
+  'P030': { min: 4, c: [[1,'D'],[2,'D'],[3,'R','^A(0[0]|0[1-9]|1[0-2])$|^T0[1-4]$','PER_APUR']] },
+  'P100': { min: 11, c: [[3,'E',['S','A'],'TIPO'],[8,'X','IND_VAL_CTA_REF_INI'],[10,'X','IND_VAL_CTA_REF_FIN'],[7,'N',7,8],[9,'N',9,10]] },
+  'P200': { min: 4, c: [[1,'D'],[2,'D'],[3,'R','^A(0[0]|0[1-9]|1[0-2])$|^T0[1-4]$','PER_APUR']] },
+  'Q100': { min: 6, c: [[1,'D'],[5,'X','IND_SLD_FIN'],[2,'N',2,5]] },
+  'T020': { min: 2, c: [[1,'E',['1','2','3','4','5','6','7'],'IND_AVAL_ESTOQ']] },
+  'T030': { min: 4, c: [[1,'D'],[2,'D'],[3,'R','^A(0[0]|0[1-9]|1[0-2])$|^T0[1-4]$','PER_APUR']] },
+  'U030': { min: 2, c: [[1,'E',['1','2','3'],'IND_FORMA_APUR']] },
+  'U100': { min: 5, c: [[4,'X','IND_DC'],[3,'N',3,4]] },
+  'U150': { min: 5, c: [[4,'X','IND_DC'],[3,'N',3,4]] },
+  'U180': { min: 5, c: [[4,'X','IND_DC'],[3,'N',3,4]] },
+  'Y612': { min: 4, c: [[3,'N',3,4]] },
+  'Y620': { min: 6, c: [[4,'X','IND_VAL_LUCRO'],[3,'N',3,4]] },
+  'Y650': { min: 4, c: [[3,'N',3,4]] },
+  'Y672': { min: 4, c: [[3,'N',3,4]] }
+};
+
+function validarEcfRegistro(reg, campos, linhaAtual, erros, avisos) {
+  const rule = ECF_RULES[reg];
+  if (!rule) return;
+  if (campos.length < rule.min) {
+    avisos.push({ linha: linhaAtual, registro: reg, mensagem: `Registro ${reg} incompleto: esperado mínimo de ${rule.min} campos, encontrado ${campos.length}.`, severidade: 'aviso' });
+  }
+  if (!rule.c) return;
+  for (const chk of rule.c) {
+    const [idx, type] = chk;
+    const val = campos[idx];
+    if (!val && type !== 'N') continue;
+    if (type === 'D') { validarData8(val, reg, linhaAtual, erros); }
+    else if (type === 'E') {
+      const vals = chk[2]; const name = chk[3] || reg;
+      if (!vals.includes(val)) { erros.push({ linha: linhaAtual, registro: reg, mensagem: `${name} inválido: "${val}" (deve ser um de: ${vals.join(', ')}).`, severidade: 'erro' }); }
+    }
+    else if (type === 'C') { validarCpfCnpj(val, reg, linhaAtual, erros, chk[2] || 'CPF/CNPJ'); }
+    else if (type === 'F') {
+      const cpf = val.replace(/\D/g, '');
+      if (cpf.length !== 11) { erros.push({ linha: linhaAtual, registro: reg, mensagem: `${chk[2] || 'CPF'} inválido: "${val}" (esperado 11 dígitos, encontrado ${cpf.length}).`, severidade: 'erro' }); }
+    }
+    else if (type === 'R') {
+      if (!new RegExp(chk[2]).test(val)) { erros.push({ linha: linhaAtual, registro: reg, mensagem: `${chk[3] || reg} inválido: "${val}".`, severidade: 'erro' }); }
+    }
+    else if (type === 'X') {
+      if (!['D','C'].includes(val)) { erros.push({ linha: linhaAtual, registro: reg, mensagem: `${chk[2] || 'IND_DC'} inválido: "${val}" (deve ser D=Devedor ou C=Credor).`, severidade: 'erro' }); }
+    }
+    else if (type === 'N') { validarValorNumerico(campos, chk[2], chk[3], reg, linhaAtual, erros); }
   }
 }
 
@@ -1027,12 +1119,16 @@ Deno.serve(async (req) => {
     }
 
     // --- 3. Detectar tipo de SPED ---
-    // ECD deve ser verificado ANTES de Contribuiões, pois ambos podem ter bloco I
+    // ECF deve ser verificado ANTES de ECD, pois ambos podem ter bloco J (J050/J100)
+    // ECF: registros L100, M010, M030, M300, P100, P200, T020, U100, U150, Y612, 0010
+    // ECD: registros I030, I050, I200, I250, J900 (bloco I é exclusivo da ECD)
     let tipoDetectado = 'FISCAL';
-    if (estatisticas.registros['I030'] || estatisticas.registros['I050'] || estatisticas.registros['J100'] || estatisticas.registros['J930'] || estatisticas.registros['J900']) {
-      tipoDetectado = 'ECD';
-    } else if (estatisticas.registros['Y612'] || estatisticas.registros['U100'] || estatisticas.registros['U150'] || estatisticas.registros['0010']) {
+    if (estatisticas.registros['L100'] || estatisticas.registros['M010'] || estatisticas.registros['M030'] || estatisticas.registros['M300'] ||
+        estatisticas.registros['P100'] || estatisticas.registros['P200'] || estatisticas.registros['T020'] ||
+        estatisticas.registros['U100'] || estatisticas.registros['U150'] || estatisticas.registros['Y612'] || estatisticas.registros['0010']) {
       tipoDetectado = 'ECF';
+    } else if (estatisticas.registros['I030'] || estatisticas.registros['I050'] || estatisticas.registros['I200'] || estatisticas.registros['I250'] || estatisticas.registros['J900']) {
+      tipoDetectado = 'ECD';
     } else {
       const temBlocoA = !!estatisticas.blocos['A'];
       const temBlocoF = !!estatisticas.blocos['F'];
@@ -2026,118 +2122,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      // === SPED ECF: 0010, U100, U150, U180, Y612, Y620, Y650 ===
-
-      if (registro === '0010' && tipoDetectado === 'ECF') {
-        // Parâmetros de tributação
-        if (campos.length < 4) {
-          avisos.push({
-            linha: linhaAtual, registro: '0010',
-            mensagem: `Registro 0010 (parâmetros) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        // FORMA_APUR (índice 1) deve ser 1-4
-        if (campos[1] && !['1','2','3','4'].includes(campos[1])) {
-          erros.push({
-            linha: linhaAtual, registro: '0010',
-            mensagem: `FORMA_APUR inválido: "${campos[1]}" (deve ser 1 a 4).`,
-            severidade: 'erro'
-          });
-        }
-      }
-
-      if (registro === 'U100' && tipoDetectado === 'ECF') {
-        // |U100|COD_CCUS|COD_CTA_B|VL_SLD_FIN|IND_DC|...
-        if (campos.length < 5) {
-          avisos.push({
-            linha: linhaAtual, registro: 'U100',
-            mensagem: `Registro U100 (LALUR parte A) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        if (campos[4] && !['D','C'].includes(campos[4])) {
-          erros.push({
-            linha: linhaAtual, registro: 'U100',
-            mensagem: `IND_DC inválido: "${campos[4]}" (deve ser D=Devedor ou C=Credor).`,
-            severidade: 'erro'
-          });
-        }
-        validarValorNumerico(campos, 3, 4, 'U100', linhaAtual, erros);
-      }
-
-      if (registro === 'U150' && tipoDetectado === 'ECF') {
-        // |U150|COD_CCUS|COD_CTA_B|VL_SLD_FIN|IND_DC|...
-        if (campos.length < 5) {
-          avisos.push({
-            linha: linhaAtual, registro: 'U150',
-            mensagem: `Registro U150 (contas parte B) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        if (campos[4] && !['D','C'].includes(campos[4])) {
-          erros.push({
-            linha: linhaAtual, registro: 'U150',
-            mensagem: `IND_DC inválido: "${campos[4]}" (deve ser D=Devedor ou C=Credor).`,
-            severidade: 'erro'
-          });
-        }
-        validarValorNumerico(campos, 3, 4, 'U150', linhaAtual, erros);
-      }
-
-      if (registro === 'U180' && tipoDetectado === 'ECF') {
-        // |U180|COD_CCUS|COD_CTA_B|VL_SLD_FIN|IND_DC|
-        if (campos.length < 5) {
-          avisos.push({
-            linha: linhaAtual, registro: 'U180',
-            mensagem: `Registro U180 (saldos finais) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        if (campos[4] && !['D','C'].includes(campos[4])) {
-          erros.push({
-            linha: linhaAtual, registro: 'U180',
-            mensagem: `IND_DC inválido: "${campos[4]}" (deve ser D=Devedor ou C=Credor).`,
-            severidade: 'erro'
-          });
-        }
-        validarValorNumerico(campos, 3, 4, 'U180', linhaAtual, erros);
-      }
-
-      if (registro === 'Y612' && tipoDetectado === 'ECF') {
-        // Detalhamento de receitas
-        if (campos.length < 4) {
-          avisos.push({
-            linha: linhaAtual, registro: 'Y612',
-            mensagem: `Registro Y612 (detalhamento de receitas) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        validarValorNumerico(campos, 3, 4, 'Y612', linhaAtual, erros);
-      }
-
-      if (registro === 'Y620' && tipoDetectado === 'ECF') {
-        // Demonstração do lucro real
-        if (campos.length < 6) {
-          avisos.push({
-            linha: linhaAtual, registro: 'Y620',
-            mensagem: `Registro Y620 (lucro real) incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        validarValorNumerico(campos, 4, 5, 'Y620', linhaAtual, erros);
-      }
-
-      if (registro === 'Y650' && tipoDetectado === 'ECF') {
-        // Informações econômicas
-        if (campos.length < 4) {
-          avisos.push({
-            linha: linhaAtual, registro: 'Y650',
-            mensagem: `Registro Y650 incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
-            severidade: 'aviso'
-          });
-        }
-        validarValorNumerico(campos, 3, 4, 'Y650', linhaAtual, erros);
+      // === SPED ECF: Validação data-driven conforme leiaute oficial ===
+      if (tipoDetectado === 'ECF') {
+        validarEcfRegistro(registro, campos, linhaAtual, erros, avisos);
       }
 
       // === Verificar registro desconhecido para o tipo detectado ===
