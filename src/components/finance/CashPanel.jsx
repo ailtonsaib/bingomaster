@@ -10,7 +10,9 @@ import {
   Landmark, 
   Undo2, 
   ArrowDownCircle, 
-  ArrowUpCircle 
+  ArrowUpCircle,
+  Wallet,
+  CalendarRange
 } from "lucide-react";
 
 export default function CashPanel({ userEmail }) {
@@ -98,9 +100,105 @@ export default function CashPanel({ userEmail }) {
   const totalReceivable = pendingReceivable.reduce((s, t) => s + parseFloat(t.amount), 0);
   const totalPayable = pendingPayable.reduce((s, t) => s + parseFloat(t.amount), 0);
 
+  // Resumo do mês vigente
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthTransactions = transactions.filter((t) => {
+    const refDate = new Date(t.due_date || t.date);
+    return refDate.getMonth() === currentMonth && refDate.getFullYear() === currentYear;
+  });
+
+  const monthReceivable = monthTransactions
+    .filter((t) => t.type === "income")
+    .reduce((s, t) => s + parseFloat(t.amount), 0);
+  const monthPayable = monthTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((s, t) => s + parseFloat(t.amount), 0);
+
+  const settledIncome = transactions
+    .filter((t) => t.status === "settled" && t.type === "income")
+    .reduce((s, t) => s + parseFloat(t.amount), 0);
+  const settledExpense = transactions
+    .filter((t) => t.status === "settled" && t.type === "expense")
+    .reduce((s, t) => s + parseFloat(t.amount), 0);
+  const currentBalance = settledIncome - settledExpense;
+
+  const monthName = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
   return (
     <div className="space-y-6">
-      {/* Summary */}
+      {/* Painel de Resumo Financeiro */}
+      <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarRange className="w-4 h-4 text-primary" />
+            Resumo Financeiro — {monthName}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Saldo Atual */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentBalance >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+                <Wallet className={`w-5 h-5 ${currentBalance >= 0 ? "text-emerald-600" : "text-red-600"}`} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Saldo Atual</p>
+                <p className={`text-lg font-bold ${currentBalance >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {fmtMoney(currentBalance)}
+                </p>
+                <p className="text-xs text-muted-foreground">Títulos baixados</p>
+              </div>
+            </div>
+
+            {/* A Receber no Mês */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">A Receber no Mês</p>
+                <p className="text-lg font-bold text-emerald-600">{fmtMoney(monthReceivable)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {monthTransactions.filter((t) => t.type === "income").length} lançamento(s)
+                </p>
+              </div>
+            </div>
+
+            {/* A Pagar no Mês */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">A Pagar no Mês</p>
+                <p className="text-lg font-bold text-red-600">{fmtMoney(monthPayable)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {monthTransactions.filter((t) => t.type === "expense").length} lançamento(s)
+                </p>
+              </div>
+            </div>
+
+            {/* Saldo do Mês */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${(monthReceivable - monthPayable) >= 0 ? "bg-primary/10" : "bg-red-100"}`}>
+                <Wallet className={`w-5 h-5 ${(monthReceivable - monthPayable) >= 0 ? "text-primary" : "text-red-600"}`} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Saldo do Mês</p>
+                <p className={`text-lg font-bold ${(monthReceivable - monthPayable) >= 0 ? "text-primary" : "text-red-600"}`}>
+                  {fmtMoney(monthReceivable - monthPayable)}
+                </p>
+                <p className="text-xs text-muted-foreground">Receitas - Despesas</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary - Pendentes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
