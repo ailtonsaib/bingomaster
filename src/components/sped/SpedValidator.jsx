@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import DivergenceReport from '@/components/sped/DivergenceReport';
+import ValidationLogPanel from '@/components/sped/ValidationLogPanel';
 import {
   UploadCloud,
   FileText,
@@ -538,6 +539,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
               </CardContent>
             </Card>
           )}
+
+          {/* Painel de Logs Detalhado — Linha, Campo, Regra PVA */}
+          <ValidationLogPanel resultado={resultado} conteudo={conteudoEditado || conteudo} />
 
           {/* Relatório Resumido de Divergências */}
           <DivergenceReport resultado={resultado} />
