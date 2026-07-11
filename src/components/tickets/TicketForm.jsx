@@ -3,13 +3,32 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
+import { X, Paperclip, Loader2, Trash2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 export default function TicketForm({ users, types, priorities, currentUser, onSave, onCancel }) {
   const [form, setForm] = useState({
     title: "", description: "", type_id: "", priority_id: "", assigned_to_id: "",
   });
   const [saving, setSaving] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const res = await base44.integrations.Core.UploadFile({ file });
+        uploaded.push({ file_url: res.file_url, file_name: file.name });
+      }
+      setAttachments((prev) => [...prev, ...uploaded]);
+    } catch (e) { alert("Erro ao enviar arquivo"); }
+    setUploading(false);
+  };
+
+  const removeAttachment = (idx) => setAttachments((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
@@ -31,13 +50,14 @@ export default function TicketForm({ users, types, priorities, currentUser, onSa
       created_by_name: currentUser.name,
       company_id: currentUser.company_id,
       company_name: currentUser.company_name,
+      attachments,
     });
     setSaving(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">Novo Chamado</h2>
@@ -74,8 +94,30 @@ export default function TicketForm({ users, types, priorities, currentUser, onSa
               {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
             </select>
           </div>
+          {/* Attachments */}
+          <div>
+            <Label>Anexos</Label>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer text-sm px-3 py-2 rounded-md border border-dashed border-input hover:bg-muted/30 transition-colors">
+                <Paperclip className="w-4 h-4" />
+                <span>Adicionar arquivos</span>
+                <input type="file" multiple className="hidden" onChange={(e) => handleFiles(Array.from(e.target.files))} />
+              </label>
+              {uploading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
+            {attachments.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1 text-xs">
+                    <span className="truncate">{a.file_name}</span>
+                    <button onClick={() => removeAttachment(i)} className="text-destructive hover:text-destructive/80"><Trash2 className="w-3 h-3" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1" onClick={handleSubmit} disabled={saving || !form.title.trim()}>{saving ? "Salvando..." : "Criar Chamado"}</Button>
+            <Button className="flex-1" onClick={handleSubmit} disabled={saving || uploading || !form.title.trim()}>{saving ? "Salvando..." : "Criar Chamado"}</Button>
             <Button variant="outline" onClick={onCancel}>Cancelar</Button>
           </div>
         </CardContent>

@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: create ───
     if (operation === 'createTicket') {
-      const { title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name } = body;
+      const { title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments } = body;
       const now = new Date().toISOString();
       const ticket = await base44.asServiceRole.entities.SupportTicket.create({
         title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level,
@@ -116,6 +116,13 @@ Deno.serve(async (req) => {
         aberto_at: now,
         history: [{ from_status: '', to_status: 'aberto', moved_at: now, moved_by_id: created_by_id, moved_by_name: created_by_name, direction: 'forward' }]
       });
+      if (attachments && attachments.length > 0) {
+        await base44.asServiceRole.entities.TicketComment.create({
+          ticket_id: ticket.id, ticket_title: title, company_id,
+          author_id: created_by_id, author_name: created_by_name,
+          content: description || '', attachments, is_system: false
+        });
+      }
       return Response.json({ ticket });
     }
 
@@ -164,6 +171,30 @@ Deno.serve(async (req) => {
       const history = [...(ticket.history || []), { from_status: ticket.status, to_status: ticket.status, moved_at: now, moved_by_id, moved_by_name, direction: 'transfer', note: 'Transferido para ' + assigned_to_name }];
       const updated = await base44.asServiceRole.entities.SupportTicket.update(ticket_id, { assigned_to_id, assigned_to_name, history });
       return Response.json({ ticket: updated });
+    }
+
+    // ─── COMMENT: add ───
+    if (operation === 'addComment') {
+      const { ticket_id, ticket_title, company_id, author_id, author_name, author_role, content, attachments } = body;
+      const comment = await base44.asServiceRole.entities.TicketComment.create({
+        ticket_id, ticket_title, company_id,
+        author_id, author_name, author_role: author_role || '',
+        content: content || '', attachments: attachments || [], is_system: false
+      });
+      return Response.json({ comment });
+    }
+
+    // ─── COMMENT: list by ticket ───
+    if (operation === 'getComments') {
+      const { ticket_id } = body;
+      const comments = await base44.asServiceRole.entities.TicketComment.filter({ ticket_id });
+      return Response.json({ comments });
+    }
+
+    // ─── COMMENT: delete ───
+    if (operation === 'deleteComment') {
+      await base44.asServiceRole.entities.TicketComment.delete(body.comment_id);
+      return Response.json({ success: true });
     }
 
     // ─── TYPES: CRUD ───

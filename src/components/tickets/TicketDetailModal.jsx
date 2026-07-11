@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ArrowRight, ArrowLeft, UserCheck, Trash2, Clock } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, UserCheck, Trash2, Clock, Paperclip, Loader2, Send, Download } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const STATUS_LABELS = {
   aberto: "Aberto", em_analise: "Em Análise", iniciado: "Iniciado", em_teste: "Em Teste", concluido: "Concluído",
@@ -13,10 +14,17 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTo, setTransferTo] = useState("");
   const [historyExpanded, setHistoryExpanded] = useState(true);
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [newComment, setNewComment] = useState("");
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [posting, setPosting] = useState(false);
 
   const currentIdx = STATUS_FLOW.indexOf(ticket.status);
   const canForward = currentIdx < STATUS_FLOW.length - 1;
   const canBackward = currentIdx > 0;
+  const isConcluido = ticket.status === "concluido";
 
   const fmtDate = (d) => d ? new Date(d).toLocaleString("pt-BR") : "—";
   const stageTimestamps = [
@@ -26,6 +34,56 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
     { label: "Em Teste", date: ticket.em_teste_at },
     { label: "Concluído", date: ticket.concluido_at },
   ];
+
+  const loadComments = useCallback(async () => {
+    setLoadingComments(true);
+    try {
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'getComments', ticket_id: ticket.id });
+      const sorted = (res.data.comments || []).sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+      setComments(sorted);
+    } catch (e) { console.error("Erro ao carregar comentários:", e); }
+    setLoadingComments(false);
+  }, [ticket.id]);
+
+  useEffect(() => { loadComments(); }, [loadComments]);
+
+  const handleFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const res = await base44.integrations.Core.UploadFile({ file });
+        uploaded.push({ file_url: res.file_url, file_name: file.name });
+      }
+      setAttachments((prev) => [...prev, ...uploaded]);
+    } catch (e) { alert("Erro ao enviar arquivo"); }
+    setUploading(false);
+  };
+
+  const removeAttachment = (idx) => setAttachments((prev) => prev.filter((_, i) => i !== idx));
+
+  const handlePostComment = async () => {
+    if (!newComment.trim() && attachments.length === 0) return;
+    setPosting(true);
+    try {
+      await base44.functions.invoke('ticketSystem', {
+        operation: 'addComment',
+        ticket_id: ticket.id,
+        ticket_title: ticket.title,
+        company_id: ticket.company_id,
+        author_id: currentUser.id,
+        author_name: currentUser.name,
+        author_role: currentUser.role,
+        content: newComment,
+        attachments,
+      });
+      setNewComment("");
+      setAttachments([]);
+      await loadComments();
+    } catch (e) { alert("Erro ao enviar comentário"); }
+    setPosting(false);
+  };
 
   const handleForward = () => onMove(ticket.id, STATUS_FLOW[currentIdx + 1], "forward");
   const handleBackward = () => onMove(ticket.id, STATUS_FLOW[currentIdx - 1], "backward");
@@ -74,6 +132,69 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
               ))}
             </div>
           </div>
+
+          {/* Comments / Interactions */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold mb-2">Comentários & Anexos ({comments.length})</h3>
+            {loadingComments ? (
+              <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+            ) : comments.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum comentário ainda</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {comments.map((c) => (
+                  <div key={c.id} className="bg-muted/20 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{c.author_name}</span>
+                      <span className="text-xs text-muted-foreground">{fmtDate(c.created_date)}</span>
+                    </div>
+                    {c.content && <p className="text-sm whitespace-pre-wrap mb-2">{c.content}</p>}
+                    {c.attachments && c.attachments.length > 0 && (
+                      <div className="space-y-1">
+                        {c.attachments.map((a, i) => (
+                          <a key={i} href={a.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-primary hover:underline">
+                            <Paperclip className="w-3 h-3" />
+                            <span className="truncate">{a.file_name}</span>
+                            <Download className="w-3 h-3" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add comment (disabled if concluido) */}
+          {!isConcluido && (
+            <div className="border-t pt-4 space-y-2">
+              <textarea
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]"
+                placeholder="Adicione um comentário..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer text-sm px-3 py-2 rounded-md border border-dashed border-input hover:bg-muted/30 transition-colors">
+                  <Paperclip className="w-4 h-4" />
+                  <span>Anexar arquivos</span>
+                  <input type="file" multiple className="hidden" onChange={(e) => handleFiles(Array.from(e.target.files))} />
+                </label>
+                {uploading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-1 bg-muted/30 rounded px-2 py-1 text-xs">
+                    <span className="truncate max-w-[120px]">{a.file_name}</span>
+                    <button onClick={() => removeAttachment(i)} className="text-destructive"><X className="w-3 h-3" /></button>
+                  </div>
+                ))}
+                <Button size="sm" className="ml-auto gap-1" onClick={handlePostComment} disabled={posting || uploading || (!newComment.trim() && attachments.length === 0)}>
+                  {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 border-t pt-4">

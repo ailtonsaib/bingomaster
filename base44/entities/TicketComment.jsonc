@@ -1,0 +1,60 @@
+{
+  "name": "TicketComment",
+  "type": "object",
+  "properties": {
+    "ticket_id": {
+      "type": "string",
+      "description": "ID do chamado vinculado"
+    },
+    "ticket_title": {
+      "type": "string",
+      "description": "T\u00edtulo do chamado (cache)"
+    },
+    "company_id": {
+      "type": "string",
+      "description": "ID da empresa"
+    },
+    "author_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio autor"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio autor"
+    },
+    "author_role": {
+      "type": "string",
+      "description": "Papel do autor"
+    },
+    "content": {
+      "type": "string",
+      "description": "Texto do coment\u00e1rio"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file_url": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Anexos do coment\u00e1rio",
+      "default": []
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 uma mensagem autom\u00e1tica do sistema"
+    }
+  },
+  "required": [
+    "ticket_id",
+    "author_id",
+    "author_name"
+  ]
+}
