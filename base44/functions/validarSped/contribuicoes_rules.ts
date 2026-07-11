@@ -23,23 +23,23 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
         erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor da base de cálculo do PIS/PASEP (${f[9]}) deve ser igual ao valor da base de cálculo da COFINS (${f[13]}).`, severidade: 'erro' });
       }
     }
-    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS
+    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS (ERRO no PVA)
     if (f[9] && f[10] && f[11]) {
       const bc = parseNum(f[9]); const aliq = parseNum(f[10]); const vlPis = parseNum(f[11]);
       if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlPis)) {
         const calc = (bc * aliq) / 100;
         if (Math.abs(vlPis - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${f[11]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${f[11]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
-    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS
+    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS (ERRO no PVA)
     if (f[13] && f[14] && f[15]) {
       const bc = parseNum(f[13]); const aliq = parseNum(f[14]); const vlCofins = parseNum(f[15]);
       if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlCofins)) {
         const calc = (bc * aliq) / 100;
         if (Math.abs(vlCofins - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${f[15]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${f[15]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
@@ -60,43 +60,43 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
     const c = linha.split('|');
     const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
     // C170 Contribuições: VL_BC_PIS=24, ALIQ_PIS=25, QUANT_BC_PIS=26, ALIQ_PIS_QUANT=27, VL_PIS=28, VL_BC_COFINS=29, ALIQ_COFINS=30, QUANT_BC_COFINS=31, ALIQ_COFINS_QUANT=32, VL_COFINS=33
-    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS
+    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS (ERRO no PVA)
     if (f[24] && f[25] && f[28]) {
       const bc = parseNum(f[24]); const aliq = parseNum(f[25]); const vlPis = parseNum(f[28]);
       if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlPis)) {
         const calc = (bc * aliq) / 100;
         if (Math.abs(vlPis - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${f[28]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${f[28]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
-    // Regra: VL_PIS = QUANT_BC_PIS x ALIQ_PIS_QUANT
+    // Regra: VL_PIS = QUANT_BC_PIS x ALIQ_PIS_QUANT (ERRO no PVA)
     if (f[26] && f[27] && f[28]) {
       const qtdBc = parseNum(f[26]); const aliqQtd = parseNum(f[27]); const vlPis = parseNum(f[28]);
       if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vlPis)) {
         const calc = qtdBc * aliqQtd;
         if (Math.abs(vlPis - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_PIS=${f[28]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_PIS=${f[28]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
-    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS
+    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS (ERRO no PVA)
     if (f[29] && f[30] && f[33]) {
       const bc = parseNum(f[29]); const aliq = parseNum(f[30]); const vlCofins = parseNum(f[33]);
       if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlCofins)) {
         const calc = (bc * aliq) / 100;
         if (Math.abs(vlCofins - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${f[33]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${f[33]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
-    // Regra: VL_COFINS = QUANT_BC_COFINS x ALIQ_COFINS_QUANT
+    // Regra: VL_COFINS = QUANT_BC_COFINS x ALIQ_COFINS_QUANT (ERRO no PVA)
     if (f[31] && f[32] && f[33]) {
       const qtdBc = parseNum(f[31]); const aliqQtd = parseNum(f[32]); const vlCofins = parseNum(f[33]);
       if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vlCofins)) {
         const calc = qtdBc * aliqQtd;
         if (Math.abs(vlCofins - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_COFINS=${f[33]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_COFINS=${f[33]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
@@ -140,23 +140,23 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
         erros.push({ linha: linhaAtual, registro: 'F500', mensagem: `Natureza da Receita inválida. O valor informado no campo deverá existir em uma das tabelas de acordo com o Código de Situação Tributária: Tabela 4.3.10: Produtos Sujeitos à Incidência Monofásica.`, severidade: 'erro' });
       }
     }
-    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS
+    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS (ERRO no PVA)
     if (campos[4] && campos[5] && campos[6]) {
       const bc = parseNum(campos[4]); const aliq = parseNum(campos[5]); const vlPis = parseNum(campos[6]);
       if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlPis)) {
         const calc = (bc * aliq) / 100;
         if (Math.abs(vlPis - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'F500', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${campos[6]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'F500', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${campos[6]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
-    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS
+    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS (ERRO no PVA)
     if (campos[8] && campos[9] && campos[10]) {
       const bc = parseNum(campos[8]); const aliq = parseNum(campos[9]); const vlCofins = parseNum(campos[10]);
       if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlCofins)) {
         const calc = (bc * aliq) / 100;
         if (Math.abs(vlCofins - calc) > 0.02) {
-          avisos.push({ linha: linhaAtual, registro: 'F500', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${campos[10]}, esperado=${calc.toFixed(2)}.`, severidade: 'aviso' });
+          erros.push({ linha: linhaAtual, registro: 'F500', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${campos[10]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
