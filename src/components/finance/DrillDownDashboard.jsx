@@ -7,6 +7,7 @@ import {
   TrendingUp, TrendingDown, Wallet, Building2, Users, FileText,
   ChevronRight, ChevronLeft, Layers, PieChart, ArrowRight, Calendar
 } from "lucide-react";
+import DailyChart from "@/components/finance/DailyChart";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
@@ -297,11 +298,14 @@ export default function DrillDownDashboard({ userEmail }) {
                 </div>
               )}
             </CardContent>
-          </Card>
-        </div>
-      )}
+            </Card>
 
-      {/* Nível 1: Por Centro de Custo */}
+            {/* Gráfico diário */}
+            <DailyChart transactions={transactions} />
+            </div>
+            )}
+
+            {/* Nível 1: Por Centro de Custo */}
       {level === 1 && (
         <Card>
           <CardHeader className="pb-3">
