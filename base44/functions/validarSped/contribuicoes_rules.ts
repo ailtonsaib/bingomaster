@@ -11,7 +11,9 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
   if (registro === 'A170') {
     const c = linha.split('|');
     const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
-    // A170: 1=A170, ..., 9=CST_PIS, 10=VL_BC_PIS, 11=ALIQ_PIS, 12=VL_PIS, 13=CST_COFINS, 14=VL_BC_COFINS, 15=ALIQ_COFINS, 16=VL_COFINS
+    // A170 (layout simplificado): f[8]=CST_PIS, f[9]=VL_BC_PIS, f[10]=ALIQ_PIS, f[11]=VL_PIS
+    //                            f[12]=CST_COFINS, f[13]=VL_BC_COFINS, f[14]=ALIQ_COFINS, f[15]=VL_COFINS
+    const cstSemCredito = ['04','05','06','07','08','09','49','98','99'];
     // Regra: CST_PIS deve ser igual a CST_COFINS
     if (f[8] && f[12] && f[8] !== f[12]) {
       erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `O CST referente ao PIS/PASEP (${f[8]}) deve ser igual ao CST referente a COFINS (${f[12]}), assim como o Valor da base de cálculo do PIS/PASEP deve ser igual ao Valor da base de cálculo da COFINS.`, severidade: 'erro' });
@@ -50,55 +52,129 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
     if (f[12] === '01' && (!f[14] || parseNum(f[14]) === 0)) {
       erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `Devem ser informadas alíquotas básicas para operações com CST = 01, de acordo com o indicador da incidência tributária no período. ALIQ_COFINS obrigatória (3,00%).`, severidade: 'erro' });
     }
-    // Regra: Alíquota para CST=03/04 (monofásica) — Tabela 4.3.11
-    if ((f[8] === '03' || f[8] === '04') && f[10] && parseNum(f[10]) === 0) {
-      erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `A alíquota informada deverá existir na Tabela 4.3.11 - Produtos Sujeitos à Incidência Monofásica da Contribuição Social - Alíquotas por Unidade de Medida de Produto (CST 03 e 04).`, severidade: 'erro' });
+    // Regra: VL_PIS deve ser 0 para CST sem direito a crédito
+    if (cstSemCredito.includes(f[8]) && f[11]) {
+      const vlPis = parseNum(f[11]);
+      if (!isNaN(vlPis) && vlPis > 0.02) {
+        erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor informado no campo VL_PIS deve ser igual a 0 (zero) se o CST for 04, 05, 06, 07, 08, 09, 49 ou 99.`, severidade: 'erro' });
+      }
+    }
+    if (cstSemCredito.includes(f[12]) && f[15]) {
+      const vlCofins = parseNum(f[15]);
+      if (!isNaN(vlCofins) && vlCofins > 0.02) {
+        erros.push({ linha: linhaAtual, registro: 'A170', mensagem: `O valor informado no campo VL_COFINS deve ser igual a 0 (zero) se o CST for 04, 05, 06, 07, 08, 09, 49 ou 99.`, severidade: 'erro' });
+      }
     }
   }
 
   if (registro === 'C170') {
     const c = linha.split('|');
     const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
-    // C170 Contribuições: VL_BC_PIS=24, ALIQ_PIS=25, QUANT_BC_PIS=26, ALIQ_PIS_QUANT=27, VL_PIS=28, VL_BC_COFINS=29, ALIQ_COFINS=30, QUANT_BC_COFINS=31, ALIQ_COFINS_QUANT=32, VL_COFINS=33
-    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS (ERRO no PVA)
-    if (f[24] && f[25] && f[28]) {
-      const bc = parseNum(f[24]); const aliq = parseNum(f[25]); const vlPis = parseNum(f[28]);
-      if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlPis)) {
+    // C170 Contribuições (leiaute oficial):
+    // f[9]=CST_ICMS, f[10]=CFOP
+    // f[24]=CST_PIS, f[25]=VL_BC_PIS, f[26]=ALIQ_PIS, f[27]=QUANT_BC_PIS, f[28]=ALIQ_PIS_QUANT, f[29]=VL_PIS
+    // f[30]=CST_COFINS, f[31]=VL_BC_COFINS, f[32]=ALIQ_COFINS, f[33]=QUANT_BC_COFINS, f[34]=ALIQ_COFINS_QUANT, f[35]=VL_COFINS
+    const cstSemCredito = ['04','05','06','07','08','09','49','98','99'];
+    const cstComCredito = ['01','02','05','06','50','51','52','53','54','55','56','60','61','62','63','64','65','66'];
+
+    const cstPis = f[24] || '';
+    const vlBcPis = f[25] || '';
+    const aliqPis = f[26] || '';
+    const quantBcPis = f[27] || '';
+    const aliqPisQuant = f[28] || '';
+    const vlPis = f[29] || '';
+    const cstCofins = f[30] || '';
+    const vlBcCofins = f[31] || '';
+    const aliqCofins = f[32] || '';
+    const quantBcCofins = f[33] || '';
+    const aliqCofinsQuant = f[34] || '';
+    const vlCofins = f[35] || '';
+
+    // Regra: CST_PIS deve ser igual a CST_COFINS
+    if (cstPis && cstCofins && cstPis !== cstCofins) {
+      erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O CST referente ao PIS/PASEP (${cstPis}) deve ser igual ao CST referente a COFINS (${cstCofins}), assim como o Valor da base de cálculo do PIS/PASEP deve ser igual ao Valor da base de cálculo da COFINS.`, severidade: 'erro' });
+    }
+    // Regra: VL_BC_PIS deve ser igual a VL_BC_COFINS
+    if (vlBcPis && vlBcCofins) {
+      const bcPis = parseNum(vlBcPis); const bcCofins = parseNum(vlBcCofins);
+      if (!isNaN(bcPis) && !isNaN(bcCofins) && Math.abs(bcPis - bcCofins) > 0.02) {
+        erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor da base de cálculo do PIS/PASEP (${vlBcPis}) deve ser igual ao valor da base de cálculo da COFINS (${vlBcCofins}).`, severidade: 'erro' });
+      }
+    }
+    // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS / 100 (ERRO no PVA)
+    if (vlBcPis && aliqPis && vlPis) {
+      const bc = parseNum(vlBcPis); const aliq = parseNum(aliqPis); const vl = parseNum(vlPis);
+      if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vl)) {
         const calc = (bc * aliq) / 100;
-        if (Math.abs(vlPis - calc) > 0.02) {
-          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${f[28]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
+        if (Math.abs(vl - calc) > 0.02) {
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_PIS=${vlPis}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
     // Regra: VL_PIS = QUANT_BC_PIS x ALIQ_PIS_QUANT (ERRO no PVA)
-    if (f[26] && f[27] && f[28]) {
-      const qtdBc = parseNum(f[26]); const aliqQtd = parseNum(f[27]); const vlPis = parseNum(f[28]);
-      if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vlPis)) {
+    if (quantBcPis && aliqPisQuant && vlPis) {
+      const qtdBc = parseNum(quantBcPis); const aliqQtd = parseNum(aliqPisQuant); const vl = parseNum(vlPis);
+      if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vl)) {
         const calc = qtdBc * aliqQtd;
-        if (Math.abs(vlPis - calc) > 0.02) {
-          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_PIS=${f[28]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
+        if (Math.abs(vl - calc) > 0.02) {
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_PIS=${vlPis}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
-    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS (ERRO no PVA)
-    if (f[29] && f[30] && f[33]) {
-      const bc = parseNum(f[29]); const aliq = parseNum(f[30]); const vlCofins = parseNum(f[33]);
-      if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vlCofins)) {
+    // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS / 100 (ERRO no PVA)
+    if (vlBcCofins && aliqCofins && vlCofins) {
+      const bc = parseNum(vlBcCofins); const aliq = parseNum(aliqCofins); const vl = parseNum(vlCofins);
+      if (!isNaN(bc) && !isNaN(aliq) && aliq > 0 && !isNaN(vl)) {
         const calc = (bc * aliq) / 100;
-        if (Math.abs(vlCofins - calc) > 0.02) {
-          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${f[33]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
+        if (Math.abs(vl - calc) > 0.02) {
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual a Base de Cálculo x Alíquota. VL_COFINS=${vlCofins}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
     }
     // Regra: VL_COFINS = QUANT_BC_COFINS x ALIQ_COFINS_QUANT (ERRO no PVA)
-    if (f[31] && f[32] && f[33]) {
-      const qtdBc = parseNum(f[31]); const aliqQtd = parseNum(f[32]); const vlCofins = parseNum(f[33]);
-      if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vlCofins)) {
+    if (quantBcCofins && aliqCofinsQuant && vlCofins) {
+      const qtdBc = parseNum(quantBcCofins); const aliqQtd = parseNum(aliqCofinsQuant); const vl = parseNum(vlCofins);
+      if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vl)) {
         const calc = qtdBc * aliqQtd;
-        if (Math.abs(vlCofins - calc) > 0.02) {
-          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_COFINS=${f[33]}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
+        if (Math.abs(vl - calc) > 0.02) {
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_COFINS=${vlCofins}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
         }
       }
+    }
+    // Regra: VL_PIS deve ser 0 para CST sem direito a crédito
+    if (cstSemCredito.includes(cstPis) && vlPis) {
+      const vl = parseNum(vlPis);
+      if (!isNaN(vl) && vl > 0.02) {
+        erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor informado no campo VL_PIS deve ser igual a 0 (zero) se o CST for 04, 05, 06, 07, 08, 09, 49 ou 99.`, severidade: 'erro' });
+      }
+    }
+    if (cstSemCredito.includes(cstCofins) && vlCofins) {
+      const vl = parseNum(vlCofins);
+      if (!isNaN(vl) && vl > 0.02) {
+        erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor informado no campo VL_COFINS deve ser igual a 0 (zero) se o CST for 04, 05, 06, 07, 08, 09, 49 ou 99.`, severidade: 'erro' });
+      }
+    }
+    // Regra: CST com crédito mas sem base de cálculo (VL_BC+ALIQ ou QUANT_BC+ALIQ_QUANT)
+    if (cstComCredito.includes(cstPis)) {
+      const hasValorBase = vlBcPis && aliqPis && parseNum(aliqPis) > 0;
+      const hasQuantBase = quantBcPis && aliqPisQuant && parseNum(aliqPisQuant) > 0;
+      if (!hasValorBase && !hasQuantBase) {
+        erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `Devem ser informadas as bases de cálculo do PIS/PASEP (VL_BC_PIS+ALIQ_PIS ou QUANT_BC_PIS+ALIQ_PIS_QUANT) para CST ${cstPis} (operação com direito a crédito).`, severidade: 'erro' });
+      }
+    }
+    if (cstComCredito.includes(cstCofins)) {
+      const hasValorBase = vlBcCofins && aliqCofins && parseNum(aliqCofins) > 0;
+      const hasQuantBase = quantBcCofins && aliqCofinsQuant && parseNum(aliqCofinsQuant) > 0;
+      if (!hasValorBase && !hasQuantBase) {
+        erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `Devem ser informadas as bases de cálculo da COFINS (VL_BC_COFINS+ALIQ_COFINS ou QUANT_BC_COFINS+ALIQ_COFINS_QUANT) para CST ${cstCofins} (operação com direito a crédito).`, severidade: 'erro' });
+      }
+    }
+    // Regra: Alíquotas básicas para CST=01
+    if (cstPis === '01' && (!aliqPis || parseNum(aliqPis) === 0)) {
+      erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `Devem ser informadas alíquotas básicas para operações com CST = 01, de acordo com o indicador da incidência tributária no período. ALIQ_PIS obrigatória (0,65%).`, severidade: 'erro' });
+    }
+    if (cstCofins === '01' && (!aliqCofins || parseNum(aliqCofins) === 0)) {
+      erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `Devem ser informadas alíquotas básicas para operações com CST = 01, de acordo com o indicador da incidência tributária no período. ALIQ_COFINS obrigatória (3,00%).`, severidade: 'erro' });
     }
     // Regra: CST incompatível com CFOP (créditos 50-56, 60-66)
     if (f[9] && f[10]) {
@@ -241,33 +317,35 @@ export function corrigirContribuicoes(linhas) {
       return partes.join('|');
     }
 
-    if (reg === 'C170' && partes.length >= 30) {
+    if (reg === 'C170' && partes.length >= 37) {
+      // Layout: partes[25]=CST_PIS, [26]=VL_BC_PIS, [27]=ALIQ_PIS, [28]=QUANT_BC_PIS, [29]=ALIQ_PIS_QUANT, [30]=VL_PIS
+      //         partes[31]=CST_COFINS, [32]=VL_BC_COFINS, [33]=ALIQ_COFINS, [34]=QUANT_BC_COFINS, [35]=ALIQ_COFINS_QUANT, [36]=VL_COFINS
       // VL_PIS = VL_BC_PIS x ALIQ_PIS / 100
-      if (partes[25] && partes[26] && partes[25] !== '' && partes[26] !== '') {
-        const bc = parseNum(partes[25]); const aliq = parseNum(partes[26]);
+      if (partes[26] && partes[27] && partes[26] !== '' && partes[27] !== '') {
+        const bc = parseNum(partes[26]); const aliq = parseNum(partes[27]);
         if (!isNaN(bc) && !isNaN(aliq) && aliq > 0) {
-          partes[29] = ((bc * aliq) / 100).toFixed(2).replace('.', ',');
+          partes[30] = ((bc * aliq) / 100).toFixed(2).replace('.', ',');
         }
       }
       // VL_PIS = QUANT_BC_PIS x ALIQ_PIS_QUANT
-      if (partes[27] && partes[28] && partes[27] !== '' && partes[28] !== '') {
-        const qtdBc = parseNum(partes[27]); const aliqQtd = parseNum(partes[28]);
+      if (partes[28] && partes[29] && partes[28] !== '' && partes[29] !== '') {
+        const qtdBc = parseNum(partes[28]); const aliqQtd = parseNum(partes[29]);
         if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0) {
-          partes[29] = (qtdBc * aliqQtd).toFixed(2).replace('.', ',');
+          partes[30] = (qtdBc * aliqQtd).toFixed(2).replace('.', ',');
         }
       }
       // VL_COFINS = VL_BC_COFINS x ALIQ_COFINS / 100
-      if (partes[30] && partes[31] && partes[30] !== '' && partes[31] !== '') {
-        const bc = parseNum(partes[30]); const aliq = parseNum(partes[31]);
+      if (partes[32] && partes[33] && partes[32] !== '' && partes[33] !== '') {
+        const bc = parseNum(partes[32]); const aliq = parseNum(partes[33]);
         if (!isNaN(bc) && !isNaN(aliq) && aliq > 0) {
-          partes[34] = ((bc * aliq) / 100).toFixed(2).replace('.', ',');
+          partes[36] = ((bc * aliq) / 100).toFixed(2).replace('.', ',');
         }
       }
       // VL_COFINS = QUANT_BC_COFINS x ALIQ_COFINS_QUANT
-      if (partes[32] && partes[33] && partes[32] !== '' && partes[33] !== '') {
-        const qtdBc = parseNum(partes[32]); const aliqQtd = parseNum(partes[33]);
+      if (partes[34] && partes[35] && partes[34] !== '' && partes[35] !== '') {
+        const qtdBc = parseNum(partes[34]); const aliqQtd = parseNum(partes[35]);
         if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0) {
-          partes[34] = (qtdBc * aliqQtd).toFixed(2).replace('.', ',');
+          partes[36] = (qtdBc * aliqQtd).toFixed(2).replace('.', ',');
         }
       }
       return partes.join('|');
