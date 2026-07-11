@@ -37,6 +37,7 @@ import {
   CalendarClock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getPortalUser } from '@/lib/portalSession';
 import { useLicense } from '@/hooks/useLicense';
 import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
 import SpedSubscriptionPanel from '@/components/sped/SpedSubscriptionPanel';
@@ -262,6 +263,28 @@ export default function ValidadorSped() {
     await base44.entities.SpedFile.delete(id);
     carregarDados();
   };
+
+  // Bloqueio temporário: apenas admin pode acessar durante testes
+  const portalUser = getPortalUser();
+  if (!portalUser?.is_admin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-8 h-8 text-amber-600" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground mb-2">Sistema em Manutenção</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            O Validador SPED está passando por melhorias e testes técnicos.
+            Volte em breve — em breve estará disponível novamente.
+          </p>
+          <Button variant="outline" onClick={() => window.history.back()} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
