@@ -23,8 +23,14 @@ Deno.serve(async (req) => {
     });
 
     if (!loginRes.ok) {
-      const loginErr = await loginRes.text();
-      return Response.json({ error: `Falha no login do Ágape: ${loginErr}` }, { status: 401 });
+      let msg = 'Email ou senha inválidos no app Ágape';
+      try {
+        const loginErr = await loginRes.json();
+        msg = loginErr?.message || loginErr?.detail || loginErr?.error || msg;
+      } catch {
+        // mantém a mensagem padrão
+      }
+      return Response.json({ error: `Falha no login do Ágape: ${msg}` }, { status: 401 });
     }
 
     const loginData = await loginRes.json();

@@ -28,7 +28,11 @@ export default function AgapeMigrationModal({ userEmail, onClose, onSuccess }) {
         setTimeout(() => onSuccess(), 2000);
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Erro ao migrar dados");
+      let msg = err.response?.data?.error || err.message || "Erro ao migrar dados";
+      // Se a mensagem contiver JSON bruto, extrair apenas a parte legível
+      const jsonMatch = msg.match(/"message"\s*:\s*"([^"]+)"/);
+      if (jsonMatch) msg = jsonMatch[1];
+      setError(msg);
     }
     setLoading(false);
   };
