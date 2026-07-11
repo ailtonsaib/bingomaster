@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const AGAPE_APP_URL = 'https://hospitable-financia-smart-flow.base44.app';
+const AGAPE_APP_ID = '69b85ec1ed3dd0a29c5bf6ce';
 
 Deno.serve(async (req) => {
   try {
@@ -15,8 +16,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email e senha do app Ágape são obrigatórios' }, { status: 400 });
     }
 
-    // 1. Login no app Ágape
-    const loginRes = await fetch(`${AGAPE_APP_URL}/api/auth/login`, {
+    // 1. Login no app Ágape (endpoint correto do Base44 SDK: /api/apps/{appId}/auth/login)
+    const loginRes = await fetch(`${AGAPE_APP_URL}/api/apps/${AGAPE_APP_ID}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
     let hasMore = true;
 
     while (hasMore) {
-      const txRes = await fetch(`${AGAPE_APP_URL}/api/entities/Transaction?limit=${limit}&skip=${skip}&sort=-created_date`, {
+      const txRes = await fetch(`${AGAPE_APP_URL}/api/apps/${AGAPE_APP_ID}/entities/Transaction?limit=${limit}&skip=${skip}&sort=-created_date`, {
         method: 'GET',
         headers: agapeHeaders,
       });
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
     }
 
     // 3. Buscar contatos do Ágape (para mapear nomes)
-    const contactsRes = await fetch(`${AGAPE_APP_URL}/api/entities/Contact?limit=500`, {
+    const contactsRes = await fetch(`${AGAPE_APP_URL}/api/apps/${AGAPE_APP_ID}/entities/Contact?limit=500`, {
       method: 'GET',
       headers: agapeHeaders,
     });
