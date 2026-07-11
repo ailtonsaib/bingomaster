@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { XMLParser } from 'npm:fast-xml-parser@4.5.1';
 import { validarDimeSC } from './dime_sc.ts';
+import { validarDetalheContribuicoes, validarCruzadaContribuicoes, corrigirContribuicoes } from './contribuicoes_rules.ts';
 
 // ===================== REGISTROS REINF (XML) =====================
 // Validação conforme Guia Prático da EFD-REINF
@@ -578,6 +579,11 @@ function corrigirConteudo(conteudo, tipoDetectado) {
     return c;
   });
 
+  // Field-level fixes for SPED Contribuições (PVA rules)
+  if (tipoDetectado === 'CONTRIBUICOES') {
+    linhas = corrigirContribuicoes(linhas);
+  }
+
   // Collect record counts
   const registros = {};
   for (const linha of linhas) {
@@ -982,6 +988,9 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
+        if (tipoDetectado === 'CONTRIBUICOES') {
+          validarDetalheContribuicoes('C170', linha, campos, linhaAtual, erros, avisos);
+        }
       }
 
       if (registro === 'E110' && tipoDetectado === 'FISCAL') {
@@ -1182,6 +1191,7 @@ Deno.serve(async (req) => {
           });
         }
         validarCpfCnpj(campos[3], '0140', linhaAtual, erros, 'CNPJ estabelecimento');
+        validarDetalheContribuicoes('0140', linha, campos, linhaAtual, erros, avisos);
       }
 
       if (registro === 'A010' && tipoDetectado === 'CONTRIBUICOES') {
@@ -1237,6 +1247,7 @@ Deno.serve(async (req) => {
           });
         }
         validarValorNumerico(campos, 2, 3, 'F500', linhaAtual, erros);
+        validarDetalheContribuicoes('F500', linha, campos, linhaAtual, erros, avisos);
       }
 
       if (registro === 'F600' && tipoDetectado === 'CONTRIBUICOES') {
@@ -1623,6 +1634,7 @@ Deno.serve(async (req) => {
         // VL_BC_PIS (9), ALIQ_PIS (10), VL_PIS (11), VL_BC_COFINS (13), ALIQ_COFINS (14), VL_COFINS (15)
         validarValorNumerico(f, 9, 12, 'A170', linhaAtual, erros);
         validarValorNumerico(f, 13, 16, 'A170', linhaAtual, erros);
+        validarDetalheContribuicoes('A170', linha, campos, linhaAtual, erros, avisos);
       }
 
       if (registro === 'F100' && tipoDetectado === 'CONTRIBUICOES') {
@@ -2278,6 +2290,11 @@ Deno.serve(async (req) => {
           });
         }
       }
+    }
+
+    // --- 4b. Validações cruzadas PVA Contribuições ---
+    if (tipoDetectado === 'CONTRIBUICOES') {
+      validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos);
     }
 
     // --- 5. Consistência de blocos (abertura/encerramento) ---
