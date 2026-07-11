@@ -609,11 +609,18 @@ function corrigirConteudo(conteudo, tipoDetectado) {
 
   const novoTotal = sem9900.length + novas9900.length;
 
+  // Ordem correta do bloco 9: |9001| → |9900|...| → |9990| → |9999|
+  // Os registros 9900 devem vir ANTES do 9990 (encerramento do bloco 9)
   const resultado = [];
   for (const linha of sem9900) {
     const campos = linha.split('|').filter(c => c !== '');
-    if (campos[0] === '9999') {
+    if (campos[0] === '9990') {
+      // Insere os registros 9900 antes do 9990
       resultado.push.apply(resultado, novas9900);
+      // Atualiza a quantidade de linhas do bloco 9 (9001 + 9900s + 9990)
+      campos[1] = String(novas9900.length + 2);
+      resultado.push('|' + campos.join('|') + '|');
+    } else if (campos[0] === '9999') {
       campos[1] = String(novoTotal);
       resultado.push('|' + campos.join('|') + '|');
     } else {
