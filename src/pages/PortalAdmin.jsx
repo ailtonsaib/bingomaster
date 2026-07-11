@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 import PlanManagement from "@/components/portal/PlanManagement";
+import { useToast } from "@/components/ui/use-toast";
 
 const BINGO_PLANS = ["free", "basic", "pro", "max", "ultra", "enterprise", "mega"];
 const SPED_PLANS = ["free", "basic", "pro", "max"];
@@ -22,6 +23,7 @@ export default function PortalAdmin() {
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user || !user.is_admin) {
@@ -53,8 +55,10 @@ export default function PortalAdmin() {
         data,
       });
       await loadUsers();
+      return true;
     } catch (e) {
       alert("Erro ao atualizar usuário");
+      return false;
     }
   };
 
@@ -64,7 +68,12 @@ export default function PortalAdmin() {
 
   const handleReset = async (userId) => {
     if (!confirm("Resetar contagem de movimentações deste usuário?")) return;
-    await updateUser(userId, { finance_transactions_used: 0 });
+    const ok = await updateUser(userId, { finance_transactions_used: 0 });
+    if (ok) {
+      toast({ title: "Contagem resetada", description: "Movimentações zeradas com sucesso." });
+    } else {
+      toast({ title: "Erro", description: "Não foi possível resetar a contagem.", variant: "destructive" });
+    }
   };
 
   const handleToggle = async (userId, field, currentValue) => {
