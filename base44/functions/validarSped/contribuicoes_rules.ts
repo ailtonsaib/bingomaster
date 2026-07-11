@@ -574,3 +574,79 @@ export function corrigirContribuicoes(linhas) {
     return linha;
   });
 }
+
+// Correção do arredondamento de R$ 0,01 no C100: VL_PIS e VL_COFINS do C100
+// devem ser >= soma dos VL_PIS/VL_COFINS dos C170 filhos (CST != 05 e != 75).
+// O PVA rejeita diferenças de até 1 centavo causadas por arredondamento decimal do ERP.
+export function corrigirC100Totais(linhas) {
+  // Primeira passada: acumular somas dos C170 por C100 pai
+  const c100Indices = []; // índices das linhas C100 no array
+  let currentC100Idx = -1;
+
+  for (let i = 0; i < linhas.length; i++) {
+    const c = linhas[i].split('|');
+    const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
+    const reg = f[0];
+
+    if (reg === 'C100') {
+      // f[14]=VL_PIS, f[18]=VL_COFINS
+      c100Indices.push({
+        idx: i,
+        somaPis: 0,
+        somaCofins: 0,
+        temC170: false
+      });
+      currentC100Idx = c100Indices.length - 1;
+    } else if (reg === 'C170' && currentC100Idx >= 0) {
+      // f[24]=CST_PIS, f[29]=VL_PIS, f[30]=CST_COFINS, f[35]=VL_COFINS
+      const cstPis = f[24] || '';
+      const cstCofins = f[30] || '';
+      const vlPis = f[29] ? parseNum(f[29]) : 0;
+      const vlCofins = f[35] ? parseNum(f[35]) : 0;
+
+      if (cstPis !== '05' && cstPis !== '75') {
+        c100Indices[currentC100Idx].somaPis += (isNaN(vlPis) ? 0 : vlPis);
+      }
+      if (cstCofins !== '05' && cstCofins !== '75') {
+        c100Indices[currentC100Idx].somaCofins += (isNaN(vlCofins) ? 0 : vlCofins);
+      }
+      c100Indices[currentC100Idx].temC170 = true;
+    } else if (reg === 'C100' || (reg && reg.charAt(0) !== 'C')) {
+      // Novo bloco ou novo C100 — resetar
+      if (reg !== 'C170' && reg !== 'C120' && reg !== 'C130' && reg !== 'C140' && reg !== 'C160' && reg !== 'C170') {
+        currentC100Idx = -1;
+      }
+    }
+  }
+
+  // Segunda passada: corrigir C100 se soma dos C170 > VL_PIS/VL_COFINS declarado
+  for (const c100 of c100Indices) {
+    if (!c100.temC170) continue;
+
+    const linha = linhas[c100.idx];
+    const partes = linha.split('|');
+    // partes[15]=VL_PIS (índice 14 no f[], que é partes[15] pois partes[0] é vazio do split)
+    // partes[19]=VL_COFINS (índice 18 no f[])
+    // Layout: |C100|IND_OPER|IND_EMIT|COD_PART|COD_MOD|COD_SIT|SER|NUM_DOC|CHV_NFE|DT_DOC|DT_E_S|VL_DOC|IND_PGTO|VL_DESC|VL_AB_NT|VL_PIS|...
+    // f[14]=VL_PIS → partes[15]; f[18]=VL_COFINS → partes[19]
+
+    if (c100.somaPis > 0 && partes[15]) {
+      const vlPisDeclarado = parseNum(partes[15]);
+      if (!isNaN(vlPisDeclarado) && c100.somaPis > vlPisDeclarado + 0.02) {
+        // Ajusta para o teto da soma (arredondado para 2 casas)
+        partes[15] = c100.somaPis.toFixed(2).replace('.', ',');
+      }
+    }
+
+    if (c100.somaCofins > 0 && partes[19]) {
+      const vlCofinsDeclarado = parseNum(partes[19]);
+      if (!isNaN(vlCofinsDeclarado) && c100.somaCofins > vlCofinsDeclarado + 0.02) {
+        partes[19] = c100.somaCofins.toFixed(2).replace('.', ',');
+      }
+    }
+
+    linhas[c100.idx] = partes.join('|');
+  }
+
+  return linhas;
+}

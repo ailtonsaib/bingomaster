@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { XMLParser } from 'npm:fast-xml-parser@4.5.1';
 import { validarDimeSC } from './dime_sc.ts';
-import { validarDetalheContribuicoes, validarCruzadaContribuicoes, corrigirContribuicoes } from './contribuicoes_rules.ts';
+import { validarDetalheContribuicoes, validarCruzadaContribuicoes, corrigirContribuicoes, corrigirC100Totais } from './contribuicoes_rules.ts';
 
 // ===================== REGISTROS REINF (XML) =====================
 // Validação conforme Guia Prático da EFD-REINF
@@ -582,6 +582,8 @@ function corrigirConteudo(conteudo, tipoDetectado) {
   // Field-level fixes for SPED Contribuições (PVA rules)
   if (tipoDetectado === 'CONTRIBUICOES') {
     linhas = corrigirContribuicoes(linhas);
+    // Corrigir arredondamento de R$ 0,01 no C100 (VL_PIS/VL_COFINS >= soma dos C170)
+    linhas = corrigirC100Totais(linhas);
   }
 
   // Collect record counts
