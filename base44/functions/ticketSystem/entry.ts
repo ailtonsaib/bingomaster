@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         name, email, password_hash, company_id, company_name: company.razao_social,
         role: role || 'agent', is_active: true
       });
-      return Response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+      return Response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, company_id: user.company_id, company_name: user.company_name } });
     }
 
     // ─── USER: list by company ───
