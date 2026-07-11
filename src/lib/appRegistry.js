@@ -32,8 +32,15 @@ export const APPS = [
     accent: "#7C3AED",
     previewRoute: "/bingo",
     screenshots: [
-      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/ce75d5a91_generated_image.png",
-      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/f8a7228d4_generated_image.png",
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/ce75d5a91_generated_image.png", caption: "Tela de Login" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/50cff3370_generated_image.png", caption: "Painel Principal" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/eefe2df08_generated_image.png", caption: "Cadastro de Evento" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/950d56ff7_generated_image.png", caption: "Telão / Projetor" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/191ea5349_generated_image.png", caption: "Tela de Sorteio" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/77c0810b3_generated_image.png", caption: "App do Vendedor" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/be464622b_generated_image.png", caption: "App do Comprador" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/c0212edb7_generated_image.png", caption: "Estatísticas de Vendas" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/7328b2f54_generated_image.png", caption: "Validação de Cartelas" },
     ],
   },
   {
@@ -64,7 +71,8 @@ export const APPS = [
     accent: "#059669",
     previewRoute: "/financ",
     screenshots: [
-      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/e8796aa21_generated_image.png",
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/e8796aa21_generated_image.png", caption: "Tela de Login" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/06fd24b05_generated_image.png", caption: "Dashboard Financeiro" },
     ],
   },
   {
@@ -100,7 +108,8 @@ export const APPS = [
     accent: "#2563EB",
     previewRoute: "/validador",
     screenshots: [
-      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/758a3d943_generated_image.png",
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/758a3d943_generated_image.png", caption: "Tela de Login" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/31098fea8_generated_image.png", caption: "Validação de Arquivos SPED" },
     ],
   },
   {
@@ -127,7 +136,8 @@ export const APPS = [
     accent: "#DC2626",
     previewRoute: "/chamados",
     screenshots: [
-      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/f8a7228d4_generated_image.png",
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/f8a7228d4_generated_image.png", caption: "Acesso ao Sistema" },
+      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/83dd4cdc8_generated_image.png", caption: "Kanban de Chamados" },
     ],
   },
   {
