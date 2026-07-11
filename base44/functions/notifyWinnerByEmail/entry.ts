@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     // Build RFC 2822 email
     const subject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(`🎉 Parabéns! Você ganhou: ${prizeName}`)))}?=`;
-    const bodyText = `Olá, ${playerName}!\n\nParabéns! Sua cartela ${cardIdentifier} ganhou o prêmio: ${prizeName}.\n\nFique atento às próximas instruções para receber seu prêmio.\n\nAbraços,\nEquipe BingoMaster`;
+    const bodyText = `Olá, ${playerName}!\n\nParabéns! Sua cartela ${cardIdentifier} ganhou o prêmio: ${prizeName}.\n\nFique atento às próximas instruções para receber seu prêmio.\n\nAbraços,\nEquipe BingoPremier`;
 
     const message = [
       `To: ${playerEmail}`,

@@ -91,11 +91,11 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
             <p className="text-xs text-muted-foreground mt-1">Padrão: <span className="font-mono font-semibold">Premier@123</span> — o usuário poderá trocar no primeiro acesso.</p>
           </div>
 
-          {/* BingoMaster permissions */}
+          {/* BingoPremier permissions */}
           <div className="pt-2 border-t">
             <label className="flex items-center gap-2 text-sm font-medium mb-2">
               <input type="checkbox" checked={canAccessBingo} onChange={(e) => setCanAccessBingo(e.target.checked)} className="w-4 h-4" />
-              BingoMaster
+              BingoPremier
             </label>
             {canAccessBingo && (
               <select

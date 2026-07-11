@@ -199,7 +199,7 @@ export default function PortalAdmin() {
                 <Grid3x3 className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">BingoMaster</p>
+                <p className="text-xs text-muted-foreground">BingoPremier</p>
                 <p className="text-lg font-bold">{bingoUsers.length}</p>
               </div>
             </CardContent>
@@ -285,7 +285,7 @@ export default function PortalAdmin() {
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="text-left p-3 font-medium">Usuário</th>
-                    <th className="text-left p-3 font-medium">BingoMaster</th>
+                    <th className="text-left p-3 font-medium">BingoPremier</th>
                     <th className="text-left p-3 font-medium">Finanças</th>
                     <th className="text-left p-3 font-medium">Chamados</th>
                     <th className="text-left p-3 font-medium">SPED</th>
@@ -306,7 +306,7 @@ export default function PortalAdmin() {
                         )}
                       </td>
 
-                      {/* BingoMaster permissions */}
+                      {/* BingoPremier permissions */}
                       <td className="p-3">
                         <div className="flex flex-col gap-1.5">
                           <label className="flex items-center gap-1.5 text-xs">

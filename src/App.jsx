@@ -112,7 +112,7 @@ const AuthenticatedApp = () => {
           <Route path="/sped-validations" element={<SpedValidations />} />
         </Route>
       </Route>
-      {/* BingoMaster — exige login + permissão bingo + auth Base44 */}
+      {/* BingoPremier — exige login + permissão bingo + auth Base44 */}
       <Route element={<PortalGuard permission="can_access_bingo" />}>
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
           <Route path="/app" element={<Home />} />

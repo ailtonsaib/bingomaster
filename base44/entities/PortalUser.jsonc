@@ -22,7 +22,7 @@
     "can_access_bingo": {
       "type": "boolean",
       "default": true,
-      "description": "Se tem acesso ao BingoMaster"
+      "description": "Se tem acesso ao BingoPremier"
     },
     "can_access_finance": {
       "type": "boolean",

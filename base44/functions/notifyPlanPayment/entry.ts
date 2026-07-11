@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.integrations.Core.SendEmail({
       to: adminEmail,
-      from_name: 'BingoMaster — Pagamentos',
+      from_name: 'BingoPremier — Pagamentos',
       subject: `💰 Pagamento confirmado: ${userName} → ${planName}`,
       body: `
         <h2 style="color:#059669;">✅ Pagamento de Plano Confirmado</h2>

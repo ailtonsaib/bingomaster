@@ -1,7 +1,7 @@
 export const APPS = [
   {
     id: "bingo",
-    name: "BingoMaster",
+    name: "BingoPremier",
     icon: "Grid3x3",
     iconBg: "bg-[#E9E5FF]",
     iconColor: "text-[#7C3AED]",
