@@ -1,0 +1,49 @@
+{
+  "name": "AppPlanConfig",
+  "type": "object",
+  "properties": {
+    "app_module": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "chamados"
+      ],
+      "description": "M\u00f3dulo do aplicativo (finance ou chamados)"
+    },
+    "plan_key": {
+      "type": "string",
+      "description": "Chave do plano (free, gold)"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Nome de exibi\u00e7\u00e3o do plano"
+    },
+    "price": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o mensal em reais (0 = gr\u00e1tis)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o curta do plano"
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "description": "Mapa de funcionalidades habilitadas por plano",
+      "default": {}
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o plano est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "app_module",
+    "plan_key",
+    "plan_name"
+  ]
+}

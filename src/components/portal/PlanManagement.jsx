@@ -6,7 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Check, X, Save, Pencil, RotateCcw, Loader2, Grid3x3, FileText, Wallet, DollarSign, LifeBuoy } from "lucide-react";
-import TicketPlanManagement from "@/components/portal/TicketPlanManagement";
+import SimplePlanManager from "@/components/portal/SimplePlanManager";
+
+const FINANCE_FEATURES = [
+  { key: "unlimited_transactions", label: "Movimentações ilimitadas" },
+  { key: "cost_centers", label: "Centros de custo" },
+  { key: "bank_accounts", label: "Contas bancárias" },
+  { key: "contacts", label: "Clientes/Fornecedores" },
+  { key: "agape_migration", label: "Migração Ágape" },
+  { key: "reports", label: "Relatórios" },
+];
+
+const FINANCE_DEFAULTS = [
+  { plan_key: "free", plan_name: "FREE", price: 0, description: "10 movimentações gratuitas", features: { unlimited_transactions: false, cost_centers: true, bank_accounts: true, contacts: true, agape_migration: false, reports: true } },
+  { plan_key: "gold", plan_name: "GOLD", price: 49.90, description: "Movimentações ilimitadas", features: { unlimited_transactions: true, cost_centers: true, bank_accounts: true, contacts: true, agape_migration: true, reports: true } },
+];
+
+const CHAMADOS_FEATURES = [
+  { key: "unlimited_tickets", label: "Chamados ilimitados" },
+  { key: "unlimited_users", label: "Usuários ilimitados" },
+  { key: "custom_types", label: "Tipos personalizados" },
+  { key: "priorities", label: "Prioridades" },
+  { key: "comments", label: "Comentários" },
+  { key: "attachments", label: "Anexos" },
+];
+
+const CHAMADOS_DEFAULTS = [
+  { plan_key: "free", plan_name: "FREE", price: 0, description: "10 chamados gratuitos", features: { unlimited_tickets: false, unlimited_users: true, custom_types: true, priorities: true, comments: true, attachments: true } },
+  { plan_key: "gold", plan_name: "GOLD", price: 49.90, description: "Chamados ilimitados", features: { unlimited_tickets: true, unlimited_users: true, custom_types: true, priorities: true, comments: true, attachments: true } },
+];
 
 const BINGO_DEFAULTS = [
   { plan_key: "free", plan_name: "FREE", price: 0, max_cards: 50, description: "Para conhecer o sistema", app_generator: true, app_seller: false, app_buyer: false, app_telao: false, app_rifa: false },
@@ -388,28 +416,26 @@ export default function PlanManagement() {
 
       {/* FINANCE PLANS */}
       {section === "finance" && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base">Plano Financeiro</h3>
-                <p className="text-sm text-muted-foreground">O valor do plano financeiro é configurado individualmente por usuário na aba "Usuários".</p>
-              </div>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-amber-600" />
-              <p className="text-sm text-amber-700">Cada usuário tem seu próprio <strong>finance_plan_price</strong> (padrão R$ 49,90). Ajuste o valor diretamente na linha do usuário na aba Usuários.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <SimplePlanManager
+          appModule="finance"
+          defaults={FINANCE_DEFAULTS}
+          featureDefs={FINANCE_FEATURES}
+          icon={Wallet}
+          iconColor="#059669"
+          title="Plano Financeiro"
+        />
       )}
 
       {/* CHAMADOS PLANS */}
       {section === "chamados" && (
-        <TicketPlanManagement />
+        <SimplePlanManager
+          appModule="chamados"
+          defaults={CHAMADOS_DEFAULTS}
+          featureDefs={CHAMADOS_FEATURES}
+          icon={LifeBuoy}
+          iconColor="#DC2626"
+          title="Plano de Chamados"
+        />
       )}
     </div>
   );
