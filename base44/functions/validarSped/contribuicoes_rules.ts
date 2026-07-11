@@ -1,6 +1,108 @@
 // Regras de validação e correção automática do PVA EFD-Contribuições
 // Replica as regras do validador oficial da Receita Federal
 
+// ===================== TABELAS MONOFÁSICAS =====================
+// Tabela 4.3.10 (v1.25 — 30/03/2026): Alíquotas Diferenciadas (CST 02 e 04) — percentual
+// Tabela 4.3.11 (v1.33 — 16/04/2026): Alíquotas por Unidade de Medida (CST 03 e 04) — ad rem
+const TABELA_4_3_10 = [
+  { cod:'101',desc:'Gasolinas',ncms:['27101159'],pis:5.08,cofins:23.44},
+  { cod:'102',desc:'Óleo Diesel',ncms:['27101921'],pis:4.21,cofins:19.42},
+  { cod:'103',desc:'GLP',ncms:['27111910'],pis:10.20,cofins:47.40},
+  { cod:'104',desc:'Querosene de Aviação',ncms:['27101911'],pis:5.00,cofins:23.20},
+  { cod:'105',desc:'Correntes Gasolinas',ncms:['27101159'],pis:5.08,cofins:23.44},
+  { cod:'106',desc:'Correntes Diesel',ncms:['27101921'],pis:4.21,cofins:19.42},
+  { cod:'107',desc:'Nafta Gasolina/Diesel',ncms:['27101141'],pis:5.08,cofins:23.44},
+  { cod:'108',desc:'Nafta apenas Diesel',ncms:['27101141'],pis:4.21,cofins:19.42},
+  { cod:'109',desc:'Biodiesel',ncms:['38249029'],pis:6.15,cofins:28.32},
+  { cod:'112',desc:'Álcool (Produtor/Importador)',ncms:['22071000','22072010','22089000'],pis:1.50,cofins:6.90},
+  { cod:'113',desc:'Álcool (Distribuidor)',ncms:['22071000','22072010','22089000'],pis:3.75,cofins:17.25},
+  { cod:'150',desc:'Nafta Petroquímica',ncms:['27101141'],pis:1.00,cofins:4.60},
+  { cod:'201',desc:'Produtos Farmacêuticos',ncms:['3001','3003','3004','300210','300220','300630','30029020','30029092','30029099','30051010','30066000'],pis:2.10,cofins:9.90},
+  { cod:'202',desc:'Perfumaria/Higiene',ncms:['3303','3304','3305','3306','3307','34011190','34012010','96032100'],pis:2.20,cofins:10.30},
+  { cod:'301',desc:'Veículos/Máquinas Agrícolas',ncms:['8429','843240','843280','843320','843330','843340','84335','8701','8702','8703','8704','8705','8706'],pis:2.00,cofins:9.60},
+  { cod:'302',desc:'Autopeças (Revenda)',ncms:[],pis:2.30,cofins:10.80},
+  { cod:'303',desc:'Autopeças (Indústria)',ncms:[],pis:1.65,cofins:7.60},
+  { cod:'304',desc:'Pneus',ncms:['4011','4013'],pis:2.00,cofins:9.50},
+  { cod:'401',desc:'Águas Artificiais',ncms:['22011000'],pis:3.50,cofins:16.65},
+  { cod:'402',desc:'Águas Naturais',ncms:['22011000'],pis:3.50,cofins:16.65},
+  { cod:'403',desc:'Refrigerantes',ncms:['22021000'],pis:3.50,cofins:16.65},
+  { cod:'406',desc:'Cervejas',ncms:['22030000'],pis:3.50,cofins:16.65},
+];
+
+const TABELA_4_3_11 = [
+  { cod:'101',desc:'Gasolinas',ncms:['27101159'],pisAdRem:158.50,cofinsAdRem:732.40,unidade:'m³'},
+  { cod:'102',desc:'Óleo Diesel (Dec 12.875/2026)',ncms:['27101921'],pisAdRem:0.01,cofinsAdRem:0.05,unidade:'m³'},
+];
+
+function normNcm(ncm) { return String(ncm||'').replace(/[.\s]/g,'').replace(/Ex\d*/gi,'').trim(); }
+function ncmMatch(ncmArq, ncmTab) {
+  const a=normNcm(ncmArq), t=normNcm(ncmTab);
+  if(!a||!t) return false;
+  if(a===t) return true;
+  if(t.length<=4 && a.substring(0,t.length)===t) return true;
+  if(t.length===6 && a.substring(0,6)===t) return true;
+  return false;
+}
+function buscarTabela4310(ncm) {
+  if(!ncm) return null;
+  for(const p of TABELA_4_3_10) for(const n of p.ncms) if(ncmMatch(ncm,n)) return p;
+  return null;
+}
+function buscarTabela4311(ncm) {
+  if(!ncm) return null;
+  for(const p of TABELA_4_3_11) for(const n of p.ncms) if(ncmMatch(ncm,n)) return p;
+  return null;
+}
+
+function validarAliquotasMonofasicas(linhas, erros, avisos) {
+  const itemNcm = {};
+  for(const linha of linhas) {
+    const c = linha.split('|');
+    if(c[1]==='0200' && c[3] && c[2] && c[8]) itemNcm[c[2]] = c[8];
+  }
+  for(let i=0; i<linhas.length; i++) {
+    const c = linhas[i].split('|');
+    const reg = c[1]||'';
+    if(reg==='C170') {
+      const codItem=c[3]||'', cstPis=c[25]||'', cstCofins=c[31]||'';
+      const aliqPis=c[27]||'', aliqCofins=c[33]||'';
+      const aliqPisQ=c[29]||'', aliqCofinsQ=c[35]||'';
+      const ncm=itemNcm[codItem]||'';
+      if(!ncm) continue;
+      if(cstPis==='02' && aliqPis) {
+        const p=buscarTabela4310(ncm);
+        if(p) { const v=parseFloat(aliqPis.replace(',','.')); if(!isNaN(v)&&Math.abs(v-p.pis)>0.01) avisos.push({linha:i+1,registro:'C170',mensagem:`ALIQ_PIS (${v}%) diverge da Tabela 4.3.10 para "${p.desc}" (esperado ${p.pis}%). NCM: ${ncm}.`,severidade:'aviso'}); }
+      }
+      if(cstCofins==='02' && aliqCofins) {
+        const p=buscarTabela4310(ncm);
+        if(p) { const v=parseFloat(aliqCofins.replace(',','.')); if(!isNaN(v)&&Math.abs(v-p.cofins)>0.01) avisos.push({linha:i+1,registro:'C170',mensagem:`ALIQ_COFINS (${v}%) diverge da Tabela 4.3.10 para "${p.desc}" (esperado ${p.cofins}%). NCM: ${ncm}.`,severidade:'aviso'}); }
+      }
+      if(cstPis==='03' && aliqPisQ) {
+        const p=buscarTabela4311(ncm);
+        if(p&&p.pisAdRem>0) { const v=parseFloat(aliqPisQ.replace(',','.')); if(!isNaN(v)&&Math.abs(v-p.pisAdRem)>0.001) avisos.push({linha:i+1,registro:'C170',mensagem:`ALIQ_PIS_QUANT (R$ ${v}/${p.unidade}) diverge da Tabela 4.3.11 para "${p.desc}" (esperado R$ ${p.pisAdRem}/${p.unidade}). NCM: ${ncm}.`,severidade:'aviso'}); }
+      }
+      if(cstCofins==='03' && aliqCofinsQ) {
+        const p=buscarTabela4311(ncm);
+        if(p&&p.cofinsAdRem>0) { const v=parseFloat(aliqCofinsQ.replace(',','.')); if(!isNaN(v)&&Math.abs(v-p.cofinsAdRem)>0.001) avisos.push({linha:i+1,registro:'C170',mensagem:`ALIQ_COFINS_QUANT (R$ ${v}/${p.unidade}) diverge da Tabela 4.3.11 para "${p.desc}" (esperado R$ ${p.cofinsAdRem}/${p.unidade}). NCM: ${ncm}.`,severidade:'aviso'}); }
+      }
+    }
+    if(reg==='A170') {
+      const codItem=c[3]||'', cstPis=c[9]||'', cstCofins=c[13]||'';
+      const aliqPis=c[11]||'', aliqCofins=c[15]||'';
+      const ncm=itemNcm[codItem]||'';
+      if(!ncm) continue;
+      if(cstPis==='02' && aliqPis) {
+        const p=buscarTabela4310(ncm);
+        if(p) { const v=parseFloat(aliqPis.replace(',','.')); if(!isNaN(v)&&Math.abs(v-p.pis)>0.01) avisos.push({linha:i+1,registro:'A170',mensagem:`ALIQ_PIS (${v}%) diverge da Tabela 4.3.10 para "${p.desc}" (esperado ${p.pis}%). NCM: ${ncm}.`,severidade:'aviso'}); }
+      }
+      if(cstCofins==='02' && aliqCofins) {
+        const p=buscarTabela4310(ncm);
+        if(p) { const v=parseFloat(aliqCofins.replace(',','.')); if(!isNaN(v)&&Math.abs(v-p.cofins)>0.01) avisos.push({linha:i+1,registro:'A170',mensagem:`ALIQ_COFINS (${v}%) diverge da Tabela 4.3.10 para "${p.desc}" (esperado ${p.cofins}%). NCM: ${ncm}.`,severidade:'aviso'}); }
+      }
+    }
+  }
+}
+
 function parseNum(v) {
   if (!v) return NaN;
   return parseFloat(String(v).replace(',', '.'));
@@ -382,6 +484,10 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
     // NAT_REC D500/D501: não validamos pois a Tabela 4.3.10 é extensa e a validação
     // de formato (8 dígitos) gera falsos positivos para códigos legítimos do ERP.
   }
+
+  // Validação de alíquotas monofásicas (Tabelas 4.3.10 e 4.3.11)
+  // Gera avisos quando ALIQ_PIS/COFINS diverge das tabelas oficiais para CST 02 e 03
+  validarAliquotasMonofasicas(linhas, erros, avisos);
 
   // Regra: 0111 REC_BRU_CUM — deve ser 0 quando COD_INC_TRIB (0110) = 1 (exclusivamente não-cumulativo)
   // e maior que zero quando COD_INC_TRIB = 3 (ambos os regimes)
