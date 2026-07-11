@@ -35,6 +35,7 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [bingoPlan, setBingoPlan] = useState("free");
   const [canAccessFinance, setCanAccessFinance] = useState(false);
   const [financePlan, setFinancePlan] = useState("test");
+  const [canAccessChamados, setCanAccessChamados] = useState(false);
   const [canAccessSped, setCanAccessSped] = useState(false);
   const [spedPlan, setSpedPlan] = useState("free");
   const [saving, setSaving] = useState(false);
@@ -46,6 +47,7 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
       const data = {
         can_access_bingo: canAccessBingo,
         can_access_finance: canAccessFinance,
+        can_access_chamados: canAccessChamados,
         can_access_sped: canAccessSped,
         bingo_plan: canAccessBingo ? bingoPlan : "free",
         sped_plan: canAccessSped ? spedPlan : "free",
@@ -125,6 +127,14 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* Chamados permissions */}
+          <div className="pt-2 border-t">
+            <label className="flex items-center gap-2 text-sm font-medium mb-2">
+              <input type="checkbox" checked={canAccessChamados} onChange={(e) => setCanAccessChamados(e.target.checked)} className="w-4 h-4" />
+              Sistema de Chamados
+            </label>
           </div>
 
           {/* SPED permissions */}

@@ -29,6 +29,11 @@
       "default": false,
       "description": "Se tem acesso ao Controle de Finan\u00e7as"
     },
+    "can_access_chamados": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso ao sistema de Chamados"
+    },
     "can_access_sped": {
       "type": "boolean",
       "default": false,
@@ -92,6 +97,7 @@
         "portal",
         "bingo",
         "finance",
+        "chamados",
         "sped"
       ],
       "default": "portal",

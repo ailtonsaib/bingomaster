@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, DollarSign, FileText, Settings, Search, Globe, Clock, Monitor } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
@@ -129,6 +129,7 @@ export default function PortalAdmin() {
   });
   const bingoUsers = users.filter((u) => u.can_access_bingo);
   const financeUsers = users.filter((u) => u.can_access_finance);
+  const chamadosUsers = users.filter((u) => u.can_access_chamados);
   const spedUsers = users.filter((u) => u.can_access_sped);
 
   const TabBar = (
@@ -180,7 +181,7 @@ export default function PortalAdmin() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {TabBar}
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -211,6 +212,17 @@ export default function PortalAdmin() {
               <div>
                 <p className="text-xs text-muted-foreground">Finanças</p>
                 <p className="text-lg font-bold">{financeUsers.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Ticket className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Chamados</p>
+                <p className="text-lg font-bold">{chamadosUsers.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -275,6 +287,7 @@ export default function PortalAdmin() {
                     <th className="text-left p-3 font-medium">Usuário</th>
                     <th className="text-left p-3 font-medium">BingoMaster</th>
                     <th className="text-left p-3 font-medium">Finanças</th>
+                    <th className="text-left p-3 font-medium">Chamados</th>
                     <th className="text-left p-3 font-medium">SPED</th>
                     <th className="text-left p-3 font-medium">Acesso</th>
                     <th className="text-left p-3 font-medium">Status</th>
@@ -352,27 +365,24 @@ export default function PortalAdmin() {
                               {u.finance_transactions_used}/{u.finance_transaction_limit} usadas
                             </span>
                           )}
-                          {u.can_access_finance && !u.is_admin && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <DollarSign className="w-3 h-3 text-muted-foreground" />
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={u.finance_plan_price ?? 49.90}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value.replace(',', '.'));
-                                  if (!isNaN(val) && val >= 0) {
-                                    updateUser(u.id, { finance_plan_price: val });
-                                  } else if (e.target.value === '') {
-                                    updateUser(u.id, { finance_plan_price: 0 });
-                                  }
-                                }}
-                                className="w-20 h-7 rounded border border-input bg-transparent px-2 text-xs"
-                                title="Valor do plano de acesso completo"
-                              />
-                              <span className="text-xs text-muted-foreground">/ único</span>
-                            </div>
-                          )}
+                        </div>
+                      </td>
+
+                      {/* Chamados permissions */}
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={u.can_access_chamados}
+                              disabled={u.is_admin}
+                              onChange={() => handleToggle(u.id, 'can_access_chamados', u.can_access_chamados)}
+                              className="w-3.5 h-3.5"
+                            />
+                            <span className={u.can_access_chamados ? 'text-foreground' : 'text-muted-foreground'}>
+                              {u.can_access_chamados ? 'Com acesso' : 'Sem acesso'}
+                            </span>
+                          </label>
                         </div>
                       </td>
 
