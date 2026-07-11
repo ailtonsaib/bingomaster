@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import DivergenceReport from '@/components/sped/DivergenceReport';
 import ValidationLogPanel from '@/components/sped/ValidationLogPanel';
 import ValidationComparison from '@/components/sped/ValidationComparison';
+import jsPDF from 'jspdf';
 import {
   UploadCloud,
   FileText,
@@ -228,37 +229,111 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
 
   const baixarRelatorio = () => {
     if (!resultado) return;
-    let txt = `RELATÓRIO DE VALIDAÇÃO SPED\n`;
-    txt += `Arquivo: ${resultado.nomeArquivo}\n`;
-    txt += `Tipo detectado: ${resultado.tipoDetectado}\n`;
-    txt += `Status: ${resultado.isValid ? 'VÁLIDO ✓' : 'INVÁLIDO ✗'}\n`;
-    txt += `Total de linhas: ${resultado.estatisticas.totalLinhas}\n`;
-    txt += `Erros: ${resultado.erros.length}\n`;
-    txt += `Avisos: ${resultado.avisos.length}\n`;
-    txt += `\n${'='.repeat(60)}\n\n`;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxW = pageW - margin * 2;
+    let y = margin;
 
+    const ensureSpace = (h) => {
+      if (y + h > pageH - margin) { doc.addPage(); y = margin; }
+    };
+
+    // Cabeçalho
+    doc.setFillColor(124, 58, 237);
+    doc.rect(0, 0, pageW, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Relatório de Validação SPED', margin, 12);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, margin, 20);
+    y = 36;
+
+    // Informações gerais
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Informações do Arquivo', margin, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const infos = [
+      `Arquivo: ${resultado.nomeArquivo}`,
+      `Tipo detectado: ${resultado.tipoDetectado}`,
+      `Status: ${resultado.isValid ? 'VÁLIDO' : 'INVÁLIDO'}`,
+      `Total de linhas: ${resultado.estatisticas.totalLinhas}`,
+      `Erros críticos: ${resultado.erros.length}`,
+      `Avisos: ${resultado.avisos.length}`,
+    ];
+    infos.forEach((linha) => {
+      ensureSpace(5);
+      doc.text(linha, margin, y); y += 5;
+    });
+    y += 3;
+
+    // Erros
     if (resultado.erros.length > 0) {
-      txt += `ERROS (${resultado.erros.length}):\n\n`;
+      ensureSpace(8);
+      doc.setFillColor(254, 226, 226);
+      doc.rect(margin, y - 4, maxW, 8, 'F');
+      doc.setTextColor(185, 28, 28);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Erros Críticos (${resultado.erros.length})`, margin + 2, y + 1);
+      y += 8;
+      doc.setTextColor(50, 50, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       resultado.erros.forEach((e, i) => {
-        txt += `  ${i + 1}. [Linha ${e.linha} | ${e.registro}] ${e.mensagem}\n`;
+        const header = `${i + 1}. Linha ${e.linha}${e.registro ? ` | Registro ${e.registro}` : ''}`;
+        const msgLines = doc.splitTextToSize(e.mensagem, maxW - 4);
+        ensureSpace(4 + msgLines.length * 4 + 2);
+        doc.setFont('helvetica', 'bold');
+        doc.text(header, margin + 2, y); y += 4;
+        doc.setFont('helvetica', 'normal');
+        msgLines.forEach((ml) => { doc.text(ml, margin + 4, y); y += 4; });
+        y += 2;
       });
-      txt += `\n${'='.repeat(60)}\n\n`;
+      y += 3;
     }
 
+    // Avisos
     if (resultado.avisos.length > 0) {
-      txt += `AVISOS (${resultado.avisos.length}):\n\n`;
+      ensureSpace(8);
+      doc.setFillColor(254, 243, 199);
+      doc.rect(margin, y - 4, maxW, 8, 'F');
+      doc.setTextColor(146, 64, 14);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Avisos (${resultado.avisos.length})`, margin + 2, y + 1);
+      y += 8;
+      doc.setTextColor(50, 50, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       resultado.avisos.forEach((a, i) => {
-        txt += `  ${i + 1}. [Linha ${a.linha} | ${a.registro}] ${a.mensagem}\n`;
+        const header = `${i + 1}. ${a.linha > 0 ? `Linha ${a.linha}` : 'Estrutura'}${a.registro ? ` | Registro ${a.registro}` : ''}`;
+        const msgLines = doc.splitTextToSize(a.mensagem, maxW - 4);
+        ensureSpace(4 + msgLines.length * 4 + 2);
+        doc.setFont('helvetica', 'bold');
+        doc.text(header, margin + 2, y); y += 4;
+        doc.setFont('helvetica', 'normal');
+        msgLines.forEach((ml) => { doc.text(ml, margin + 4, y); y += 4; });
+        y += 2;
       });
     }
 
-    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio_validacao_${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // Rodapé em todas as páginas
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p);
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`SoftPremier — Relatório de Validação SPED | Página ${p} de ${pageCount}`, margin, pageH - 8);
+    }
+
+    doc.save(`relatorio_validacao_${Date.now()}.pdf`);
   };
 
   return (
