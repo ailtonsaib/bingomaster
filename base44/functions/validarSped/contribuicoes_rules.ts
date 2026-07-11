@@ -172,12 +172,33 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
   if (registro === 'C170') {
     const c = linha.split('|');
     const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
-    // C170 Contribuições (leiaute oficial):
-    // f[9]=CST_ICMS, f[10]=CFOP
-    // f[24]=CST_PIS, f[25]=VL_BC_PIS, f[26]=ALIQ_PIS, f[27]=QUANT_BC_PIS, f[28]=ALIQ_PIS_QUANT, f[29]=VL_PIS
-    // f[30]=CST_COFINS, f[31]=VL_BC_COFINS, f[32]=ALIQ_COFINS, f[33]=QUANT_BC_COFINS, f[34]=ALIQ_COFINS_QUANT, f[35]=VL_COFINS
+    // ===== LEIAUTE OFICIAL C170 — EFD-Contribuições (Guia Prático v2.0.0a) =====
+    // Confirmado via TOTVS (Campo 25=CST_PIS, 27=ALIQ_PIS, 30=VL_PIS, 31=CST_COFINS, 36=VL_COFINS)
+    // e validado contra dados reais de arquivo SPED (73051,96 × 1,65% = 1205,36 ✓)
+    //
+    // f[0]=REG(C170)        f[1]=NUM_ITEM      f[2]=COD_ITEM       f[3]=DESCR_COMPL
+    // f[4]=QTD              f[5]=UNID          f[6]=VL_ITEM         f[7]=VL_DESC
+    // f[8]=IND_MOV          f[9]=CST_ICMS      f[10]=CFOP           f[11]=COD_NAT
+    // f[12]=VL_BC_ICMS      f[13]=ALIQ_ICMS    f[14]=VL_ICMS        f[15]=VL_BC_ICMS_ST
+    // f[16]=ALIQ_ST         f[17]=VL_ICMS_ST   f[18]=IND_APUR       f[19]=CST_ICMS_ST
+    // f[20]=COD_CTA         f[21]=VL_BC_IPI    f[22]=ALIQ_IPI       f[23]=VL_IPI
+    // f[24]=CST_PIS         f[25]=VL_BC_PIS    f[26]=ALIQ_PIS       f[27]=QUANT_BC_PIS
+    // f[28]=ALIQ_PIS_QUANT  f[29]=VL_PIS       f[30]=CST_COFINS     f[31]=VL_BC_COFINS
+    // f[32]=ALIQ_COFINS     f[33]=QUANT_BC_COFINS f[34]=ALIQ_COFINS_QUANT f[35]=VL_COFINS
+    // f[36]=COD_OBS (opcional)
     const cstSemCredito = ['04','05','06','07','08','09','49','98','99'];
     const cstComCredito = ['01','02','05','06','50','51','52','53','54','55','56','60','61','62','63','64','65','66'];
+
+    // === Validação IPI (f[21]=VL_BC_IPI, f[22]=ALIQ_IPI, f[23]=VL_IPI) ===
+    if (f[21] && f[22] && f[23]) {
+      const bcIpi = parseNum(f[21]); const aliqIpi = parseNum(f[22]); const vlIpi = parseNum(f[23]);
+      if (!isNaN(bcIpi) && !isNaN(aliqIpi) && aliqIpi > 0 && !isNaN(vlIpi)) {
+        const calc = (bcIpi * aliqIpi) / 100;
+        if (Math.abs(vlIpi - calc) > 0.02) {
+          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor do IPI (${f[23]}) deve ser igual a Base de Cálculo × Alíquota. Esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
+        }
+      }
+    }
 
     const cstPis = f[24] || '';
     const vlBcPis = f[25] || '';
@@ -585,8 +606,18 @@ export function corrigirContribuicoes(linhas) {
     if (reg === 'C170') {
       // Pad array to at least 37 fields — many ERPs truncate trailing empty pipe fields
       while (partes.length < 37) partes.push('');
-      // Layout: partes[25]=CST_PIS, [26]=VL_BC_PIS, [27]=ALIQ_PIS, [28]=QUANT_BC_PIS, [29]=ALIQ_PIS_QUANT, [30]=VL_PIS
-      //         partes[31]=CST_COFINS, [32]=VL_BC_COFINS, [33]=ALIQ_COFINS, [34]=QUANT_BC_COFINS, [35]=ALIQ_COFINS_QUANT, [36]=VL_COFINS
+      // Leiaute oficial C170 (ver mapa completo no início da validação C170):
+      // partes[22]=VL_BC_IPI, [23]=ALIQ_IPI, [24]=VL_IPI
+      // partes[25]=CST_PIS, [26]=VL_BC_PIS, [27]=ALIQ_PIS, [28]=QUANT_BC_PIS, [29]=ALIQ_PIS_QUANT, [30]=VL_PIS
+      // partes[31]=CST_COFINS, [32]=VL_BC_COFINS, [33]=ALIQ_COFINS, [34]=QUANT_BC_COFINS, [35]=ALIQ_COFINS_QUANT, [36]=VL_COFINS
+
+      // === Auto-fix IPI: VL_IPI = VL_BC_IPI × ALIQ_IPI / 100 ===
+      if (partes[22] && partes[22] !== '' && partes[23] && partes[23] !== '') {
+        const bcIpi = parseNum(partes[22]); const aliqIpi = parseNum(partes[23]);
+        if (!isNaN(bcIpi) && !isNaN(aliqIpi) && aliqIpi > 0) {
+          partes[24] = ((bcIpi * aliqIpi) / 100).toFixed(2).replace('.', ',');
+        }
+      }
 
       const cstSemCredito = ['04','05','06','07','08','09','49','98','99'];
 
@@ -667,6 +698,36 @@ export function corrigirContribuicoes(linhas) {
         const qtdBc = parseNum(partes[34]); const aliqQtd = parseNum(partes[35]);
         if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0) {
           partes[36] = (qtdBc * aliqQtd).toFixed(2).replace('.', ',');
+        }
+      }
+
+      // === Auto-fix edge case: CST com crédito mas VL_BC=0 e ALIQ=0 em ambos os lados ===
+      // Se CST exige crédito (01, 02, 50, etc.) e ambas as bases/alíquotas estão zeradas,
+      // inferir VL_BC a partir de VL_ITEM (partes[7]) com alíquotas padrão:
+      // CST 01 → PIS=0,65%, COFINS=3,00% (não-cumulativo)
+      // CST 50 → PIS=1,65%, COFINS=7,60% (cumulativo)
+      // CST 02 → manter zerado (monofásica — alíquota vem da Tabela 4.3.10, não inferir)
+      const cstPisVal = partes[25] || '';
+      const cstCofinsVal = partes[31] || '';
+      const cstComCreditoFix = ['01','50','51','52','53','54','55','56'];
+      if (cstComCreditoFix.includes(cstPisVal)) {
+        const bcPisZero = (!partes[26] || partes[26] === '' || parseNum(partes[26]) === 0);
+        const aliqPisZero = (!partes[27] || partes[27] === '' || parseNum(partes[27]) === 0);
+        const bcCofinsZero = (!partes[32] || partes[32] === '' || parseNum(partes[32]) === 0);
+        const aliqCofinsZero = (!partes[33] || partes[33] === '' || parseNum(partes[33]) === 0);
+        // Só inferir se TODOS os 4 campos (VL_BC_PIS, ALIQ_PIS, VL_BC_COFINS, ALIQ_COFINS) estão zerados
+        if (bcPisZero && aliqPisZero && bcCofinsZero && aliqCofinsZero) {
+          const vlItem = parseNum(partes[7]);
+          if (!isNaN(vlItem) && vlItem > 0) {
+            const aliqPisDefault = cstPisVal === '01' ? '0,65' : '1,65';
+            const aliqCofinsDefault = cstCofinsVal === '01' ? '3,00' : '7,60';
+            partes[26] = partes[7]; // VL_BC_PIS = VL_ITEM
+            partes[27] = aliqPisDefault;
+            partes[30] = ((vlItem * parseFloat(aliqPisDefault.replace(',', '.'))) / 100).toFixed(2).replace('.', ',');
+            partes[32] = partes[7]; // VL_BC_COFINS = VL_ITEM
+            partes[33] = aliqCofinsDefault;
+            partes[36] = ((vlItem * parseFloat(aliqCofinsDefault.replace(',', '.'))) / 100).toFixed(2).replace('.', ',');
+          }
         }
       }
       return partes.join('|');
