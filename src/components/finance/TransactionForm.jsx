@@ -17,11 +17,14 @@ export default function TransactionForm({ userEmail, onSave, onCancel }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [costCenters, setCostCenters] = useState([]);
+  const [selectedCostCenter, setSelectedCostCenter] = useState("");
   const [saving, setSaving] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
     loadContacts();
+    loadCostCenters();
   }, []);
 
   useEffect(() => {
@@ -43,6 +46,18 @@ export default function TransactionForm({ userEmail, onSave, onCancel }) {
       setContacts(res.data.contacts || []);
     } catch (e) {
       console.error("Erro ao carregar contatos:", e);
+    }
+  };
+
+  const loadCostCenters = async () => {
+    try {
+      const res = await base44.functions.invoke("portalAuth", {
+        operation: "getCostCenters",
+        email: userEmail,
+      });
+      setCostCenters(res.data.costCenters || []);
+    } catch (e) {
+      console.error("Erro ao carregar centros de custo:", e);
     }
   };
 
@@ -74,6 +89,8 @@ export default function TransactionForm({ userEmail, onSave, onCancel }) {
       due_date: dueDate ? new Date(dueDate + "T00:00:00").toISOString() : undefined,
       contact_id: selectedContact?.id || undefined,
       contact_name: selectedContact?.razao_social || undefined,
+      cost_center_id: selectedCostCenter || undefined,
+      cost_center_name: costCenters.find((c) => c.id === selectedCostCenter)?.name || undefined,
     });
     setSaving(false);
   };
@@ -154,6 +171,22 @@ export default function TransactionForm({ userEmail, onSave, onCancel }) {
                 )}
               </div>
             )}
+          </div>
+
+          <div>
+            <Label>Centro de Custo (opcional)</Label>
+            <select
+              value={selectedCostCenter}
+              onChange={(e) => setSelectedCostCenter(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            >
+              <option value="">Selecione...</option>
+              {costCenters.map((cc) => (
+                <option key={cc.id} value={cc.id}>
+                  {cc.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

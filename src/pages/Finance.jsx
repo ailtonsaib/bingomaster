@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users, ClipboardList, CalendarDays } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users, ClipboardList, CalendarDays, FileBarChart } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
 import PlanInfoCard from "@/components/finance/PlanInfoCard";
@@ -15,6 +15,7 @@ import ContactManager from "@/components/finance/ContactManager";
 import TransactionForm from "@/components/finance/TransactionForm";
 import CashPanel from "@/components/finance/CashPanel";
 import TransactionTable from "@/components/finance/TransactionTable";
+import CashFlowReport from "@/components/finance/CashFlowReport";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -160,6 +161,10 @@ export default function Finance() {
           <button onClick={() => setActiveTab("transactions")}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "transactions" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             <Receipt className="w-4 h-4" /> Movimentações
+          </button>
+          <button onClick={() => setActiveTab("relatorio")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "relatorio" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <FileBarChart className="w-4 h-4" /> Relatório
           </button>
           <button onClick={() => setActiveTab("lancamentos")}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "lancamentos" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
@@ -315,6 +320,10 @@ export default function Finance() {
 
         {activeTab === "lancamentos" && (
           <TransactionTable userEmail={user.email} />
+        )}
+
+        {activeTab === "relatorio" && (
+          <CashFlowReport userEmail={user.email} />
         )}
       </div>
     </div>

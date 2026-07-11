@@ -46,6 +46,14 @@
       "type": "string",
       "description": "Nome do cliente/fornecedor vinculado"
     },
+    "cost_center_id": {
+      "type": "string",
+      "description": "ID do centro de custo vinculado"
+    },
+    "cost_center_name": {
+      "type": "string",
+      "description": "Nome do centro de custo vinculado"
+    },
     "status": {
       "type": "string",
       "enum": [

@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
 
     // ─── FINANCE: add transaction ───
     if (operation === 'addTransaction') {
-      const { email, description, amount, type, category, launch_date, due_date, contact_id, contact_name } = body;
+      const { email, description, amount, type, category, launch_date, due_date, contact_id, contact_name, cost_center_id, cost_center_name } = body;
       const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
       if (users.length === 0) {
         return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
@@ -279,6 +279,8 @@ Deno.serve(async (req) => {
         due_date: due_date || undefined,
         contact_id: contact_id || undefined,
         contact_name: contact_name || undefined,
+        cost_center_id: cost_center_id || undefined,
+        cost_center_name: cost_center_name || undefined,
         status: 'pending',
       });
       if (!user.finance_full_access) {
