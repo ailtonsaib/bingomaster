@@ -33,25 +33,29 @@ export default function TicketForm({ users, types, priorities, currentUser, onSa
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
     setSaving(true);
-    const type = types.find((t) => t.id === form.type_id);
-    const priority = priorities.find((p) => p.id === form.priority_id);
-    const assignee = users.find((u) => u.id === form.assigned_to_id);
-    await onSave({
-      title: form.title,
-      description: form.description,
-      type_id: form.type_id || "",
-      type_name: type?.name || "",
-      priority_id: form.priority_id || "",
-      priority_name: priority?.name || "",
-      priority_level: priority?.level || 0,
-      assigned_to_id: form.assigned_to_id || "",
-      assigned_to_name: assignee?.name || "",
-      created_by_id: currentUser.id,
-      created_by_name: currentUser.name,
-      company_id: currentUser.company_id,
-      company_name: currentUser.company_name,
-      attachments,
-    });
+    try {
+      const type = types.find((t) => t.id === form.type_id);
+      const priority = priorities.find((p) => p.id === form.priority_id);
+      const assignee = users.find((u) => u.id === form.assigned_to_id);
+      await onSave({
+        title: form.title,
+        description: form.description,
+        type_id: form.type_id || "",
+        type_name: type?.name || "",
+        priority_id: form.priority_id || "",
+        priority_name: priority?.name || "",
+        priority_level: priority?.level || 0,
+        assigned_to_id: form.assigned_to_id || "",
+        assigned_to_name: assignee?.name || "",
+        created_by_id: currentUser.id,
+        created_by_name: currentUser.name,
+        company_id: currentUser.company_id,
+        company_name: currentUser.company_name,
+        attachments,
+      });
+    } catch (err) {
+      /* erro já tratado no handleCreate */
+    }
     setSaving(false);
   };
 

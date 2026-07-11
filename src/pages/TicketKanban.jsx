@@ -47,9 +47,15 @@ export default function TicketKanban() {
   const handleLogout = () => { clearTicketUser(); navigate("/tickets"); };
 
   const handleCreate = async (formData) => {
-    await base44.functions.invoke('ticketSystem', { operation: 'createTicket', ...formData });
-    setShowForm(false);
-    await loadData();
+    try {
+      await base44.functions.invoke('ticketSystem', { operation: 'createTicket', ...formData });
+      setShowForm(false);
+      await loadData();
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || "Erro ao criar chamado";
+      alert(msg);
+      throw err;
+    }
   };
 
   const handleMove = async (ticketId, newStatus, direction) => {
