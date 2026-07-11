@@ -447,14 +447,38 @@ export function corrigirContribuicoes(linhas) {
     const partes = linha.split('|');
     const reg = partes[1];
 
-    if (reg === 'A170' && partes.length >= 17) {
+    if (reg === 'A170') {
+      // Pad array to at least 17 fields — trailing empty fields may be truncated
+      while (partes.length < 17) partes.push('');
+      // A170 layout: partes[9]=CST_PIS, [10]=VL_BC_PIS, [11]=ALIQ_PIS, [12]=VL_PIS
+      //               partes[13]=CST_COFINS, [14]=VL_BC_COFINS, [15]=ALIQ_COFINS, [16]=VL_COFINS
+      const cstSemCredito = ['04','05','06','07','08','09','49','98','99'];
+
       // CST_COFINS = CST_PIS
       if (partes[9] && partes[9] !== '' && (partes[13] === '' || partes[13] === undefined || partes[13] !== partes[9])) {
         partes[13] = partes[9];
       }
-      // VL_BC_COFINS = VL_BC_PIS
-      if (partes[10] && partes[10] !== '' && (partes[14] === '' || partes[14] === undefined)) {
-        partes[14] = partes[10];
+      // VL_BC_COFINS = VL_BC_PIS (sync when both filled but different, or COFINS empty)
+      if (partes[10] && partes[10] !== '') {
+        const bcPis = parseNum(partes[10]);
+        if (!isNaN(bcPis) && bcPis > 0) {
+          if (!partes[14] || partes[14] === '' || parseNum(partes[14]) !== bcPis) {
+            partes[14] = partes[10];
+          }
+        }
+      }
+      // ALIQ_COFINS = ALIQ_PIS (when COFINS empty)
+      if (partes[11] && partes[11] !== '' && (!partes[15] || partes[15] === '')) {
+        partes[15] = partes[11];
+      }
+      // Zero VL_PIS/VL_COFINS for CST sem crédito
+      if (cstSemCredito.includes(partes[9] || '')) {
+        partes[12] = '0,00';
+        partes[10] = ''; partes[11] = '';
+      }
+      if (cstSemCredito.includes(partes[13] || '')) {
+        partes[16] = '0,00';
+        partes[14] = ''; partes[15] = '';
       }
       // VL_PIS = VL_BC_PIS x ALIQ_PIS / 100
       if (partes[10] && partes[11] && partes[10] !== '' && partes[11] !== '') {
@@ -473,17 +497,39 @@ export function corrigirContribuicoes(linhas) {
       return partes.join('|');
     }
 
-    if (reg === 'C170' && partes.length >= 37) {
+    if (reg === 'C170') {
+      // Pad array to at least 37 fields — many ERPs truncate trailing empty pipe fields
+      while (partes.length < 37) partes.push('');
       // Layout: partes[25]=CST_PIS, [26]=VL_BC_PIS, [27]=ALIQ_PIS, [28]=QUANT_BC_PIS, [29]=ALIQ_PIS_QUANT, [30]=VL_PIS
       //         partes[31]=CST_COFINS, [32]=VL_BC_COFINS, [33]=ALIQ_COFINS, [34]=QUANT_BC_COFINS, [35]=ALIQ_COFINS_QUANT, [36]=VL_COFINS
+
+      const cstSemCredito = ['04','05','06','07','08','09','49','98','99'];
 
       // Auto-fix: CST_COFINS = CST_PIS
       if (partes[25] && partes[25] !== '' && (!partes[31] || partes[31] === '' || partes[31] !== partes[25])) {
         partes[31] = partes[25];
       }
-      // Auto-fix: VL_BC_COFINS = VL_BC_PIS
-      if (partes[26] && partes[26] !== '' && (!partes[32] || partes[32] === '')) {
-        partes[32] = partes[26];
+      // Auto-fix: VL_BC_COFINS = VL_BC_PIS (when both filled but different, or COFINS empty)
+      if (partes[26] && partes[26] !== '') {
+        const bcPis = parseNum(partes[26]);
+        if (!isNaN(bcPis) && bcPis > 0) {
+          if (!partes[32] || partes[32] === '' || parseNum(partes[32]) !== bcPis) {
+            partes[32] = partes[26];
+          }
+        }
+      }
+      // Auto-fix: ALIQ_COFINS = ALIQ_PIS (when COFINS empty)
+      if (partes[27] && partes[27] !== '' && (!partes[33] || partes[33] === '')) {
+        partes[33] = partes[27];
+      }
+      // Auto-fix: Zero VL_PIS/VL_COFINS for CST sem crédito
+      if (cstSemCredito.includes(partes[25] || '')) {
+        partes[30] = '0,00';
+        partes[26] = ''; partes[27] = ''; partes[28] = ''; partes[29] = '';
+      }
+      if (cstSemCredito.includes(partes[31] || '')) {
+        partes[36] = '0,00';
+        partes[32] = ''; partes[33] = ''; partes[34] = ''; partes[35] = '';
       }
       // Auto-fix: Alíquotas básicas para CST=01 (PIS=0.65%, COFINS=3.00%)
       if (partes[25] === '01' && (!partes[27] || partes[27] === '' || parseNum(partes[27]) === 0)) {
