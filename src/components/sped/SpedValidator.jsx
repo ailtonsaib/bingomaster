@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import DivergenceReport from '@/components/sped/DivergenceReport';
 import ValidationLogPanel from '@/components/sped/ValidationLogPanel';
+import ValidationComparison from '@/components/sped/ValidationComparison';
 import {
   UploadCloud,
   FileText,
@@ -44,6 +45,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
   const [erro, setErro] = useState('');
   const [foiCorrigido, setFoiCorrigido] = useState(false);
   const [showAjusteDialog, setShowAjusteDialog] = useState(false);
+  const [resultadoOriginal, setResultadoOriginal] = useState(null);
+  const [resultadoCorrigido, setResultadoCorrigido] = useState(null);
+  const [revalidando, setRevalidando] = useState(false);
   const inputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -109,6 +113,8 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
       if (dados.success) {
         setResultado(dados);
         setConteudo(conteudoParaValidar);
+        setResultadoOriginal(dados);
+        setResultadoCorrigido(null);
         if (dados.erros?.length > 0 || dados.avisos?.length > 0) {
           setShowAjusteDialog(true);
         }
@@ -179,7 +185,22 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         setConteudoEditado(dados.conteudo_corrigido);
         setFoiCorrigido(true);
         setResultado(dados);
+        setResultadoOriginal(resultado); // snapshot do estado antes da correção
         await salvarValidacao(dados, arquivo?.name || 'arquivo_sped.txt', dados.conteudo_corrigido, true);
+
+        // Re-validar o arquivo corrigido para gerar o comparativo
+        setRevalidando(true);
+        try {
+          const reResp = await base44.functions.invoke('validarSped', {
+            conteudo: dados.conteudo_corrigido,
+            nomeArquivo: arquivo?.name || 'arquivo_sped.txt',
+          });
+          if (reResp.data?.success) {
+            setResultadoCorrigido(reResp.data);
+            setResultado(reResp.data);
+          }
+        } catch (_) {}
+        setRevalidando(false);
       } else {
         setErro('Não foi possível ajustar o arquivo automaticamente.');
       }
@@ -199,6 +220,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
     setModoEdicao(false);
     setFoiCorrigido(false);
     setShowAjusteDialog(false);
+    setResultadoOriginal(null);
+    setResultadoCorrigido(null);
+    setRevalidando(false);
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -369,6 +393,26 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
               </div>
             </CardContent>
           </Card>
+
+          {/* Comparativo Antes × Depois */}
+          {resultadoOriginal && resultadoCorrigido && (
+            <ValidationComparison
+              resultadoOriginal={resultadoOriginal}
+              resultadoCorrigido={resultadoCorrigido}
+            />
+          )}
+
+          {/* Indicador de re-validação */}
+          {revalidando && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                <p className="text-sm font-medium text-primary">
+                  Re-validando arquivo corrigido para gerar comparativo...
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Estatísticas */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
