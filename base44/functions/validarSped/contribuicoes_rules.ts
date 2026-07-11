@@ -539,9 +539,22 @@ export function corrigirContribuicoes(linhas) {
           }
         }
       }
+      // VL_BC_PIS = VL_BC_COFINS (reverse — when PIS is 0/empty but COFINS has value)
+      if (partes[14] && partes[14] !== '') {
+        const bcCofins = parseNum(partes[14]);
+        if (!isNaN(bcCofins) && bcCofins > 0) {
+          if (!partes[10] || partes[10] === '' || parseNum(partes[10]) === 0 || parseNum(partes[10]) !== bcCofins) {
+            partes[10] = partes[14];
+          }
+        }
+      }
       // ALIQ_COFINS = ALIQ_PIS (when COFINS empty)
       if (partes[11] && partes[11] !== '' && (!partes[15] || partes[15] === '')) {
         partes[15] = partes[11];
+      }
+      // ALIQ_PIS = ALIQ_COFINS (reverse — when PIS is 0/empty but COFINS has value)
+      if (partes[15] && partes[15] !== '' && (!partes[11] || partes[11] === '' || parseNum(partes[11]) === 0)) {
+        partes[11] = partes[15];
       }
       // Zero VL_PIS/VL_COFINS for CST sem crédito
       if (cstSemCredito.includes(partes[9] || '')) {
@@ -590,9 +603,22 @@ export function corrigirContribuicoes(linhas) {
           }
         }
       }
+      // Auto-fix: VL_BC_PIS = VL_BC_COFINS (reverse — when PIS is 0/empty but COFINS has value)
+      if (partes[32] && partes[32] !== '') {
+        const bcCofins = parseNum(partes[32]);
+        if (!isNaN(bcCofins) && bcCofins > 0) {
+          if (!partes[26] || partes[26] === '' || parseNum(partes[26]) === 0 || parseNum(partes[26]) !== bcCofins) {
+            partes[26] = partes[32];
+          }
+        }
+      }
       // Auto-fix: ALIQ_COFINS = ALIQ_PIS (when COFINS empty)
       if (partes[27] && partes[27] !== '' && (!partes[33] || partes[33] === '')) {
         partes[33] = partes[27];
+      }
+      // Auto-fix: ALIQ_PIS = ALIQ_COFINS (reverse — when PIS is 0/empty but COFINS has value)
+      if (partes[33] && partes[33] !== '' && (!partes[27] || partes[27] === '' || parseNum(partes[27]) === 0)) {
+        partes[27] = partes[33];
       }
       // Auto-fix: Zero VL_PIS/VL_COFINS for CST sem crédito
       if (cstSemCredito.includes(partes[25] || '')) {
