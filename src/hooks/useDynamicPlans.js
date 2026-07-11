@@ -99,10 +99,21 @@ export function useDynamicPlans() {
       description: p.description || "",
     }));
 
+  /** Converte planos de Chamados do banco (AppPlanConfig) para o formato da Landing */
+  const mappedChamadosPlans = financePlans
+    .filter((p) => p.app_module === "chamados" && p.is_active !== false)
+    .map((p) => ({
+      name: p.plan_name || p.plan_key,
+      price: p.price ?? 0,
+      limit: p.plan_key === "free" ? "10 chamados" : "Chamados ilimitados",
+      description: p.description || "",
+    }));
+
   return {
     bingoPlans: mappedBingoPlans.length ? mappedBingoPlans : null,
     spedPlans: mappedSpedPlans.length ? mappedSpedPlans : null,
     financePlans: mappedFinancePlans.length ? mappedFinancePlans : null,
+    chamadosPlans: mappedChamadosPlans.length ? mappedChamadosPlans : null,
     loading,
   };
 }
