@@ -409,6 +409,26 @@ Deno.serve(async (req) => {
       if (!email || !name || !level) {
         return Response.json({ error: 'Email, nome e nível são obrigatórios' }, { status: 400 });
       }
+      // Validação de amarração hierárquica
+      if (level === 'setor' && !parent_id) {
+        return Response.json({ error: 'Um Setor deve obrigatoriamente estar vinculado a um Departamento.' }, { status: 400 });
+      }
+      if (level === 'centro_custo' && !parent_id) {
+        return Response.json({ error: 'Um Centro de Custo deve obrigatoriamente estar vinculado a um Setor.' }, { status: 400 });
+      }
+      // Valida que o pai existe e é do nível correto
+      if (parent_id) {
+        const parent = await base44.asServiceRole.entities.FinanceCostCenter.get(parent_id);
+        if (!parent) {
+          return Response.json({ error: 'Item pai não encontrado.' }, { status: 400 });
+        }
+        if (level === 'setor' && parent.level !== 'departamento') {
+          return Response.json({ error: 'O pai de um Setor deve ser um Departamento.' }, { status: 400 });
+        }
+        if (level === 'centro_custo' && parent.level !== 'setor') {
+          return Response.json({ error: 'O pai de um Centro de Custo deve ser um Setor.' }, { status: 400 });
+        }
+      }
       if (id) {
         const updated = await base44.asServiceRole.entities.FinanceCostCenter.update(id, {
           name, level, parent_id: parent_id || undefined, code: code || undefined,
