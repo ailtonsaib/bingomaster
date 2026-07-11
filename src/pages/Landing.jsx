@@ -11,6 +11,7 @@ const iconMap = {
   Grid3x3: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>,
   Wallet: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>,
   FileText: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8M16 13H8M16 17H8"/></svg>,
+  LifeBuoy: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>,
 };
 
 function currency(v) {
@@ -94,17 +95,19 @@ function AppCard({ app, onOpenPlans, loading }) {
           className="flex-1 h-10 rounded-xl text-white font-medium"
           style={{ backgroundColor: app.accent }}
         >
-          {user && user[app.permission] ? "Acessar" : "Experimentar"}
+          {!app.permission || (user && user[app.permission]) ? "Acessar" : "Experimentar"}
           <ArrowRight className="w-4 h-4 ml-1" />
         </Button>
-        <Button
-          onClick={() => onOpenPlans(app)}
-          variant="outline"
-          disabled={loading}
-          className="h-10 rounded-xl border-gray-200 text-[#52525B] hover:bg-gray-50"
-        >
-          Ver Planos
-        </Button>
+        {app.plans && app.plans.length > 0 && (
+          <Button
+            onClick={() => onOpenPlans(app)}
+            variant="outline"
+            disabled={loading}
+            className="h-10 rounded-xl border-gray-200 text-[#52525B] hover:bg-gray-50"
+          >
+            Ver Planos
+          </Button>
+        )}
       </div>
     </motion.div>
   );
