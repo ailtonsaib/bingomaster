@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X, Save, Pencil, RotateCcw, Loader2, Grid3x3, FileText, Wallet, DollarSign } from "lucide-react";
+import { Check, X, Save, Pencil, RotateCcw, Loader2, Grid3x3, FileText, Wallet, DollarSign, LifeBuoy } from "lucide-react";
+import TicketPlanManagement from "@/components/portal/TicketPlanManagement";
 
 const BINGO_DEFAULTS = [
   { plan_key: "free", plan_name: "FREE", price: 0, max_cards: 50, description: "Para conhecer o sistema", app_generator: true, app_seller: false, app_buyer: false, app_telao: false, app_rifa: false },
@@ -195,6 +196,12 @@ export default function PlanManagement() {
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${section === "finance" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           <Wallet className="w-4 h-4" /> Planos Finance
+        </button>
+        <button
+          onClick={() => setSection("chamados")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${section === "chamados" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <LifeBuoy className="w-4 h-4" /> Planos Chamados
         </button>
       </div>
 
@@ -398,6 +405,11 @@ export default function PlanManagement() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* CHAMADOS PLANS */}
+      {section === "chamados" && (
+        <TicketPlanManagement />
       )}
     </div>
   );

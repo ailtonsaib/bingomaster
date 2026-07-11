@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock } from "lucide-react";
 import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
 import KanbanBoard from "@/components/tickets/KanbanBoard";
 import TicketForm from "@/components/tickets/TicketForm";
@@ -23,21 +23,24 @@ export default function TicketKanban() {
   const [filterType, setFilterType] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("");
+  const [companyPlan, setCompanyPlan] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!user) { navigate("/tickets"); return; }
     setLoading(true);
     try {
-      const [txRes, usersRes, typesRes, priRes] = await Promise.all([
+      const [txRes, usersRes, typesRes, priRes, planRes] = await Promise.all([
         base44.functions.invoke('ticketSystem', { operation: 'getTickets', company_id: user.company_id }),
         base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id }),
         base44.functions.invoke('ticketSystem', { operation: 'getTypes' }),
         base44.functions.invoke('ticketSystem', { operation: 'getPriorities' }),
+        base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id }),
       ]);
       setTickets(txRes.data.tickets || []);
       setUsers(usersRes.data.users || []);
       setTypes(typesRes.data.types || []);
       setPriorities(priRes.data.priorities || []);
+      setCompanyPlan(planRes.data);
     } catch (e) { console.error("Erro:", e); }
     setLoading(false);
   }, [user, navigate]);
@@ -99,8 +102,19 @@ export default function TicketKanban() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {companyPlan && !companyPlan.company?.ticket_full_access && (
+              <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${companyPlan.limit_reached ? "bg-red-100 text-red-700" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                {companyPlan.limit_reached ? <Lock className="w-3 h-3 inline mr-1" /> : <AlertTriangle className="w-3 h-3 inline mr-1" />}
+                {companyPlan.ticket_count}/{companyPlan.company?.ticket_limit ?? 10} chamados
+              </span>
+            )}
+            {companyPlan && companyPlan.company?.ticket_full_access && (
+              <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Plano Completo · {companyPlan.ticket_count} chamados
+              </span>
+            )}
             <Button variant="outline" size="sm" onClick={() => navigate("/tickets/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>
-            <Button size="sm" onClick={() => setShowForm(true)} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
+            <Button size="sm" onClick={() => setShowForm(true)} disabled={companyPlan?.limit_reached} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
           </div>
         </div>
@@ -124,6 +138,15 @@ export default function TicketKanban() {
           </select>
         </div>
       </div>
+
+      {companyPlan?.limit_reached && (
+        <div className="mx-4 mt-2 p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2">
+          <Lock className="w-4 h-4 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-700">
+            Limite de {companyPlan.company?.ticket_limit ?? 10} chamados atingido no plano Free. Contate o administrador para liberar acesso completo.
+          </p>
+        </div>
+      )}
 
       <div className="p-4">
         <KanbanBoard tickets={filtered} onMove={handleMove} onTicketClick={setSelectedTicket} />

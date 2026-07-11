@@ -105,9 +105,54 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── COMPANY: get with plan info ───
+    if (operation === 'getCompanyPlan') {
+      const { company_id } = body;
+      const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
+      if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
+      const ticketCount = tickets.length;
+      const fullAccess = company.ticket_full_access || company.ticket_plan === 'full';
+      const limit = company.ticket_limit ?? 10;
+      return Response.json({ company: { id: company.id, razao_social: company.razao_social, cnpj: company.cnpj, ticket_plan: company.ticket_plan || 'free', ticket_limit: limit, ticket_full_access: fullAccess, is_active: company.is_active }, ticket_count: ticketCount, limit_reached: !fullAccess && ticketCount >= limit });
+    }
+
+    // ─── COMPANY: list with plan info (admin) ───
+    if (operation === 'getCompaniesWithPlan') {
+      const companies = await base44.asServiceRole.entities.SupportCompany.list();
+      const result = [];
+      for (const c of companies) {
+        const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id: c.id });
+        result.push({ id: c.id, razao_social: c.razao_social, cnpj: c.cnpj, is_active: c.is_active, ticket_plan: c.ticket_plan || 'free', ticket_limit: c.ticket_limit ?? 10, ticket_full_access: c.ticket_full_access || false, ticket_count: tickets.length });
+      }
+      return Response.json({ companies: result });
+    }
+
+    // ─── COMPANY: update plan (admin) ───
+    if (operation === 'updateCompanyPlan') {
+      const { company_id, ticket_full_access, ticket_limit, ticket_plan } = body;
+      const updates = {};
+      if (ticket_full_access !== undefined) updates.ticket_full_access = ticket_full_access;
+      if (ticket_limit !== undefined) updates.ticket_limit = ticket_limit;
+      if (ticket_plan !== undefined) updates.ticket_plan = ticket_plan;
+      const company = await base44.asServiceRole.entities.SupportCompany.update(company_id, updates);
+      return Response.json({ company });
+    }
+
     // ─── TICKET: create ───
     if (operation === 'createTicket') {
       const { title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments } = body;
+      // Verifica limite do plano
+      const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
+      if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      const fullAccess = company.ticket_full_access || company.ticket_plan === 'full';
+      if (!fullAccess) {
+        const existingTickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
+        const limit = company.ticket_limit ?? 10;
+        if (existingTickets.length >= limit) {
+          return Response.json({ error: `Limite de ${limit} chamados atingido no plano Free. Contate o administrador para liberar acesso completo.` }, { status: 403 });
+        }
+      }
       const now = new Date().toISOString();
       const ticket = await base44.asServiceRole.entities.SupportTicket.create({
         title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level,

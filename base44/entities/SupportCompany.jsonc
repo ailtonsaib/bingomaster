@@ -18,6 +18,25 @@
       "type": "boolean",
       "default": true,
       "description": "Se a empresa est\u00e1 ativa"
+    },
+    "ticket_plan": {
+      "type": "string",
+      "enum": [
+        "free",
+        "full"
+      ],
+      "default": "free",
+      "description": "Plano de chamados: free (10 chamados) ou full (ilimitado)"
+    },
+    "ticket_limit": {
+      "type": "number",
+      "default": 10,
+      "description": "Limite de chamados no plano free"
+    },
+    "ticket_full_access": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a empresa tem acesso completo (ilimitado) liberado pelo admin"
     }
   },
   "required": [
