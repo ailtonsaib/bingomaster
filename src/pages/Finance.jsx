@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
@@ -14,6 +12,7 @@ import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import CostCenterManager from "@/components/finance/CostCenterManager";
 import BankAccountManager from "@/components/finance/BankAccountManager";
 import ContactManager from "@/components/finance/ContactManager";
+import TransactionForm from "@/components/finance/TransactionForm";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -21,10 +20,6 @@ export default function Finance() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [type, setType] = useState("expense");
-  const [category, setCategory] = useState("");
   const [saving, setSaving] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [activeTab, setActiveTab] = useState("transactions");
@@ -61,22 +56,14 @@ export default function Finance() {
     loadData();
   }, []);
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
+  const handleAdd = async (formData) => {
     setSaving(true);
     try {
       await base44.functions.invoke('portalAuth', {
         operation: 'addTransaction',
         email: user.email,
-        description,
-        amount: parseFloat(amount),
-        type,
-        category: category || undefined,
+        ...formData,
       });
-      setDescription("");
-      setAmount("");
-      setCategory("");
-      setType("expense");
       setShowForm(false);
       await loadData();
     } catch (err) {
@@ -227,64 +214,11 @@ export default function Finance() {
 
         {/* Add Transaction */}
         {showForm ? (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-base">Nova Movimentação</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAdd} className="space-y-3">
-                <div>
-                  <Label>Descrição</Label>
-                  <Input
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    required
-                    placeholder="Ex: Venda de produto"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Valor (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Tipo</Label>
-                    <select
-                      value={type}
-                      onChange={(e) => setType(e.target.value)}
-                      className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-                    >
-                      <option value="expense">Despesa</option>
-                      <option value="income">Receita</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <Label>Categoria (opcional)</Label>
-                  <Input
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    placeholder="Ex: Alimentação"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : "Salvar"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          <TransactionForm
+            userEmail={user.email}
+            onSave={handleAdd}
+            onCancel={() => setShowForm(false)}
+          />
         ) : (
           <Button className="mb-6 gap-2" onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" /> Nova Movimentação
@@ -323,8 +257,12 @@ export default function Finance() {
                       <div>
                         <p className="text-sm font-medium">{tx.description}</p>
                         <p className="text-xs text-muted-foreground">
+                          {tx.contact_name && (
+                            <span className="text-primary/80">{tx.contact_name} · </span>
+                          )}
                           {tx.category && `${tx.category} · `}
-                          {new Date(tx.date).toLocaleDateString('pt-BR')}
+                          Lanç: {tx.launch_date ? new Date(tx.launch_date).toLocaleDateString('pt-BR') : new Date(tx.date).toLocaleDateString('pt-BR')}
+                          {tx.due_date && ` · Venc: ${new Date(tx.due_date).toLocaleDateString('pt-BR')}`}
                         </p>
                       </div>
                     </div>
