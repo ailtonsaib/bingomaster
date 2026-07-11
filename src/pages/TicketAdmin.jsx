@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare } from "lucide-react";
+import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock } from "lucide-react";
 import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
 function clearPortalUser() { clearTicketUser(); }
 
@@ -253,26 +253,73 @@ function PriorityManager() {
 function CompanyManager({ user }) {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompanies' }); setCompanies(res.data.companies || []); } catch (e) {}
+    try { const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompaniesWithPlan' }); setCompanies(res.data.companies || []); } catch (e) {}
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const toggleFullAccess = async (c) => {
+    setSavingId(c.id);
+    try {
+      const newAccess = !c.ticket_full_access;
+      await base44.functions.invoke('ticketSystem', {
+        operation: 'updateCompanyPlan',
+        company_id: c.id,
+        ticket_full_access: newAccess,
+        ticket_plan: newAccess ? "full" : "free",
+      });
+      await load();
+    } catch (e) { alert("Erro ao atualizar plano"); }
+    setSavingId(null);
+  };
+
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   return (
     <div className="space-y-2">
-      {companies.map((c) => (
-        <Card key={c.id}><CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm font-medium">{c.razao_social}</p><p className="text-xs text-muted-foreground">CNPJ: {c.cnpj}</p></div>
-            <Badge variant={c.is_active ? "default" : "secondary"} className="text-xs">{c.is_active ? "Ativa" : "Inativa"}</Badge>
-          </div>
-          {c.endereco && <p className="text-xs text-muted-foreground mt-1">{c.endereco}</p>}
-        </CardContent></Card>
-      ))}
+      <Card className="bg-amber-50 border-amber-200"><CardContent className="p-3 text-xs text-amber-800">
+        Libere "Acesso Completo" para uma empresa permitir abertura de chamados ilimitados. Sem liberação, o plano Free limita em 10 chamados.
+      </CardContent></Card>
+      {companies.map((c) => {
+        const isFull = c.ticket_full_access || c.ticket_plan === "full";
+        return (
+          <Card key={c.id} className={isFull ? "ring-1 ring-emerald-300" : ""}>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex-1 min-w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{c.razao_social}</p>
+                    {isFull
+                      ? <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-0">Acesso Completo</Badge>
+                      : <Badge variant="secondary" className="text-[10px]">Free</Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">CNPJ: {c.cnpj}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {c.ticket_count ?? 0}{!isFull && <span>/{c.ticket_limit ?? 10}</span>} chamados
+                  </span>
+                  <Badge variant={c.is_active ? "default" : "secondary"} className="text-xs">{c.is_active ? "Ativa" : "Inativa"}</Badge>
+                  <Button
+                    size="sm"
+                    variant={isFull ? "outline" : "default"}
+                    className={`h-8 gap-1.5 ${isFull ? "" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                    onClick={() => toggleFullAccess(c)}
+                    disabled={savingId === c.id}
+                  >
+                    {savingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isFull ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    {isFull ? "Bloquear" : "Liberar Completo"}
+                  </Button>
+                </div>
+              </div>
+              {c.endereco && <p className="text-xs text-muted-foreground mt-1">{c.endereco}</p>}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
