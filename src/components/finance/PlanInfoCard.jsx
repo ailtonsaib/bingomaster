@@ -73,6 +73,7 @@ export default function PlanInfoCard({ user }) {
                   <p className="text-2xl font-bold text-primary">
                     R$ {price.toFixed(2).replace('.', ',')}
                   </p>
+                  <p className="text-xs text-muted-foreground">Pagamento único</p>
                 </div>
                 <p className="text-xs text-muted-foreground text-right max-w-[140px]">
                   Entre em contato com o administrador para adquirir

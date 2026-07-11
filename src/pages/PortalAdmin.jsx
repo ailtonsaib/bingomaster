@@ -370,6 +370,7 @@ export default function PortalAdmin() {
                                 className="w-20 h-7 rounded border border-input bg-transparent px-2 text-xs"
                                 title="Valor do plano de acesso completo"
                               />
+                              <span className="text-xs text-muted-foreground">/ único</span>
                             </div>
                           )}
                         </div>
