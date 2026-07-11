@@ -249,10 +249,10 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1B1C21]">
-              Soluções digitais para sua empresa
+              Soluções digitais para você e sua empresa
             </h1>
             <p className="mt-4 text-lg text-[#71717A] max-w-2xl mx-auto">
-              Aplicativos profissionais para bingo, controle financeiro e validação fiscal.
+              Aplicativos profissionais para bingo, controle financeiro controle de chamados e validação fiscal.
               Comece grátis e faça upgrade quando precisar.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
