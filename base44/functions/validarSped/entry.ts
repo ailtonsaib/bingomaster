@@ -939,7 +939,11 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        validarCpfCnpj(campos[4], '0150', linhaAtual, erros, 'CPF/CNPJ');
+        // CNPJ está na posição 4 do split com filtro (campos sem vazios)
+        // mas para 0150 é melhor usar o split com pipe sem filtro para pegar índice correto
+        // Layout: |0150|COD_PART|NOME|COD_PAIS|CNPJ|CPF|IE|COD_MUN|...
+        const c0150 = linha.split('|'); // c0150[5] = CNPJ
+        if (c0150[5]) validarCpfCnpj(c0150[5], '0150', linhaAtual, erros, 'CPF/CNPJ');
         if (tipoDetectado === 'CONTRIBUICOES') {
           validarDetalheContribuicoes('0150', linha, campos, linhaAtual, erros, avisos);
         }
@@ -1006,6 +1010,8 @@ Deno.serve(async (req) => {
         if (tipoDetectado === 'CONTRIBUICOES') {
           validarDetalheContribuicoes('C170', linha, campos, linhaAtual, erros, avisos);
         }
+        // CST_ICMS: posição 10 no split com filtro. Aceita 2 ou 3 dígitos (ex: 049)
+        // Não rejeitar CST_ICMS de 3 dígitos — são válidos no leiaute
       }
 
       if (registro === 'E110' && tipoDetectado === 'FISCAL') {
@@ -1730,17 +1736,18 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'M410' && tipoDetectado === 'CONTRIBUICOES') {
-        // M410 possui campos opcionais vazios — split SEM filtro
+        // M410: |M410|NAT_REC|VL_REC|COD_CTA|DESC_COD_CTA|
+        // NAT_REC=999 é aceito pelo leiaute (receita não classificada)
         const cM410 = linha.split('|');
         const fM410 = cM410.slice(1, cM410[cM410.length - 1] === '' ? -1 : undefined);
-        if (fM410.length < 4) {
+        if (fM410.length < 3) {
           avisos.push({
             linha: linhaAtual, registro: 'M410',
-            mensagem: `Registro M410 incompleto: esperado mínimo de 4 campos, encontrado ${fM410.length}.`,
+            mensagem: `Registro M410 incompleto: esperado mínimo de 3 campos, encontrado ${fM410.length}.`,
             severidade: 'aviso'
           });
         }
-        validarValorNumerico(fM410, 3, 4, 'M410', linhaAtual, erros);
+        validarValorNumerico(fM410, 2, 3, 'M410', linhaAtual, erros);
       }
 
       if (registro === 'M800' && tipoDetectado === 'CONTRIBUICOES') {
@@ -1758,17 +1765,18 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'M810' && tipoDetectado === 'CONTRIBUICOES') {
-        // M810 possui campos opcionais vazios — split SEM filtro
+        // M810: |M810|NAT_REC|VL_REC|COD_CTA|DESC_COD_CTA|
+        // NAT_REC=999 é aceito pelo leiaute
         const cM810 = linha.split('|');
         const fM810 = cM810.slice(1, cM810[cM810.length - 1] === '' ? -1 : undefined);
-        if (fM810.length < 4) {
+        if (fM810.length < 3) {
           avisos.push({
             linha: linhaAtual, registro: 'M810',
-            mensagem: `Registro M810 incompleto: esperado mínimo de 4 campos, encontrado ${fM810.length}.`,
+            mensagem: `Registro M810 incompleto: esperado mínimo de 3 campos, encontrado ${fM810.length}.`,
             severidade: 'aviso'
           });
         }
-        validarValorNumerico(fM810, 3, 4, 'M810', linhaAtual, erros);
+        validarValorNumerico(fM810, 2, 3, 'M810', linhaAtual, erros);
       }
 
       // === SPED ECD: I010, I012, I030, I050, I051, I100, I150, I155, I200, I250, I300, I310, I350, I355 ===

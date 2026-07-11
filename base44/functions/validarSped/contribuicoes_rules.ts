@@ -176,16 +176,9 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
     if (cstCofins === '01' && (!aliqCofins || parseNum(aliqCofins) === 0)) {
       erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `Devem ser informadas alíquotas básicas para operações com CST = 01, de acordo com o indicador da incidência tributária no período. ALIQ_COFINS obrigatória (3,00%).`, severidade: 'erro' });
     }
-    // Regra: CST incompatível com CFOP (créditos 50-56, 60-66)
-    if (f[9] && f[10]) {
-      const cstNum = parseInt(f[9], 10);
-      if (!isNaN(cstNum) && cstNum >= 50 && cstNum <= 66) {
-        const cfopFirst = f[10].charAt(0);
-        if (!['1','2','3'].includes(cfopFirst)) {
-          avisos.push({ linha: linhaAtual, registro: 'C170', mensagem: `CST informado (${f[9]}), referente a Operações com Direito a Crédito (50 a 56 - Créditos Básicos; ou 60 a 66 - Crédito Presumido) incompatível com CFOP informado (${f[10]}), não constante na Tabela CFOP.`, severidade: 'aviso' });
-        }
-      }
-    }
+    // Regra: CST_ICMS de 2 ou 3 dígitos é aceito pelo leiaute (ex: 049 é válido)
+    // Regra: CST incompatível com CFOP (créditos 50-56, 60-66) — apenas para CST_PIS/COFINS
+    // Não validamos CST_ICMS aqui pois o leiaute aceita 2 ou 3 dígitos
   }
 
   if (registro === '0140') {
@@ -208,26 +201,25 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
   }
 
   if (registro === '0150') {
-    // 0150 possui campos opcionais vazios (CPF, IE, SU_FRAM) — split SEM filtro para preservar índices
     // Layout: |0150|COD_PART|NOME|COD_PAIS|CNPJ|CPF|IE|COD_MUN|SU_FRAM|ENDERECO|NUM|COMPL|BAIRRO|
+    // split por '|' gera: [0]='' [1]='0150' [2]=COD_PART [3]=NOME [4]=COD_PAIS [5]=CNPJ [6]=CPF [7]=IE [8]=COD_MUN
     const c = linha.split('|');
-    const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
-    // f[0]=0150, f[1]=COD_PART, f[2]=NOME, f[3]=COD_PAIS, f[4]=CNPJ, f[5]=CPF, f[6]=IE, f[7]=COD_MUN
-    // Regra: Inscrição Estadual inválida (para participantes brasileiros COD_PAIS=105 ou vazio)
-    const codPais = f[3] || '';
-    if (codPais === '105' || codPais === '') {
-      const ie = (f[6] || '').toUpperCase().trim();
-      if (ie !== 'ISENTO' && ie !== 'PR' && ie !== '' && !/^\d+$/.test(ie)) {
+    const codPais = (c[4] || '').replace(/\D/g, ''); // remove formatação ex: "1058" ou "105"
+    // Brasil: COD_PAIS = 105 ou 1058 ou vazio
+    const isBrasil = codPais === '' || codPais === '105' || codPais === '1058';
+    if (isBrasil) {
+      const ie = (c[7] || '').toUpperCase().trim();
+      // IE válida: vazia, "ISENTO", "PR", ou somente dígitos (ex: 103697446)
+      if (ie !== '' && ie !== 'ISENTO' && ie !== 'PR' && !/^\d+$/.test(ie)) {
         erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Inscrição Estadual inválida.`, severidade: 'erro' });
       }
     }
-    // Regra: Código do município inválido (f[7] = COD_MUN)
-    if (f[7] !== undefined && f[7] !== '') {
-      if (!/^\d{7}$/.test(f[7]) && f[7] !== '9999999') {
-        erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Código do município inválido. Utilizar código da "Tabela de Municípios do IBGE".`, severidade: 'erro' });
-      }
-    } else {
+    // COD_MUN está em c[8]
+    const codMun = (c[8] !== undefined ? c[8] : '').trim();
+    if (codMun === '') {
       erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Campo obrigatório para contribuintes domiciliados no Brasil. Preencher com "9999999" caso contrário.`, severidade: 'erro' });
+    } else if (codMun !== '9999999' && !/^\d{7}$/.test(codMun)) {
+      erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Código do município inválido. Utilizar código da "Tabela de Municípios do IBGE".`, severidade: 'erro' });
     }
   }
 
@@ -419,23 +411,25 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
     }
   }
 
-  // Regra: Incidência tributária 0110 — se = 1 (não-cumulativo), não deve har CST cumulativo
-  if (estatisticas.registros['0110']) {
+  // Regra: 0111 REC_BRU_CUM — deve ser 0 quando COD_INC_TRIB (0110) = 1 (exclusivamente não-cumulativo)
+  // e maior que zero quando COD_INC_TRIB = 3 (ambos os regimes)
+  if (estatisticas.registros['0110'] && estatisticas.registros['0111']) {
+    let codIncTrib = '';
     for (const linha of linhas) {
       const campos = linha.split('|').filter((c) => c !== '');
-      if (campos[0] === '0110' && campos[1] === '1') {
-        let temCumulativo = false;
-        for (const linha2 of linhas) {
-          const c2 = linha2.split('|').filter((c) => c !== '');
-          if (c2[0] === 'F500' && (c2[3] === '08' || c2[3] === '09')) {
-            temCumulativo = true;
-            break;
+      if (campos[0] === '0110') { codIncTrib = campos[1] || ''; break; }
+    }
+    if (codIncTrib === '1') {
+      // COD_INC_TRIB=1 → REC_BRU_CUM no 0111 deve ser 0
+      for (const linha of linhas) {
+        const c = linha.split('|');
+        if (c[1] === '0111') {
+          const recBruCum = parseNum(c[5] || ''); // posição 5 no split com pipe
+          if (!isNaN(recBruCum) && recBruCum > 0) {
+            erros.push({ linha: 0, registro: '0111', mensagem: `O valor do campo deve ser igual a 0 (zero), se incidência tributária for igual a 1 - Escrituração de operações com incidência exclusivamente no regime não-cumulativo; ou maior que zero, se for 3 (ambos).`, severidade: 'erro' });
           }
+          break;
         }
-        if (temCumulativo) {
-          erros.push({ linha: 0, registro: '0110', mensagem: `O valor do campo deve ser igual a 0 (zero), se incidência tributária for igual a 1 - Escrituração de operações com incidência exclusivamente no regime não-cumulativo; ou maior que zero, se for 3 (ambos).`, severidade: 'erro' });
-        }
-        break;
       }
     }
   }
@@ -539,37 +533,10 @@ export function corrigirContribuicoes(linhas) {
         partes[33] = '3,00';
       }
 
-      // Auto-fix: ALIQ_PIS_QUANT/ALIQ_COFINS_QUANT (Tabela 4.3.11) — quando CST é 03 ou 04,
-      // a alíquota por quantidade deve existir na tabela. Como não temos a tabela completa,
-      // zeramos ALIQ_QUANT e QUANT_BC quando não há VL_BC+ALIQ_% para recalcular pelo valor.
-      // O PVA aceita cálculo exclusivamente por valor (VL_BC x ALIQ%) sem QUANT_BC.
-      // Regra: se ALIQ_PIS_QUANT está preenchida mas QUANT_BC_PIS = 0 ou vazio,
-      //        ou se CST = 03/04 com ALIQ_QUANT fora da tabela → zerar QUANT e ALIQ_QUANT.
-      const cstPisC170 = partes[25] || '';
-      const cstCofinsC170 = partes[31] || '';
-      const aliqPisQuantVal = parseNum(partes[29]);
-      const aliqCofinsQuantVal = parseNum(partes[35]);
-      const vlBcPisC170 = parseNum(partes[26]);
-      const aliqPisC170 = parseNum(partes[27]);
-
-      // Se há ALIQ_PIS_QUANT preenchida e também há VL_BC_PIS + ALIQ_PIS,
-      // o PVA pode rejeitar a alíquota por quant → zeramos QUANT e ALIQ_QUANT
-      // e deixamos o cálculo pelo valor (mais confiável e sem validação de tabela).
-      if (!isNaN(aliqPisQuantVal) && aliqPisQuantVal > 0) {
-        // Se há base valor → usar só ela; zerar base quantidade
-        if (!isNaN(vlBcPisC170) && vlBcPisC170 > 0 && !isNaN(aliqPisC170) && aliqPisC170 > 0) {
-          partes[28] = ''; // QUANT_BC_PIS
-          partes[29] = ''; // ALIQ_PIS_QUANT
-        }
-      }
-      const aliqCofinsC170 = parseNum(partes[33]);
-      const vlBcCofinsC170 = parseNum(partes[32]);
-      if (!isNaN(aliqCofinsQuantVal) && aliqCofinsQuantVal > 0) {
-        if (!isNaN(vlBcCofinsC170) && vlBcCofinsC170 > 0 && !isNaN(aliqCofinsC170) && aliqCofinsC170 > 0) {
-          partes[34] = ''; // QUANT_BC_COFINS
-          partes[35] = ''; // ALIQ_COFINS_QUANT
-        }
-      }
+      // NOTA: NÃO zeramos ALIQ_PIS_QUANT/ALIQ_COFINS_QUANT para CST monofásico (03/04)
+      // pois essas alíquotas são obrigatórias nesse caso (Tabela 4.3.11).
+      // O PVA valida se a alíquota existe na tabela — não há como corrigir automaticamente
+      // sem conhecer a tabela completa, então mantemos os valores do ERP intactos.
 
       // VL_PIS = VL_BC_PIS x ALIQ_PIS / 100
       if (partes[26] && partes[27] && partes[26] !== '' && partes[27] !== '') {
@@ -617,9 +584,12 @@ export function corrigirContribuicoes(linhas) {
       return partes.join('|');
     }
 
-    if (reg === '0150' && partes.length >= 9) {
-      // Layout: partes[1]=0150, [2]=COD_PART, [3]=NOME, [4]=COD_PAIS, [5]=CNPJ, [6]=CPF, [7]=IE, [8]=COD_MUN
-      // IE inválida → "ISENTO"
+    if (reg === '0150') {
+      // Layout pipe-split: partes[0]='' partes[1]='0150' partes[2]=COD_PART partes[3]=NOME
+      //   partes[4]=COD_PAIS partes[5]=CNPJ partes[6]=CPF partes[7]=IE partes[8]=COD_MUN
+      // Garantir que o array tem campos suficientes
+      while (partes.length < 10) partes.push('');
+      // IE inválida (não-dígito, não-ISENTO, não-PR) → "ISENTO"
       if (partes[7] !== undefined && partes[7] !== '') {
         const ie = partes[7].toUpperCase().trim();
         if (ie !== 'ISENTO' && ie !== 'PR' && !/^\d+$/.test(ie)) {
@@ -703,10 +673,10 @@ export function corrigirC100Totais(linhas) {
     if (!entry.temC170) continue;
     const partes = linhas[idx].split('|');
 
-    if (entry.somaPis > 0 && partes[15] !== undefined && partes[15] !== '') {
+    if (partes[15] !== undefined && partes[15] !== '') {
       const declarado = parseNum(partes[15]);
-      // Corrigir se soma > declarado (qualquer centavo a mais)
-      if (!isNaN(declarado) && entry.somaPis > declarado + 0.005) {
+      // Corrigir se soma dos C170 > VL_PIS declarado no C100 (qualquer diferença, inclusive R$0,01)
+      if (!isNaN(declarado) && entry.somaPis > declarado + 0.001) {
         partes[15] = entry.somaPis.toFixed(2).replace('.', ',');
         linhas[idx] = partes.join('|');
       }
@@ -714,9 +684,9 @@ export function corrigirC100Totais(linhas) {
 
     // Re-split após possível modificação acima
     const partes2 = linhas[idx].split('|');
-    if (entry.somaCofins > 0 && partes2[19] !== undefined && partes2[19] !== '') {
+    if (partes2[19] !== undefined && partes2[19] !== '') {
       const declarado = parseNum(partes2[19]);
-      if (!isNaN(declarado) && entry.somaCofins > declarado + 0.005) {
+      if (!isNaN(declarado) && entry.somaCofins > declarado + 0.001) {
         partes2[19] = entry.somaCofins.toFixed(2).replace('.', ',');
         linhas[idx] = partes2.join('|');
       }
