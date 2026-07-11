@@ -1,0 +1,63 @@
+{
+  "name": "SpedSubscription",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio assinante"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio"
+    },
+    "plan_key": {
+      "type": "string",
+      "description": "Chave do plano aprovado (basic, pro, max)"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Nome do plano"
+    },
+    "approved_at": {
+      "type": "string",
+      "description": "Data de aprova\u00e7\u00e3o (ISO)"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "Data de vencimento (ISO) = approved_at + 90 dias"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "blocked"
+      ],
+      "default": "active",
+      "description": "Status da assinatura"
+    },
+    "notification_sent_at": {
+      "type": "string",
+      "description": "Data do envio do aviso de vencimento (ISO)"
+    },
+    "renewal_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantas vezes foi renovada"
+    },
+    "blocked_at": {
+      "type": "string",
+      "description": "Data em que foi bloqueada (ISO)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es administrativas"
+    }
+  },
+  "required": [
+    "user_email",
+    "plan_key",
+    "approved_at",
+    "expires_at"
+  ]
+}

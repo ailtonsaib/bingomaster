@@ -33,11 +33,13 @@ import {
   ShieldCheck,
   FileDown,
   History,
-  FileCheck
+  FileCheck,
+  CalendarClock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLicense } from '@/hooks/useLicense';
 import SpedPlanPanel from '@/components/sped/SpedPlanPanel';
+import SpedSubscriptionPanel from '@/components/sped/SpedSubscriptionPanel';
 import SpedValidator from '@/components/sped/SpedValidator';
 import DimeScGenerator from '@/components/sped/DimeScGenerator';
 import ReinfGenerator from '@/components/sped/ReinfGenerator';
@@ -326,6 +328,13 @@ export default function ValidadorSped() {
               className="gap-2"
             >
               <Crown className="h-4 w-4" /> Planos
+            </Button>
+            <Button
+              variant={aba === 'assinaturas' ? 'default' : 'outline'}
+              onClick={() => setAba('assinaturas')}
+              className="gap-2"
+            >
+              <CalendarClock className="h-4 w-4" /> Assinaturas
             </Button>
             <Button
               variant={aba === 'admin' ? 'default' : 'outline'}
@@ -624,6 +633,11 @@ export default function ValidadorSped() {
         {/* ABA: Planos */}
         {aba === 'planos' && (
           <SpedPlanPanel planKey={planKey} downloadsUsed={downloadsUsed} isAdmin={license?.is_admin} />
+        )}
+
+        {/* ABA: Assinaturas */}
+        {aba === 'assinaturas' && (
+          <SpedSubscriptionPanel />
         )}
 
         {/* ABA 2: Painel Admin */}
