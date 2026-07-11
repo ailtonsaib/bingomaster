@@ -14,6 +14,7 @@ import {
   Wallet,
   CalendarRange
 } from "lucide-react";
+import BankBalanceChart from "@/components/finance/BankBalanceChart";
 
 export default function CashPanel({ userEmail }) {
   const [transactions, setTransactions] = useState([]);
@@ -197,6 +198,9 @@ export default function CashPanel({ userEmail }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Gráfico de Saldos por Banco */}
+      <BankBalanceChart bankAccounts={bankAccounts} transactions={transactions} />
 
       {/* Summary - Pendentes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
