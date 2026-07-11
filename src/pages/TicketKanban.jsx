@@ -113,7 +113,7 @@ export default function TicketKanban() {
                 Plano Completo · {companyPlan.ticket_count} chamados
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={() => navigate("/tickets/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>
+            {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/tickets/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>}
             <Button size="sm" onClick={() => setShowForm(true)} disabled={companyPlan?.limit_reached} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
           </div>
