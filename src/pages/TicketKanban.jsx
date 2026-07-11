@@ -26,7 +26,7 @@ export default function TicketKanban() {
   const [companyPlan, setCompanyPlan] = useState(null);
 
   const loadData = useCallback(async () => {
-    if (!user) { navigate("/tickets"); return; }
+    if (!user) { navigate("/chamados"); return; }
     setLoading(true);
     try {
       const [txRes, usersRes, typesRes, priRes, planRes] = await Promise.all([
@@ -47,7 +47,7 @@ export default function TicketKanban() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleLogout = () => { clearTicketUser(); navigate("/tickets"); };
+  const handleLogout = () => { clearTicketUser(); navigate("/chamados"); };
 
   const handleCreate = async (formData) => {
     try {
@@ -113,7 +113,7 @@ export default function TicketKanban() {
                 Plano Completo · {companyPlan.ticket_count} chamados
               </span>
             )}
-            {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/tickets/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>}
+            {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/chamados/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>}
             <Button size="sm" onClick={() => setShowForm(true)} disabled={companyPlan?.limit_reached} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
           </div>

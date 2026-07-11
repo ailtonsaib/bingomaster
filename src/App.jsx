@@ -141,9 +141,9 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
       {/* Sistema de Chamados — login próprio por CNPJ + senha */}
-      <Route path="/tickets" element={<TicketLogin />} />
-      <Route path="/tickets/kanban" element={<TicketKanban />} />
-      <Route path="/tickets/admin" element={<TicketAdmin />} />
+      <Route path="/chamados" element={<TicketLogin />} />
+      <Route path="/chamados/kanban" element={<TicketKanban />} />
+      <Route path="/chamados/admin" element={<TicketAdmin />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

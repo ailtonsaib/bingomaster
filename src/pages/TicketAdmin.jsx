@@ -18,10 +18,10 @@ export default function TicketAdmin() {
   const [tab, setTab] = useState("users");
   const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => { clearPortalUser(); navigate("/tickets"); };
+  const handleLogout = () => { clearPortalUser(); navigate("/chamados"); };
 
   useEffect(() => {
-    if (!user) { navigate("/tickets"); return; }
+    if (!user) { navigate("/chamados"); return; }
     setLoading(false);
   }, [user, navigate]);
 
@@ -34,14 +34,14 @@ export default function TicketAdmin() {
       <div className="border-b bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/tickets/kanban")}><ArrowLeft className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/chamados/kanban")}><ArrowLeft className="w-5 h-5" /></Button>
             <div>
               <h1 className="text-lg font-bold font-heading">Administração</h1>
               <p className="text-xs text-muted-foreground">{user.company_name}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate("/tickets/kanban")} className="gap-2"><KanbanSquare className="w-4 h-4" /> <span className="hidden sm:inline">Kanban</span></Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/chamados/kanban")} className="gap-2"><KanbanSquare className="w-4 h-4" /> <span className="hidden sm:inline">Kanban</span></Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
           </div>
         </div>
