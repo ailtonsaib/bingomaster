@@ -12,15 +12,18 @@ import {
   ArrowDownCircle, 
   ArrowUpCircle,
   Wallet,
-  CalendarRange
+  CalendarRange,
+  Pencil
 } from "lucide-react";
 import BankBalanceChart from "@/components/finance/BankBalanceChart";
+import EditTransactionModal from "@/components/finance/EditTransactionModal";
 
 export default function CashPanel({ userEmail }) {
   const [transactions, setTransactions] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [settleTarget, setSettleTarget] = useState(null); // transaction being settled
+  const [editTarget, setEditTarget] = useState(null); // transaction being edited
 
   const loadData = useCallback(async () => {
     if (!userEmail) return;
@@ -70,6 +73,11 @@ export default function CashPanel({ userEmail }) {
     } catch (e) {
       alert("Erro ao dar baixa no título");
     }
+  };
+
+  const handleEditSaved = async () => {
+    setEditTarget(null);
+    await loadData();
   };
 
   const handleReopen = async (transactionId) => {
@@ -253,14 +261,15 @@ export default function CashPanel({ userEmail }) {
                 <div className="space-y-2">
                   {pendingReceivable.map((tx) => (
                     <TransactionRow
-                      key={tx.id}
-                      tx={tx}
-                      fmtDate={fmtDate}
-                      fmtMoney={fmtMoney}
-                      isOverdue={isOverdue}
-                      isReceivable
-                      onSettle={() => setSettleTarget(tx)}
-                    />
+                       key={tx.id}
+                       tx={tx}
+                       fmtDate={fmtDate}
+                       fmtMoney={fmtMoney}
+                       isOverdue={isOverdue}
+                       isReceivable
+                       onSettle={() => setSettleTarget(tx)}
+                       onEdit={() => setEditTarget(tx)}
+                     />
                   ))}
                 </div>
               )}
@@ -284,13 +293,14 @@ export default function CashPanel({ userEmail }) {
                 <div className="space-y-2">
                   {pendingPayable.map((tx) => (
                     <TransactionRow
-                      key={tx.id}
-                      tx={tx}
-                      fmtDate={fmtDate}
-                      fmtMoney={fmtMoney}
-                      isOverdue={isOverdue}
-                      onSettle={() => setSettleTarget(tx)}
-                    />
+                       key={tx.id}
+                       tx={tx}
+                       fmtDate={fmtDate}
+                       fmtMoney={fmtMoney}
+                       isOverdue={isOverdue}
+                       onSettle={() => setSettleTarget(tx)}
+                       onEdit={() => setEditTarget(tx)}
+                     />
                   ))}
                 </div>
               )}
@@ -339,22 +349,30 @@ export default function CashPanel({ userEmail }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-bold ${
-                            tx.type === "income" ? "text-emerald-600" : "text-red-600"
-                          }`}
-                        >
-                          {tx.type === "income" ? "+" : "-"} {fmtMoney(tx.amount)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleReopen(tx.id)}
-                          title="Estornar baixa"
-                        >
-                          <Undo2 className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                      </div>
+                         <span
+                           className={`text-sm font-bold ${
+                             tx.type === "income" ? "text-emerald-600" : "text-red-600"
+                           }`}
+                         >
+                           {tx.type === "income" ? "+" : "-"} {fmtMoney(tx.amount)}
+                         </span>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           onClick={() => setEditTarget(tx)}
+                           title="Editar"
+                         >
+                           <Pencil className="w-4 h-4 text-muted-foreground" />
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           onClick={() => handleReopen(tx.id)}
+                           title="Estornar baixa"
+                         >
+                           <Undo2 className="w-4 h-4 text-muted-foreground" />
+                         </Button>
+                       </div>
                     </div>
                   ))}
                 </div>
@@ -375,11 +393,21 @@ export default function CashPanel({ userEmail }) {
           onConfirm={handleSettle}
         />
       )}
+
+      {/* Edit modal */}
+      {editTarget && (
+        <EditTransactionModal
+          tx={editTarget}
+          userEmail={userEmail}
+          onClose={() => setEditTarget(null)}
+          onSaved={handleEditSaved}
+        />
+      )}
     </div>
   );
 }
 
-function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSettle }) {
+function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSettle, onEdit }) {
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-3">
@@ -407,19 +435,27 @@ function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSett
       </div>
       <div className="flex items-center gap-2">
         <span
-          className={`text-sm font-bold ${
-            tx.type === "income" ? "text-emerald-600" : "text-red-600"
-          }`}
-        >
-          {fmtMoney(tx.amount)}
-        </span>
-        <Button size="sm" onClick={onSettle} className="gap-1">
-          <CheckCircle2 className="w-4 h-4" /> Baixar
-        </Button>
-      </div>
-    </div>
-  );
-}
+           className={`text-sm font-bold ${
+             tx.type === "income" ? "text-emerald-600" : "text-red-600"
+           }`}
+         >
+           {fmtMoney(tx.amount)}
+         </span>
+         <Button
+           variant="ghost"
+           size="icon"
+           onClick={onEdit}
+           title="Editar"
+         >
+           <Pencil className="w-4 h-4 text-muted-foreground" />
+         </Button>
+         <Button size="sm" onClick={onSettle} className="gap-1">
+           <CheckCircle2 className="w-4 h-4" /> Baixar
+         </Button>
+        </div>
+        </div>
+        );
+        }
 
 function SettleModal({ tx, bankAccounts, fmtMoney, fmtDate, onClose, onConfirm }) {
   const [selectedBank, setSelectedBank] = useState("");
