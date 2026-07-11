@@ -117,11 +117,13 @@ Deno.serve(async (req) => {
         history: [{ from_status: '', to_status: 'aberto', moved_at: now, moved_by_id: created_by_id, moved_by_name: created_by_name, direction: 'forward' }]
       });
       if (attachments && attachments.length > 0) {
-        await base44.asServiceRole.entities.TicketComment.create({
-          ticket_id: ticket.id, ticket_title: title, company_id,
-          author_id: created_by_id, author_name: created_by_name,
-          content: description || '', attachments, is_system: false
-        });
+        try {
+          await base44.asServiceRole.entities.TicketComment.create({
+            ticket_id: ticket.id, ticket_title: title, company_id,
+            author_id: created_by_id, author_name: created_by_name,
+            content: description || '', attachments, is_system: false
+          });
+        } catch (e) { /* não falha o chamado se o comentário falhar */ }
       }
       return Response.json({ ticket });
     }
