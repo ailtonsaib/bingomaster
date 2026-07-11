@@ -201,7 +201,7 @@ export default function PlanManagement() {
     setSavingSped(false);
   };
 
-  const fmtPrice = (v) => v === 0 || v == null ? "Grátis" : `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
+  const fmtPrice = (v) => v === 0 || v == null ? "Grátis" : `R$ ${Number(v).toFixed(2).replace(".", ",")} / trimestre`;
 
   return (
     <div className="space-y-6">
@@ -329,7 +329,7 @@ export default function PlanManagement() {
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between p-3 border-b">
-                <p className="text-sm font-semibold">Comparativo de Planos SPED</p>
+                <p className="text-sm font-semibold">Comparativo de Planos SPED <span className="text-xs font-normal text-muted-foreground ml-1">· Cobrança trimestral</span></p>
                 <Button variant="ghost" size="sm" className="gap-1" onClick={loadSpedPlans}><RotateCcw className="w-4 h-4" /> Atualizar</Button>
               </div>
               <div className="overflow-x-auto">
@@ -423,6 +423,7 @@ export default function PlanManagement() {
           icon={Wallet}
           iconColor="#059669"
           title="Plano Financeiro"
+          billingCycle="one_time"
         />
       )}
 
@@ -435,6 +436,7 @@ export default function PlanManagement() {
           icon={LifeBuoy}
           iconColor="#DC2626"
           title="Plano de Chamados"
+          billingCycle="one_time"
         />
       )}
     </div>

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, X, Pencil, Loader2, Lock } from "lucide-react";
 
-export default function SimplePlanManager({ appModule, defaults, featureDefs, icon: Icon, iconColor, title }) {
+export default function SimplePlanManager({ appModule, defaults, featureDefs, icon: Icon, iconColor, title, billingCycle = "one_time" }) {
+  const cycleLabel = { one_time: "Pagamento único", monthly: "Mensal", quarterly: "Trimestral", yearly: "Anual" }[billingCycle] || "Pagamento único";
   const [plans, setPlans] = useState(defaults);
   const [loading, setLoading] = useState(true);
   const [editingKey, setEditingKey] = useState(null);
@@ -67,7 +68,7 @@ export default function SimplePlanManager({ appModule, defaults, featureDefs, ic
     setSaving(false);
   };
 
-  const fmtPrice = (v) => v === 0 || v == null ? "Grátis" : `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
+  const fmtPrice = (v) => v === 0 || v == null ? "Grátis" : `R$ ${Number(v).toFixed(2).replace(".", ",")}${billingCycle === "one_time" ? "" : ` / ${billingCycle === "monthly" ? "mês" : billingCycle === "quarterly" ? "trimestre" : "ano"}`}`;
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -80,7 +81,7 @@ export default function SimplePlanManager({ appModule, defaults, featureDefs, ic
           </div>
           <div>
             <h3 className="font-bold text-base">{title}</h3>
-            <p className="text-sm text-muted-foreground">Configure o preço do plano Gold e os pacotes disponíveis em cada plano. O plano Free é sempre gratuito.</p>
+            <p className="text-sm text-muted-foreground">Configure o preço do plano Gold e os pacotes disponíveis em cada plano. O plano Free é sempre gratuito. <strong>Ciclo de cobrança: {cycleLabel}.</strong></p>
           </div>
         </div>
 

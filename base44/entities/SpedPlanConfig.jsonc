@@ -15,6 +15,17 @@
       "description": "Pre\u00e7o do plano em reais (0 = gr\u00e1tis)",
       "default": 0
     },
+    "billing_cycle": {
+      "type": "string",
+      "enum": [
+        "one_time",
+        "monthly",
+        "quarterly",
+        "yearly"
+      ],
+      "default": "quarterly",
+      "description": "Ciclo de cobran\u00e7a: one_time (\u00fanico), monthly (mensal), quarterly (trimestral), yearly (anual)"
+    },
     "downloads_limit": {
       "type": "number",
       "description": "Limite de downloads (null = ilimitado)",
@@ -33,7 +44,7 @@
           "REINF"
         ]
       },
-      "description": "Tipos de SPED/liberados neste plano"
+      "description": "Tipos de SPED liberados neste plano"
     },
     "description": {
       "type": "string",

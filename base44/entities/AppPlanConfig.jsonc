@@ -21,7 +21,18 @@
     "price": {
       "type": "number",
       "default": 0,
-      "description": "Pre\u00e7o mensal em reais (0 = gr\u00e1tis)"
+      "description": "Pre\u00e7o em reais (0 = gr\u00e1tis)"
+    },
+    "billing_cycle": {
+      "type": "string",
+      "enum": [
+        "one_time",
+        "monthly",
+        "quarterly",
+        "yearly"
+      ],
+      "default": "one_time",
+      "description": "Ciclo de cobran\u00e7a: one_time (\u00fanico), monthly (mensal), quarterly (trimestral), yearly (anual)"
     },
     "description": {
       "type": "string",
