@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users, ClipboardList, CalendarDays, FileBarChart } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users, ClipboardList, CalendarDays, FileBarChart, LayoutDashboard } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
 import PlanInfoCard from "@/components/finance/PlanInfoCard";
@@ -16,6 +16,7 @@ import TransactionForm from "@/components/finance/TransactionForm";
 import CashPanel from "@/components/finance/CashPanel";
 import TransactionTable from "@/components/finance/TransactionTable";
 import CashFlowReport from "@/components/finance/CashFlowReport";
+import DrillDownDashboard from "@/components/finance/DrillDownDashboard";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export default function Finance() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [activeTab, setActiveTab] = useState("transactions");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -158,6 +159,10 @@ export default function Finance() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b">
+          <button onClick={() => setActiveTab("dashboard")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "dashboard" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <LayoutDashboard className="w-4 h-4" /> Dashboard
+          </button>
           <button onClick={() => setActiveTab("transactions")}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "transactions" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             <Receipt className="w-4 h-4" /> Movimentações
@@ -187,6 +192,10 @@ export default function Finance() {
             <Users className="w-4 h-4" /> Clientes & Fornecedores
           </button>
         </div>
+
+        {activeTab === "dashboard" && (
+          <DrillDownDashboard userEmail={user.email} />
+        )}
 
         {activeTab === "transactions" && (
         <>
