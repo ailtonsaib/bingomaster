@@ -291,6 +291,27 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── FINANCE: update transaction (editar todos os campos) ───
+    if (operation === 'updateTransaction') {
+      const { email, transaction_id, description, amount, type, category, launch_date, due_date, contact_id, contact_name, cost_center_id, cost_center_name, bank_account_id, bank_name, status } = body;
+      const updateData = {};
+      if (description !== undefined) updateData.description = description;
+      if (amount !== undefined) updateData.amount = amount;
+      if (type !== undefined) updateData.type = type;
+      if (category !== undefined) updateData.category = category || undefined;
+      if (launch_date !== undefined) updateData.launch_date = launch_date || undefined;
+      if (due_date !== undefined) updateData.due_date = due_date || undefined;
+      if (contact_id !== undefined) updateData.contact_id = contact_id || undefined;
+      if (contact_name !== undefined) updateData.contact_name = contact_name || undefined;
+      if (cost_center_id !== undefined) updateData.cost_center_id = cost_center_id || undefined;
+      if (cost_center_name !== undefined) updateData.cost_center_name = cost_center_name || undefined;
+      if (bank_account_id !== undefined) updateData.bank_account_id = bank_account_id || undefined;
+      if (bank_name !== undefined) updateData.bank_name = bank_name || undefined;
+      if (status !== undefined) updateData.status = status;
+      await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, updateData);
+      return Response.json({ success: true });
+    }
+
     // ─── FINANCE: classify transaction (atribuir centro de custo / conta bancária) ───
     if (operation === 'classifyTransaction') {
       const { email, transaction_id, cost_center_id, cost_center_name, bank_account_id, bank_name } = body;
