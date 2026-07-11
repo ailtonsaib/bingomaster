@@ -393,6 +393,85 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── COST CENTERS: list ───
+    if (operation === 'getCostCenters') {
+      const { email } = body;
+      const items = await base44.asServiceRole.entities.FinanceCostCenter.filter(
+        { user_email: email },
+        '-created_date'
+      );
+      return Response.json({ costCenters: items });
+    }
+
+    // ─── COST CENTERS: save (create or update) ───
+    if (operation === 'saveCostCenter') {
+      const { email, name, level, parent_id, code, is_active, id } = body;
+      if (!email || !name || !level) {
+        return Response.json({ error: 'Email, nome e nível são obrigatórios' }, { status: 400 });
+      }
+      if (id) {
+        const updated = await base44.asServiceRole.entities.FinanceCostCenter.update(id, {
+          name, level, parent_id: parent_id || undefined, code: code || undefined,
+          is_active: is_active !== false,
+        });
+        return Response.json({ costCenter: updated });
+      }
+      const created = await base44.asServiceRole.entities.FinanceCostCenter.create({
+        user_email: email, name, level,
+        parent_id: parent_id || undefined, code: code || undefined,
+        is_active: is_active !== false,
+      });
+      return Response.json({ costCenter: created });
+    }
+
+    // ─── COST CENTERS: delete ───
+    if (operation === 'deleteCostCenter') {
+      const { id } = body;
+      await base44.asServiceRole.entities.FinanceCostCenter.delete(id);
+      return Response.json({ success: true });
+    }
+
+    // ─── BANK ACCOUNTS: list ───
+    if (operation === 'getBankAccounts') {
+      const { email } = body;
+      const items = await base44.asServiceRole.entities.FinanceBankAccount.filter(
+        { user_email: email },
+        '-created_date'
+      );
+      return Response.json({ bankAccounts: items });
+    }
+
+    // ─── BANK ACCOUNTS: save (create or update) ───
+    if (operation === 'saveBankAccount') {
+      const { email, bank_code, bank_name, agency, account_number, account_type, holder_name, is_active, id } = body;
+      if (!email || !bank_code || !bank_name || !agency || !account_number) {
+        return Response.json({ error: 'Campos obrigatórios não preenchidos' }, { status: 400 });
+      }
+      if (id) {
+        const updated = await base44.asServiceRole.entities.FinanceBankAccount.update(id, {
+          bank_code, bank_name, agency, account_number,
+          account_type: account_type || 'corrente',
+          holder_name: holder_name || undefined,
+          is_active: is_active !== false,
+        });
+        return Response.json({ bankAccount: updated });
+      }
+      const created = await base44.asServiceRole.entities.FinanceBankAccount.create({
+        user_email: email, bank_code, bank_name, agency, account_number,
+        account_type: account_type || 'corrente',
+        holder_name: holder_name || undefined,
+        is_active: is_active !== false,
+      });
+      return Response.json({ bankAccount: created });
+    }
+
+    // ─── BANK ACCOUNTS: delete ───
+    if (operation === 'deleteBankAccount') {
+      const { id } = body;
+      await base44.asServiceRole.entities.FinanceBankAccount.delete(id);
+      return Response.json({ success: true });
+    }
+
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

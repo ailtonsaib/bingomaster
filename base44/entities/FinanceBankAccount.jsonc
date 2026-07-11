@@ -1,0 +1,51 @@
+{
+  "name": "FinanceBankAccount",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio propriet\u00e1rio"
+    },
+    "bank_code": {
+      "type": "string",
+      "description": "C\u00f3digo COMPE do banco"
+    },
+    "bank_name": {
+      "type": "string",
+      "description": "Nome do banco"
+    },
+    "agency": {
+      "type": "string",
+      "description": "N\u00famero da ag\u00eancia"
+    },
+    "account_number": {
+      "type": "string",
+      "description": "N\u00famero da conta"
+    },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "corrente",
+        "poupanca"
+      ],
+      "default": "corrente",
+      "description": "Tipo de conta"
+    },
+    "holder_name": {
+      "type": "string",
+      "description": "Nome do titular da conta"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a conta est\u00e1 ativa"
+    }
+  },
+  "required": [
+    "user_email",
+    "bank_code",
+    "bank_name",
+    "agency",
+    "account_number"
+  ]
+}

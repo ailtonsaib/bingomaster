@@ -1,0 +1,41 @@
+{
+  "name": "FinanceCostCenter",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio propriet\u00e1rio"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do departamento, setor ou centro de custo"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "departamento",
+        "setor",
+        "centro_custo"
+      ],
+      "description": "N\u00edvel na hierarquia: 1=departamento, 2=setor, 3=centro_custo"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID do registro pai (setor \u2192 departamento, centro_custo \u2192 setor)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo opcional do centro de custo"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "level"
+  ]
+}

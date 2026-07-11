@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
 import PlanInfoCard from "@/components/finance/PlanInfoCard";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
+import CostCenterManager from "@/components/finance/CostCenterManager";
+import BankAccountManager from "@/components/finance/BankAccountManager";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ export default function Finance() {
   const [category, setCategory] = useState("");
   const [saving, setSaving] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [activeTab, setActiveTab] = useState("transactions");
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -162,6 +165,24 @@ export default function Finance() {
           <PlanInfoCard user={user} />
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b">
+          <button onClick={() => setActiveTab("transactions")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "transactions" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <Receipt className="w-4 h-4" /> Movimentações
+          </button>
+          <button onClick={() => setActiveTab("costcenters")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "costcenters" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <Building2 className="w-4 h-4" /> Centros de Custo
+          </button>
+          <button onClick={() => setActiveTab("bankaccounts")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "bankaccounts" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <Landmark className="w-4 h-4" /> Contas Bancárias
+          </button>
+        </div>
+
+        {activeTab === "transactions" && (
+        <>
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
@@ -320,6 +341,16 @@ export default function Finance() {
             )}
           </CardContent>
         </Card>
+        </>
+        )}
+
+        {activeTab === "costcenters" && (
+          <CostCenterManager userEmail={user.email} />
+        )}
+
+        {activeTab === "bankaccounts" && (
+          <BankAccountManager userEmail={user.email} />
+        )}
       </div>
     </div>
   );
