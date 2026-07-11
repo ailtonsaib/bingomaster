@@ -30,6 +30,7 @@ export const APPS = [
       { name: "Max", price: 199.9, max_cards: 10000, apps: ["Gerador", "Vendedor", "Comprador", "Telão", "Rifas"] },
     ],
     accent: "#7C3AED",
+    video: "https://media.base44.com/videos/public/6a2055dca9eaba25f3a7de8f/751f31d1f_BingoPremier_Demo.mp4",
   },
   {
     id: "financeiro",
@@ -57,6 +58,7 @@ export const APPS = [
       { name: "Full", price: 49.9, limit: "Movimentações ilimitadas" },
     ],
     accent: "#059669",
+    video: "https://media.base44.com/videos/public/6a2055dca9eaba25f3a7de8f/25e71be64_Financeiro_Demo.mp4",
   },
   {
     id: "sped",
@@ -89,6 +91,7 @@ export const APPS = [
       { name: "Max", price: 199.9, downloads: null, types: ["Fiscal", "Contribuições", "ECD", "ECF"] },
     ],
     accent: "#2563EB",
+    video: "https://media.base44.com/videos/public/6a2055dca9eaba25f3a7de8f/158a656f7_Validador_SPED_Demo.mp4",
   },
   {
     id: "chamados",
@@ -112,6 +115,7 @@ export const APPS = [
       "Atribuição de responsáveis",
     ],
     accent: "#DC2626",
+    video: "https://media.base44.com/videos/public/6a2055dca9eaba25f3a7de8f/4bc193cb6_Chamados_Demo.mp4",
   },
   {
     id: "admin",

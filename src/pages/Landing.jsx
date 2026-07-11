@@ -6,6 +6,7 @@ import { getPortalUser } from "@/lib/portalSession";
 import { useDynamicPlans } from "@/hooks/useDynamicPlans";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle, Mail, Phone, X, Check, Sparkles } from "lucide-react";
+import AppVideo from "@/components/AppVideo";
 
 const iconMap = {
   Grid3x3: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>,
@@ -68,6 +69,9 @@ function AppCard({ app, onOpenPlans, loading }) {
           ))}
         </ul>
       </div>
+
+      {/* Video */}
+      {app.video && <AppVideo src={app.video} accent={app.accent} appName={app.name} />}
 
       {/* Plans preview */}
       <div className="px-8 pb-4">
