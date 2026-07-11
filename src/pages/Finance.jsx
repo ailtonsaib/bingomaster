@@ -18,6 +18,7 @@ import TransactionTable from "@/components/finance/TransactionTable";
 import CashFlowReport from "@/components/finance/CashFlowReport";
 import DrillDownDashboard from "@/components/finance/DrillDownDashboard";
 import AgapeMigrationModal from "@/components/finance/AgapeMigrationModal";
+import TransactionClassifier from "@/components/finance/TransactionClassifier";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -196,6 +197,10 @@ export default function Finance() {
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "cashpanel" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             <ClipboardList className="w-4 h-4" /> Caixa & Banco
           </button>
+          <button onClick={() => setActiveTab("classify")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "classify" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <ClipboardList className="w-4 h-4" /> Classificar
+          </button>
           <button onClick={() => setActiveTab("costcenters")}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "costcenters" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             <Building2 className="w-4 h-4" /> Centros de Custo
@@ -326,6 +331,10 @@ export default function Finance() {
           </CardContent>
         </Card>
         </>
+        )}
+
+        {activeTab === "classify" && (
+          <TransactionClassifier userEmail={user.email} onClassified={loadData} />
         )}
 
         {activeTab === "costcenters" && (

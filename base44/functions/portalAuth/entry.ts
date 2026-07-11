@@ -291,6 +291,29 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── FINANCE: classify transaction (atribuir centro de custo / conta bancária) ───
+    if (operation === 'classifyTransaction') {
+      const { email, transaction_id, cost_center_id, cost_center_name, bank_account_id, bank_name } = body;
+      const updateData = {};
+      if (cost_center_id !== undefined) updateData.cost_center_id = cost_center_id || undefined;
+      if (cost_center_name !== undefined) updateData.cost_center_name = cost_center_name || undefined;
+      if (bank_account_id !== undefined) updateData.bank_account_id = bank_account_id || undefined;
+      if (bank_name !== undefined) updateData.bank_name = bank_name || undefined;
+      await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, updateData);
+      return Response.json({ success: true });
+    }
+
+    // ─── FINANCE: bulk classify transactions ───
+    if (operation === 'bulkClassifyTransactions') {
+      const { email, transaction_ids, cost_center_id, cost_center_name, bank_account_id, bank_name } = body;
+      const updateData = {};
+      if (cost_center_id !== undefined) { updateData.cost_center_id = cost_center_id || undefined; updateData.cost_center_name = cost_center_name || undefined; }
+      if (bank_account_id !== undefined) { updateData.bank_account_id = bank_account_id || undefined; updateData.bank_name = bank_name || undefined; }
+      const updates = transaction_ids.map(id => ({ id, ...updateData }));
+      await base44.asServiceRole.entities.PortalFinanceTransaction.bulkUpdate(updates);
+      return Response.json({ success: true, updated: transaction_ids.length });
+    }
+
     // ─── FINANCE: settle transaction (baixa de título) ───
     if (operation === 'settleTransaction') {
       const { email, transaction_id, bank_account_id, bank_name } = body;
