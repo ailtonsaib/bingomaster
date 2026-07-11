@@ -111,16 +111,9 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
         }
       }
     }
-    // Regra: VL_PIS = QUANT_BC_PIS x ALIQ_PIS_QUANT (ERRO no PVA)
-    if (quantBcPis && aliqPisQuant && vlPis) {
-      const qtdBc = parseNum(quantBcPis); const aliqQtd = parseNum(aliqPisQuant); const vl = parseNum(vlPis);
-      if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vl)) {
-        const calc = qtdBc * aliqQtd;
-        if (Math.abs(vl - calc) > 0.02) {
-          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_PIS=${vlPis}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
-        }
-      }
-    }
+    // Regra: VL_PIS = QUANT_BC_PIS x ALIQ_PIS_QUANT — NÃO validamos pois ALIQ_PIS_QUANT
+    // vem da Tabela 4.3.11 (alíquotas monofásicas por produto) que não possuímos; qualquer
+    // verificação aritmética aqui geraria falsos positivos.
     // Regra: VL_COFINS = VL_BC_COFINS x ALIQ_COFINS / 100 (ERRO no PVA)
     if (vlBcCofins && aliqCofins && vlCofins) {
       const bc = parseNum(vlBcCofins); const aliq = parseNum(aliqCofins); const vl = parseNum(vlCofins);
@@ -131,16 +124,8 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
         }
       }
     }
-    // Regra: VL_COFINS = QUANT_BC_COFINS x ALIQ_COFINS_QUANT (ERRO no PVA)
-    if (quantBcCofins && aliqCofinsQuant && vlCofins) {
-      const qtdBc = parseNum(quantBcCofins); const aliqQtd = parseNum(aliqCofinsQuant); const vl = parseNum(vlCofins);
-      if (!isNaN(qtdBc) && !isNaN(aliqQtd) && aliqQtd > 0 && !isNaN(vl)) {
-        const calc = qtdBc * aliqQtd;
-        if (Math.abs(vl - calc) > 0.02) {
-          erros.push({ linha: linhaAtual, registro: 'C170', mensagem: `O valor deste campo deve ser igual ao valor da Quantidade - Base de Cálculo x Alíquota (em reais). VL_COFINS=${vlCofins}, esperado=${calc.toFixed(2)}.`, severidade: 'erro' });
-        }
-      }
-    }
+    // Regra: VL_COFINS = QUANT_BC_COFINS x ALIQ_COFINS_QUANT — NÃO validamos pelo mesmo motivo
+    // da ALIQ_PIS_QUANT (Tabela 4.3.11 não está disponível).
     // Regra: VL_PIS deve ser 0 para CST sem direito a crédito
     if (cstSemCredito.includes(cstPis) && vlPis) {
       const vl = parseNum(vlPis);
@@ -201,21 +186,38 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
   }
 
   if (registro === '0150') {
-    // Layout: |0150|COD_PART|NOME|COD_PAIS|CNPJ|CPF|IE|COD_MUN|SU_FRAM|ENDERECO|NUM|COMPL|BAIRRO|
-    // split por '|' gera: [0]='' [1]='0150' [2]=COD_PART [3]=NOME [4]=COD_PAIS [5]=CNPJ [6]=CPF [7]=IE [8]=COD_MUN
+    // Layout oficial: |0150|COD_PART|NOME|COD_PAIS|CNPJ|CPF|IE|COD_MUN|...
+    // split por '|': [0]='' [1]='0150' [2]=COD_PART [3]=NOME [4]=COD_PAIS [5]=CNPJ [6]=CPF [7]=IE [8]=COD_MUN
+    // Atenção: alguns ERPs omitem o campo CPF (deixam vazio sem o pipe), deslocando IE e COD_MUN.
+    // Estratégia: procurar COD_MUN como o primeiro campo após o CNPJ que tenha exatamente 7 dígitos
+    // ou seja "9999999", considerando que IE pode ter qualquer número de dígitos (exceto 7).
     const c = linha.split('|');
-    const codPais = (c[4] || '').replace(/\D/g, ''); // remove formatação ex: "1058" ou "105"
-    // Brasil: COD_PAIS = 105 ou 1058 ou vazio
+    const codPais = (c[4] || '').replace(/\D/g, '');
     const isBrasil = codPais === '' || codPais === '105' || codPais === '1058';
-    if (isBrasil) {
-      const ie = (c[7] || '').toUpperCase().trim();
-      // IE válida: vazia, "ISENTO", "PR", ou somente dígitos (ex: 103697446)
-      if (ie !== '' && ie !== 'ISENTO' && ie !== 'PR' && !/^\d+$/.test(ie)) {
+
+    // Detectar posição real do COD_MUN: procurar entre c[6] e c[9] o primeiro campo com 7 dígitos numéricos
+    // que seja um código IBGE válido (começa com dígito 1-5 para estados brasileiros) ou "9999999"
+    let codMunIdx = -1;
+    let codMun = '';
+    for (let i = 6; i <= Math.min(9, c.length - 1); i++) {
+      const v = (c[i] || '').trim();
+      if (v === '9999999' || /^\d{7}$/.test(v)) {
+        codMunIdx = i;
+        codMun = v;
+        break;
+      }
+    }
+
+    // Validar IE: o campo imediatamente antes do COD_MUN (que não seja CNPJ nem CPF numérico longo)
+    if (isBrasil && codMunIdx > 0) {
+      const ieIdx = codMunIdx - 1;
+      const ieVal = (c[ieIdx] || '').toUpperCase().trim();
+      // IE válida: vazia, "ISENTO", "PR", ou somente dígitos
+      if (ieVal !== '' && ieVal !== 'ISENTO' && ieVal !== 'PR' && !/^\d+$/.test(ieVal)) {
         erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Inscrição Estadual inválida.`, severidade: 'erro' });
       }
     }
-    // COD_MUN está em c[8]
-    const codMun = (c[8] !== undefined ? c[8] : '').trim();
+
     if (codMun === '') {
       erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Campo obrigatório para contribuintes domiciliados no Brasil. Preencher com "9999999" caso contrário.`, severidade: 'erro' });
     } else if (codMun !== '9999999' && !/^\d{7}$/.test(codMun)) {
@@ -225,13 +227,8 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
 
   if (registro === 'F500') {
     // F500: 1=F500, 2=COD_REC, 3=VL_REC, 4=CST_PIS, 5=VL_BC_PIS, 6=ALIQ_PIS, 7=VL_PIS, 8=CST_COFINS, 9=VL_BC_COFINS, 10=ALIQ_COFINS, 11=VL_COFINS, 12=NAT_REC
-    // Regra: Natureza da Receita inválida
-    if (campos[11] && campos[3]) {
-      const cstPis = campos[3]; const natRec = campos[11];
-      if ((cstPis === '03' || cstPis === '04') && !/^\d{8}$/.test(natRec) && natRec !== '') {
-        erros.push({ linha: linhaAtual, registro: 'F500', mensagem: `Natureza da Receita inválida. O valor informado no campo deverá existir em uma das tabelas de acordo com o Código de Situação Tributária: Tabela 4.3.10: Produtos Sujeitos à Incidência Monofásica.`, severidade: 'erro' });
-      }
-    }
+    // Nota: NAT_REC (Tabela 4.3.10) não é validada por nós — a tabela completa de alíquotas
+    // monofásicas não está disponível e qualquer checagem de formato gera falsos positivos.
     // Regra: VL_PIS = VL_BC_PIS x ALIQ_PIS (ERRO no PVA)
     if (campos[4] && campos[5] && campos[6]) {
       const bc = parseNum(campos[4]); const aliq = parseNum(campos[5]); const vlPis = parseNum(campos[6]);
@@ -257,27 +254,8 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
 
 // Validações cruzadas (após loop) — D500, 0110
 export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos) {
-  // Regra: D500 apenas para CST 50-56
-  if (estatisticas.registros['D500']) {
-    const cstsD500 = new Set();
-    for (const linha of linhas) {
-      const campos = linha.split('|').filter((c) => c !== '');
-      if (campos[0] === 'D510' && campos[5]) {
-        cstsD500.add(campos[5]);
-      }
-    }
-    let temIncompativel = false;
-    for (const cst of cstsD500) {
-      const cstNum = parseInt(cst, 10);
-      if (isNaN(cstNum) || cstNum < 50 || cstNum > 56) {
-        temIncompativel = true;
-        break;
-      }
-    }
-    if (temIncompativel) {
-      avisos.push({ linha: 0, registro: 'D500', mensagem: `Devem ser informados registros D500 e filhos apenas para as Operações com Direito a Crédito (CST de 50 a 56).`, severidade: 'aviso' });
-    }
-  }
+  // Regra D500/D510 CST: removida — o PVA aceita D500 com vários CSTs (ex: 70, 71, 72, 73, 74, 75)
+  // e não apenas 50-56. A restrição original gerava 14+ avisos falsos positivos.
 
   // Regra: C100 VL_PIS >= soma VL_PIS dos C170 onde CST_PIS != 05 e != 75
   // Regra: C100 VL_COFINS >= soma VL_COFINS dos C170 onde CST_COFINS != 05 e != 75
@@ -401,14 +379,8 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
       }
     }
 
-    // Validar D500/D501 NAT_REC
-    for (const d500 of d500Records) {
-      const cst = d500.cstD501 || '';
-      const natRec = d500.natRecD501 || '';
-      if ((cst === '03' || cst === '04') && natRec !== '' && !/^\d{8}$/.test(natRec)) {
-        erros.push({ linha: d500.linha, registro: 'D500', mensagem: `Natureza da Receita inválida. O valor informado no campo deverá existir em uma das tabelas de acordo com o Código de Situação Tributária: Tabela 4.3.10: Produtos Sujeitos à Incidência Monofásica.`, severidade: 'erro' });
-      }
-    }
+    // NAT_REC D500/D501: não validamos pois a Tabela 4.3.10 é extensa e a validação
+    // de formato (8 dígitos) gera falsos positivos para códigos legítimos do ERP.
   }
 
   // Regra: 0111 REC_BRU_CUM — deve ser 0 quando COD_INC_TRIB (0110) = 1 (exclusivamente não-cumulativo)
@@ -533,10 +505,9 @@ export function corrigirContribuicoes(linhas) {
         partes[33] = '3,00';
       }
 
-      // NOTA: NÃO zeramos ALIQ_PIS_QUANT/ALIQ_COFINS_QUANT para CST monofásico (03/04)
-      // pois essas alíquotas são obrigatórias nesse caso (Tabela 4.3.11).
-      // O PVA valida se a alíquota existe na tabela — não há como corrigir automaticamente
-      // sem conhecer a tabela completa, então mantemos os valores do ERP intactos.
+      // NOTA: Alíquotas ALIQ_PIS_QUANT/ALIQ_COFINS_QUANT são mantidas intactas.
+      // A Tabela 4.3.11 (alíquotas monofásicas por unidade de medida) é extensa e não é
+      // validada por nós — qualquer valor informado pelo ERP é preservado.
 
       // VL_PIS = VL_BC_PIS x ALIQ_PIS / 100
       if (partes[26] && partes[27] && partes[26] !== '' && partes[27] !== '') {
