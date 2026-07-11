@@ -1,0 +1,129 @@
+{
+  "name": "SupportTicket",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo do chamado"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada"
+    },
+    "company_id": {
+      "type": "string",
+      "description": "ID da empresa"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Nome da empresa"
+    },
+    "type_id": {
+      "type": "string",
+      "description": "ID do tipo de chamado"
+    },
+    "type_name": {
+      "type": "string",
+      "description": "Nome do tipo"
+    },
+    "priority_id": {
+      "type": "string",
+      "description": "ID da prioridade"
+    },
+    "priority_name": {
+      "type": "string",
+      "description": "Nome da prioridade"
+    },
+    "priority_level": {
+      "type": "number",
+      "description": "N\u00edvel da prioridade"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aberto",
+        "em_analise",
+        "iniciado",
+        "em_teste",
+        "concluido"
+      ],
+      "default": "aberto",
+      "description": "Status: aberto, em an\u00e1lise, iniciado, em teste, conclu\u00eddo"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID de quem criou"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Nome de quem criou"
+    },
+    "assigned_to_id": {
+      "type": "string",
+      "description": "ID do respons\u00e1vel"
+    },
+    "assigned_to_name": {
+      "type": "string",
+      "description": "Nome do respons\u00e1vel"
+    },
+    "aberto_at": {
+      "type": "string",
+      "description": "Data/hora em que foi aberto (ISO)"
+    },
+    "em_analise_at": {
+      "type": "string",
+      "description": "Data/hora em que entrou em an\u00e1lise (ISO)"
+    },
+    "iniciado_at": {
+      "type": "string",
+      "description": "Data/hora em que foi iniciado (ISO)"
+    },
+    "em_teste_at": {
+      "type": "string",
+      "description": "Data/hora em que entrou em teste (ISO)"
+    },
+    "concluido_at": {
+      "type": "string",
+      "description": "Data/hora em que foi conclu\u00eddo (ISO)"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from_status": {
+            "type": "string"
+          },
+          "to_status": {
+            "type": "string"
+          },
+          "moved_at": {
+            "type": "string"
+          },
+          "moved_by_id": {
+            "type": "string"
+          },
+          "moved_by_name": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "forward",
+              "backward",
+              "transfer"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Hist\u00f3rico de movimenta\u00e7\u00f5es do chamado"
+    }
+  },
+  "required": [
+    "title",
+    "company_id"
+  ]
+}

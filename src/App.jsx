@@ -48,6 +48,9 @@ import PortalLogin from '@/pages/PortalLogin';
 import Finance from '@/pages/Finance';
 import PortalAdmin from '@/pages/PortalAdmin';
 import PortalGuard from '@/components/PortalGuard';
+import TicketLogin from '@/pages/TicketLogin';
+import TicketKanban from '@/pages/TicketKanban';
+import TicketAdmin from '@/pages/TicketAdmin';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -137,6 +140,10 @@ const AuthenticatedApp = () => {
           <Route path="/admin-financial" element={<AdminFinancialPanel />} />
         </Route>
       </Route>
+      {/* Sistema de Chamados — login próprio por CNPJ + senha */}
+      <Route path="/tickets" element={<TicketLogin />} />
+      <Route path="/tickets/kanban" element={<TicketKanban />} />
+      <Route path="/tickets/admin" element={<TicketAdmin />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

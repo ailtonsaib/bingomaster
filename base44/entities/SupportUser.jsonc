@@ -1,0 +1,51 @@
+{
+  "name": "SupportUser",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome completo do usu\u00e1rio"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email (login)"
+    },
+    "password_hash": {
+      "type": "string",
+      "description": "Hash da senha"
+    },
+    "company_id": {
+      "type": "string",
+      "description": "ID da empresa vinculada"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Nome da empresa"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "agent",
+        "requester"
+      ],
+      "default": "agent",
+      "description": "Papel: admin, agente ou solicitante"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o usu\u00e1rio est\u00e1 ativo"
+    },
+    "last_login_at": {
+      "type": "string",
+      "description": "Data/hora do \u00faltimo login (ISO)"
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "password_hash",
+    "company_id"
+  ]
+}

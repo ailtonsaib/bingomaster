@@ -1,0 +1,27 @@
+{
+  "name": "SupportCompany",
+  "type": "object",
+  "properties": {
+    "razao_social": {
+      "type": "string",
+      "description": "Raz\u00e3o Social da empresa"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ (apenas n\u00fameros)"
+    },
+    "endereco": {
+      "type": "string",
+      "description": "Endere\u00e7o completo"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a empresa est\u00e1 ativa"
+    }
+  },
+  "required": [
+    "razao_social",
+    "cnpj"
+  ]
+}

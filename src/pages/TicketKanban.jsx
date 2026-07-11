@@ -1,0 +1,143 @@
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search } from "lucide-react";
+import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
+import KanbanBoard from "@/components/tickets/KanbanBoard";
+import TicketForm from "@/components/tickets/TicketForm";
+import TicketDetailModal from "@/components/tickets/TicketDetailModal";
+
+export default function TicketKanban() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(getTicketUser());
+  const [tickets, setTickets] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [types, setTypes] = useState([]);
+  const [priorities, setPriorities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
+  const [filterAssignee, setFilterAssignee] = useState("");
+
+  const loadData = useCallback(async () => {
+    if (!user) { navigate("/tickets"); return; }
+    setLoading(true);
+    try {
+      const [txRes, usersRes, typesRes, priRes] = await Promise.all([
+        base44.functions.invoke('ticketSystem', { operation: 'getTickets', company_id: user.company_id }),
+        base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id }),
+        base44.functions.invoke('ticketSystem', { operation: 'getTypes' }),
+        base44.functions.invoke('ticketSystem', { operation: 'getPriorities' }),
+      ]);
+      setTickets(txRes.data.tickets || []);
+      setUsers(usersRes.data.users || []);
+      setTypes(typesRes.data.types || []);
+      setPriorities(priRes.data.priorities || []);
+    } catch (e) { console.error("Erro:", e); }
+    setLoading(false);
+  }, [user, navigate]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleLogout = () => { clearTicketUser(); navigate("/tickets"); };
+
+  const handleCreate = async (formData) => {
+    await base44.functions.invoke('ticketSystem', { operation: 'createTicket', ...formData });
+    setShowForm(false);
+    await loadData();
+  };
+
+  const handleMove = async (ticketId, newStatus, direction) => {
+    await base44.functions.invoke('ticketSystem', { operation: 'moveTicket', ticket_id: ticketId, new_status: newStatus, direction, moved_by_id: user.id, moved_by_name: user.name });
+    await loadData();
+  };
+
+  const handleTransfer = async (ticketId, assignedToId, assignedToName) => {
+    await base44.functions.invoke('ticketSystem', { operation: 'transferTicket', ticket_id: ticketId, assigned_to_id: assignedToId, assigned_to_name: assignedToName, moved_by_id: user.id, moved_by_name: user.name });
+    await loadData();
+    setSelectedTicket(null);
+  };
+
+  const handleDelete = async (ticketId) => {
+    await base44.functions.invoke('ticketSystem', { operation: 'deleteTicket', ticket_id: ticketId });
+    setSelectedTicket(null);
+    await loadData();
+  };
+
+  const filtered = tickets.filter((t) => {
+    if (search && !t.title?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterType && t.type_id !== filterType) return false;
+    if (filterPriority && t.priority_id !== filterPriority) return false;
+    if (filterAssignee && t.assigned_to_id !== filterAssignee) return false;
+    return true;
+  });
+
+  if (loading || !user) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b bg-card sticky top-0 z-10">
+        <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")}><ArrowLeft className="w-5 h-5" /></Button>
+            <div>
+              <h1 className="text-lg font-bold font-heading">Central de Chamados</h1>
+              <p className="text-xs text-muted-foreground">{user.company_name} · {user.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/tickets/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>
+            <Button size="sm" onClick={() => setShowForm(true)} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
+          </div>
+        </div>
+        {/* Filters */}
+        <div className="px-4 pb-3 flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[150px] max-w-xs">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input className="w-full h-9 rounded-md border border-input bg-transparent pl-8 pr-3 text-sm" placeholder="Buscar chamado..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+            <option value="">Todas as prioridades</option>
+            {priorities.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
+            <option value="">Todos os responsáveis</option>
+            {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <KanbanBoard tickets={filtered} onMove={handleMove} onTicketClick={setSelectedTicket} />
+      </div>
+
+      {showForm && (
+        <TicketForm users={users} types={types} priorities={priorities} currentUser={user} onSave={handleCreate} onCancel={() => setShowForm(false)} />
+      )}
+
+      {selectedTicket && (
+        <TicketDetailModal
+          ticket={selectedTicket}
+          users={users}
+          currentUser={user}
+          onMove={handleMove}
+          onTransfer={handleTransfer}
+          onDelete={handleDelete}
+          onClose={() => setSelectedTicket(null)}
+        />
+      )}
+    </div>
+  );
+}
