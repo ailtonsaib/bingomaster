@@ -620,7 +620,8 @@ function corrigirConteudo(conteudo, tipoDetectado) {
       resultado.push(linha);
     }
   }
-  return resultado.join('\n');
+  // PVA exige CRLF (Windows) e a última linha também deve terminar com terminador
+  return resultado.join('\r\n') + '\r\n';
 }
 
 // ===================== FUNÇÃO PRINCIPAL =====================
