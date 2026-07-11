@@ -598,12 +598,14 @@ function corrigirConteudo(conteudo, tipoDetectado) {
     return campos[0] !== '9900';
   });
 
+  // PVA exige que TODOS os registros presentes no arquivo sejam totalizados no 9900,
+  // incluindo 9001 (abertura) e 9990 (encerramento do bloco 9)
   const novas9900 = [];
   for (const [reg, qtd] of Object.entries(registros)) {
-    if (['9900', '9999', '9001', '9990'].includes(reg)) continue;
+    if (['9900', '9999'].includes(reg)) continue;
     novas9900.push('|9900|' + reg + '|' + qtd + '|');
   }
-  const total9900Entries = novas9900.length + 2;
+  const total9900Entries = novas9900.length + 2; // +2: auto-referência 9900 e 9999
   novas9900.push('|9900|9900|' + total9900Entries + '|');
   novas9900.push('|9900|9999|1|');
 
@@ -617,8 +619,8 @@ function corrigirConteudo(conteudo, tipoDetectado) {
     if (campos[0] === '9990') {
       // Insere os registros 9900 antes do 9990
       resultado.push.apply(resultado, novas9900);
-      // Atualiza a quantidade de linhas do bloco 9 (9001 + 9900s + 9990)
-      campos[1] = String(novas9900.length + 2);
+      // QTD_LIN do bloco 9: 9001 + 9900s + 9990 + 9999
+      campos[1] = String(total9900Entries + 3);
       resultado.push('|' + campos.join('|') + '|');
     } else if (campos[0] === '9999') {
       campos[1] = String(novoTotal);
