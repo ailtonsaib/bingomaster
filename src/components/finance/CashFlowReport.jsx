@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Wallet, FileBarChart, Building2, ChevronDown, ChevronRight } from "lucide-react";
+import CashFlowForecast from "@/components/finance/CashFlowForecast";
 
 export default function CashFlowReport({ userEmail }) {
   const [transactions, setTransactions] = useState([]);
@@ -229,6 +230,9 @@ export default function CashFlowReport({ userEmail }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Projeção 5/10/15/30 dias */}
+      <CashFlowForecast transactions={transactions} />
 
       {/* Resumo por status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
