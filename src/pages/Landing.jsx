@@ -198,12 +198,13 @@ function PlansModal({ app, onClose }) {
 export default function Landing() {
   const navigate = useNavigate();
   const [plansApp, setPlansApp] = useState(null);
-  const { bingoPlans, spedPlans, loading } = useDynamicPlans();
+  const { bingoPlans, spedPlans, financePlans, loading } = useDynamicPlans();
 
   // Sobrescreve planos hardcoded com dados reais do banco
   const publicApps = APPS.filter((a) => !a.adminOnly).map((app) => {
     if (app.id === "bingo" && bingoPlans) return { ...app, plans: bingoPlans };
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
+    if (app.id === "financeiro" && financePlans) return { ...app, plans: financePlans };
     return app;
   });
 

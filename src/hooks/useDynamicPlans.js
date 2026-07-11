@@ -8,14 +8,16 @@ import { base44 } from "@/api/base44Client";
 export function useDynamicPlans() {
   const [bingoPlans, setBingoPlans] = useState([]);
   const [spedPlans, setSpedPlans] = useState([]);
+  const [financePlans, setFinancePlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPlans() {
       try {
-        const [bingo, sped] = await Promise.all([
+        const [bingo, sped, appPlans] = await Promise.all([
           base44.entities.PlanConfig.list(),
           base44.entities.SpedPlanConfig.list(),
+          base44.entities.AppPlanConfig.list(),
         ]);
 
         // Ordena bingo por max_cards crescente e SPED por order crescente
@@ -28,6 +30,7 @@ export function useDynamicPlans() {
 
         setBingoPlans(sortedBingo);
         setSpedPlans(sortedSped);
+        setFinancePlans(appPlans || []);
       } catch (_) {
         // fallback: arrays vazios, Landing usa planos do appRegistry
       } finally {
@@ -86,9 +89,20 @@ export function useDynamicPlans() {
       };
     });
 
+  /** Converte planos do banco (AppPlanConfig) para o formato da Landing */
+  const mappedFinancePlans = financePlans
+    .filter((p) => p.app_module === "finance" && p.is_active !== false)
+    .map((p) => ({
+      name: p.plan_name || p.plan_key,
+      price: p.price ?? 0,
+      limit: p.plan_key === "free" ? "10 movimentações" : "Movimentações ilimitadas",
+      description: p.description || "",
+    }));
+
   return {
     bingoPlans: mappedBingoPlans.length ? mappedBingoPlans : null,
     spedPlans: mappedSpedPlans.length ? mappedSpedPlans : null,
+    financePlans: mappedFinancePlans.length ? mappedFinancePlans : null,
     loading,
   };
 }
