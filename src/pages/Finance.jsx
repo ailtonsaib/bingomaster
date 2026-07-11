@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users, ClipboardList, CalendarDays, FileBarChart, LayoutDashboard } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users, ClipboardList, CalendarDays, FileBarChart, LayoutDashboard, Download } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
 import PlanInfoCard from "@/components/finance/PlanInfoCard";
@@ -17,6 +17,7 @@ import CashPanel from "@/components/finance/CashPanel";
 import TransactionTable from "@/components/finance/TransactionTable";
 import CashFlowReport from "@/components/finance/CashFlowReport";
 import DrillDownDashboard from "@/components/finance/DrillDownDashboard";
+import AgapeMigrationModal from "@/components/finance/AgapeMigrationModal";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function Finance() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showAgapeMigration, setShowAgapeMigration] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const loadData = useCallback(async () => {
@@ -137,6 +139,10 @@ export default function Finance() {
                 ? "Acesso Completo"
                 : `${user.finance_transactions_used}/${user.finance_transaction_limit} movimentações`}
             </Badge>
+            <Button variant="outline" size="sm" onClick={() => setShowAgapeMigration(true)} title="Migrar do Ágape" className="gap-2">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Migrar Ágape</span>
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => setShowChangePassword(true)} title="Alterar Senha">
               <KeyRound className="w-4 h-4" />
             </Button>
@@ -149,6 +155,17 @@ export default function Finance() {
 
       {showChangePassword && (
         <ChangePasswordModal userEmail={user.email} onClose={() => setShowChangePassword(false)} />
+      )}
+
+      {showAgapeMigration && (
+        <AgapeMigrationModal
+          userEmail={user.email}
+          onClose={() => setShowAgapeMigration(false)}
+          onSuccess={async () => {
+            setShowAgapeMigration(false);
+            await loadData();
+          }}
+        />
       )}
 
       <div className="max-w-4xl mx-auto px-4 py-6">
