@@ -279,12 +279,37 @@ Deno.serve(async (req) => {
         due_date: due_date || undefined,
         contact_id: contact_id || undefined,
         contact_name: contact_name || undefined,
+        status: 'pending',
       });
       if (!user.finance_full_access) {
         await base44.asServiceRole.entities.PortalUser.update(user.id, {
           finance_transactions_used: user.finance_transactions_used + 1,
         });
       }
+      return Response.json({ success: true });
+    }
+
+    // ─── FINANCE: settle transaction (baixa de título) ───
+    if (operation === 'settleTransaction') {
+      const { email, transaction_id, bank_account_id, bank_name } = body;
+      await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, {
+        status: 'settled',
+        bank_account_id: bank_account_id || undefined,
+        bank_name: bank_name || undefined,
+        settled_date: new Date().toISOString(),
+      });
+      return Response.json({ success: true });
+    }
+
+    // ─── FINANCE: reopen transaction (estornar baixa) ───
+    if (operation === 'reopenTransaction') {
+      const { email, transaction_id } = body;
+      await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, {
+        status: 'pending',
+        bank_account_id: undefined,
+        bank_name: undefined,
+        settled_date: undefined,
+      });
       return Response.json({ success: true });
     }
 

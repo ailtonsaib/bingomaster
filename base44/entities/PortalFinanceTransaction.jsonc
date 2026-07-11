@@ -45,6 +45,27 @@
     "contact_name": {
       "type": "string",
       "description": "Nome do cliente/fornecedor vinculado"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "settled"
+      ],
+      "default": "pending",
+      "description": "Status: pendente ou baixado"
+    },
+    "bank_account_id": {
+      "type": "string",
+      "description": "ID da conta banc\u00e1ria utilizada na baixa"
+    },
+    "bank_name": {
+      "type": "string",
+      "description": "Nome do banco utilizado na baixa"
+    },
+    "settled_date": {
+      "type": "string",
+      "description": "Data da baixa do t\u00edtulo (ISO)"
     }
   },
   "required": [
