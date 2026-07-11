@@ -107,12 +107,13 @@ Deno.serve(async (req) => {
 
     // ─── COMPANY: get with plan info ───
     if (operation === 'getCompanyPlan') {
-      const { company_id } = body;
+      const { company_id, user_role } = body;
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
       const ticketCount = tickets.length;
-      const fullAccess = company.ticket_full_access || company.ticket_plan === 'full';
+      const isAdmin = user_role === 'admin';
+      const fullAccess = company.ticket_full_access || company.ticket_plan === 'full' || isAdmin;
       const limit = company.ticket_limit ?? 10;
       return Response.json({ company: { id: company.id, razao_social: company.razao_social, cnpj: company.cnpj, ticket_plan: company.ticket_plan || 'free', ticket_limit: limit, ticket_full_access: fullAccess, is_active: company.is_active }, ticket_count: ticketCount, limit_reached: !fullAccess && ticketCount >= limit });
     }
@@ -141,11 +142,13 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: create ───
     if (operation === 'createTicket') {
-      const { title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments } = body;
+      const { title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments, created_by_role } = body;
+      // Admin tem acesso ilimitado por padrão
+      const isAdmin = created_by_role === 'admin';
       // Verifica limite do plano
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
-      const fullAccess = company.ticket_full_access || company.ticket_plan === 'full';
+      const fullAccess = company.ticket_full_access || company.ticket_plan === 'full' || isAdmin;
       if (!fullAccess) {
         const existingTickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
         const limit = company.ticket_limit ?? 10;

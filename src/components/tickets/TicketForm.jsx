@@ -49,6 +49,7 @@ export default function TicketForm({ users, types, priorities, currentUser, onSa
         assigned_to_name: assignee?.name || "",
         created_by_id: currentUser.id,
         created_by_name: currentUser.name,
+        created_by_role: currentUser.role,
         company_id: currentUser.company_id,
         company_name: currentUser.company_name,
         attachments,

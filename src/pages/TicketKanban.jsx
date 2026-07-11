@@ -34,7 +34,7 @@ export default function TicketKanban() {
         base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id }),
         base44.functions.invoke('ticketSystem', { operation: 'getTypes' }),
         base44.functions.invoke('ticketSystem', { operation: 'getPriorities' }),
-        base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id }),
+        base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id, user_role: user.role }),
       ]);
       setTickets(txRes.data.tickets || []);
       setUsers(usersRes.data.users || []);
