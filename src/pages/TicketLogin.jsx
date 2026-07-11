@@ -20,7 +20,28 @@ export default function TicketLogin() {
   const [showRegister, setShowRegister] = useState(false);
   const [regData, setRegData] = useState({ razao_social: "", cnpj: "", endereco: "", name: "", email: "", password: "" });
 
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [cnpjError, setCnpjError] = useState("");
+
   const maskCNPJ = (v) => v.replace(/\D/g, "").slice(0, 14).replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+
+  const fetchCnpjData = async (cnpjValue) => {
+    const cnpjClean = cnpjValue.replace(/\D/g, "");
+    if (cnpjClean.length !== 14) { setRegData((prev) => ({ ...prev, razao_social: "", endereco: "" })); return; }
+    setCnpjLoading(true);
+    setCnpjError("");
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjClean}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) { setCnpjError("CNPJ não encontrado na Receita."); setCnpjLoading(false); return; }
+      const dados = await res.json();
+      const endereco = [
+        dados.logradouro, dados.numero, dados.complemento, dados.bairro,
+        dados.municipio, dados.uf
+      ].filter(Boolean).join(", ");
+      setRegData((prev) => ({ ...prev, razao_social: dados.razao_social || prev.razao_social, endereco: endereco || prev.endereco }));
+    } catch { setCnpjError("Erro ao consultar CNPJ."); }
+    setCnpjLoading(false);
+  };
 
   const handleCnpj = async () => {
     setError("");
@@ -85,11 +106,16 @@ export default function TicketLogin() {
             </div>
             <div>
               <Label>CNPJ *</Label>
-              <Input value={regData.cnpj} onChange={(e) => setRegData({ ...regData, cnpj: maskCNPJ(e.target.value) })} placeholder="00.000.000/0000-00" />
+              <div className="flex gap-2">
+                <Input value={regData.cnpj} onChange={(e) => { const v = maskCNPJ(e.target.value); setRegData({ ...regData, cnpj: v }); setCnpjError(""); if (v.replace(/\D/g, "").length === 14) fetchCnpjData(v); }} placeholder="00.000.000/0000-00" />
+                {cnpjLoading && <Loader2 className="w-4 h-4 animate-spin mt-2 text-muted-foreground" />}
+              </div>
+              {cnpjError && <p className="text-xs text-destructive mt-1">{cnpjError}</p>}
+              {regData.razao_social && !cnpjError && <p className="text-xs text-emerald-600 mt-1">✓ Empresa encontrada: {regData.razao_social}</p>}
             </div>
             <div>
               <Label>Endereço</Label>
-              <Input value={regData.endereco} onChange={(e) => setRegData({ ...regData, endereco: e.target.value })} />
+              <Input value={regData.endereco} onChange={(e) => setRegData({ ...regData, endereco: e.target.value })} placeholder="Preenchido automaticamente pela Receita" />
             </div>
             <div className="border-t pt-3">
               <p className="text-sm font-medium mb-2">Dados do Administrador</p>
