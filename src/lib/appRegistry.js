@@ -31,6 +31,10 @@ export const APPS = [
     ],
     accent: "#7C3AED",
     previewRoute: "/bingo",
+    screenshots: [
+      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/ce75d5a91_generated_image.png",
+      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/f8a7228d4_generated_image.png",
+    ],
   },
   {
     id: "financeiro",
@@ -59,6 +63,9 @@ export const APPS = [
     ],
     accent: "#059669",
     previewRoute: "/financ",
+    screenshots: [
+      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/e8796aa21_generated_image.png",
+    ],
   },
   {
     id: "sped",
@@ -92,6 +99,9 @@ export const APPS = [
     ],
     accent: "#2563EB",
     previewRoute: "/validador",
+    screenshots: [
+      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/758a3d943_generated_image.png",
+    ],
   },
   {
     id: "chamados",
@@ -116,6 +126,9 @@ export const APPS = [
     ],
     accent: "#DC2626",
     previewRoute: "/chamados",
+    screenshots: [
+      "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/f8a7228d4_generated_image.png",
+    ],
   },
   {
     id: "admin",

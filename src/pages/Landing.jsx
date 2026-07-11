@@ -70,8 +70,15 @@ function AppCard({ app, onOpenPlans, loading }) {
         </ul>
       </div>
 
-      {/* Preview real do aplicativo */}
-      {app.previewRoute && <AppPreview previewRoute={app.previewRoute} accent={app.accent} appName={app.name} />}
+      {/* Vídeo das telas reais + botão tela cheia */}
+      {(app.previewRoute || app.screenshots) && (
+        <AppPreview
+          screenshots={app.screenshots}
+          previewRoute={app.previewRoute}
+          accent={app.accent}
+          appName={app.name}
+        />
+      )}
 
       {/* Plans preview */}
       <div className="px-8 pb-4">
