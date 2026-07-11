@@ -1441,6 +1441,21 @@ Deno.serve(async (req) => {
         }
       };
 
+      if (registro === 'M105' && tipoDetectado === 'CONTRIBUICOES') {
+        // M105 possui campos opcionais vazios — split SEM filtro para preservar índices e contagem
+        const cM105 = linha.split('|');
+        const fM105 = cM105.slice(1, cM105[cM105.length - 1] === '' ? -1 : undefined);
+        if (fM105.length < 9) {
+          avisos.push({
+            linha: linhaAtual, registro: 'M105',
+            mensagem: `Registro M105 incompleto: esperado mínimo de 9 campos, encontrado ${fM105.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // VL_BC_PIS (índice 3), VL_BC_PIS_NC (4), VL_BC_PIS_CUM (5), VL_BC_PIS_TOT (6), QUANT_BC_PIS (7), QUANT_BC_PIS_TOT (8)
+        validarValorNumerico(fM105, 3, 9, 'M105', linhaAtual, erros);
+      }
+
       if (registro === 'M100' && tipoDetectado === 'CONTRIBUICOES') {
         // M100: split SEM filtro para preservar índices (campos opcionais vazios)
         // Layout oficial: |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|QUANT_BC_PIS|ALIQ_PIS_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
@@ -1634,6 +1649,21 @@ Deno.serve(async (req) => {
         validarValorNumerico(campos, 3, 5, 'F200', linhaAtual, erros);
       }
 
+      if (registro === 'M210' && tipoDetectado === 'CONTRIBUICOES') {
+        // M210 possui campos opcionais vazios — split SEM filtro para preservar índices e contagem
+        const cM210 = linha.split('|');
+        const fM210 = cM210.slice(1, cM210[cM210.length - 1] === '' ? -1 : undefined);
+        if (fM210.length < 11) {
+          avisos.push({
+            linha: linhaAtual, registro: 'M210',
+            mensagem: `Registro M210 incompleto: esperado mínimo de 11 campos, encontrado ${fM210.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        // VL_BC_CONT (3), ALIQ_CONT (4), VL_CONT_APUR (5), VL_AJUS_ACRES (6), VL_AJUS_REDUC (7), VL_CONT_DIFER (8), VL_CONT_DEV (9)
+        validarValorNumerico(fM210, 3, 10, 'M210', linhaAtual, erros);
+      }
+
       if (registro === 'M200' && tipoDetectado === 'CONTRIBUICOES') {
         // Apuração PIS — campos numéricos de VL_CONT_APUR até VL_OUT_CRED
         if (campos.length < 12) {
@@ -1659,27 +1689,59 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'M400' && tipoDetectado === 'CONTRIBUICOES') {
-        // Receitas isentas PIS
-        if (campos.length < 5) {
+        // M400 possui campos opcionais vazios — split SEM filtro para preservar índices e contagem
+        const cM400 = linha.split('|');
+        const fM400 = cM400.slice(1, cM400[cM400.length - 1] === '' ? -1 : undefined);
+        if (fM400.length < 5) {
           avisos.push({
             linha: linhaAtual, registro: 'M400',
-            mensagem: `Registro M400 incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro M400 incompleto: esperado mínimo de 5 campos, encontrado ${fM400.length}.`,
             severidade: 'aviso'
           });
         }
-        validarValorNumerico(campos, 3, 4, 'M400', linhaAtual, erros);
+        validarValorNumerico(fM400, 3, 4, 'M400', linhaAtual, erros);
+      }
+
+      if (registro === 'M410' && tipoDetectado === 'CONTRIBUICOES') {
+        // M410 possui campos opcionais vazios — split SEM filtro
+        const cM410 = linha.split('|');
+        const fM410 = cM410.slice(1, cM410[cM410.length - 1] === '' ? -1 : undefined);
+        if (fM410.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'M410',
+            mensagem: `Registro M410 incompleto: esperado mínimo de 4 campos, encontrado ${fM410.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarValorNumerico(fM410, 3, 4, 'M410', linhaAtual, erros);
       }
 
       if (registro === 'M800' && tipoDetectado === 'CONTRIBUICOES') {
-        // Receitas isentas COFINS
-        if (campos.length < 5) {
+        // M800 possui campos opcionais vazios — split SEM filtro para preservar índices e contagem
+        const cM800 = linha.split('|');
+        const fM800 = cM800.slice(1, cM800[cM800.length - 1] === '' ? -1 : undefined);
+        if (fM800.length < 5) {
           avisos.push({
             linha: linhaAtual, registro: 'M800',
-            mensagem: `Registro M800 incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro M800 incompleto: esperado mínimo de 5 campos, encontrado ${fM800.length}.`,
             severidade: 'aviso'
           });
         }
-        validarValorNumerico(campos, 3, 4, 'M800', linhaAtual, erros);
+        validarValorNumerico(fM800, 3, 4, 'M800', linhaAtual, erros);
+      }
+
+      if (registro === 'M810' && tipoDetectado === 'CONTRIBUICOES') {
+        // M810 possui campos opcionais vazios — split SEM filtro
+        const cM810 = linha.split('|');
+        const fM810 = cM810.slice(1, cM810[cM810.length - 1] === '' ? -1 : undefined);
+        if (fM810.length < 4) {
+          avisos.push({
+            linha: linhaAtual, registro: 'M810',
+            mensagem: `Registro M810 incompleto: esperado mínimo de 4 campos, encontrado ${fM810.length}.`,
+            severidade: 'aviso'
+          });
+        }
+        validarValorNumerico(fM810, 3, 4, 'M810', linhaAtual, erros);
       }
 
       // === SPED ECD: I010, I012, I030, I050, I051, I100, I150, I155, I200, I250, I300, I310, I350, I355 ===
