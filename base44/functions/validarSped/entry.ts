@@ -937,34 +937,37 @@ Deno.serve(async (req) => {
       // === SPED FISCAL e CONTRIBUIÇÕES: C100 / C170 ===
 
       if (registro === 'C100' && (tipoDetectado === 'FISCAL' || tipoDetectado === 'CONTRIBUICOES')) {
-        if (campos.length < 29) {
+        // C100 possui campos opcionais vazios — split SEM filtro para preservar índices e contagem correta
+        const cC100 = linha.split('|');
+        const fC100 = cC100.slice(1, cC100[cC100.length - 1] === '' ? -1 : undefined);
+        if (fC100.length < 29) {
           avisos.push({
             linha: linhaAtual, registro: 'C100',
-            mensagem: `Registro C100 com campos insuficientes: esperado mínimo de 29 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro C100 com campos insuficientes: esperado mínimo de 29 campos, encontrado ${fC100.length}.`,
             severidade: 'aviso'
           });
         }
-        if (campos[1] && campos[1] !== '0' && campos[1] !== '1') {
+        if (fC100[1] && fC100[1] !== '0' && fC100[1] !== '1') {
           erros.push({
             linha: linhaAtual, registro: 'C100',
-            mensagem: `IND_OPER inválido: "${campos[1]}" (deve ser 0=Entrada ou 1=Saída).`,
+            mensagem: `IND_OPER inválido: "${fC100[1]}" (deve ser 0=Entrada ou 1=Saída).`,
             severidade: 'erro'
           });
         }
         const codSitValidos = ['00','01','02','03','04','05','06','07','08'];
-        if (campos[5] && !codSitValidos.includes(campos[5])) {
+        if (fC100[5] && !codSitValidos.includes(fC100[5])) {
           erros.push({
             linha: linhaAtual, registro: 'C100',
-            mensagem: `COD_SIT inválido: "${campos[5]}" (deve ser um dos códigos: ${codSitValidos.join(', ')}).`,
+            mensagem: `COD_SIT inválido: "${fC100[5]}" (deve ser um dos códigos: ${codSitValidos.join(', ')}).`,
             severidade: 'erro'
           });
         }
-        if (campos[12]) {
-          const valor = campos[12].replace(',', '.');
+        if (fC100[12]) {
+          const valor = fC100[12].replace(',', '.');
           if (isNaN(parseFloat(valor))) {
             erros.push({
               linha: linhaAtual, registro: 'C100',
-              mensagem: `VL_DOC inválido: "${campos[12]}" não é um valor numérico válido.`,
+              mensagem: `VL_DOC inválido: "${fC100[12]}" não é um valor numérico válido.`,
               severidade: 'erro'
             });
           }
