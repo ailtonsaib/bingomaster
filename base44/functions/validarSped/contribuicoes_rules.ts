@@ -207,6 +207,30 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
     }
   }
 
+  if (registro === '0150') {
+    // 0150 possui campos opcionais vazios (CPF, IE, SU_FRAM) — split SEM filtro para preservar índices
+    // Layout: |0150|COD_PART|NOME|COD_PAIS|CNPJ|CPF|IE|COD_MUN|SU_FRAM|ENDERECO|NUM|COMPL|BAIRRO|
+    const c = linha.split('|');
+    const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
+    // f[0]=0150, f[1]=COD_PART, f[2]=NOME, f[3]=COD_PAIS, f[4]=CNPJ, f[5]=CPF, f[6]=IE, f[7]=COD_MUN
+    // Regra: Inscrição Estadual inválida (para participantes brasileiros COD_PAIS=105 ou vazio)
+    const codPais = f[3] || '';
+    if (codPais === '105' || codPais === '') {
+      const ie = (f[6] || '').toUpperCase().trim();
+      if (ie !== 'ISENTO' && ie !== 'PR' && ie !== '' && !/^\d+$/.test(ie)) {
+        erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Inscrição Estadual inválida.`, severidade: 'erro' });
+      }
+    }
+    // Regra: Código do município inválido (f[7] = COD_MUN)
+    if (f[7] !== undefined && f[7] !== '') {
+      if (!/^\d{7}$/.test(f[7]) && f[7] !== '9999999') {
+        erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Código do município inválido. Utilizar código da "Tabela de Municípios do IBGE".`, severidade: 'erro' });
+      }
+    } else {
+      erros.push({ linha: linhaAtual, registro: '0150', mensagem: `Campo obrigatório para contribuintes domiciliados no Brasil. Preencher com "9999999" caso contrário.`, severidade: 'erro' });
+    }
+  }
+
   if (registro === 'F500') {
     // F500: 1=F500, 2=COD_REC, 3=VL_REC, 4=CST_PIS, 5=VL_BC_PIS, 6=ALIQ_PIS, 7=VL_PIS, 8=CST_COFINS, 9=VL_BC_COFINS, 10=ALIQ_COFINS, 11=VL_COFINS, 12=NAT_REC
     // Regra: Natureza da Receita inválida
@@ -260,6 +284,138 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
     }
     if (temIncompativel) {
       avisos.push({ linha: 0, registro: 'D500', mensagem: `Devem ser informados registros D500 e filhos apenas para as Operações com Direito a Crédito (CST de 50 a 56).`, severidade: 'aviso' });
+    }
+  }
+
+  // Regra: C100 VL_PIS >= soma VL_PIS dos C170 onde CST_PIS != 05 e != 75
+  // Regra: C100 VL_COFINS >= soma VL_COFINS dos C170 onde CST_COFINS != 05 e != 75
+  // Regra: CNPJ da chave do documento eletrônico deve confere com CNPJ/CPF do participante
+  // Regra: Número do documento na chave do CTe deve conferir com NUM_DOC do D100
+  // Regra: D500/D501 NAT_REC inválida para CST 03/04
+  {
+    // Agrupa C170 por documento pai (C100)
+    const c100Docs = {}; // { linhaC100: { vlPis, vlCofins, cnpjPart, numDoc, codPart, indOper } }
+    let currentC100Linha = null;
+    const d100Docs = {}; // { linhaD100: { numDoc, chvCte, codPart } }
+    let currentD100Linha = null;
+    const d500Records = [];
+
+    for (let i = 0; i < linhas.length; i++) {
+      const campos = linhas[i].split('|').filter((c) => c !== '');
+      if (campos.length === 0) continue;
+      const reg = campos[0];
+
+      if (reg === 'C100') {
+        // C100: split sem filtro para preservar índices
+        const c = linhas[i].split('|');
+        const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
+        // f[1]=IND_OPER, f[3]=COD_PART, f[7]=NUM_DOC, f[14]=VL_PIS(TOTAL), f[18]=VL_COFINS(TOTAL)
+        // CNPJ está em COD_PART (0150) — chave do documento está em f[12]=CHV_NFE
+        currentC100Linha = i;
+        c100Docs[i] = {
+          linha: i + 1,
+          indOper: f[1] || '',
+          codPart: f[3] || '',
+          numDoc: f[7] || '',
+          chvNfe: f[12] || '',
+          vlPisC100: f[14] ? parseNum(f[14]) : 0,
+          vlCofinsC100: f[18] ? parseNum(f[18]) : 0,
+          somaPisC170: 0,
+          somaCofinsC170: 0,
+          linhaC170s: []
+        };
+      } else if (reg === 'C170' && currentC100Linha !== null) {
+        // C170: f[24]=CST_PIS, f[29]=VL_PIS, f[30]=CST_COFINS, f[35]=VL_COFINS
+        const c = linhas[i].split('|');
+        const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
+        const cstPis = f[24] || '';
+        const cstCofins = f[30] || '';
+        const vlPis = f[29] ? parseNum(f[29]) : 0;
+        const vlCofins = f[35] ? parseNum(f[35]) : 0;
+        if (c100Docs[currentC100Linha]) {
+          if (cstPis !== '05' && cstPis !== '75') {
+            c100Docs[currentC100Linha].somaPisC170 += (isNaN(vlPis) ? 0 : vlPis);
+          }
+          if (cstCofins !== '05' && cstCofins !== '75') {
+            c100Docs[currentC100Linha].somaCofinsC170 += (isNaN(vlCofins) ? 0 : vlCofins);
+          }
+          c100Docs[currentC100Linha].linhaC170s.push(i + 1);
+        }
+      } else if (reg === 'D100') {
+        // D100: f[1]=IND_OPER, f[3]=COD_PART, f[5]=COD_MOD, f[7]=NUM_DOC, f[11]=CHV_CTE
+        const c = linhas[i].split('|');
+        const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
+        currentD100Linha = i;
+        d100Docs[i] = {
+          linha: i + 1,
+          numDoc: f[7] || '',
+          chvCte: f[11] || '',
+          codMod: f[5] || ''
+        };
+      } else if (reg === 'D500') {
+        // D500: campos[1]=IND_OPER, campos[4]=COD_MOD, campos[7]=NUM_DOC, campos[10]=VL_DOC
+        // D501: campos[1]=CST, campos[8]=NAT_REC
+        d500Records.push({ linha: i + 1, campos });
+      } else if (reg === 'D501') {
+        // D501: 1=D501, 2=CST, 3=COD_REC, 4=VL_BC_PIS, 5=ALIQ_PIS, 6=VL_PIS, 7=VL_BC_COFINS, 8=ALIQ_COFINS, 9=VL_COFINS, 10=NAT_REC
+        if (d500Records.length > 0) {
+          d500Records[d500Records.length - 1].natRecD501 = campos[9] || '';
+          d500Records[d500Records.length - 1].cstD501 = campos[1] || '';
+        }
+      }
+    }
+
+    // Validar C100 vs C170
+    for (const key of Object.keys(c100Docs)) {
+      const doc = c100Docs[key];
+      // VL_PIS: C100 >= soma C170
+      if (doc.vlPisC100 > 0 && doc.somaPisC170 > 0 && doc.vlPisC100 < doc.somaPisC170 - 0.02) {
+        erros.push({ linha: doc.linha, registro: 'C100', mensagem: `Valor inválido. O valor deve ser maior ou igual à soma dos valores do PIS (VL_PIS) dos Itens do Documento (Registros C170) onde CST (CST_PIS) for diferente de 05 e 75.`, severidade: 'erro' });
+      }
+      // VL_COFINS: C100 >= soma C170
+      if (doc.vlCofinsC100 > 0 && doc.somaCofinsC170 > 0 && doc.vlCofinsC100 < doc.somaCofinsC170 - 0.02) {
+        erros.push({ linha: doc.linha, registro: 'C100', mensagem: `Valor inválido. O valor deve ser maior ou igual à soma dos valores da COFINS (VL_COFINS) dos Itens do Documento (Registros C170) onde CST (CST_COFINS) for diferente de 05 e 75.`, severidade: 'erro' });
+      }
+      // CHV_NFE: CNPJ na chave deve confecer com CNPJ do participante
+      if (doc.chvNfe && doc.chvNfe.length >= 22) {
+        const cnpjChave = doc.chvNfe.substring(6, 20);
+        // Buscar CNPJ do participante no 0150
+        const codPart = doc.codPart;
+        if (codPart) {
+          for (const linha of linhas) {
+            const c = linha.split('|').filter((x) => x !== '');
+            if (c[0] === '0150' && c[1] === codPart) {
+              // 0150: 1=0150, 2=COD_PART, 3=NOME, 4=COD_PAIS, 5=CNPJ, 6=IE, 7=COD_MUN
+              const cnpjPart = (c[4] || '').replace(/\D/g, '');
+              if (cnpjPart && cnpjPart.length === 14 && cnpjChave !== cnpjPart) {
+                erros.push({ linha: doc.linha, registro: 'C100', mensagem: `O CNPJ da chave do documento eletrônico (${cnpjChave}) não confere com o CNPJ ou CPF do participante informado (${cnpjPart}).`, severidade: 'erro' });
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Validar D100 CHV_CTE
+    for (const key of Object.keys(d100Docs)) {
+      const doc = d100Docs[key];
+      if (doc.chvCte && doc.chvCte.length >= 34) {
+        const numDocChave = doc.chvCte.substring(25, 34).replace(/^0+/, '');
+        const numDoc = (doc.numDoc || '').replace(/^0+/, '');
+        if (numDocChave && numDoc && numDocChave !== numDoc) {
+          erros.push({ linha: doc.linha, registro: 'D100', mensagem: `O número do documento informado na chave do CTe (${numDocChave}) não confere com o número do documento informado no documento fiscal (${numDoc}).`, severidade: 'erro' });
+        }
+      }
+    }
+
+    // Validar D500/D501 NAT_REC
+    for (const d500 of d500Records) {
+      const cst = d500.cstD501 || '';
+      const natRec = d500.natRecD501 || '';
+      if ((cst === '03' || cst === '04') && natRec !== '' && !/^\d{8}$/.test(natRec)) {
+        erros.push({ linha: d500.linha, registro: 'D500', mensagem: `Natureza da Receita inválida. O valor informado no campo deverá existir em uma das tabelas de acordo com o Código de Situação Tributária: Tabela 4.3.10: Produtos Sujeitos à Incidência Monofásica.`, severidade: 'erro' });
+      }
     }
   }
 
@@ -320,6 +476,21 @@ export function corrigirContribuicoes(linhas) {
     if (reg === 'C170' && partes.length >= 37) {
       // Layout: partes[25]=CST_PIS, [26]=VL_BC_PIS, [27]=ALIQ_PIS, [28]=QUANT_BC_PIS, [29]=ALIQ_PIS_QUANT, [30]=VL_PIS
       //         partes[31]=CST_COFINS, [32]=VL_BC_COFINS, [33]=ALIQ_COFINS, [34]=QUANT_BC_COFINS, [35]=ALIQ_COFINS_QUANT, [36]=VL_COFINS
+      // Auto-fix: CST_COFINS = CST_PIS
+      if (partes[25] && partes[25] !== '' && (!partes[31] || partes[31] === '' || partes[31] !== partes[25])) {
+        partes[31] = partes[25];
+      }
+      // Auto-fix: VL_BC_COFINS = VL_BC_PIS
+      if (partes[26] && partes[26] !== '' && (!partes[32] || partes[32] === '')) {
+        partes[32] = partes[26];
+      }
+      // Auto-fix: Alíquotas básicas para CST=01 (PIS=0.65%, COFINS=3.00%)
+      if (partes[25] === '01' && (!partes[27] || partes[27] === '' || parseNum(partes[27]) === 0)) {
+        partes[27] = '0,65';
+      }
+      if (partes[31] === '01' && (!partes[33] || partes[33] === '' || parseNum(partes[33]) === 0)) {
+        partes[33] = '3,00';
+      }
       // VL_PIS = VL_BC_PIS x ALIQ_PIS / 100
       if (partes[26] && partes[27] && partes[26] !== '' && partes[27] !== '') {
         const bc = parseNum(partes[26]); const aliq = parseNum(partes[27]);
@@ -362,6 +533,22 @@ export function corrigirContribuicoes(linhas) {
       // COD_MUN ausente/inválido → "9999999"
       if (partes[7] === undefined || partes[7] === '' || !/^\d{7}$/.test(partes[7])) {
         partes[7] = '9999999';
+      }
+      return partes.join('|');
+    }
+
+    if (reg === '0150' && partes.length >= 9) {
+      // Layout: partes[1]=0150, [2]=COD_PART, [3]=NOME, [4]=COD_PAIS, [5]=CNPJ, [6]=CPF, [7]=IE, [8]=COD_MUN
+      // IE inválida → "ISENTO"
+      if (partes[7] !== undefined && partes[7] !== '') {
+        const ie = partes[7].toUpperCase().trim();
+        if (ie !== 'ISENTO' && ie !== 'PR' && !/^\d+$/.test(ie)) {
+          partes[7] = 'ISENTO';
+        }
+      }
+      // COD_MUN ausente/inválido → "9999999"
+      if (partes[8] === undefined || partes[8] === '' || !/^\d{7}$/.test(partes[8])) {
+        partes[8] = '9999999';
       }
       return partes.join('|');
     }

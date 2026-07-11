@@ -938,6 +938,9 @@ Deno.serve(async (req) => {
           });
         }
         validarCpfCnpj(campos[4], '0150', linhaAtual, erros, 'CPF/CNPJ');
+        if (tipoDetectado === 'CONTRIBUICOES') {
+          validarDetalheContribuicoes('0150', linha, campos, linhaAtual, erros, avisos);
+        }
       }
 
       if (registro === '0200') {
