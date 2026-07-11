@@ -1,0 +1,46 @@
+{
+  "name": "FinanceContact",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio propriet\u00e1rio"
+    },
+    "razao_social": {
+      "type": "string",
+      "description": "Raz\u00e3o Social"
+    },
+    "nome_fantasia": {
+      "type": "string",
+      "description": "Nome Fantasia"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ (apenas n\u00fameros)"
+    },
+    "endereco": {
+      "type": "string",
+      "description": "Endere\u00e7o completo (rua, n\u00famero, bairro, cidade/UF)"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "cliente",
+        "fornecedor",
+        "ambos"
+      ],
+      "default": "cliente",
+      "description": "Tipo: cliente, fornecedor ou ambos"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "razao_social",
+    "tipo"
+  ]
+}

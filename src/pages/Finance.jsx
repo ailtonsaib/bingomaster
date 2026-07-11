@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Wallet, LogOut, KeyRound, Receipt, Building2, Landmark, Users } from "lucide-react";
 import { getPortalUser, setPortalUser, clearPortalUser } from "@/lib/portalSession";
 import LockScreen from "@/components/finance/LockScreen";
 import PlanInfoCard from "@/components/finance/PlanInfoCard";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import CostCenterManager from "@/components/finance/CostCenterManager";
 import BankAccountManager from "@/components/finance/BankAccountManager";
+import ContactManager from "@/components/finance/ContactManager";
 
 export default function Finance() {
   const navigate = useNavigate();
@@ -178,6 +179,10 @@ export default function Finance() {
           <button onClick={() => setActiveTab("bankaccounts")}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "bankaccounts" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             <Landmark className="w-4 h-4" /> Contas Bancárias
+          </button>
+          <button onClick={() => setActiveTab("contacts")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "contacts" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <Users className="w-4 h-4" /> Clientes & Fornecedores
           </button>
         </div>
 
@@ -350,6 +355,10 @@ export default function Finance() {
 
         {activeTab === "bankaccounts" && (
           <BankAccountManager userEmail={user.email} />
+        )}
+
+        {activeTab === "contacts" && (
+          <ContactManager userEmail={user.email} />
         )}
       </div>
     </div>

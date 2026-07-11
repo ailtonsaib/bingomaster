@@ -393,6 +393,43 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── CONTACTS: list ───
+    if (operation === 'getContacts') {
+      const { email } = body;
+      const items = await base44.asServiceRole.entities.FinanceContact.filter(
+        { user_email: email },
+        '-created_date'
+      );
+      return Response.json({ contacts: items });
+    }
+
+    // ─── CONTACTS: save (create or update) ───
+    if (operation === 'saveContact') {
+      const { email, razao_social, nome_fantasia, cnpj, endereco, tipo, is_active, id } = body;
+      if (!email || !razao_social || !tipo) {
+        return Response.json({ error: 'Email, razão social e tipo são obrigatórios' }, { status: 400 });
+      }
+      if (id) {
+        const updated = await base44.asServiceRole.entities.FinanceContact.update(id, {
+          razao_social, nome_fantasia: nome_fantasia || undefined, cnpj: cnpj || undefined,
+          endereco: endereco || undefined, tipo, is_active: is_active !== false,
+        });
+        return Response.json({ contact: updated });
+      }
+      const created = await base44.asServiceRole.entities.FinanceContact.create({
+        user_email: email, razao_social, nome_fantasia: nome_fantasia || undefined,
+        cnpj: cnpj || undefined, endereco: endereco || undefined, tipo, is_active: is_active !== false,
+      });
+      return Response.json({ contact: created });
+    }
+
+    // ─── CONTACTS: delete ───
+    if (operation === 'deleteContact') {
+      const { id } = body;
+      await base44.asServiceRole.entities.FinanceContact.delete(id);
+      return Response.json({ success: true });
+    }
+
     // ─── COST CENTERS: list ───
     if (operation === 'getCostCenters') {
       const { email } = body;
