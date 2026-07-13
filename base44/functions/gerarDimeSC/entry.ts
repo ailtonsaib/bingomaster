@@ -74,31 +74,37 @@ Deno.serve(async (req) => {
 
       if (reg === 'E110' && !rE110) {
         // Layout oficial E110:
-        // p[2]=VL_TOT_DEB_ICMS (débitos do imposto)
-        // p[3]=VL_DEB_AJ (ajustes a débito - doc fiscal)
-        // p[4]=VL_AJ (ajustes a débito)
-        // p[5]=VL_TOT_DEB (total débitos = p[2]+p[3]+p[4])
-        // p[6]=VL_SLD_CRED_ANT (saldo credor período anterior)
-        // p[7]=VL_TOT_CRED_ICMS (créditos do imposto)
-        // p[8]=VL_CRED_AJ (ajustes a crédito - doc fiscal)
-        // p[9]=VL_AJ_CRED (ajustes a crédito)
-        // p[10]=VL_TOT_CRED (total créditos = p[7]+p[8]+p[9])
-        // p[11]=VL_SLD_DEVEDOR (saldo devedor / A RECOLHER)
-        // p[12]=VL_SLD_CRED_TRANSPORTAR (saldo credor a transportar)
-        // p[13]=DEB_ESP (débitos especiais)
+        // p[2]=VL_TOT_DEB_ICMS, p[3]=VL_DEB_AJ, p[4]=VL_AJ, p[5]=VL_TOT_DEB
+        // p[6]=VL_SLD_CRED_ANT, p[7]=VL_TOT_CRED_ICMS, p[8]=VL_CRED_AJ, p[9]=VL_AJ_CRED
+        // p[10]=VL_TOT_CRED, p[11]=VL_SLD_DEVEDOR, p[12]=VL_SLD_CRED_TRANSPORTAR, p[13]=DEB_ESP
+        const debImposto = parseNum(p[2]);
+        const debAjustosDocFiscal = parseNum(p[3]);
+        const debAjustos = parseNum(p[4]);
+        const saldoCredorAnt = parseNum(p[6]);
+        const credImposto = parseNum(p[7]);
+        const credAjustosDocFiscal = parseNum(p[8]);
+        const credAjustos = parseNum(p[9]);
+        const saldoDevedor = parseNum(p[11]);
+        const saldoCredorTransportar = parseNum(p[12]);
+        const debEspeciais = parseNum(p[13]);
+
+        // Alguns ERPs deixam p[5] e p[10] vazios — calcular a partir dos componentes
+        const totDebitos = parseNum(p[5]) || (debImposto + debAjustosDocFiscal + debAjustos);
+        const totCreditos = parseNum(p[10]) || (credImposto + credAjustosDocFiscal + credAjustos);
+
         rE110 = {
-          debImposto: parseNum(p[2]),
-          debAjustosDocFiscal: parseNum(p[3]),
-          debAjustos: parseNum(p[4]),
-          totDebitos: parseNum(p[5]),
-          saldoCredorAnt: parseNum(p[6]),
-          credImposto: parseNum(p[7]),
-          credAjustosDocFiscal: parseNum(p[8]),
-          credAjustos: parseNum(p[9]),
-          totCreditos: parseNum(p[10]),
-          saldoDevedor: parseNum(p[11]),
-          saldoCredorTransportar: parseNum(p[12]),
-          debEspeciais: parseNum(p[13])
+          debImposto,
+          debAjustosDocFiscal,
+          debAjustos,
+          totDebitos,
+          saldoCredorAnt,
+          credImposto,
+          credAjustosDocFiscal,
+          credAjustos,
+          totCreditos,
+          saldoDevedor,
+          saldoCredorTransportar,
+          debEspeciais
         };
       }
 
