@@ -19,6 +19,7 @@ export default function TicketLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showRegister, setShowRegister] = useState(false);
+  const [directLogin, setDirectLogin] = useState(false);
   const [regData, setRegData] = useState({ razao_social: "", cnpj: "", endereco: "", name: "", email: "", password: "" });
 
   const [cnpjLoading, setCnpjLoading] = useState(false);
@@ -65,7 +66,9 @@ export default function TicketLogin() {
     if (!email || !password) { setError("Preencha email e senha"); return; }
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('ticketSystem', { operation: 'login', cnpj, email, password });
+      const op = directLogin ? 'loginByEmail' : 'login';
+      const payload = directLogin ? { operation: op, email, password } : { operation: op, cnpj, email, password };
+      const res = await base44.functions.invoke('ticketSystem', payload);
       setTicketUser(res.data.user);
       navigate('/chamados/kanban');
     } catch (err) {
@@ -123,6 +126,7 @@ export default function TicketLogin() {
   const switchMode = (newMode) => {
     setMode(newMode);
     setStep(1);
+    setDirectLogin(false);
     setError("");
     setEmail("");
     setPassword("");
@@ -187,12 +191,12 @@ export default function TicketLogin() {
           </div>
           <CardTitle>
             {mode === "empresa"
-              ? (step === 1 ? "Acesso da Empresa" : `Bem-vindo à ${companyName.name || companyName}`)
+              ? (step === 1 ? "Acesso da Empresa" : directLogin ? "Login direto" : `Bem-vindo à ${companyName.name || companyName}`)
               : (step === 1 ? "Acesso do Cliente" : `Bem-vindo, ${companyName.name || ""}`)}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             {mode === "empresa"
-              ? (step === 1 ? "Informe o CNPJ da sua empresa" : "Faça login para continuar")
+              ? (step === 1 ? "Informe o CNPJ ou entre com seu email" : "Faça login para continuar")
               : (step === 1 ? "Informe seu email de acesso" : "Digite sua senha para entrar")}
           </p>
         </CardHeader>
@@ -225,6 +229,13 @@ export default function TicketLogin() {
               <Button className="w-full" onClick={handleCnpj} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Building2 className="w-4 h-4" />} Continuar
               </Button>
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
+              </div>
+              <Button variant="outline" className="w-full" onClick={() => { setDirectLogin(true); setStep(2); setError(""); }}>
+                <Mail className="w-4 h-4" /> Entrar com email e senha
+              </Button>
               <Button variant="link" className="w-full" onClick={() => setShowRegister(true)}>
                 Cadastrar nova empresa
               </Button>
@@ -233,9 +244,14 @@ export default function TicketLogin() {
 
           {mode === "empresa" && step === 2 && (
             <>
+              {!directLogin && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
+                  <p className="text-sm font-medium">{companyName.name}</p>
+                </div>
+              )}
               <div>
                 <Label>Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" autoFocus={directLogin} />
               </div>
               <div>
                 <Label>Senha</Label>
@@ -245,7 +261,7 @@ export default function TicketLogin() {
               <Button className="w-full" onClick={handleLogin} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Entrar
               </Button>
-              <Button variant="ghost" className="w-full" onClick={() => { setStep(1); setError(""); }}>
+              <Button variant="ghost" className="w-full" onClick={() => { setStep(1); setDirectLogin(false); setError(""); }}>
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </Button>
             </>
