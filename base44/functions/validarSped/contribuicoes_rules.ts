@@ -766,9 +766,9 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
         erros.push({ linha: doc.linha, registro: 'C100', mensagem: `Valor inválido. O valor deve ser maior ou igual à soma dos valores da COFINS (VL_COFINS) dos Itens do Documento (Registros C170) onde CST (CST_COFINS) for diferente de 05 e 75.`, severidade: 'erro' });
       }
       // CHV_NFE: CNPJ na chave deve conferir com CNPJ do participante
-      // IND_EMIT=0 → participante é o emitente → CNPJ da chave deve conferir
-      // IND_EMIT=1 → participante é o destinatário → CNPJ da chave é do emitente (terceiro) → NÃO comparar
-      if (doc.chvNfe && doc.chvNfe.length >= 22 && doc.indEmit === '0') {
+      // IND_EMIT=0 (Emissão própria) → empresa é a emitente → CNPJ da chave é da empresa → NÃO comparar com participante
+      // IND_EMIT=1 (Terceiros) → participante é o emitente (terceiro) → CNPJ da chave deve conferir com participante
+      if (doc.chvNfe && doc.chvNfe.length >= 22 && doc.indEmit === '1') {
         const cnpjChave = doc.chvNfe.substring(6, 20);
         const codPart = doc.codPart;
         if (codPart) {

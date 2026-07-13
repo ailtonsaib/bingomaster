@@ -1062,9 +1062,7 @@ Deno.serve(async (req) => {
           if (isNaN(v)) erros.push({ linha: linhaAtual, registro: 'E116', mensagem: `Valor numérico inválido em VL_OR: "${vlOr}".`, severidade: 'erro' });
         }
         if (dtVcto && dtVcto.trim() !== '') validarData8(dtVcto.trim(), 'E116', linhaAtual, erros);
-        if (!codRec || codRec.trim() === '') {
-          erros.push({ linha: linhaAtual, registro: 'E116', mensagem: `Campo obrigatório. COD_REC (posição 5) não informado. Registro/Campo não informado ou inválido.`, severidade: 'erro' });
-        }
+        // COD_REC é opcional no leiaute EFD-ICMS/IPI — validar apenas formato se preenchido
       }
 
       // === SPED FISCAL: Bloco B (Documentos Fiscais - Serviços/ISS) ===
