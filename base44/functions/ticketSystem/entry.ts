@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: create ───
     if (operation === 'createTicket') {
-      const { title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments, created_by_role } = body;
+      const { title, description, company_id, company_name, type_id, type_name, module_id, module_name, submodule_id, submodule_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments, created_by_role } = body;
       // Admin tem acesso ilimitado por padrão
       const isAdmin = created_by_role === 'admin';
       // Verifica limite do plano
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
       }
       const now = new Date().toISOString();
       const ticket = await base44.asServiceRole.entities.SupportTicket.create({
-        title, description, company_id, company_name, type_id, type_name, priority_id, priority_name, priority_level,
+        title, description, company_id, company_name, type_id, type_name, module_id: module_id || '', module_name: module_name || '', submodule_id: submodule_id || '', submodule_name: submodule_name || '', priority_id, priority_name, priority_level,
         status: 'aberto', created_by_id, created_by_name,
         assigned_to_id: assigned_to_id || '', assigned_to_name: assigned_to_name || '',
         aberto_at: now,
@@ -271,6 +271,38 @@ Deno.serve(async (req) => {
     // ─── COMMENT: delete ───
     if (operation === 'deleteComment') {
       await base44.asServiceRole.entities.TicketComment.delete(body.comment_id);
+      return Response.json({ success: true });
+    }
+
+    // ─── MODULES: CRUD ───
+    if (operation === 'getModules') {
+      const modules = await base44.asServiceRole.entities.TicketModule.list();
+      return Response.json({ modules });
+    }
+    if (operation === 'createModule') {
+      const m = await base44.asServiceRole.entities.TicketModule.create({ name: body.name, description: body.description || '', is_active: true });
+      return Response.json({ module: m });
+    }
+    if (operation === 'deleteModule') {
+      await base44.asServiceRole.entities.TicketModule.delete(body.module_id);
+      return Response.json({ success: true });
+    }
+
+    // ─── SUBMODULES: CRUD ───
+    if (operation === 'getSubModules') {
+      const submodules = await base44.asServiceRole.entities.TicketSubModule.list();
+      return Response.json({ submodules });
+    }
+    if (operation === 'createSubModule') {
+      const { name, module_id } = body;
+      if (!name || !module_id) return Response.json({ error: 'Nome e módulo são obrigatórios' }, { status: 400 });
+      const mod = await base44.asServiceRole.entities.TicketModule.get(module_id);
+      if (!mod) return Response.json({ error: 'Módulo não encontrado' }, { status: 404 });
+      const sm = await base44.asServiceRole.entities.TicketSubModule.create({ name, module_id, module_name: mod.name, is_active: true });
+      return Response.json({ submodule: sm });
+    }
+    if (operation === 'deleteSubModule') {
+      await base44.asServiceRole.entities.TicketSubModule.delete(body.submodule_id);
       return Response.json({ success: true });
     }
 

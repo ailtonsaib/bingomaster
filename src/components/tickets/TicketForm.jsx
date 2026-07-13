@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { X, Paperclip, Loader2, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
-export default function TicketForm({ users, types, priorities, currentUser, isRequester, onSave, onCancel }) {
+export default function TicketForm({ users, types, priorities, modules, submodules, currentUser, isRequester, onSave, onCancel }) {
   const [form, setForm] = useState({
-    title: "", description: "", type_id: "", priority_id: "", assigned_to_id: "",
+    title: "", description: "", type_id: "", priority_id: "", assigned_to_id: "", module_id: "", submodule_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState([]);
@@ -37,11 +37,17 @@ export default function TicketForm({ users, types, priorities, currentUser, isRe
       const type = types.find((t) => t.id === form.type_id);
       const priority = priorities.find((p) => p.id === form.priority_id);
       const assignee = users.find((u) => u.id === form.assigned_to_id);
+      const mod = modules.find((m) => m.id === form.module_id);
+      const sub = submodules.find((s) => s.id === form.submodule_id);
       await onSave({
         title: form.title,
         description: form.description,
         type_id: form.type_id || "",
         type_name: type?.name || "",
+        module_id: form.module_id || "",
+        module_name: mod?.name || "",
+        submodule_id: form.submodule_id || "",
+        submodule_name: sub?.name || "",
         priority_id: form.priority_id || "",
         priority_name: priority?.name || "",
         priority_level: priority?.level || 0,
@@ -75,6 +81,22 @@ export default function TicketForm({ users, types, priorities, currentUser, isRe
           <div>
             <Label>Descrição</Label>
             <textarea className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px]" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Módulo</Label>
+              <select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.module_id} onChange={(e) => setForm({ ...form, module_id: e.target.value, submodule_id: "" })}>
+                <option value="">Selecione...</option>
+                {modules.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Sub-módulo</Label>
+              <select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.submodule_id} onChange={(e) => setForm({ ...form, submodule_id: e.target.value })} disabled={!form.module_id}>
+                <option value="">{form.module_id ? "Selecione..." : "Escolha um módulo primeiro"}</option>
+                {submodules.filter((s) => s.module_id === form.module_id).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

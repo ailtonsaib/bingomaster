@@ -18,6 +18,8 @@ export default function TicketKanban() {
   const [users, setUsers] = useState([]);
   const [types, setTypes] = useState([]);
   const [priorities, setPriorities] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [submodules, setSubmodules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -32,17 +34,21 @@ export default function TicketKanban() {
     if (!user) { navigate("/chamados"); return; }
     setLoading(true);
     try {
-      const [txRes, usersRes, typesRes, priRes, planRes] = await Promise.all([
+      const [txRes, usersRes, typesRes, priRes, modRes, subModRes, planRes] = await Promise.all([
         base44.functions.invoke('ticketSystem', { operation: 'getTickets', company_id: user.company_id }),
         base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id }),
         base44.functions.invoke('ticketSystem', { operation: 'getTypes' }),
         base44.functions.invoke('ticketSystem', { operation: 'getPriorities' }),
+        base44.functions.invoke('ticketSystem', { operation: 'getModules' }),
+        base44.functions.invoke('ticketSystem', { operation: 'getSubModules' }),
         base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id, user_role: user.role }),
       ]);
       setTickets(txRes.data.tickets || []);
       setUsers(usersRes.data.users || []);
       setTypes(typesRes.data.types || []);
       setPriorities(priRes.data.priorities || []);
+      setModules(modRes.data.modules || []);
+      setSubmodules(subModRes.data.submodules || []);
       setCompanyPlan(planRes.data);
     } catch (e) { console.error("Erro:", e); }
     setLoading(false);
@@ -168,7 +174,7 @@ export default function TicketKanban() {
       </div>
 
       {showForm && (
-        <TicketForm users={users} types={types} priorities={priorities} currentUser={user} isRequester={isRequester} onSave={handleCreate} onCancel={() => setShowForm(false)} />
+        <TicketForm users={users} types={types} priorities={priorities} modules={modules} submodules={submodules} currentUser={user} isRequester={isRequester} onSave={handleCreate} onCancel={() => setShowForm(false)} />
       )}
 
       {selectedTicket && (

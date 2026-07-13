@@ -116,6 +116,8 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{STATUS_LABELS[ticket.status]}</Badge>
             {ticket.type_name && <Badge variant="outline">{ticket.type_name}</Badge>}
+            {ticket.module_name && <Badge variant="outline" className="border-primary/30">{ticket.module_name}</Badge>}
+            {ticket.submodule_name && <Badge variant="secondary">{ticket.submodule_name}</Badge>}
             {ticket.priority_name && <Badge variant="outline" className="border-primary/30">{ticket.priority_name}</Badge>}
             {ticket.assigned_to_name && <Badge variant="outline" className="gap-1"><UserCheck className="w-3 h-3" />{ticket.assigned_to_name}</Badge>}
           </div>

@@ -26,6 +26,22 @@
       "type": "string",
       "description": "Nome do tipo"
     },
+    "module_id": {
+      "type": "string",
+      "description": "ID do m\u00f3dulo"
+    },
+    "module_name": {
+      "type": "string",
+      "description": "Nome do m\u00f3dulo"
+    },
+    "submodule_id": {
+      "type": "string",
+      "description": "ID do sub-m\u00f3dulo"
+    },
+    "submodule_name": {
+      "type": "string",
+      "description": "Nome do sub-m\u00f3dulo"
+    },
     "priority_id": {
       "type": "string",
       "description": "ID da prioridade"

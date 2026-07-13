@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock } from "lucide-react";
+import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock, Boxes } from "lucide-react";
+import { ModuleManager } from "@/components/tickets/ModuleManager";
 import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
 function clearPortalUser() { clearTicketUser(); }
 
@@ -51,6 +52,7 @@ export default function TicketAdmin() {
         <div className="flex gap-2 mb-6 border-b">
           {[
             { key: "users", label: "Clientes e Usuários", icon: Users },
+            { key: "modules", label: "Módulos e Sub-módulos", icon: Boxes },
             { key: "types", label: "Tipos de Chamado", icon: Tag },
             { key: "priorities", label: "Prioridades", icon: Flag },
             ...(user.role === "admin" ? [{ key: "companies", label: "Empresas", icon: Building2 }] : []),
@@ -63,6 +65,7 @@ export default function TicketAdmin() {
         </div>
 
         {tab === "users" && <UserManager user={user} />}
+        {tab === "modules" && <ModuleManager />}
         {tab === "types" && <TypeManager />}
         {tab === "priorities" && <PriorityManager />}
         {tab === "companies" && <CompanyManager user={user} />}

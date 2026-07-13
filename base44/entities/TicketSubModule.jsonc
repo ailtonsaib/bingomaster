@@ -1,0 +1,27 @@
+{
+  "name": "TicketSubModule",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do sub-m\u00f3dulo"
+    },
+    "module_id": {
+      "type": "string",
+      "description": "ID do m\u00f3dulo vinculado"
+    },
+    "module_name": {
+      "type": "string",
+      "description": "Nome do m\u00f3dulo vinculado (cache)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "name",
+    "module_id"
+  ]
+}
