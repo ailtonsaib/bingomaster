@@ -19,28 +19,13 @@ export default function TicketCard({ ticket, index, onClick, readOnly }) {
           {...(provided?.draggableProps || {})}
           {...(provided?.dragHandleProps || {})}
           onClick={onClick}
-          className={`bg-card border rounded-lg p-3 cursor-pointer transition-shadow hover:shadow-md ${snapshot?.isDragging ? "shadow-lg ring-2 ring-primary/30" : ""}`}
+          className={`bg-card border rounded-md px-2.5 py-2 cursor-pointer transition-shadow hover:shadow-md ${snapshot?.isDragging ? "shadow-lg ring-2 ring-primary/30" : ""}`}
         >
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-sm font-medium leading-tight">{ticket.title}</p>
-            {ticket.priority_name && (
-              <Badge variant="outline" className={`text-[10px] shrink-0 ${priorityColor}`}>
-                {ticket.priority_name}
-              </Badge>
-            )}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-xs text-muted-foreground font-mono shrink-0">#{ticket.id?.slice(-4)}</span>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: priorityColor.includes('red') ? '#ef4444' : priorityColor.includes('orange') ? '#f97316' : priorityColor.includes('yellow') ? '#eab308' : priorityColor.includes('blue') ? '#3b82f6' : '#9ca3af' }} />
           </div>
-          {ticket.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{ticket.description}</p>
-          )}
-          <div className="flex flex-wrap gap-1 mb-1">
-            {ticket.type_name && (
-              <Badge variant="secondary" className="text-[10px]">{ticket.type_name}</Badge>
-            )}
-          </div>
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>{ticket.assigned_to_name || "Sem responsável"}</span>
-            <span>#{ticket.id?.slice(-4)}</span>
-          </div>
+          <p className="text-xs font-medium leading-tight truncate mt-0.5">{ticket.title}</p>
         </div>
   );
 

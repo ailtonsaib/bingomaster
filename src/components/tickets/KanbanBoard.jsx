@@ -26,13 +26,13 @@ export default function KanbanBoard({ tickets, onMove, onTicketClick, readOnly }
         {COLUMNS.map((col) => {
           const colTickets = tickets.filter((t) => t.status === col.id);
           return (
-            <div key={col.id} className="flex-shrink-0 w-72">
+            <div key={col.id} className="flex-shrink-0 w-48">
               <div className="flex items-center gap-2 mb-2 px-1">
                 <div className={`w-2.5 h-2.5 rounded-full ${col.color}`} />
                 <h3 className="text-sm font-semibold">{col.title}</h3>
                 <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{colTickets.length}</span>
               </div>
-              <div className="space-y-2 min-h-[200px] p-2 rounded-lg bg-muted/30">
+              <div className="space-y-1.5 min-h-[200px] p-1.5 rounded-lg bg-muted/30">
                 {colTickets.map((ticket) => (
                   <TicketCard key={ticket.id} ticket={ticket} index={0} onClick={() => onTicketClick(ticket)} readOnly />
                 ))}
@@ -53,7 +53,7 @@ export default function KanbanBoard({ tickets, onMove, onTicketClick, readOnly }
         {COLUMNS.map((col) => {
           const colTickets = tickets.filter((t) => t.status === col.id);
           return (
-            <div key={col.id} className="flex-shrink-0 w-72">
+            <div key={col.id} className="flex-shrink-0 w-48">
               <div className="flex items-center gap-2 mb-2 px-1">
                 <div className={`w-2.5 h-2.5 rounded-full ${col.color}`} />
                 <h3 className="text-sm font-semibold">{col.title}</h3>
@@ -64,7 +64,7 @@ export default function KanbanBoard({ tickets, onMove, onTicketClick, readOnly }
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-2 min-h-[200px] p-2 rounded-lg transition-colors ${snapshot.isDraggingOver ? "bg-primary/5" : "bg-muted/30"}`}
+                    className={`space-y-1.5 min-h-[200px] p-1.5 rounded-lg transition-colors ${snapshot.isDraggingOver ? "bg-primary/5" : "bg-muted/30"}`}
                   >
                     {colTickets.map((ticket, idx) => (
                       <TicketCard key={ticket.id} ticket={ticket} index={idx} onClick={() => onTicketClick(ticket)} />
