@@ -9,6 +9,7 @@ import { base44 } from "@/api/base44Client";
 export default function TicketForm({ users, types, priorities, modules, submodules, currentUser, isRequester, onSave, onCancel }) {
   const [form, setForm] = useState({
     title: "", description: "", type_id: "", priority_id: "", assigned_to_id: "", module_id: "", submodule_id: "",
+    requester_name: currentUser?.name || "",
   });
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState([]);
@@ -32,6 +33,7 @@ export default function TicketForm({ users, types, priorities, modules, submodul
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
+    if (isRequester && !form.requester_name.trim()) return;
     setSaving(true);
     try {
       const type = types.find((t) => t.id === form.type_id);
@@ -54,7 +56,7 @@ export default function TicketForm({ users, types, priorities, modules, submodul
         assigned_to_id: form.assigned_to_id || "",
         assigned_to_name: assignee?.name || "",
         created_by_id: currentUser.id,
-        created_by_name: currentUser.name,
+        created_by_name: isRequester ? form.requester_name.trim() : currentUser.name,
         created_by_role: currentUser.role,
         company_id: currentUser.company_id,
         company_name: currentUser.company_name,
@@ -126,8 +128,8 @@ export default function TicketForm({ users, types, priorities, modules, submodul
           {isRequester && (
             <div className="space-y-3">
               <div>
-                <Label>Solicitante</Label>
-                <Input value={currentUser?.name || ""} disabled className="bg-muted/30" />
+                <Label>Solicitante *</Label>
+                <Input value={form.requester_name} onChange={(e) => setForm({ ...form, requester_name: e.target.value })} placeholder="Nome de quem está abrindo o chamado" />
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
@@ -159,7 +161,7 @@ export default function TicketForm({ users, types, priorities, modules, submodul
             )}
           </div>
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1" onClick={handleSubmit} disabled={saving || uploading || !form.title.trim()}>{saving ? "Salvando..." : "Criar Chamado"}</Button>
+            <Button className="flex-1" onClick={handleSubmit} disabled={saving || uploading || !form.title.trim() || (isRequester && !form.requester_name.trim())}>{saving ? "Salvando..." : "Criar Chamado"}</Button>
             <Button variant="outline" onClick={onCancel}>Cancelar</Button>
           </div>
         </CardContent>
