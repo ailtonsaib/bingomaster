@@ -65,7 +65,7 @@ export default function TicketLogin() {
     try {
       const res = await base44.functions.invoke('ticketSystem', { operation: 'login', cnpj, email, password });
       setTicketUser(res.data.user);
-      navigate('/tickets/kanban');
+      navigate('/chamados/kanban');
     } catch (err) {
       setError(err.response?.data?.error || "Erro ao fazer login");
     }
@@ -82,7 +82,7 @@ export default function TicketLogin() {
       const company = companyRes.data.company;
       const userRes = await base44.functions.invoke('ticketSystem', { operation: 'createUser', name, email: regEmail, password: regPassword, company_id: company.id, role: 'admin' });
       setTicketUser(userRes.data.user);
-      navigate('/tickets/kanban');
+      navigate('/chamados/kanban');
     } catch (err) {
       setError(err.response?.data?.error || "Erro ao cadastrar");
     }
