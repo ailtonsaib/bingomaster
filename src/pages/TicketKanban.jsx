@@ -14,6 +14,8 @@ export default function TicketKanban() {
   const navigate = useNavigate();
   const [user, setUser] = useState(getTicketUser());
   const isRequester = user?.role === "requester";
+  const isAgent = user?.role === "agent";
+  const canManage = !isRequester && !isAgent;
   const [tickets, setTickets] = useState([]);
   const [users, setUsers] = useState([]);
   const [types, setTypes] = useState([]);
@@ -114,6 +116,7 @@ export default function TicketKanban() {
                 {user.role === "system_admin" ? "Todas as Empresas" : user.company_name} · {user.name}
                 {user.role === "system_admin" && <span className="ml-1 text-primary">· Admin do Sistema</span>}
                 {user.role === "company_admin" && <span className="ml-1 text-primary">· Admin da Empresa</span>}
+                {isAgent && <span className="ml-1 text-primary">· Atendente</span>}
                 {isRequester && <span className="ml-1 text-primary">· Cliente</span>}
               </p>
             </div>
@@ -175,7 +178,7 @@ export default function TicketKanban() {
       )}
 
       <div className="p-4">
-        <KanbanBoard tickets={filtered} onMove={isRequester ? undefined : handleMove} onTicketClick={setSelectedTicket} readOnly={isRequester} />
+        <KanbanBoard tickets={filtered} onMove={canManage ? handleMove : undefined} onTicketClick={setSelectedTicket} readOnly={isRequester || isAgent} />
       </div>
 
       {showForm && (
@@ -187,9 +190,9 @@ export default function TicketKanban() {
           ticket={selectedTicket}
           users={users}
           currentUser={user}
-          onMove={isRequester ? undefined : handleMove}
-          onTransfer={isRequester ? undefined : handleTransfer}
-          onDelete={isRequester ? undefined : handleDelete}
+          onMove={canManage ? handleMove : undefined}
+          onTransfer={canManage ? handleTransfer : undefined}
+          onDelete={canManage ? handleDelete : undefined}
           onClose={() => setSelectedTicket(null)}
         />
       )}
