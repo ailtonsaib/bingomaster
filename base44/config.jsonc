@@ -1,5 +1,5 @@
 {
-  "name": "BingoPremier",
+  "name": "SoftPremier",
   "site": {
     "installCommand": "npm install",
     "buildCommand": "npm run build",
