@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { XMLParser } from 'npm:fast-xml-parser@4.5.1';
 import { validarDimeSC } from './dime_sc.ts';
 import { validarDetalheContribuicoes, validarCruzadaContribuicoes, corrigirContribuicoes, corrigirC100Totais } from './contribuicoes_rules.ts';
+import { validarCruzadaFiscal, construirMapaParticipantes } from './fiscal_rules.ts';
 
 // ===================== REGISTROS REINF (XML) =====================
 // Validação conforme Guia Prático da EFD-REINF
@@ -896,6 +897,9 @@ Deno.serve(async (req) => {
 
     // --- 4. Segunda passada: validações específicas por registro ---
     linhaAtual = 0;
+    let c100ChvNfeMap: Array<{linha: number; codPart: string; cnpjChave: string}> | null = null;
+    const part0150Map = construirMapaParticipantes(linhas);
+
     for (const linha of linhas) {
       linhaAtual++;
       const campos = linha.split('|').filter((c) => c !== '');
@@ -997,6 +1001,20 @@ Deno.serve(async (req) => {
             });
           }
         }
+        // Validar CHV_NFE (posição 8 no fC100): CNPJ na chave deve conferir com CNPJ/CPF do participante (COD_PART)
+        // Layout C100: fC100[0]=C100, fC100[1]=IND_OPER, fC100[2]=IND_EMIT, fC100[3]=COD_PART, fC100[4]=COD_MOD,
+        //              fC100[5]=COD_SIT, fC100[6]=SER, fC100[7]=NUM_DOC, fC100[8]=CHV_NFE, ...
+        // A chave NF-e (44 dígitos) tem CNPJ do emitente nas posições 6-19 (índices 6..19)
+        const chvNfe = fC100[8] || '';
+        const codPartC100 = fC100[3] || '';
+        if (chvNfe.length >= 22 && codPartC100) {
+          const cnpjChave = chvNfe.substring(6, 20); // posições 7-20 da chave = CNPJ emitente
+          // Buscar CNPJ do participante no 0150 acumulado antes desta linha
+          // Precisamos de acesso ao mapa de participantes — faremos a validação em segunda passada
+          // guardando os dados para cruzamento posterior
+          if (!c100ChvNfeMap) c100ChvNfeMap = [];
+          c100ChvNfeMap.push({ linha: linhaAtual, codPart: codPartC100, cnpjChave });
+        }
       }
 
       if (registro === 'C170' && (tipoDetectado === 'FISCAL' || tipoDetectado === 'CONTRIBUICOES')) {
@@ -1023,6 +1041,29 @@ Deno.serve(async (req) => {
           });
         }
         validarValorNumerico(campos, 2, 14, 'E110', linhaAtual, erros);
+      }
+
+      // E116: Obrigações do ICMS a Recolher — COD_OR obrigatório (campo 1), VL_OR (campo 2), DT_VCTO (campo 3), COD_REC obrigatório (campo 5)
+      // Layout: |E116|COD_OR|VL_OR|DT_VCTO|COD_REC|NUM_PROC|IND_PROC|PROC|TXT_COMPL|MES_REF|
+      // Posições: campos[1]=COD_OR, campos[2]=VL_OR, campos[3]=DT_VCTO, campos[5]=COD_REC
+      if (registro === 'E116' && tipoDetectado === 'FISCAL') {
+        const cE116 = linha.split('|'); // preserva índices com pipe raw
+        // cE116: ['', 'E116', COD_OR, VL_OR, DT_VCTO, COD_REC, NUM_PROC, ...]
+        const codOr = cE116[2] || '';
+        const vlOr  = cE116[3] || '';
+        const dtVcto = cE116[4] || '';
+        const codRec = cE116[5] || '';
+        if (!codOr || codOr.trim() === '') {
+          erros.push({ linha: linhaAtual, registro: 'E116', mensagem: `Campo obrigatório. COD_OR (posição 1) não informado.`, severidade: 'erro' });
+        }
+        if (vlOr && vlOr.trim() !== '') {
+          const v = parseFloat(vlOr.replace(',', '.'));
+          if (isNaN(v)) erros.push({ linha: linhaAtual, registro: 'E116', mensagem: `Valor numérico inválido em VL_OR: "${vlOr}".`, severidade: 'erro' });
+        }
+        if (dtVcto && dtVcto.trim() !== '') validarData8(dtVcto.trim(), 'E116', linhaAtual, erros);
+        if (!codRec || codRec.trim() === '') {
+          erros.push({ linha: linhaAtual, registro: 'E116', mensagem: `Campo obrigatório. COD_REC (posição 5) não informado. Registro/Campo não informado ou inválido.`, severidade: 'erro' });
+        }
       }
 
       // === SPED FISCAL: Bloco B (Documentos Fiscais - Serviços/ISS) ===
@@ -2315,10 +2356,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- 4b. Validações cruzadas PVA Contribuições ---
-    if (tipoDetectado === 'CONTRIBUICOES') {
-      validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos);
-    }
+    // --- 4b. CHV_NFE × 0150 + Contribuições cruzadas ---
+    if (c100ChvNfeMap && c100ChvNfeMap.length > 0) validarCruzadaFiscal(c100ChvNfeMap, part0150Map, erros);
+    if (tipoDetectado === 'CONTRIBUICOES') validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos);
 
     // --- 5. Consistência de blocos (abertura/encerramento) ---
     const blocosEncontrados = Object.keys(estatisticas.blocos);
