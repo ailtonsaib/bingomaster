@@ -379,8 +379,6 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
 export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos) {
   // Regra D501/D505 CST: D500 e filhos devem ser informados apenas para operações com Direito
   // a Crédito (CST de 50 a 56). CSTs fora desse intervalo geram AVISO no PVA oficial.
-  // CSTs aceitos sem aviso: 50-56 (crédito) e 70-99 são tecnicamente aceitos pelo leiaute,
-  // mas o PVA emite aviso para qualquer CST fora de 50-56.
   {
     const cstCreditoD = ['50','51','52','53','54','55','56'];
     for (let i = 0; i < linhas.length; i++) {
@@ -388,8 +386,6 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
       if (c.length === 0) continue;
       const reg = c[0];
       if (reg === 'D501' || reg === 'D505') {
-        // D501: [0]=D501, [1]=CST_PIS, ...
-        // D505: [0]=D505, [1]=CST_COFINS, ...
         const cst = c[1] || '';
         const campoNome = reg === 'D501' ? 'CST_PIS' : 'CST_COFINS';
         if (cst && !cstCreditoD.includes(cst)) {
@@ -398,6 +394,279 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
             registro: reg,
             mensagem: `Devem ser informados registros D500 e filhos apenas para as Operações com Direito a Crédito (CST de 50 a 56). Campo ${campoNome}=${cst} (Registro/Campo não informado ou inválido).`,
             severidade: 'aviso'
+          });
+        }
+      }
+    }
+  }
+
+  // Regra 0400: Duplicidade de COD_NAT — reportar TODAS as ocorrências duplicadas (igual ao PVA)
+  {
+    const nat0400Ocorrencias: Record<string, number[]> = {};
+    for (let i = 0; i < linhas.length; i++) {
+      const c = linhas[i].split('|').filter((x) => x !== '');
+      if (c[0] !== '0400') continue;
+      const codNat = c[1] || '';
+      if (!codNat) continue;
+      if (!nat0400Ocorrencias[codNat]) nat0400Ocorrencias[codNat] = [];
+      nat0400Ocorrencias[codNat].push(i + 1);
+    }
+    for (const [codNat, ocorrencias] of Object.entries(nat0400Ocorrencias)) {
+      if (ocorrencias.length > 1) {
+        for (const linhaOcorr of ocorrencias) {
+          erros.push({
+            linha: linhaOcorr,
+            registro: '0400',
+            mensagem: `Duplicidade de ocorrência da chave COD_NAT. O código "${codNat}" aparece ${ocorrencias.length} vezes no arquivo (linhas: ${ocorrencias.join(', ')}).`,
+            severidade: 'erro'
+          });
+        }
+      }
+    }
+  }
+
+  // Regra 0150: COD_MUN deve ser código IBGE válido (7 dígitos, estado 1x-53)
+  // Código de estado IBGE: 11-17 (N), 21-29 (NE), 31-35 (SE), 41-43 (S), 50-53 (CO)
+  // Prefixo 54+ não existe no IBGE brasileiro
+  {
+    for (let i = 0; i < linhas.length; i++) {
+      const partes = linhas[i].split('|');
+      if ((partes[1] || '') !== '0150') continue;
+      // Detectar posição do COD_MUN (7 dígitos numéricos entre posições 6-9)
+      for (let j = 6; j <= Math.min(9, partes.length - 1); j++) {
+        const v = (partes[j] || '').trim();
+        if (v === '9999999') break; // válido
+        if (/^\d{7}$/.test(v)) {
+          const prefixo = parseInt(v.substring(0, 2), 10);
+          // UFs IBGE: 11-17, 21-29, 31-35, 41-43, 50-53 — prefixos fora disso são inválidos
+          const ufValida = (prefixo >= 11 && prefixo <= 17) ||
+                           (prefixo >= 21 && prefixo <= 29) ||
+                           (prefixo >= 31 && prefixo <= 35) ||
+                           (prefixo >= 41 && prefixo <= 43) ||
+                           (prefixo >= 50 && prefixo <= 53);
+          if (!ufValida) {
+            erros.push({
+              linha: i + 1,
+              registro: '0150',
+              mensagem: `Código do município inválido. Utilizar código da "Tabela de Municípios do IBGE". COD_MUN="${v}" não corresponde a nenhuma UF brasileira (prefixo ${prefixo} inválido). Este registro deve ser corrigido na origem.`,
+              severidade: 'erro'
+            });
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Regra M100/M105 e M500/M505:
+  // Para cada M100, deve existir pelo menos um M105 filho com NAT_BC_CRED correspondente
+  // M105 sem M100 pai também é erro. Idem para M500/M505.
+  // Regra M200/M600: VL_TOT_CRED_DESC deve ser igual à soma dos VL_CRED_DESC dos M100/M500.
+  {
+    // Rastrear M100 → M105 e M500 → M505 (hierarquia pai-filho por sequência)
+    let currentM100Idx = -1;
+    let currentM500Idx = -1;
+    const m100Map: Record<number, { linha: number; codCred: string; aliqPis: string; m105Count: number; vlCredDesc: number }> = {};
+    const m500Map: Record<number, { linha: number; codCred: string; aliqCofins: string; m505Count: number; vlCredDesc: number }> = {};
+    const m105OrfaosLinhas: number[] = [];
+    const m505OrfaosLinhas: number[] = [];
+
+    for (let i = 0; i < linhas.length; i++) {
+      const c = linhas[i].split('|').filter((x) => x !== '');
+      if (c.length === 0) continue;
+      const reg = c[0];
+
+      if (reg === 'M100') {
+        currentM100Idx = i;
+        currentM500Idx = -1; // reset M500 tracker
+        // Layout M100 sem filtro para índices corretos:
+        // |M100|COD_CRED|IND_CRED_ORI|VL_BC_PIS|ALIQ_PIS|QUANT_BC|ALIQ_QUANT|VL_CRED|VL_AJUS_ACRES|VL_AJUS_REDUC|VL_CRED_DIF|VL_CRED_DISP|IND_DESC_CRED|VL_CRED_DESC|SLD_CRED|
+        const raw = linhas[i].split('|');
+        const f = raw.slice(1, raw[raw.length - 1] === '' ? -1 : undefined);
+        const vlCredDesc = f[13] ? parseNum(f[13]) : 0;
+        m100Map[i] = { linha: i + 1, codCred: c[1] || '', aliqPis: c[4] || '', m105Count: 0, vlCredDesc: isNaN(vlCredDesc) ? 0 : vlCredDesc };
+      } else if (reg === 'M105') {
+        if (currentM100Idx >= 0 && m100Map[currentM100Idx]) {
+          m100Map[currentM100Idx].m105Count++;
+        } else {
+          m105OrfaosLinhas.push(i + 1);
+        }
+      } else if (reg === 'M200') {
+        // Encerra bloco M100
+        currentM100Idx = -1;
+      } else if (reg === 'M500') {
+        currentM500Idx = i;
+        currentM100Idx = -1;
+        const raw = linhas[i].split('|');
+        const f = raw.slice(1, raw[raw.length - 1] === '' ? -1 : undefined);
+        const vlCredDesc = f[13] ? parseNum(f[13]) : 0;
+        m500Map[i] = { linha: i + 1, codCred: c[1] || '', aliqCofins: c[4] || '', m505Count: 0, vlCredDesc: isNaN(vlCredDesc) ? 0 : vlCredDesc };
+      } else if (reg === 'M505') {
+        if (currentM500Idx >= 0 && m500Map[currentM500Idx]) {
+          m500Map[currentM500Idx].m505Count++;
+        } else {
+          m505OrfaosLinhas.push(i + 1);
+        }
+      } else if (reg === 'M600') {
+        currentM500Idx = -1;
+      }
+    }
+
+    // M100 sem nenhum M105 filho → erro: deve existir M105
+    // M100 COM filhos M105 mas NAT_BC incompatível → detectado via M200 VL_TOT_CRED_DESC abaixo
+    for (const [idx, m] of Object.entries(m100Map)) {
+      if (m.m105Count === 0) {
+        erros.push({
+          linha: m.linha,
+          registro: 'M105',
+          mensagem: `Deverá existir um registro M105 - Detalhamento da Base de Cálculo do Crédito para cada Código da Natureza da Base de Cálculo do Crédito e Código de Situação Tributária informados nos documentos e operações, agrupados pelo COD_CRED=${m.codCred}, ALIQ_PIS=${m.aliqPis}, CST_PIS=50. Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+          severidade: 'erro'
+        });
+      }
+    }
+
+    // M105 sem M100 pai → erro: não deverá existir M105 sem M100 correspondente
+    for (const linhaOrfa of m105OrfaosLinhas) {
+      erros.push({
+        linha: linhaOrfa,
+        registro: 'M105',
+        mensagem: `Não deverá existir um registro M105 - Detalhamento da Base de Cálculo do Crédito para Código da Natureza da Base de Cálculo do Crédito e Código de Situação Tributária não informados nos documentos e operações, agrupados pelo Código do Tipo de Crédito, Alíquota (em percentual) e Alíquota (em reais). Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+        severidade: 'erro'
+      });
+    }
+
+    // M500 sem nenhum M505 filho
+    for (const [idx, m] of Object.entries(m500Map)) {
+      if (m.m505Count === 0) {
+        erros.push({
+          linha: m.linha,
+          registro: 'M505',
+          mensagem: `Deverá existir um registro M505 - Detalhamento da Base de Cálculo do Crédito para cada Código da Natureza da Base de Cálculo do Crédito e Código de Situação Tributária informados nos documentos e operações, agrupados pelo COD_CRED=${m.codCred}, ALIQ_COFINS=${m.aliqCofins}, CST_COFINS=50. Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+          severidade: 'erro'
+        });
+      }
+    }
+
+    // M505 sem M500 pai
+    for (const linhaOrfa of m505OrfaosLinhas) {
+      erros.push({
+        linha: linhaOrfa,
+        registro: 'M505',
+        mensagem: `Não deverá existir um registro M505 - Detalhamento da Base de Cálculo do Crédito para Código da Natureza da Base de Cálculo do Crédito e Código de Situação Tributária não informados nos documentos e operações, agrupados pelo Código do Tipo de Crédito, Alíquota (em percentual) e Alíquota (em reais). Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+        severidade: 'erro'
+      });
+    }
+
+    // M100 com M105 filhos mas M200.VL_TOT_CRED_DESC=0 enquanto M100.VL_CRED_DESC>0
+    // indica que as NAT_BC dos M105 não correspondem às operações do M100 (PVA detecta via cruzamento interno)
+    // Reportar cada M105 filho como "não deverá existir" e o M100 como "deverá existir M105 correto"
+    {
+      // Pré-computar soma VL_CRED_DESC dos M100 para comparar com M200
+      // Se soma>0 mas M200.VL_TOT_CRED_DESC=0 → os M105 presentes têm NAT_BC errada
+      let somaM100vlCredDesc = 0;
+      let m200VlTotCredDesc = 0;
+      let somaM500vlCredDesc = 0;
+      let m600VlTotCredDesc = 0;
+      for (let i = 0; i < linhas.length; i++) {
+        const raw = linhas[i].split('|');
+        const reg = raw[1] || '';
+        if (reg === 'M200') m200VlTotCredDesc = raw[3] ? parseNum(raw[3]) : 0;
+        if (reg === 'M600') m600VlTotCredDesc = raw[3] ? parseNum(raw[3]) : 0;
+      }
+      somaM100vlCredDesc = Object.values(m100Map).reduce((s, m) => s + m.vlCredDesc, 0);
+      somaM500vlCredDesc = Object.values(m500Map).reduce((s, m) => s + m.vlCredDesc, 0);
+
+      // Se M100 tem filhos M105 mas M200.VL_TOT_CRED_DESC não bate com VL_CRED_DESC do M100,
+      // significa que o PVA não reconhece os M105 presentes (NAT_BC errada)
+      if (somaM100vlCredDesc > 0 && !isNaN(m200VlTotCredDesc) && Math.abs(m200VlTotCredDesc - somaM100vlCredDesc) > 0.02) {
+        // Emitir erro para cada M100 que tem filhos M105 (as NAT_BC não correspondem)
+        for (const [idx, m] of Object.entries(m100Map)) {
+          if (m.m105Count > 0) {
+            erros.push({
+              linha: m.linha,
+              registro: 'M105',
+              mensagem: `Deverá existir um registro M105 - Detalhamento da Base de Cálculo do Crédito com Código da Natureza da Base de Cálculo correto (NAT_BC_CRED=07, CST_PIS=50) para COD_CRED=${m.codCred}, ALIQ_PIS=${m.aliqPis}. Os registros M105 existentes têm NAT_BC_CRED incompatível com as operações escrituradas. Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+              severidade: 'erro'
+            });
+          }
+        }
+        // Emitir erro para cada M105 filho que não deveria existir com essa NAT_BC
+        let curM = -1;
+        for (let i = 0; i < linhas.length; i++) {
+          const c = linhas[i].split('|').filter((x) => x !== '');
+          if (c[0] === 'M100') { curM = i; }
+          else if (c[0] === 'M105' && curM >= 0 && m100Map[curM]) {
+            if (somaM100vlCredDesc > 0 && Math.abs(m200VlTotCredDesc - somaM100vlCredDesc) > 0.02) {
+              erros.push({
+                linha: i + 1,
+                registro: 'M105',
+                mensagem: `Não deverá existir um registro M105 - Detalhamento da Base de Cálculo do Crédito para Código da Natureza da Base de Cálculo do Crédito e Código de Situação Tributária não informados nos documentos e operações, agrupados pelo Código do Tipo de Crédito, Alíquota (em percentual) e Alíquota (em reais). Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+                severidade: 'erro'
+              });
+            }
+          } else if (c[0] === 'M200') { curM = -1; }
+        }
+      }
+
+      // Mesmo para M500/M505
+      if (somaM500vlCredDesc > 0 && !isNaN(m600VlTotCredDesc) && Math.abs(m600VlTotCredDesc - somaM500vlCredDesc) > 0.02) {
+        for (const [idx, m] of Object.entries(m500Map)) {
+          if (m.m505Count > 0) {
+            erros.push({
+              linha: m.linha,
+              registro: 'M505',
+              mensagem: `Deverá existir um registro M505 - Detalhamento da Base de Cálculo do Crédito com Código da Natureza da Base de Cálculo correto (NAT_BC_CRED=07, CST_COFINS=50) para COD_CRED=${m.codCred}, ALIQ_COFINS=${m.aliqCofins}. Os registros M505 existentes têm NAT_BC_CRED incompatível com as operações escrituradas. Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+              severidade: 'erro'
+            });
+          }
+        }
+        let curM = -1;
+        for (let i = 0; i < linhas.length; i++) {
+          const c = linhas[i].split('|').filter((x) => x !== '');
+          if (c[0] === 'M500') { curM = i; }
+          else if (c[0] === 'M505' && curM >= 0 && m500Map[curM]) {
+            if (somaM500vlCredDesc > 0 && Math.abs(m600VlTotCredDesc - somaM500vlCredDesc) > 0.02) {
+              erros.push({
+                linha: i + 1,
+                registro: 'M505',
+                mensagem: `Não deverá existir um registro M505 - Detalhamento da Base de Cálculo do Crédito para Código da Natureza da Base de Cálculo do Crédito e Código de Situação Tributária não informados nos documentos e operações, agrupados pelo Código do Tipo de Crédito, Alíquota (em percentual) e Alíquota (em reais). Este erro deve ser corrigido na origem (ERP/Contabilidade).`,
+                severidade: 'erro'
+              });
+            }
+          } else if (c[0] === 'M600') { curM = -1; }
+        }
+      }
+    }
+
+    // M200: VL_TOT_CRED_DESC deve ser igual à soma dos M100.VL_CRED_DESC
+    // M600: VL_TOT_CRED_DESC deve ser igual à soma dos M500.VL_CRED_DESC
+    // Layout M200/M600: |M200|VL_TOT_CONT|VL_TOT_CRED_DESC|VL_TOT_CRED_DISP|...
+    // Índices (split sem filtro): [1]=REG, [2]=VL_TOT_CONT, [3]=VL_TOT_CRED_DESC
+    const somaCredDescM100 = Object.values(m100Map).reduce((s, m) => s + m.vlCredDesc, 0);
+    const somaCredDescM500 = Object.values(m500Map).reduce((s, m) => s + m.vlCredDesc, 0);
+
+    for (let i = 0; i < linhas.length; i++) {
+      const raw = linhas[i].split('|');
+      const reg = raw[1] || '';
+      if (reg === 'M200' && somaCredDescM100 > 0) {
+        const vlTotCredDesc = raw[3] ? parseNum(raw[3]) : 0;
+        if (!isNaN(vlTotCredDesc) && Math.abs(vlTotCredDesc - somaCredDescM100) > 0.02) {
+          erros.push({
+            linha: i + 1,
+            registro: 'M200',
+            mensagem: `O valor do campo VL_TOT_CRED_DESC (${raw[3]}) deve ser igual ao somatório dos campos "Valor do Crédito a Descontar" dos Registros M100 para PIS/PASEP (esperado: ${somaCredDescM100.toFixed(2)}). Os registros M100/M105 devem ser corrigidos no validador oficial (ícone de engrenagem) ou na origem.`,
+            severidade: 'erro'
+          });
+        }
+      }
+      if (reg === 'M600' && somaCredDescM500 > 0) {
+        const vlTotCredDesc = raw[3] ? parseNum(raw[3]) : 0;
+        if (!isNaN(vlTotCredDesc) && Math.abs(vlTotCredDesc - somaCredDescM500) > 0.02) {
+          erros.push({
+            linha: i + 1,
+            registro: 'M600',
+            mensagem: `O valor do campo VL_TOT_CRED_DESC (${raw[3]}) deve ser igual ao somatório dos campos "Valor do Crédito a Descontar" dos Registros M500 para COFINS (esperado: ${somaCredDescM500.toFixed(2)}). Os registros M500/M505 devem ser corrigidos no validador oficial (ícone de engrenagem) ou na origem.`,
+            severidade: 'erro'
           });
         }
       }
