@@ -42,6 +42,29 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
     return Math.abs(num).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  // Fallback: se o backend retornar créditos = 0, calcular a partir de débitos - saldo a recolher
+  const calcularCreditos = () => {
+    const creditosStr = String(resultado?.resumo?.creditos || '0').replace(/[^\d,-]/g, '').replace(',', '.');
+    const creditosNum = parseFloat(creditosStr);
+    if (creditosNum > 0.01) return resultado.resumo.creditos;
+
+    // Tentar calcular: créditos = débitos - saldo a recolher
+    const debitosStr = String(resultado?.resumo?.debitos || '0').replace(/[^\d,-]/g, '').replace(',', '.');
+    const debitosNum = parseFloat(debitosStr);
+    const saldoMatch = String(resultado?.resumo?.saldo || '').match(/R\$\s*([\d.,]+)/);
+    if (saldoMatch && debitosNum > 0) {
+      const raw = saldoMatch[1];
+      const saldoNum = raw.includes(',')
+        ? parseFloat(raw.replace(/\./g, '').replace(',', '.'))
+        : parseFloat(raw);
+      if (!isNaN(saldoNum) && saldoNum > 0) {
+        const calculado = debitosNum - saldoNum;
+        if (calculado > 0) return calculado.toFixed(2).replace('.', ',');
+      }
+    }
+    return resultado?.resumo?.creditos || '0,00';
+  };
+
   const formatarSaldo = (saldo) => {
     // saldo vem como "A RECOLHER: R$ 637776.29" (ponto como decimal)
     const match = String(saldo || '').match(/^(.*?)R\$\s*([\d.,]+)$/);
@@ -282,6 +305,18 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
             </CardContent>
           </Card>
 
+          {/* Debug info — remover após diagnosticar */}
+          {resultado._debug && (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold text-amber-800 mb-2">🔍 Debug E110:</p>
+                <pre className="text-xs font-mono text-amber-900 overflow-x-auto">
+                  {JSON.stringify(resultado._debug, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Resumo fiscal */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -306,7 +341,7 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
               <CardContent className="p-4 flex items-center gap-3">
                 <Scale className="w-8 h-8 text-emerald-500 shrink-0" />
                 <div>
-                  <p className="text-lg font-bold text-emerald-600">R$ {formatarMoeda(resultado.resumo.creditos)}</p>
+                  <p className="text-lg font-bold text-emerald-600">R$ {formatarMoeda(calcularCreditos())}</p>
                   <p className="text-xs text-muted-foreground">Créditos ICMS</p>
                 </div>
               </CardContent>
