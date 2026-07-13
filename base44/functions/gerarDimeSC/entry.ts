@@ -13,16 +13,15 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Conteúdo do SPED Fiscal não fornecido.' }, { status: 400 });
     }
 
-    // Remove BOM (Byte Order Mark) e espaços invisíveis no início do conteúdo
+    // Remove BOM e espaços invisíveis no início do conteúdo
     const conteudoLimpo = conteudoSped.replace(/^\uFEFF/, '').replace(/^\u200B/, '').trim();
     const linhas = conteudoLimpo.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (linhas.length === 0) {
       return Response.json({ success: false, error: 'Arquivo SPED Fiscal vazio.' }, { status: 400 });
     }
 
-    // Procura o registro 0000 (pode não ser a primeira linha se houver header/BOM)
+    // Procura o registro 0000
     let primLinha = linhas[0].trim();
-    // Se a primeira linha não começa com |, tenta encontrar o 0000
     if (!primLinha.startsWith('|')) {
       const idx0000 = linhas.findIndex((l) => l.trim().startsWith('|') && l.split('|').filter((c) => c !== '')[0] === '0000');
       if (idx0000 === -1) {
@@ -90,7 +89,6 @@ Deno.serve(async (req) => {
         const credImposto = parseNum(p[7]);
         const credAjDocFiscal = parseNum(p[8]);
         const credAjustes = parseNum(p[9]);
-        const debEspeciais = parseNum(p[13]);
 
         const totDebitos = debImposto + debAjDocFiscal + debAjustes;
         const totCreditos = saldoCredorAnt + credImposto + credAjDocFiscal + credAjustes;
@@ -100,7 +98,7 @@ Deno.serve(async (req) => {
         rE110 = {
           debImposto, debAjDocFiscal, debAjustes, totDebitos,
           saldoCredorAnt, credImposto, credAjDocFiscal, credAjustes, totCreditos,
-          saldoDevedor, saldoCredorTransportar, debEspeciais
+          saldoDevedor, saldoCredorTransportar
         };
       }
 
@@ -148,23 +146,26 @@ Deno.serve(async (req) => {
     const temMovimento = entradas.length > 0 || saidas.length > 0;
 
     // === Helper functions ===
-    // Valor em centavos, largura variável
+    // Valor em centavos, largura variável (sem sinal, sem vírgula)
     const fmtVal = (val: number, width = 17) => {
       const cents = Math.round((val || 0) * 100);
       return String(Math.abs(cents)).padStart(width, '0').slice(-width);
     };
-    const fmtVal18 = (val: number) => fmtVal(val, 18);
 
     const fmtTxt = (text: string, width: number) =>
       (text || '').substring(0, width).padEnd(width, ' ');
 
+    // Item de quadro com 3 dígitos numéricos, ex: "010", "020", "990"
+    const fmtItem = (item: number) => String(item).padStart(3, '0');
+
     // === Generate DIME-SC lines ===
+    // Layout baseado no Manual Consolidado Portaria SEF 153/2012 (versão 153/12.29)
     const linhasDime: string[] = [];
     let totalRegistros = 0;
 
     // --- Registro 20: Contabilista ---
-    // Formato: "20" + "  " + CPF(11) + NOME(50) + DATA_HORA(14) = 79 chars
-    const cpfCont = (r0100?.cpf || '00000000000').padStart(11, '0').slice(-11);
+    // Layout: "20" + espaco(2) + CPF(11) + NOME(50) + DATA_HORA(14) = 79 chars
+    const cpfCont = (r0100?.cpf || '00000000000').replace(/\D/g, '').padStart(11, '0').slice(-11);
     const nomeCont = r0100?.nome || 'CONTABILISTA';
     const now = new Date();
     const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -172,61 +173,65 @@ Deno.serve(async (req) => {
     linhasDime.push(`20  ${cpfCont}${fmtTxt(nomeCont, 50)}${dataHora}`);
     totalRegistros++;
 
-    // --- Registro 21: Cabeçalho da Declaração ---
-    // Formato: "21" + SEQ(2) + IE(9) + RAZAO(50) + MMAAAA(6) + TIPO_DECL(1) + REGIME(1) + PORTE(1)
-    //          + APURACAO_CENTRALIZADA(1) + TRANSF_CREDITO(1) + CREDITO_PRESUMIDO(1) + CREDITO_INCENTIVO(1)
-    //          + MOVIMENTO(1) + SUBSTITUTO_TRIBUT(1) + ESCRITA_FISCAL(1) + QTD_TRAB(5)
-    // Valores válidos:
-    //   TIPO_DECL: 1=Normal, 2=Retificadora, 3=Com Encerramento, 4=Retificadora com Encerramento
-    //   REGIME: 1=Simples Nacional, 2=Normal, 9=Produtor Primário
-    //   PORTE: 1=EPP (até 360k), 2=MPP (360k-2.4M), 3=PP (2.4M-3.6M), 4=MP (3.6M-12M), 5=Grande (>12M)
-    //   APURACAO_CENTRALIZADA: 1=Sim, 2=Não
-    //   TRANSF_CREDITO: 1=Sim, 2=Não
-    //   CREDITO_PRESUMIDO: 1=Sim, 2=Não
-    //   CREDITO_INCENTIVO: 1=Sim, 2=Não
-    //   MOVIMENTO: 1=Com movimento, 2=Sem movimento
-    //   SUBSTITUTO_TRIBUT: 1=Sim, 2=Não
-    //   ESCRITA_FISCAL: 1=Com Escrita Fiscal, 2=Sem Escrita Fiscal
+    // --- Registro 21: Cabeçalho da Declaração (Quadro 00) ---
+    // Campos conforme Manual Consolidado Portaria SEF 153/2012:
+    //   "21" (2) + Quadro "00" (2) + IE(9) + RAZAO(50) + MMAAAA(6)
+    //   + TIPO_DECL(1): 1=Normal
+    //   + REGIME(1): 2=Normal
+    //   + PORTE(1): 1=Não se aplica
+    //   + APURACAO_CONSOLIDADA(1): 1=Não é apuração consolidada
+    //   + APURACAO_CENTRALIZADA(1): 1=Não se aplica
+    //   + TRANSF_CREDITO(1): 1=Não transferiu nem recebeu
+    //   + CREDITO_PRESUMIDO(1): 1=Não se aplica
+    //   + CREDITO_INCENTIVO(1): 1=Não se aplica
+    //   + MOVIMENTO(1): 1=Sem mov/sem saldo, 2=Sem mov/com saldo, 3=Com movimento
+    //   + SUBSTITUTO(1): 2=Não
+    //   + ESCRITA_CONTABIL(1): 1=Sim é estabelecimento principal
+    //   + QTD_TRAB(5)
     const dtFim = r0000.dataFim;
     const mesAno = dtFim.length === 8 ? dtFim.substring(2, 4) + dtFim.substring(4) : '000000';
     const ie = r0000.ie.replace(/\D/g, '').padStart(9, '0').slice(-9);
-    const tipoDecl = '1';      // Normal
-    const regimeApur = '2';    // Normal
-    const porte = '4';         // Médio Porte (padrão genérico válido)
-    const apurCent = '2';      // Não centralizada
-    const transfCred = '2';    // Não
-    const credPresumido = '2'; // Não
-    const credIncentivo = '2'; // Não
-    const movimento = temMovimento ? '1' : '2';
-    const substituto = '2';    // Não substituto
-    const escritaFiscal = '1'; // Com escrita fiscal
+
+    const tipoDecl = '1';        // 1=Normal
+    const regimeApur = '2';      // 2=Normal
+    const porte = '1';           // 1=Não se aplica
+    const apurConsolidada = '1'; // 1=Não é apuração consolidada
+    const apurCentralizada = '1';// 1=Não se aplica
+    const transfCred = '1';      // 1=Não transferiu nem recebeu
+    const credPresumido = '1';   // 1=Não se aplica
+    const credIncentivo = '1';   // 1=Não se aplica
+    // MOVIMENTO: 3=Com movimento, 1=Sem movimento e sem saldos
+    const movimento = temMovimento ? '3' : '1';
+    const substituto = '2';      // 2=Não
+    const escritaContabil = '1'; // 1=Sim é estabelecimento principal
     const qtdTrab = '00000';
-    linhasDime.push(`2100${ie}${fmtTxt(r0000.razao, 50)}${mesAno}${tipoDecl}${regimeApur}${porte}${apurCent}${transfCred}${credPresumido}${credIncentivo}${movimento}${substituto}${escritaFiscal}${qtdTrab}`);
+
+    linhasDime.push(`2100${ie}${fmtTxt(r0000.razao, 50)}${mesAno}${tipoDecl}${regimeApur}${porte}${apurConsolidada}${apurCentralizada}${transfCred}${credPresumido}${credIncentivo}${movimento}${substituto}${escritaContabil}${qtdTrab}`);
     totalRegistros++;
 
-    // Os registros 22, 23, 24, 25, 26, 30, 33 só são gerados quando há movimento (movimento=1)
+    // Registros 22-33 SOMENTE quando há movimento (movimento = '3')
     if (temMovimento) {
 
-      // --- Registro 22: Entradas (Quadro 1) ---
-      // Formato: "22" + "01" + CFOP(5) + 8×valor(17) = 145 chars
+      // --- Registro 22: Valores Fiscais Entradas (Quadro 01) ---
+      // Layout: "22" + "01" + CFOP(5) + 8×valor(17) = 2+2+5+(8×17) = 145 chars
       for (const c of entradas) {
         const cfop = (c as any).cfop.padStart(5, '0').slice(-5);
         const campos = [
-          fmtVal((c as any).vlCont),   // Valor Contábil
-          fmtVal((c as any).vlBc),     // Base de Cálculo
-          fmtVal((c as any).vlIcms),   // Imposto Creditado
-          fmtVal((c as any).isentas),  // Isentas/Não Tributadas
-          fmtVal((c as any).outras),   // Outras
-          fmtVal((c as any).vlBcSt),   // BC Retido (ST)
-          fmtVal((c as any).vlIcmsSt), // Imposto Retido (ST)
-          fmtVal(0)                     // Dif. Alíquota
+          fmtVal((c as any).vlCont),    // Valor Contábil
+          fmtVal((c as any).vlBc),      // Base de Cálculo
+          fmtVal((c as any).vlIcms),    // Imposto Creditado
+          fmtVal((c as any).isentas),   // Isentas/Não Tributadas
+          fmtVal((c as any).outras),    // Outras
+          fmtVal((c as any).vlBcSt),    // BC Retido (ST)
+          fmtVal((c as any).vlIcmsSt),  // Imposto Retido (ST)
+          fmtVal(0)                      // Diferença de Alíquota
         ].join('');
         linhasDime.push(`2201${cfop}${campos}`);
         totalRegistros++;
       }
 
-      // --- Registro 23: Saídas (Quadro 2) ---
-      // Formato: "23" + "02" + CFOP(5) + 8×valor(17) = 145 chars
+      // --- Registro 23: Valores Fiscais Saídas (Quadro 02) ---
+      // Layout: "22" + "02" + CFOP(5) + 8×valor(17) = 145 chars
       for (const c of saidas) {
         const cfop = (c as any).cfop.padStart(5, '0').slice(-5);
         const campos = [
@@ -243,134 +248,165 @@ Deno.serve(async (req) => {
         totalRegistros++;
       }
 
-      // --- Registro 24: Apuração do ICMS (Quadro 3) ---
-      // Formato: "24" + "03" + LINHA(2) + VALOR(18) = 24 chars
-      // Regra: NÃO emitir linhas com valor zero (erro da validação)
+      // --- Registro 24: Resumo dos Valores Fiscais (Quadro 03) ---
+      // Layout: "24" + "03" + ITEM(3) + VALOR(17) = 24 chars
+      // Itens válidos do Quadro 03: 010 a 999 conforme manual
       if (rE110) {
         const totalEntradasVC = entradas.reduce((s: number, c: any) => s + c.vlCont, 0);
+        const totalEntradasBC = entradas.reduce((s: number, c: any) => s + c.vlBc, 0);
+        const totalEntradasICMS = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const totalSaidasVC = saidas.reduce((s: number, c: any) => s + c.vlCont, 0);
+        const totalSaidasBC = saidas.reduce((s: number, c: any) => s + c.vlBc, 0);
+        const totalSaidasICMS = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
 
-        // Apenas linhas com valor não-zero
-        const linhas24: Array<{ linha: string; valor: number }> = [
-          { linha: '01', valor: totalEntradasVC },          // Total entradas (Quadro 1)
-          { linha: '02', valor: totalSaidasVC },            // Total saídas (Quadro 2)
-          { linha: '08', valor: rE110.totDebitos },         // Total débitos
-          { linha: '09', valor: rE110.totCreditos },        // Total créditos
-          { linha: '10', valor: rE110.saldoDevedor > 0 ? rE110.saldoDevedor : 0 }, // Saldo a recolher
+        // Itens do Quadro 03 com valor > 0
+        const itens24: Array<{ item: number; valor: number }> = [
+          { item: 10, valor: totalEntradasVC },    // 010 - Total Valor Contábil Entradas
+          { item: 20, valor: totalEntradasBC },    // 020 - Total Base Cálculo Entradas
+          { item: 30, valor: totalEntradasICMS },  // 030 - Total ICMS Creditado Entradas
+          { item: 50, valor: totalSaidasVC },      // 050 - Total Valor Contábil Saídas
+          { item: 60, valor: totalSaidasBC },      // 060 - Total Base Cálculo Saídas
+          { item: 70, valor: totalSaidasICMS },    // 070 - Total ICMS Debitado Saídas
         ];
 
-        for (const item of linhas24) {
+        for (const item of itens24) {
           if (item.valor > 0) {
-            linhasDime.push(`2403${item.linha}${fmtVal18(item.valor)}`);
+            linhasDime.push(`2403${fmtItem(item.item)}${fmtVal(item.valor)}`);
             totalRegistros++;
           }
         }
       }
 
-      // --- Registro 25: Totais do Quadro 1 (Entradas) ---
-      // Formato: "25" + "01" + 8×valor(17) = 138 chars
-      if (entradas.length > 0) {
-        const tot25 = entradas.reduce((acc: any, c: any) => {
-          acc.vlCont += c.vlCont;
-          acc.vlBc += c.vlBc;
-          acc.vlIcms += c.vlIcms;
-          acc.isentas += c.isentas;
-          acc.outras += c.outras;
-          acc.vlBcSt += c.vlBcSt;
-          acc.vlIcmsSt += c.vlIcmsSt;
-          return acc;
-        }, { vlCont: 0, vlBc: 0, vlIcms: 0, isentas: 0, outras: 0, vlBcSt: 0, vlIcmsSt: 0 });
+      // --- Registro 25: Resumo da Apuração dos Débitos (Quadro 04) ---
+      // Layout: "25" + "04" + ITEM(3) + VALOR(17) = 24 chars
+      // Itens válidos: 010 = Débito pelas saídas, 990 = Subtotal de Débitos
+      if (saidas.length > 0 && rE110) {
+        const debSaidas = rE110.debImposto > 0 ? rE110.debImposto : saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
+        const outrosDebitos = rE110.debAjDocFiscal + rE110.debAjustes;
+        const subtotalDebitos = rE110.totDebitos;
 
-        const campos25 = [
-          fmtVal(tot25.vlCont),
-          fmtVal(tot25.vlBc),
-          fmtVal(tot25.vlIcms),
-          fmtVal(tot25.isentas),
-          fmtVal(tot25.outras),
-          fmtVal(tot25.vlBcSt),
-          fmtVal(tot25.vlIcmsSt),
-          fmtVal(0)
-        ].join('');
-        linhasDime.push(`2501${campos25}`);
-        totalRegistros++;
-      }
-
-      // --- Registro 26: Totais do Quadro 2 (Saídas) ---
-      // Formato: "26" + "02" + 8×valor(17) = 138 chars
-      if (saidas.length > 0) {
-        const tot26 = saidas.reduce((acc: any, c: any) => {
-          acc.vlCont += c.vlCont;
-          acc.vlBc += c.vlBc;
-          acc.vlIcms += c.vlIcms;
-          acc.isentas += c.isentas;
-          acc.outras += c.outras;
-          acc.vlBcSt += c.vlBcSt;
-          acc.vlIcmsSt += c.vlIcmsSt;
-          return acc;
-        }, { vlCont: 0, vlBc: 0, vlIcms: 0, isentas: 0, outras: 0, vlBcSt: 0, vlIcmsSt: 0 });
-
-        const campos26 = [
-          fmtVal(tot26.vlCont),
-          fmtVal(tot26.vlBc),
-          fmtVal(tot26.vlIcms),
-          fmtVal(tot26.isentas),
-          fmtVal(tot26.outras),
-          fmtVal(tot26.vlBcSt),
-          fmtVal(tot26.vlIcmsSt),
-          fmtVal(0)
-        ].join('');
-        linhasDime.push(`2602${campos26}`);
-        totalRegistros++;
-      }
-
-      // --- Registro 30: Outros Débitos/Créditos do ICMS ---
-      // Formato: "30" + "03" + LINHA(2) + valor(17) = 23 chars
-      // Registra os ajustes (se existirem) de forma separada
-      if (rE110) {
-        const ajustes30: Array<{ linha: string; valor: number }> = [
-          { linha: '01', valor: rE110.debImposto },        // Débito do imposto
-          { linha: '02', valor: rE110.debAjDocFiscal },    // Débito por ajuste (doc fiscal)
-          { linha: '03', valor: rE110.debAjustes },        // Outros ajustes débito
-          { linha: '04', valor: rE110.saldoCredorAnt },    // Saldo credor período anterior
-          { linha: '05', valor: rE110.credImposto },       // Crédito do imposto
-          { linha: '06', valor: rE110.credAjDocFiscal },   // Crédito por ajuste (doc fiscal)
-          { linha: '07', valor: rE110.credAjustes },       // Outros ajustes crédito
-        ];
-
-        let emitiu30 = false;
-        for (const item of ajustes30) {
-          if (item.valor > 0) {
-            linhasDime.push(`3003${item.linha}${fmtVal(item.valor)}`);
-            totalRegistros++;
-            emitiu30 = true;
-          }
+        // Item 010 - Débito pelas saídas
+        if (debSaidas > 0) {
+          linhasDime.push(`2504${fmtItem(10)}${fmtVal(debSaidas)}`);
+          totalRegistros++;
         }
-
-        // Registro 30 é obrigatório quando há movimento; emite ao menos o débito principal
-        if (!emitiu30 && rE110.totDebitos > 0) {
-          linhasDime.push(`3003${'01'}${fmtVal(rE110.totDebitos)}`);
+        // Item 070 - Outros débitos (se houver ajustes)
+        if (outrosDebitos > 0) {
+          linhasDime.push(`2504${fmtItem(70)}${fmtVal(outrosDebitos)}`);
+          totalRegistros++;
+        }
+        // Item 990 - Subtotal de Débitos (obrigatório quando há itens)
+        if (subtotalDebitos > 0) {
+          linhasDime.push(`2504${fmtItem(990)}${fmtVal(subtotalDebitos)}`);
           totalRegistros++;
         }
       }
 
-      // --- Registro 33: Guias de Pagamento (Quadro 3) ---
-      // Formato: "33" + "03" + ORIGEM(1) + COD_RECEITA(4) + DT_VCTO(8) + VALOR(17) + CLASSE_VCTO(1) + ACORDO(15)
-      // Regras:
-      //   ORIGEM: 1=Imposto, 2=Multa, 3=Juros, 4=Atualização, 5=Honorários
-      //   COD_RECEITA: código SEFAZ/SC (ex: 1147 para ICMS mensal)
-      //   CLASSE_VCTO: 1=Normal, 2=Em atraso, 3=Antecipado
-      //   DT_VCTO: formato DDMMAAAA
-      for (const e of e116Records) {
-        if (e.vlOr <= 0) continue; // Não emitir guias com valor zero
+      // --- Registro 26: Resumo da Apuração dos Créditos (Quadro 05) ---
+      // Layout: "26" + "05" + ITEM(3) + VALOR(17) = 24 chars
+      // Itens válidos: 010 = Saldo credor anterior, 020 = Crédito pelas entradas, 990 = Subtotal
+      if (rE110) {
+        const saldoAnt = rE110.saldoCredorAnt;
+        const credEntradas = rE110.credImposto > 0 ? rE110.credImposto : entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
+        const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
+        const subtotalCreditos = rE110.totCreditos;
 
-        const origem = '1'; // 1=Imposto (padrão ICMS)
-        // COD_RECEITA: usar o do SPED se válido (4 dígitos numéricos), senão usar 1147 (ICMS mensal SC)
+        // Item 010 - Saldo credor do mês anterior
+        if (saldoAnt > 0) {
+          linhasDime.push(`2605${fmtItem(10)}${fmtVal(saldoAnt)}`);
+          totalRegistros++;
+        }
+        // Item 020 - Crédito pelas entradas
+        if (credEntradas > 0) {
+          linhasDime.push(`2605${fmtItem(20)}${fmtVal(credEntradas)}`);
+          totalRegistros++;
+        }
+        // Item 150 - Outros créditos (se houver ajustes)
+        if (outrosCred > 0) {
+          linhasDime.push(`2605${fmtItem(150)}${fmtVal(outrosCred)}`);
+          totalRegistros++;
+        }
+        // Item 990 - Subtotal de Créditos (obrigatório quando há itens)
+        if (subtotalCreditos > 0) {
+          linhasDime.push(`2605${fmtItem(990)}${fmtVal(subtotalCreditos)}`);
+          totalRegistros++;
+        }
+      }
+
+      // --- Registro 30: Cálculo do Imposto a Pagar ou Saldo Credor (Quadro 09) ---
+      // Layout: "30" + "09" + ITEM(3) + VALOR(17) = 24 chars
+      // Itens do Quadro 09:
+      //   010 = Subtotal de débitos (= item 990 do Quadro 04)
+      //   040 = Total de débitos (= item 010 se não houver 020/030)
+      //   050 = Subtotal de créditos (= item 990 do Quadro 05)
+      //   080 = Total de créditos (= item 050 se não houver 060/070)
+      //   120 = Saldo devedor (Total Débitos - Total Créditos, se > 0)
+      //   999 = Imposto a recolher (= item 120 se não houver deduções)
+      //   998 = Saldo credor para o mês seguinte (se saldo credor > 0)
+      if (rE110) {
+        const totDeb = rE110.totDebitos;
+        const totCred = rE110.totCreditos;
+        const saldoDevedor = rE110.saldoDevedor;
+        const saldoCredor = rE110.saldoCredorTransportar;
+
+        // Item 010 - Subtotal de débitos
+        if (totDeb > 0) {
+          linhasDime.push(`3009${fmtItem(10)}${fmtVal(totDeb)}`);
+          totalRegistros++;
+        }
+        // Item 040 - Total de débitos
+        if (totDeb > 0) {
+          linhasDime.push(`3009${fmtItem(40)}${fmtVal(totDeb)}`);
+          totalRegistros++;
+        }
+        // Item 050 - Subtotal de créditos
+        if (totCred > 0) {
+          linhasDime.push(`3009${fmtItem(50)}${fmtVal(totCred)}`);
+          totalRegistros++;
+        }
+        // Item 080 - Total de créditos
+        if (totCred > 0) {
+          linhasDime.push(`3009${fmtItem(80)}${fmtVal(totCred)}`);
+          totalRegistros++;
+        }
+        // Item 120 - Saldo devedor
+        if (saldoDevedor > 0) {
+          linhasDime.push(`3009${fmtItem(120)}${fmtVal(saldoDevedor)}`);
+          totalRegistros++;
+        }
+        // Item 999 - Imposto a recolher (se há saldo devedor)
+        if (saldoDevedor > 0) {
+          linhasDime.push(`3009${fmtItem(999)}${fmtVal(saldoDevedor)}`);
+          totalRegistros++;
+        }
+        // Item 998 - Saldo credor para mês seguinte (se há saldo credor)
+        if (saldoCredor > 0) {
+          linhasDime.push(`3009${fmtItem(998)}${fmtVal(saldoCredor)}`);
+          totalRegistros++;
+        }
+      }
+
+      // --- Registro 33: Discriminação dos Pagamentos (Quadro 12) ---
+      // Layout: "33" + "12" + ORIGEM(1) + COD_RECEITA(5) + DT_VCTO(8) + VALOR(14) + CLASSE_VCTO(2) + ACORDO(15)
+      // Total: 2+2+1+5+8+14+2+15 = 49 chars
+      // ORIGEM: 1=Imposto ICMS
+      // COD_RECEITA: 5 dígitos (ex: 14492 para ICMS mensal SC)
+      // DT_VCTO: DDMMAAAA
+      // CLASSE_VCTO: 2 dígitos (ex: "10" = Normal prazo)
+      // ACORDO: 15 zeros
+      for (const e of e116Records) {
+        if (e.vlOr <= 0) continue;
+
+        const origem = '1'; // 1=Imposto ICMS
+        // Código de receita: 5 dígitos numéricos
+        // Para ICMS SC mensal: 14492
         const codRecRaw = (e.codRec || '').replace(/\D/g, '');
-        const codRec = codRecRaw.length === 4 ? codRecRaw : '1147';
-        // DT_VCTO: SPED usa DDMMAAAA; se vier AAAAMMDD, converter
+        const codRec = codRecRaw.length >= 4 ? codRecRaw.padStart(5, '0').slice(-5) : '14492';
+
+        // DT_VCTO: SPED usa DDMMAAAA
         let dtVcto = (e.dtVcto || '').replace(/\D/g, '');
         if (dtVcto.length === 8) {
-          // Detectar formato AAAAMMDD vs DDMMAAAA pelo ano (AAAA seria >1900)
+          // Detectar formato AAAAMMDD vs DDMMAAAA pelo ano (AAAA > 1900 na posição 0)
           const anoPos0 = parseInt(dtVcto.substring(0, 4));
           if (anoPos0 >= 1900 && anoPos0 <= 2100) {
             // Está em AAAAMMDD → converter para DDMMAAAA
@@ -379,26 +415,31 @@ Deno.serve(async (req) => {
         } else {
           dtVcto = '00000000';
         }
-        const valor = fmtVal(e.vlOr);
-        const classeVcto = '1'; // Normal (1 char)
+
+        // Valor: 14 dígitos em centavos
+        const valor = fmtVal(e.vlOr, 14);
+        // Classe de vencimento: 2 dígitos ("10" = Normal - prazo regular)
+        const classeVcto = '10';
         const acordo = '000000000000000'; // 15 zeros
 
-        linhasDime.push(`3303${origem}${codRec}${dtVcto}${valor}${classeVcto}${acordo}`);
+        linhasDime.push(`3312${origem}${codRec}${dtVcto}${valor}${classeVcto}${acordo}`);
         totalRegistros++;
       }
 
     } // fim if(temMovimento)
 
-    // --- Registro 98: Fim da Declaração (total de registros ANTES do 98 e 99) ---
-    // Formato: "98" + "  " + QTD(6) = 10 chars
-    const qtdReg = String(totalRegistros + 1).padStart(6, '0');
-    linhasDime.push(`98  ${qtdReg}`);
+    // --- Registro 98: Fim da Declaração ---
+    // Layout: "98" + "98" + QTD_REGISTROS(6) = 10 chars
+    // Conta TODOS os registros desta declaração exceto o 98 e 99 (ou seja, totalRegistros atual)
+    const qtdReg98 = String(totalRegistros).padStart(6, '0');
+    linhasDime.push(`9898${qtdReg98}`);
     totalRegistros++;
 
     // --- Registro 99: Fechamento do Arquivo ---
-    // Formato: "99" + "  " + QTD_TOTAL(6) + QTD_DECLARACOES(5) = 15 chars
-    const qtdTotal = String(totalRegistros + 1).padStart(6, '0');
-    linhasDime.push(`99  ${qtdTotal}00001`);
+    // Layout: "99" + "99" + QTD_TOTAL_REGISTROS(6) + QTD_DECLARACOES(5) = 15 chars
+    // QTD_TOTAL inclui TODOS os registros do arquivo (incluindo o 98 já contado, mais o próprio 99)
+    const qtdTotal99 = String(totalRegistros + 1).padStart(6, '0');
+    linhasDime.push(`9999${qtdTotal99}00001`);
     totalRegistros++;
 
     // === Final file ===
@@ -447,7 +488,7 @@ Deno.serve(async (req) => {
         saldo: saldoApur > 0
           ? `A RECOLHER: R$ ${saldoApur.toFixed(2)}`
           : `CREDOR: R$ ${Math.abs(saldoCredor).toFixed(2)}`,
-        format: 'fixed-width (posição fixa)'
+        format: 'fixed-width posicional (Manual SEF 153/2012)'
       },
       spedId: spedRecord.id
     });
