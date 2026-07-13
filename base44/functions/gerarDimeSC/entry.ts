@@ -13,14 +13,27 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Conteúdo do SPED Fiscal não fornecido.' }, { status: 400 });
     }
 
-    const linhas = conteudoSped.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    // Remove BOM (Byte Order Mark) e espaços invisíveis no início do conteúdo
+    const conteudoLimpo = conteudoSped.replace(/^\uFEFF/, '').replace(/^\u200B/, '').trim();
+    const linhas = conteudoLimpo.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (linhas.length === 0) {
       return Response.json({ success: false, error: 'Arquivo SPED Fiscal vazio.' }, { status: 400 });
     }
 
-    const camposPrim = linhas[0].split('|').filter((c) => c !== '');
+    // Procura o registro 0000 (pode não ser a primeira linha se houver header/BOM)
+    let primLinha = linhas[0].trim();
+    // Se a primeira linha não começa com |, tenta encontrar o 0000
+    if (!primLinha.startsWith('|')) {
+      const idx0000 = linhas.findIndex((l) => l.trim().startsWith('|') && l.split('|').filter((c) => c !== '')[0] === '0000');
+      if (idx0000 === -1) {
+        return Response.json({ success: false, error: 'O arquivo não é um SPED Fiscal válido (registro 0000 não encontrado).' }, { status: 400 });
+      }
+      primLinha = linhas[idx0000].trim();
+    }
+
+    const camposPrim = primLinha.split('|').filter((c) => c !== '');
     if (camposPrim[0] !== '0000') {
-      return Response.json({ success: false, error: 'O arquivo não é um SPED Fiscal válido.' }, { status: 400 });
+      return Response.json({ success: false, error: 'O arquivo não é um SPED Fiscal válido (registro 0000 não encontrado).' }, { status: 400 });
     }
 
     // === Parse SPED Fiscal ===
