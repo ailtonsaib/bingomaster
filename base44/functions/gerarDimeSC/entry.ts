@@ -90,7 +90,10 @@ Deno.serve(async (req) => {
 
         // Alguns ERPs deixam p[5] e p[10] vazios — calcular a partir dos componentes
         const totDebitos = parseNum(p[5]) || (debImposto + debAjustosDocFiscal + debAjustos);
-        const totCreditos = parseNum(p[10]) || (credImposto + credAjustosDocFiscal + credAjustos);
+        // Fallback 1: somar componentes de crédito. Fallback 2: deduzir do saldo devedor
+        const credFromComponents = credImposto + credAjustosDocFiscal + credAjustos;
+        const totCreditos = parseNum(p[10]) || credFromComponents ||
+          (totDebitos - saldoCredorAnt - saldoDevedor);
 
         rE110 = {
           debImposto,
