@@ -35,10 +35,11 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
   };
 
   const formatarMoeda = (valor) => {
-    const str = String(valor || '0').replace(/[^\d,-]/g, '').replace(',', '.');
+    if (!valor) return '0,00';
+    const str = String(valor).replace(/[^\d,-]/g, '').replace(',', '.');
     const num = parseFloat(str);
-    if (isNaN(num)) return valor;
-    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (isNaN(num) || num === 0) return '0,00';
+    return Math.abs(num).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const formatarSaldo = (saldo) => {

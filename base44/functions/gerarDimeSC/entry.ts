@@ -92,8 +92,11 @@ Deno.serve(async (req) => {
         const totDebitos = parseNum(p[5]) || (debImposto + debAjustosDocFiscal + debAjustos);
         // Fallback 1: somar componentes de crédito. Fallback 2: deduzir do saldo devedor
         const credFromComponents = credImposto + credAjustosDocFiscal + credAjustos;
-        const totCreditos = parseNum(p[10]) || credFromComponents ||
-          (totDebitos - saldoCredorAnt - saldoDevedor);
+        let totCreditos = parseNum(p[10]) || credFromComponents;
+        // Fallback final: se créditos ainda = 0 mas há débitos e saldo devedor, calcular pela fórmula
+        if ((!totCreditos || Math.abs(totCreditos) < 0.01) && totDebitos > 0 && saldoDevedor > 0) {
+          totCreditos = Math.max(0, totDebitos - saldoCredorAnt - saldoDevedor);
+        }
 
         rE110 = {
           debImposto,
@@ -329,6 +332,17 @@ Deno.serve(async (req) => {
           : `CREDOR: R$ ${Math.abs(saldoCredor).toFixed(2)}`,
         format: 'fixed-width (posição fixa)'
       },
+      _debug: rE110 ? {
+        rawE110: linhas.find(l => l.split('|')[1] === 'E110') || 'E110 não encontrado',
+        parsed: {
+          p2_debImposto: rE110.debImposto,
+          p5_totDebitos: rE110.totDebitos,
+          p7_credImposto: rE110.credImposto,
+          p10_totCreditos: rE110.totCreditos,
+          p11_saldoDevedor: rE110.saldoDevedor,
+          credFromComponents: rE110.credImposto + rE110.credAjustosDocFiscal + rE110.credAjustos
+        }
+      } : { error: 'E110 não encontrado' },
       spedId: spedRecord.id
     });
   } catch (error) {
