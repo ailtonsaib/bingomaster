@@ -338,17 +338,30 @@ Deno.serve(async (req) => {
         const totalEntradasVC = entradas.reduce((s: number, c: any) => s + c.vlCont, 0);
         const totalEntradasBC = entradas.reduce((s: number, c: any) => s + c.vlBc, 0);
         const totalEntradasICMS = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
+        const totalEntradasIsentas = entradas.reduce((s: number, c: any) => s + c.isentas, 0);
+        const totalEntradasOutras = entradas.reduce((s: number, c: any) => s + c.outras, 0);
         const totalSaidasVC = saidas.reduce((s: number, c: any) => s + c.vlCont, 0);
         const totalSaidasBC = saidas.reduce((s: number, c: any) => s + c.vlBc, 0);
         const totalSaidasICMS = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
+        const totalSaidasIsentas = saidas.reduce((s: number, c: any) => s + c.isentas, 0);
+        const totalSaidasOutras = saidas.reduce((s: number, c: any) => s + c.outras, 0);
 
+        // Quadro 03 — Itens conforme layout oficial DIME-SC:
+        // 10=VC entradas, 20=BC entradas, 30=ICMS creditado entradas,
+        // 40=isentas entradas, 50=outras entradas,
+        // 60=VC saídas, 70=BC saídas, 80=ICMS debitado saídas,
+        // 90=isentas saídas, 100=outras saídas
         const itens24: Array<{ item: number; valor: number }> = [
           { item: 10, valor: totalEntradasVC },
           { item: 20, valor: totalEntradasBC },
           { item: 30, valor: totalEntradasICMS },
-          { item: 50, valor: totalSaidasVC },
-          { item: 60, valor: totalSaidasBC },
-          { item: 70, valor: totalSaidasICMS },
+          { item: 40, valor: totalEntradasIsentas },
+          { item: 50, valor: totalEntradasOutras },
+          { item: 60, valor: totalSaidasVC },
+          { item: 70, valor: totalSaidasBC },
+          { item: 80, valor: totalSaidasICMS },
+          { item: 90, valor: totalSaidasIsentas },
+          { item: 100, valor: totalSaidasOutras },
         ];
 
         for (const item of itens24) {
@@ -369,11 +382,12 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        const debSaidas = rE110.debImposto > 0
-          ? rE110.debImposto
-          : saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
+        // Item 10 = ICMS debitado nas saídas — DEVE ser igual ao item 80 do Quadro 03
+        // Usar sempre a soma dos C190 (mesma base do Quadro 03) para garantir consistência
+        const debSaidas = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosDebitos = rE110.debAjDocFiscal + rE110.debAjustes;
-        const subtotalDebitos = rE110.totDebitos;
+        // Subtotal = soma dos itens 10 + 70 (sem saldo devedor anterior)
+        const subtotalDebitos = debSaidas + outrosDebitos;
 
         if (debSaidas > 0) {
           linhasDime.push(`25` + `04` + fmtItem(10) + fmtVal(debSaidas));
@@ -401,18 +415,15 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        const saldoAnt = rE110.saldoCredorAnt;
-        const credEntradas = rE110.credImposto > 0
-          ? rE110.credImposto
-          : entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
+        // Item 10 (saldo credor anterior) NÃO é emitido — não é possível confirmar
+        // contra a DIME do mês anterior. Se a DIME anterior tinha saldo 0,00,
+        // emitir um valor diferente causa erro de validação.
+        // Item 20 = ICMS creditado nas entradas — DEVE ser igual ao item 30 do Quadro 03
+        const credEntradas = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
-        const subtotalCreditos = rE110.totCreditos;
+        // Subtotal = soma dos itens 20 + 150 (sem item 10)
+        const subtotalCreditos = credEntradas + outrosCred;
 
-        if (saldoAnt > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(10) + fmtVal(saldoAnt));
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
         if (credEntradas > 0) {
           linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
           totalRegsArquivo++;
@@ -439,10 +450,12 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        const totDeb = rE110.totDebitos;
-        const totCred = rE110.totCreditos;
-        const saldoDevedor = rE110.saldoDevedor;
-        const saldoCredor = rE110.saldoCredorTransportar;
+        // Totais ajustados: devem coincidir com os subtotais dos Quadros 04 e 05
+        // (sem saldo credor anterior, que não foi emitido no Quadro 05)
+        const totDeb = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
+        const totCred = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
+        const saldoDevedor = Math.max(0, totDeb - totCred);
+        const saldoCredor = Math.max(0, totCred - totDeb);
 
         if (totDeb > 0) {
           linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(totDeb));   // 010 Subtotal débitos
@@ -573,16 +586,16 @@ Deno.serve(async (req) => {
       linhas: totalRegsArquivo,
       total_participantes: 0,
       total_produtos: 0,
-      debitos: rE110 ? rE110.totDebitos.toFixed(2).replace('.', ',') : '0,00',
-      creditos: rE110 ? rE110.totCreditos.toFixed(2).replace('.', ',') : '0,00',
+      debitos: rE110 ? (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes).toFixed(2).replace('.', ',') : '0,00',
+      creditos: rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes).toFixed(2).replace('.', ',') : '0,00',
       saldo: 'DIME-SC GERADO',
       sped_type: 'DIMESC'
     });
 
-    const debitosApur = rE110 ? rE110.totDebitos : 0;
-    const creditosApur = rE110 ? rE110.totCreditos : 0;
-    const saldoApur = rE110 ? rE110.saldoDevedor : 0;
-    const saldoCredor = rE110 ? rE110.saldoCredorTransportar : 0;
+    const debitosApur = rE110 ? (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) : 0;
+    const creditosApur = rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes) : 0;
+    const saldoApur = rE110 ? Math.max(0, debitosApur - creditosApur) : 0;
+    const saldoCredor = rE110 ? Math.max(0, creditosApur - debitosApur) : 0;
 
     return Response.json({
       success: true,
