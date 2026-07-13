@@ -80,7 +80,6 @@ export default function TicketKanban() {
   };
 
   const filtered = tickets.filter((t) => {
-    if (isRequester && t.created_by_id !== user.id) return false;
     if (search && !t.title?.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterType && t.type_id !== filterType) return false;
     if (filterPriority && t.priority_id !== filterPriority) return false;
