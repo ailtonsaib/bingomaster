@@ -28,6 +28,29 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
 
   const podeGerar = allowedTypes.includes('DIMESC');
 
+  const formatarCnpj = (cnpj) => {
+    const num = String(cnpj || '').replace(/\D/g, '');
+    if (num.length !== 14) return cnpj;
+    return num.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  };
+
+  const formatarMoeda = (valor) => {
+    const str = String(valor || '0').replace(/[^\d,-]/g, '').replace(',', '.');
+    const num = parseFloat(str);
+    if (isNaN(num)) return valor;
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const formatarSaldo = (saldo) => {
+    // saldo vem como "A RECOLHER: R$ 485557.66" ou "CREDOR: R$ 123.45"
+    const match = String(saldo || '').match(/^(.*?)R\$\s*([\d.,]+)$/);
+    if (!match) return saldo;
+    const num = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
+    if (isNaN(num)) return saldo;
+    const valorFormatado = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${match[1]}R$ ${valorFormatado}`;
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -236,7 +259,7 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
                 </div>
                 <div>
                   <span className="text-muted-foreground">CNPJ:</span>
-                  <p className="font-semibold">{resultado.empresa.cnpj}</p>
+                  <p className="font-semibold">{formatarCnpj(resultado.empresa.cnpj)}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">UF:</span>
@@ -268,7 +291,7 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
               <CardContent className="p-4 flex items-center gap-3">
                 <Scale className="w-8 h-8 text-red-500 shrink-0" />
                 <div>
-                  <p className="text-lg font-bold text-red-600">R$ {resultado.resumo.debitos}</p>
+                  <p className="text-lg font-bold text-red-600">R$ {formatarMoeda(resultado.resumo.debitos)}</p>
                   <p className="text-xs text-muted-foreground">Débitos ICMS</p>
                 </div>
               </CardContent>
@@ -277,7 +300,7 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
               <CardContent className="p-4 flex items-center gap-3">
                 <Scale className="w-8 h-8 text-emerald-500 shrink-0" />
                 <div>
-                  <p className="text-lg font-bold text-emerald-600">R$ {resultado.resumo.creditos}</p>
+                  <p className="text-lg font-bold text-emerald-600">R$ {formatarMoeda(resultado.resumo.creditos)}</p>
                   <p className="text-xs text-muted-foreground">Créditos ICMS</p>
                 </div>
               </CardContent>
@@ -285,7 +308,7 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
                 <Badge variant={resultado.resumo.saldo.includes('RECOLHER') ? 'destructive' : 'secondary'} className="text-xs">
-                  {resultado.resumo.saldo}
+                  {formatarSaldo(resultado.resumo.saldo)}
                 </Badge>
               </CardContent>
             </Card>
