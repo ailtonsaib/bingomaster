@@ -377,8 +377,32 @@ export function validarDetalheContribuicoes(registro, linha, campos, linhaAtual,
 
 // Validações cruzadas (após loop) — D500, 0110
 export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos) {
-  // Regra D500/D510 CST: removida — o PVA aceita D500 com vários CSTs (ex: 70, 71, 72, 73, 74, 75)
-  // e não apenas 50-56. A restrição original gerava 14+ avisos falsos positivos.
+  // Regra D501/D505 CST: D500 e filhos devem ser informados apenas para operações com Direito
+  // a Crédito (CST de 50 a 56). CSTs fora desse intervalo geram AVISO no PVA oficial.
+  // CSTs aceitos sem aviso: 50-56 (crédito) e 70-99 são tecnicamente aceitos pelo leiaute,
+  // mas o PVA emite aviso para qualquer CST fora de 50-56.
+  {
+    const cstCreditoD = ['50','51','52','53','54','55','56'];
+    for (let i = 0; i < linhas.length; i++) {
+      const c = linhas[i].split('|').filter((x) => x !== '');
+      if (c.length === 0) continue;
+      const reg = c[0];
+      if (reg === 'D501' || reg === 'D505') {
+        // D501: [0]=D501, [1]=CST_PIS, ...
+        // D505: [0]=D505, [1]=CST_COFINS, ...
+        const cst = c[1] || '';
+        const campoNome = reg === 'D501' ? 'CST_PIS' : 'CST_COFINS';
+        if (cst && !cstCreditoD.includes(cst)) {
+          avisos.push({
+            linha: i + 1,
+            registro: reg,
+            mensagem: `Devem ser informados registros D500 e filhos apenas para as Operações com Direito a Crédito (CST de 50 a 56). Campo ${campoNome}=${cst} (Registro/Campo não informado ou inválido).`,
+            severidade: 'aviso'
+          });
+        }
+      }
+    }
+  }
 
   // Regra: C100 VL_PIS >= soma VL_PIS dos C170 onde CST_PIS != 05 e != 75
   // Regra: C100 VL_COFINS >= soma VL_COFINS dos C170 onde CST_COFINS != 05 e != 75
