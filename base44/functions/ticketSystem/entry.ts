@@ -102,8 +102,8 @@ Deno.serve(async (req) => {
       }
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
-      const existing = await base44.asServiceRole.entities.SupportUser.filter({ email, company_id });
-      if (existing.length) return Response.json({ error: 'Email já cadastrado nesta empresa' }, { status: 409 });
+      const existing = await base44.asServiceRole.entities.SupportUser.filter({ email });
+      if (existing.length) return Response.json({ error: 'Email já cadastrado no sistema' }, { status: 409 });
       const password_hash = await hashPassword(password);
       const user = await base44.asServiceRole.entities.SupportUser.create({
         name, email, password_hash, company_id, company_name: company.razao_social,
@@ -133,6 +133,12 @@ Deno.serve(async (req) => {
         }
         if (updated_by_role !== 'system_admin' && updates.role === 'system_admin') {
           return Response.json({ error: 'Sem permissão para atribuir admin do sistema' }, { status: 403 });
+        }
+      }
+      if (updates.email) {
+        const dup = await base44.asServiceRole.entities.SupportUser.filter({ email: updates.email });
+        if (dup.length && dup[0].id !== user_id) {
+          return Response.json({ error: 'Email já cadastrado no sistema' }, { status: 409 });
         }
       }
       if (updates.password) {
