@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { X, Paperclip, Loader2, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
-export default function TicketForm({ users, types, priorities, currentUser, onSave, onCancel }) {
+export default function TicketForm({ users, types, priorities, currentUser, isRequester, onSave, onCancel }) {
   const [form, setForm] = useState({
     title: "", description: "", type_id: "", priority_id: "", assigned_to_id: "",
   });
@@ -92,13 +92,22 @@ export default function TicketForm({ users, types, priorities, currentUser, onSa
               </select>
             </div>
           </div>
-          <div>
-            <Label>Atribuir para</Label>
-            <select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.assigned_to_id} onChange={(e) => setForm({ ...form, assigned_to_id: e.target.value })}>
-              <option value="">Sem responsável</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-            </select>
-          </div>
+          {!isRequester && (
+            <div>
+              <Label>Atribuir para</Label>
+              <select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.assigned_to_id} onChange={(e) => setForm({ ...form, assigned_to_id: e.target.value })}>
+                <option value="">Sem responsável</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+              </select>
+            </div>
+          )}
+          {isRequester && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800">
+                Seu chamado será analisado pela equipe de suporte. Você receberá atualizações de status no Kanban.
+              </p>
+            </div>
+          )}
           {/* Attachments */}
           <div>
             <Label>Anexos</Label>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ArrowRight, ArrowLeft, UserCheck, Trash2, Clock, Paperclip, Loader2, Send, Download } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, UserCheck, Trash2, Clock, Paperclip, Loader2, Send, Download, Lock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const STATUS_LABELS = {
@@ -21,6 +21,7 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
 
+  const isRequester = currentUser?.role === "requester";
   const currentIdx = STATUS_FLOW.indexOf(ticket.status);
   const canForward = currentIdx < STATUS_FLOW.length - 1;
   const canBackward = currentIdx > 0;
@@ -197,20 +198,39 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 border-t pt-4">
-            <Button size="sm" variant="default" onClick={handleForward} disabled={!canForward} className="gap-1">
-              <ArrowRight className="w-4 h-4" /> Avançar
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleBackward} disabled={!canBackward} className="gap-1">
-              <ArrowLeft className="w-4 h-4" /> Voltar
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setShowTransfer(!showTransfer)} className="gap-1">
-              <UserCheck className="w-4 h-4" /> Transferir
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir chamado?")) onDelete(ticket.id); }} className="gap-1 text-destructive ml-auto">
-              <Trash2 className="w-4 h-4" /> Excluir
-            </Button>
-          </div>
+          {!isRequester && (
+            <div className="flex flex-wrap gap-2 border-t pt-4">
+              {onMove && (
+                <>
+                  <Button size="sm" variant="default" onClick={handleForward} disabled={!canForward} className="gap-1">
+                    <ArrowRight className="w-4 h-4" /> Avançar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleBackward} disabled={!canBackward} className="gap-1">
+                    <ArrowLeft className="w-4 h-4" /> Voltar
+                  </Button>
+                </>
+              )}
+              {onTransfer && (
+                <Button size="sm" variant="secondary" onClick={() => setShowTransfer(!showTransfer)} className="gap-1">
+                  <UserCheck className="w-4 h-4" /> Transferir
+                </Button>
+              )}
+              {onDelete && (
+                <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir chamado?")) onDelete(ticket.id); }} className="gap-1 text-destructive ml-auto">
+                  <Trash2 className="w-4 h-4" /> Excluir
+                </Button>
+              )}
+            </div>
+          )}
+
+          {isRequester && (
+            <div className="border-t pt-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5" />
+                Como cliente, você pode acompanhar o status e adicionar comentários, mas não pode movimentar, transferir ou excluir chamados.
+              </p>
+            </div>
+          )}
 
           {showTransfer && (
             <div className="flex gap-2 items-center bg-muted/30 p-3 rounded-lg">

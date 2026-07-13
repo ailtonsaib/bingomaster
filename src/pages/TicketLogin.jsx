@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, ArrowLeft, UserPlus, Loader2 } from "lucide-react";
+import { Building2, Lock, ArrowLeft, UserPlus, Loader2, UserCircle } from "lucide-react";
 import { setTicketUser } from "@/lib/ticketSession";
 
 export default function TicketLogin() {
@@ -18,6 +18,7 @@ export default function TicketLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showRegister, setShowRegister] = useState(false);
+  const [showClientRegister, setShowClientRegister] = useState(false);
   const [regData, setRegData] = useState({ razao_social: "", cnpj: "", endereco: "", name: "", email: "", password: "" });
 
   const [cnpjLoading, setCnpjLoading] = useState(false);
@@ -52,7 +53,7 @@ export default function TicketLogin() {
       const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompanies' });
       const company = res.data.companies?.find((c) => c.cnpj === cnpjClean && c.is_active);
       if (!company) { setError("Empresa não encontrada"); setLoading(false); return; }
-      setCompanyName(company.razao_social);
+      setCompanyName({ name: company.razao_social, _companyId: company.id });
       setStep(2);
     } catch { setError("Erro ao buscar empresa"); }
     setLoading(false);
@@ -88,6 +89,60 @@ export default function TicketLogin() {
     }
     setLoading(false);
   };
+
+  const handleClientRegister = async () => {
+    setError("");
+    const { name, email: regEmail, password: regPassword } = regData;
+    if (!name || !regEmail || !regPassword) { setError("Preencha todos os campos"); return; }
+    setLoading(true);
+    try {
+      const res = await base44.functions.invoke('ticketSystem', {
+        operation: 'createUser',
+        name,
+        email: regEmail,
+        password: regPassword,
+        company_id: companyName._companyId,
+        role: 'requester',
+      });
+      setTicketUser(res.data.user);
+      navigate('/chamados/kanban');
+    } catch (err) {
+      setError(err.response?.data?.error || "Erro ao cadastrar cliente");
+    }
+    setLoading(false);
+  };
+
+  if (showClientRegister) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <Button variant="ghost" size="sm" onClick={() => { setShowClientRegister(false); setError(""); }} className="gap-2 mb-2 w-fit">
+              <ArrowLeft className="w-4 h-4" /> Voltar
+            </Button>
+            <CardTitle className="flex items-center gap-2"><UserCircle className="w-5 h-5" /> Cadastro de Cliente</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Empresa: <strong>{companyName.name || companyName}</strong>
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800">
+                Como cliente, você poderá abrir chamados e acompanhar o status no Kanban. Não é possível movimentar, transferir ou excluir chamados.
+              </p>
+            </div>
+            <div><Label>Nome completo *</Label><Input value={regData.name} onChange={(e) => setRegData({ ...regData, name: e.target.value })} placeholder="Seu nome" /></div>
+            <div><Label>Email *</Label><Input type="email" value={regData.email} onChange={(e) => setRegData({ ...regData, email: e.target.value })} placeholder="seu@email.com" /></div>
+            <div><Label>Senha *</Label><Input type="password" value={regData.password} onChange={(e) => setRegData({ ...regData, password: e.target.value })} placeholder="Crie uma senha" /></div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button className="w-full" onClick={handleClientRegister} disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} Cadastrar e Entrar
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (showRegister) {
     return (
@@ -142,7 +197,7 @@ export default function TicketLogin() {
           <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
             {step === 1 ? <Building2 className="w-7 h-7 text-primary" /> : <Lock className="w-7 h-7 text-primary" />}
           </div>
-          <CardTitle>{step === 1 ? "Acesso ao Sistema" : `Bem-vindo à ${companyName}`}</CardTitle>
+          <CardTitle>{step === 1 ? "Acesso ao Sistema" : `Bem-vindo à ${companyName.name || companyName}`}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {step === 1 ? "Informe o CNPJ da sua empresa" : "Faça login para continuar"}
           </p>
@@ -175,6 +230,9 @@ export default function TicketLogin() {
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button className="w-full" onClick={handleLogin} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Entrar
+              </Button>
+              <Button variant="outline" className="w-full gap-2" onClick={() => { setRegData({ name: "", email: "", password: "" }); setShowClientRegister(true); }}>
+                <UserCircle className="w-4 h-4" /> Cadastrar como Cliente
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => { setStep(1); setError(""); }}>
                 <ArrowLeft className="w-4 h-4" /> Voltar

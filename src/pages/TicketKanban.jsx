@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock } from "lucide-react";
+import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock, UserCircle } from "lucide-react";
 import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
 import KanbanBoard from "@/components/tickets/KanbanBoard";
 import TicketForm from "@/components/tickets/TicketForm";
 import TicketDetailModal from "@/components/tickets/TicketDetailModal";
 
 export default function TicketKanban() {
+  const isRequester = user?.role === "requester";
   const navigate = useNavigate();
   const [user, setUser] = useState(getTicketUser());
   const [tickets, setTickets] = useState([]);
@@ -79,6 +80,7 @@ export default function TicketKanban() {
   };
 
   const filtered = tickets.filter((t) => {
+    if (isRequester && t.created_by_id !== user.id) return false;
     if (search && !t.title?.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterType && t.type_id !== filterType) return false;
     if (filterPriority && t.priority_id !== filterPriority) return false;
@@ -98,7 +100,10 @@ export default function TicketKanban() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")}><ArrowLeft className="w-5 h-5" /></Button>
             <div>
               <h1 className="text-lg font-bold font-heading">Central de Chamados</h1>
-              <p className="text-xs text-muted-foreground">{user.company_name} · {user.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {user.company_name} · {user.name}
+                {isRequester && <span className="ml-1 text-primary">· Cliente</span>}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -119,24 +124,26 @@ export default function TicketKanban() {
           </div>
         </div>
         {/* Filters */}
-        <div className="px-4 pb-3 flex flex-wrap gap-2 items-center">
-          <div className="relative flex-1 min-w-[150px] max-w-xs">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input className="w-full h-9 rounded-md border border-input bg-transparent pl-8 pr-3 text-sm" placeholder="Buscar chamado..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        {!isRequester && (
+          <div className="px-4 pb-3 flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[150px] max-w-xs">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input className="w-full h-9 rounded-md border border-input bg-transparent pl-8 pr-3 text-sm" placeholder="Buscar chamado..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <option value="">Todos os tipos</option>
+              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+              <option value="">Todas as prioridades</option>
+              {priorities.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
+              <option value="">Todos os responsáveis</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
           </div>
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-            <option value="">Todos os tipos</option>
-            {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
-            <option value="">Todas as prioridades</option>
-            {priorities.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
-            <option value="">Todos os responsáveis</option>
-            {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        )}
       </div>
 
       {companyPlan?.limit_reached && (
@@ -149,11 +156,11 @@ export default function TicketKanban() {
       )}
 
       <div className="p-4">
-        <KanbanBoard tickets={filtered} onMove={handleMove} onTicketClick={setSelectedTicket} />
+        <KanbanBoard tickets={filtered} onMove={isRequester ? undefined : handleMove} onTicketClick={setSelectedTicket} readOnly={isRequester} />
       </div>
 
       {showForm && (
-        <TicketForm users={users} types={types} priorities={priorities} currentUser={user} onSave={handleCreate} onCancel={() => setShowForm(false)} />
+        <TicketForm users={users} types={types} priorities={priorities} currentUser={user} isRequester={isRequester} onSave={handleCreate} onCancel={() => setShowForm(false)} />
       )}
 
       {selectedTicket && (
@@ -161,9 +168,9 @@ export default function TicketKanban() {
           ticket={selectedTicket}
           users={users}
           currentUser={user}
-          onMove={handleMove}
-          onTransfer={handleTransfer}
-          onDelete={handleDelete}
+          onMove={isRequester ? undefined : handleMove}
+          onTransfer={isRequester ? undefined : handleTransfer}
+          onDelete={isRequester ? undefined : handleDelete}
           onClose={() => setSelectedTicket(null)}
         />
       )}
