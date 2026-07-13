@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock, Boxes, Shield } from "lucide-react";
 import { ModuleManager } from "@/components/tickets/ModuleManager";
 import UserEditModal from "@/components/tickets/UserEditModal";
+import CompanyLogoUploader from "@/components/tickets/CompanyLogoUploader";
 import { getTicketUser, setTicketUser, clearTicketUser } from "@/lib/ticketSession";
 function clearPortalUser() { clearTicketUser(); }
 
@@ -21,12 +22,19 @@ export default function TicketAdmin() {
   const [user, setUser] = useState(getTicketUser());
   const [tab, setTab] = useState("users");
   const [loading, setLoading] = useState(true);
+  const [companyLogo, setCompanyLogo] = useState(null);
 
   const handleLogout = () => { clearPortalUser(); navigate("/chamados"); };
 
   useEffect(() => {
     if (!user) { navigate("/chamados"); return; }
-    setLoading(false);
+    (async () => {
+      try {
+        const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id, user_role: user.role });
+        setCompanyLogo(res.data.company?.logo_url || null);
+      } catch (e) {}
+      setLoading(false);
+    })();
   }, [user, navigate]);
 
   if (loading || !user) {
@@ -39,6 +47,7 @@ export default function TicketAdmin() {
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/chamados/kanban")}><ArrowLeft className="w-5 h-5" /></Button>
+            <CompanyLogoUploader companyId={user.company_id} logoUrl={companyLogo} onUpdated={setCompanyLogo} size="lg" />
             <div>
               <h1 className="text-lg font-bold font-heading">Administração</h1>
               <p className="text-xs text-muted-foreground">{user.company_name}</p>
@@ -352,6 +361,7 @@ function CompanyManager({ user }) {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex-1 min-w-[180px]">
                   <div className="flex items-center gap-2">
+                    <CompanyLogoUploader companyId={c.id} logoUrl={c.logo_url} onUpdated={(url) => { c.logo_url = url; setCompanies([...companies]); }} />
                     <p className="text-sm font-medium">{c.razao_social}</p>
                     {isFull
                       ? <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-0">Acesso Completo</Badge>

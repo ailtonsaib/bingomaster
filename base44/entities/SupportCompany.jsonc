@@ -37,6 +37,10 @@
       "type": "boolean",
       "default": false,
       "description": "Se a empresa tem acesso completo (ilimitado) liberado pelo admin"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL do logo da empresa"
     }
   },
   "required": [

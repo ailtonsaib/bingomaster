@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
       const isAdmin = user_role === 'system_admin' || user_role === 'company_admin' || user_role === 'admin';
       const fullAccess = company.ticket_full_access || company.ticket_plan === 'full' || isAdmin;
       const limit = company.ticket_limit ?? 10;
-      return Response.json({ company: { id: company.id, razao_social: company.razao_social, cnpj: company.cnpj, ticket_plan: company.ticket_plan || 'free', ticket_limit: limit, ticket_full_access: fullAccess, is_active: company.is_active }, ticket_count: ticketCount, limit_reached: !fullAccess && ticketCount >= limit });
+      return Response.json({ company: { id: company.id, razao_social: company.razao_social, cnpj: company.cnpj, ticket_plan: company.ticket_plan || 'free', ticket_limit: limit, ticket_full_access: fullAccess, is_active: company.is_active, logo_url: company.logo_url }, ticket_count: ticketCount, limit_reached: !fullAccess && ticketCount >= limit });
     }
 
     // ─── COMPANY: list with plan info (admin) ───
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       const result = [];
       for (const c of companies) {
         const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id: c.id });
-        result.push({ id: c.id, razao_social: c.razao_social, cnpj: c.cnpj, is_active: c.is_active, ticket_plan: c.ticket_plan || 'free', ticket_limit: c.ticket_limit ?? 10, ticket_full_access: c.ticket_full_access || false, ticket_count: tickets.length });
+        result.push({ id: c.id, razao_social: c.razao_social, cnpj: c.cnpj, is_active: c.is_active, ticket_plan: c.ticket_plan || 'free', ticket_limit: c.ticket_limit ?? 10, ticket_full_access: c.ticket_full_access || false, ticket_count: tickets.length, logo_url: c.logo_url, endereco: c.endereco });
       }
       return Response.json({ companies: result });
     }

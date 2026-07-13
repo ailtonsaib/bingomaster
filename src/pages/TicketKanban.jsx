@@ -105,6 +105,9 @@ export default function TicketKanban() {
         <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")}><ArrowLeft className="w-5 h-5" /></Button>
+            {companyPlan?.company?.logo_url && (
+              <img src={companyPlan.company.logo_url} alt="Logo" className="w-10 h-10 rounded-lg object-contain border border-border bg-card shrink-0" />
+            )}
             <div>
               <h1 className="text-lg font-bold font-heading">Central de Chamados</h1>
               <p className="text-xs text-muted-foreground">
