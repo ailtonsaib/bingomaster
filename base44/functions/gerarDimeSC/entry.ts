@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
       movimento +      // pos 078: Movimento N(1)
       '2' +            // pos 079: Substituto Tributário N(1) - 2=Não
       '1' +            // pos 080: Escrita Contábil N(1) - 1=Sim estabelecimento principal
-      '00000';         // pos 081-085: Qtd Trabalhadores N(5)
+      '00001';         // pos 081-085: Qtd Trabalhadores N(5) — mínimo 1 (zero é rejeitado pela SEF)
 
     linhasDime.push(reg21);
     totalRegsArquivo++;
@@ -518,8 +518,9 @@ Deno.serve(async (req) => {
         const valor = fmtVal(e.vlOr, 17);
 
         // Classe Vencimento: 5 dígitos (conforme PDF pos 035-039, tamanho 5)
-        // "00001" = prazo regular
-        const classeVcto = '00001';
+        // Código 10014 = ICMS normal apurado no mês, vencimento até o 10º dia após o período
+        // Conforme Portaria SEF 269/2018 (tabela oficial de classes de vencimento)
+        const classeVcto = '10014';
 
         // Número Acordo: 15 dígitos zeros (sem acordo)
         const acordo = '000000000000000';
