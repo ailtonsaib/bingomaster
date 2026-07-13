@@ -325,6 +325,19 @@ function CompanyManager({ user }) {
     setSavingId(null);
   };
 
+  const toggleCompanyActive = async (c) => {
+    setSavingId(c.id);
+    try {
+      await base44.functions.invoke('ticketSystem', {
+        operation: 'updateCompany',
+        company_id: c.id,
+        is_active: !c.is_active,
+      });
+      await load();
+    } catch (e) { alert("Erro ao atualizar empresa"); }
+    setSavingId(null);
+  };
+
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   return (
     <div className="space-y-2">
@@ -351,6 +364,17 @@ function CompanyManager({ user }) {
                     {c.ticket_count ?? 0}{!isFull && <span>/{c.ticket_limit ?? 10}</span>} chamados
                   </span>
                   <Badge variant={c.is_active ? "default" : "secondary"} className="text-xs">{c.is_active ? "Ativa" : "Inativa"}</Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5"
+                    onClick={() => toggleCompanyActive(c)}
+                    disabled={savingId === c.id}
+                    title={c.is_active ? "Desativar empresa" : "Ativar empresa"}
+                  >
+                    {savingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : c.is_active ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    {c.is_active ? "Desativar" : "Ativar"}
+                  </Button>
                   <Button
                     size="sm"
                     variant={isFull ? "outline" : "default"}
