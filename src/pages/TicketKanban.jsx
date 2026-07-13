@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock } from "lucide-react";
+import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock, BarChart3 } from "lucide-react";
 import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
 import KanbanBoard from "@/components/tickets/KanbanBoard";
 import TicketForm from "@/components/tickets/TicketForm";
 import TicketDetailModal from "@/components/tickets/TicketDetailModal";
+import ClientDashboard from "@/components/tickets/ClientDashboard";
 
 export default function TicketKanban() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function TicketKanban() {
   const [filterPriority, setFilterPriority] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("");
   const [companyPlan, setCompanyPlan] = useState(null);
+  const [showDashboard, setShowDashboard] = useState(isRequester);
 
   const loadData = useCallback(async () => {
     if (!user) { navigate("/chamados"); return; }
@@ -118,6 +120,7 @@ export default function TicketKanban() {
               </span>
             )}
             {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/chamados/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Cadastrar Clientes e Usuários</span></Button>}
+            <Button variant={showDashboard ? "default" : "outline"} size="sm" onClick={() => setShowDashboard((v) => !v)} className="gap-2"><BarChart3 className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span></Button>
             <Button size="sm" onClick={() => setShowForm(true)} disabled={companyPlan?.limit_reached} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
           </div>
@@ -151,6 +154,12 @@ export default function TicketKanban() {
           <p className="text-sm text-red-700">
             Limite de {companyPlan.company?.ticket_limit ?? 10} chamados atingido no plano Free. Contate o administrador para liberar acesso completo.
           </p>
+        </div>
+      )}
+
+      {showDashboard && (
+        <div className="p-4 pb-0">
+          <ClientDashboard tickets={tickets} />
         </div>
       )}
 
