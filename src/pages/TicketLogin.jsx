@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, ArrowLeft, UserPlus, Loader2 } from "lucide-react";
+import { Building2, Lock, ArrowLeft, UserPlus, Loader2, Mail, UserCircle } from "lucide-react";
 import { setTicketUser } from "@/lib/ticketSession";
 
 export default function TicketLogin() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState("empresa"); // "empresa" | "cliente"
   const [step, setStep] = useState(1);
   const [cnpj, setCnpj] = useState("");
   const [email, setEmail] = useState("");
@@ -43,6 +44,7 @@ export default function TicketLogin() {
     setCnpjLoading(false);
   };
 
+  // ─── Empresa: CNPJ → login ───
   const handleCnpj = async () => {
     setError("");
     const cnpjClean = cnpj.replace(/\D/g, "");
@@ -72,6 +74,35 @@ export default function TicketLogin() {
     setLoading(false);
   };
 
+  // ─── Cliente: email → encontrar empresa → senha ───
+  const handleClientEmail = async () => {
+    setError("");
+    if (!email) { setError("Informe seu email"); return; }
+    setLoading(true);
+    try {
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'findUserByEmail', email });
+      setCompanyName({ name: res.data.company.razao_social });
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.error || "Email não encontrado");
+    }
+    setLoading(false);
+  };
+
+  const handleClientLogin = async () => {
+    setError("");
+    if (!password) { setError("Informe sua senha"); return; }
+    setLoading(true);
+    try {
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'loginByEmail', email, password });
+      setTicketUser(res.data.user);
+      navigate('/chamados/kanban');
+    } catch (err) {
+      setError(err.response?.data?.error || "Erro ao fazer login");
+    }
+    setLoading(false);
+  };
+
   const handleRegister = async () => {
     setError("");
     const { razao_social, cnpj: regCnpj, endereco, name, email: regEmail, password: regPassword } = regData;
@@ -87,6 +118,16 @@ export default function TicketLogin() {
       setError(err.response?.data?.error || "Erro ao cadastrar");
     }
     setLoading(false);
+  };
+
+  const switchMode = (newMode) => {
+    setMode(newMode);
+    setStep(1);
+    setError("");
+    setEmail("");
+    setPassword("");
+    setCnpj("");
+    setCompanyName("");
   };
 
   if (showRegister) {
@@ -140,15 +181,41 @@ export default function TicketLogin() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
-            {step === 1 ? <Building2 className="w-7 h-7 text-primary" /> : <Lock className="w-7 h-7 text-primary" />}
+            {mode === "empresa"
+              ? (step === 1 ? <Building2 className="w-7 h-7 text-primary" /> : <Lock className="w-7 h-7 text-primary" />)
+              : (step === 1 ? <Mail className="w-7 h-7 text-primary" /> : <Lock className="w-7 h-7 text-primary" />)}
           </div>
-          <CardTitle>{step === 1 ? "Acesso ao Sistema" : `Bem-vindo à ${companyName.name || companyName}`}</CardTitle>
+          <CardTitle>
+            {mode === "empresa"
+              ? (step === 1 ? "Acesso da Empresa" : `Bem-vindo à ${companyName.name || companyName}`)
+              : (step === 1 ? "Acesso do Cliente" : `Bem-vindo, ${companyName.name || ""}`)}
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
-            {step === 1 ? "Informe o CNPJ da sua empresa" : "Faça login para continuar"}
+            {mode === "empresa"
+              ? (step === 1 ? "Informe o CNPJ da sua empresa" : "Faça login para continuar")
+              : (step === 1 ? "Informe seu email de acesso" : "Digite sua senha para entrar")}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {step === 1 ? (
+          {/* Mode toggle */}
+          {step === 1 && (
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              <button
+                onClick={() => switchMode("empresa")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${mode === "empresa" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}
+              >
+                <Building2 className="w-4 h-4" /> Empresa
+              </button>
+              <button
+                onClick={() => switchMode("cliente")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${mode === "cliente" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}
+              >
+                <UserCircle className="w-4 h-4" /> Cliente
+              </button>
+            </div>
+          )}
+
+          {mode === "empresa" && step === 1 && (
             <>
               <div>
                 <Label>CNPJ</Label>
@@ -162,7 +229,9 @@ export default function TicketLogin() {
                 Cadastrar nova empresa
               </Button>
             </>
-          ) : (
+          )}
+
+          {mode === "empresa" && step === 2 && (
             <>
               <div>
                 <Label>Email</Label>
@@ -177,6 +246,42 @@ export default function TicketLogin() {
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Entrar
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => { setStep(1); setError(""); }}>
+                <ArrowLeft className="w-4 h-4" /> Voltar
+              </Button>
+            </>
+          )}
+
+          {mode === "cliente" && step === 1 && (
+            <>
+              <div>
+                <Label>Email</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" onKeyDown={(e) => e.key === 'Enter' && handleClientEmail()} />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button className="w-full" onClick={handleClientEmail} disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Continuar
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                O sistema identificará automaticamente a empresa vinculada ao seu email.
+              </p>
+            </>
+          )}
+
+          {mode === "cliente" && step === 2 && (
+            <>
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
+                <p className="text-sm font-medium">{companyName.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{email}</p>
+              </div>
+              <div>
+                <Label>Senha</Label>
+                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleClientLogin()} autoFocus />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button className="w-full" onClick={handleClientLogin} disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Entrar
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => { setStep(1); setError(""); setPassword(""); }}>
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </Button>
             </>

@@ -35,6 +35,33 @@ Deno.serve(async (req) => {
       return Response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, company_id: company.id, company_name: company.razao_social } });
     }
 
+    // ─── AUTH: login by email only (client) ───
+    if (operation === 'loginByEmail') {
+      const { email, password } = body;
+      const users = await base44.asServiceRole.entities.SupportUser.filter({ email });
+      if (!users.length) return Response.json({ error: 'Email não encontrado' }, { status: 404 });
+      const user = users[0];
+      if (!user.is_active) return Response.json({ error: 'Usuário inativo' }, { status: 403 });
+      const company = await base44.asServiceRole.entities.SupportCompany.get(user.company_id);
+      if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      if (!company.is_active) return Response.json({ error: 'Empresa inativa' }, { status: 403 });
+      const hash = await hashPassword(password);
+      if (user.password_hash !== hash) return Response.json({ error: 'Senha incorreta' }, { status: 401 });
+      await base44.asServiceRole.entities.SupportUser.update(user.id, { last_login_at: new Date().toISOString() });
+      return Response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, company_id: company.id, company_name: company.razao_social } });
+    }
+
+    // ─── AUTH: find user by email (lookup company) ───
+    if (operation === 'findUserByEmail') {
+      const { email } = body;
+      const users = await base44.asServiceRole.entities.SupportUser.filter({ email });
+      if (!users.length) return Response.json({ error: 'Email não encontrado' }, { status: 404 });
+      const user = users[0];
+      const company = await base44.asServiceRole.entities.SupportCompany.get(user.company_id);
+      if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      return Response.json({ company: { id: company.id, razao_social: company.razao_social, is_active: company.is_active }, user_name: user.name, user_role: user.role });
+    }
+
     // ─── COMPANY: create ───
     if (operation === 'createCompany') {
       const { razao_social, cnpj, endereco } = body;
