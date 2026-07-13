@@ -84,19 +84,17 @@ Deno.serve(async (req) => {
         const credImposto = parseNum(p[7]);
         const credAjustosDocFiscal = parseNum(p[8]);
         const credAjustos = parseNum(p[9]);
-        const saldoDevedor = parseNum(p[11]);
-        const saldoCredorTransportar = parseNum(p[12]);
         const debEspeciais = parseNum(p[13]);
 
-        // Alguns ERPs deixam p[5] e p[10] vazios — calcular a partir dos componentes
-        const totDebitos = parseNum(p[5]) || (debImposto + debAjustosDocFiscal + debAjustos);
-        // Fallback 1: somar componentes de crédito. Fallback 2: deduzir do saldo devedor
-        const credFromComponents = credImposto + credAjustosDocFiscal + credAjustos;
-        let totCreditos = parseNum(p[10]) || credFromComponents;
-        // Fallback final: se créditos ainda = 0 mas há débitos e saldo devedor, calcular pela fórmula
-        if ((!totCreditos || Math.abs(totCreditos) < 0.01) && totDebitos > 0 && saldoDevedor > 0) {
-          totCreditos = Math.max(0, totDebitos - saldoCredorAnt - saldoDevedor);
-        }
+        // SEMPRE calcular totais a partir dos componentes individuais.
+        // Muitos ERPs preenchem p[5], p[10], p[11] e p[12] incorretamente
+        // (ex: colocam o saldo devedor em p[10] ou p[12] em vez dos totalizadores corretos).
+        const totDebitos = debImposto + debAjustosDocFiscal + debAjustos;
+        const totCreditos = saldoCredorAnt + credImposto + credAjustosDocFiscal + credAjustos;
+        // Saldo devedor = débitos - créditos (se positivo, há imposto a recolher)
+        const saldoDevedor = Math.max(0, totDebitos - totCreditos);
+        // Saldo credor a transportar = créditos - débitos (se positivo, há crédito a transportar)
+        const saldoCredorTransportar = Math.max(0, totCreditos - totDebitos);
 
         rE110 = {
           debImposto,
