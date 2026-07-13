@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ArrowRight, ArrowLeft, UserCheck, Trash2, Clock, Paperclip, Loader2, Send, Download, Lock } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, UserCheck, Trash2, Clock, Paperclip, Loader2, Send, Download, Lock, Building2, FileUp } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const STATUS_LABELS = {
@@ -11,8 +11,6 @@ const STATUS_LABELS = {
 const STATUS_FLOW = ["aberto", "em_analise", "iniciado", "em_teste", "concluido"];
 
 export default function TicketDetailModal({ ticket, users, currentUser, onMove, onTransfer, onDelete, onClose }) {
-  const [showTransfer, setShowTransfer] = useState(false);
-  const [transferTo, setTransferTo] = useState("");
   const [historyExpanded, setHistoryExpanded] = useState(true);
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(true);
@@ -88,23 +86,24 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
 
   const handleForward = () => onMove(ticket.id, STATUS_FLOW[currentIdx + 1], "forward");
   const handleBackward = () => onMove(ticket.id, STATUS_FLOW[currentIdx - 1], "backward");
-  const handleTransfer = () => {
-    if (!transferTo) return;
-    const user = users.find((u) => u.id === transferTo);
-    onTransfer(ticket.id, transferTo, user?.name || "");
-    setShowTransfer(false);
-  };
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardContent className="p-6 space-y-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-bold">{ticket.title}</h2>
-              <p className="text-xs text-muted-foreground">#{ticket.id?.slice(-6)} · Criado por {ticket.created_by_name}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl font-bold font-mono text-primary">#{ticket.id?.slice(-6)}</span>
+                <Badge variant="secondary">{STATUS_LABELS[ticket.status]}</Badge>
+              </div>
+              <h2 className="text-lg font-bold leading-tight">{ticket.title}</h2>
+              <div className="flex items-center gap-1.5 mt-2 text-sm">
+                <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="font-medium">{ticket.company_name || "—"}</span>
+                <span className="text-xs text-muted-foreground">· Criado por {ticket.created_by_name}</span>
+              </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}><X className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0"><X className="w-4 h-4" /></Button>
           </div>
 
           {ticket.description && (
@@ -114,13 +113,33 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{STATUS_LABELS[ticket.status]}</Badge>
             {ticket.type_name && <Badge variant="outline">{ticket.type_name}</Badge>}
             {ticket.module_name && <Badge variant="outline" className="border-primary/30">{ticket.module_name}</Badge>}
             {ticket.submodule_name && <Badge variant="secondary">{ticket.submodule_name}</Badge>}
             {ticket.priority_name && <Badge variant="outline" className="border-primary/30">{ticket.priority_name}</Badge>}
-            {ticket.assigned_to_name && <Badge variant="outline" className="gap-1"><UserCheck className="w-3 h-3" />{ticket.assigned_to_name}</Badge>}
           </div>
+
+          {/* Responsável inline */}
+          {!isRequester && onTransfer ? (
+            <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-2.5">
+              <UserCheck className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground shrink-0 font-medium">Responsável:</span>
+              <select
+                className="flex-1 h-8 rounded-md border border-input bg-card px-2 text-sm font-medium"
+                value=""
+                onChange={(e) => { if (e.target.value) { const u = users.find((u) => u.id === e.target.value); if (u) onTransfer(ticket.id, u.id, u.name); } }}
+              >
+                <option value="">{ticket.assigned_to_name || "Atribuir responsável..."}</option>
+                {users.filter((u) => u.id !== ticket.assigned_to_id).map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm">
+              <UserCheck className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Responsável:</span>
+              <span className="font-medium">{ticket.assigned_to_name || "Não atribuído"}</span>
+            </div>
+          )}
 
           {/* Stage timestamps */}
           <div>
@@ -178,22 +197,27 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
               />
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className="flex items-center gap-2 cursor-pointer text-sm px-3 py-2 rounded-md border border-dashed border-input hover:bg-muted/30 transition-colors">
-                  <Paperclip className="w-4 h-4" />
-                  <span>Anexar arquivos</span>
-                  <input type="file" multiple className="hidden" onChange={(e) => handleFiles(Array.from(e.target.files))} />
-                </label>
-                {uploading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                {attachments.map((a, i) => (
-                  <div key={i} className="flex items-center gap-1 bg-muted/30 rounded px-2 py-1 text-xs">
-                    <span className="truncate max-w-[120px]">{a.file_name}</span>
-                    <button onClick={() => removeAttachment(i)} className="text-destructive"><X className="w-3 h-3" /></button>
-                  </div>
-                ))}
-                <Button size="sm" className="ml-auto gap-1" onClick={handlePostComment} disabled={posting || uploading || (!newComment.trim() && attachments.length === 0)}>
+              <label className="flex items-center justify-center gap-2 cursor-pointer text-sm px-4 py-3 rounded-lg border-2 border-dashed border-input hover:border-primary/40 hover:bg-primary/5 transition-colors w-full">
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : <FileUp className="w-5 h-5 text-muted-foreground" />}
+                <span className="font-medium">{uploading ? "Enviando..." : "Anexar documentos"}</span>
+                <span className="text-xs text-muted-foreground">— clique para selecionar</span>
+                <input type="file" multiple className="hidden" onChange={(e) => handleFiles(Array.from(e.target.files))} />
+              </label>
+              {attachments.length > 0 && (
+                <div className="space-y-1">
+                  {attachments.map((a, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded px-3 py-1.5 text-xs">
+                      <Paperclip className="w-3 h-3 text-primary shrink-0" />
+                      <span className="truncate flex-1">{a.file_name}</span>
+                      <button onClick={() => removeAttachment(i)} className="text-destructive hover:text-destructive/80 shrink-0"><X className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button size="sm" className="gap-1" onClick={handlePostComment} disabled={posting || uploading || (!newComment.trim() && attachments.length === 0)}>
                   {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  Enviar
+                  Enviar Comentário
                 </Button>
               </div>
             </div>
@@ -212,11 +236,6 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
                   </Button>
                 </>
               )}
-              {onTransfer && (
-                <Button size="sm" variant="secondary" onClick={() => setShowTransfer(!showTransfer)} className="gap-1">
-                  <UserCheck className="w-4 h-4" /> Transferir
-                </Button>
-              )}
               {onDelete && (
                 <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir chamado?")) onDelete(ticket.id); }} className="gap-1 text-destructive ml-auto">
                   <Trash2 className="w-4 h-4" /> Excluir
@@ -231,16 +250,6 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
                 <Lock className="w-3.5 h-3.5" />
                 Como cliente, você pode acompanhar o status e adicionar comentários, mas não pode movimentar, transferir ou excluir chamados.
               </p>
-            </div>
-          )}
-
-          {showTransfer && (
-            <div className="flex gap-2 items-center bg-muted/30 p-3 rounded-lg">
-              <select className="flex-1 h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
-                <option value="">Selecione um usuário...</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-              </select>
-              <Button size="sm" onClick={handleTransfer} disabled={!transferTo}>Transferir</Button>
             </div>
           )}
 
