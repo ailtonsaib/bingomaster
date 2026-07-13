@@ -42,10 +42,15 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
   };
 
   const formatarSaldo = (saldo) => {
-    // saldo vem como "A RECOLHER: R$ 485557.66" ou "CREDOR: R$ 123.45"
+    // saldo vem como "A RECOLHER: R$ 637776.29" (ponto como decimal)
     const match = String(saldo || '').match(/^(.*?)R\$\s*([\d.,]+)$/);
     if (!match) return saldo;
-    const num = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
+    const raw = match[2];
+    // Se tem vírgula: formato BR (1.234,56) → remove pontos, troca vírgula por ponto
+    // Se só tem ponto: formato US (1234.56) → converte direto
+    const num = raw.includes(',')
+      ? parseFloat(raw.replace(/\./g, '').replace(',', '.'))
+      : parseFloat(raw);
     if (isNaN(num)) return saldo;
     const valorFormatado = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return `${match[1]}R$ ${valorFormatado}`;
