@@ -305,18 +305,6 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
             </CardContent>
           </Card>
 
-          {/* Debug info — remover após diagnosticar */}
-          {resultado._debug && (
-            <Card className="border-amber-300 bg-amber-50">
-              <CardContent className="p-4">
-                <p className="text-xs font-semibold text-amber-800 mb-2">🔍 Debug E110:</p>
-                <pre className="text-xs font-mono text-amber-900 overflow-x-auto">
-                  {JSON.stringify(resultado._debug, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Resumo fiscal */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
