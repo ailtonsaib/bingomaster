@@ -23,12 +23,22 @@ const STATUS_COLORS = {
   concluido: "#22c55e"
 };
 
-export default function AgentStatsPanel({ user }) {
+export default function AgentStatsPanel({ user, tickets: propTickets, users: propUsers }) {
   const [agents, setAgents] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    // Se dados já foram passados via props (ex: Kanban já carregou), usa direto
+    if (propTickets && propUsers) {
+      const agentUsers = propUsers.filter((u) =>
+        ["agent", "master_agent", "company_admin", "admin", "system_admin"].includes(u.role)
+      );
+      setAgents(agentUsers);
+      setTickets(propTickets);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [usersRes, ticketsRes] = await Promise.all([
@@ -46,7 +56,6 @@ export default function AgentStatsPanel({ user }) {
       const allUsers = usersRes.data.users || [];
       const allTickets = ticketsRes.data.tickets || [];
 
-      // Filtrar apenas agentes (agent, master_agent, company_admin, admin, system_admin)
       const agentUsers = allUsers.filter((u) =>
         ["agent", "master_agent", "company_admin", "admin", "system_admin"].includes(u.role)
       );
@@ -57,7 +66,7 @@ export default function AgentStatsPanel({ user }) {
       console.error(e);
     }
     setLoading(false);
-  }, [user.company_id, user.role]);
+  }, [user.company_id, user.role, propTickets, propUsers]);
 
   useEffect(() => { load(); }, [load]);
 

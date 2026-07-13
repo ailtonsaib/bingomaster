@@ -9,6 +9,7 @@ import KanbanBoard from "@/components/tickets/KanbanBoard";
 import TicketForm from "@/components/tickets/TicketForm";
 import TicketDetailModal from "@/components/tickets/TicketDetailModal";
 import ClientDashboard from "@/components/tickets/ClientDashboard";
+import AgentStatsPanel from "@/components/tickets/AgentStatsPanel";
 
 export default function TicketKanban() {
   const navigate = useNavigate();
@@ -173,8 +174,11 @@ export default function TicketKanban() {
       )}
 
       {showDashboard && (
-        <div className="p-4 pb-0">
+        <div className="p-4 pb-0 space-y-4">
           <ClientDashboard tickets={tickets} />
+          {!isRequester && (
+            <AgentStatsPanel user={user} tickets={tickets} users={users} />
+          )}
         </div>
       )}
 
