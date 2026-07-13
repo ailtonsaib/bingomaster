@@ -124,10 +124,16 @@ export default function TicketForm({ users, types, priorities, modules, submodul
             </div>
           )}
           {isRequester && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-800">
-                Seu chamado será analisado pela equipe de suporte. Você receberá atualizações de status no Kanban.
-              </p>
+            <div className="space-y-3">
+              <div>
+                <Label>Solicitante</Label>
+                <Input value={currentUser?.name || ""} disabled className="bg-muted/30" />
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800">
+                  Seu chamado será analisado pela equipe de suporte. Você receberá atualizações de status no Kanban.
+                </p>
+              </div>
             </div>
           )}
           {/* Attachments */}
