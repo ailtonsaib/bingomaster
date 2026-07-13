@@ -120,7 +120,8 @@ export default function DimeScGenerator({ planKey, allowedTypes }) {
         setErro(dados.error || 'Erro ao gerar DIME-SC.');
       }
     } catch (err) {
-      setErro('Erro ao gerar: ' + (err.message || 'erro desconhecido'));
+      const msg = err.response?.data?.error || err.message || 'erro desconhecido';
+      setErro(msg);
     } finally {
       setLoading(false);
     }
