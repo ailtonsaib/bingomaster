@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 Deno.serve(async (req) => {
   try {
@@ -13,280 +13,269 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Conteúdo do SPED Fiscal não fornecido.' }, { status: 400 });
     }
 
-    // Divide em linhas e filtra vazias
     const linhas = conteudoSped.split(/\r?\n/).filter((l) => l.trim().length > 0);
-
     if (linhas.length === 0) {
       return Response.json({ success: false, error: 'Arquivo SPED Fiscal vazio.' }, { status: 400 });
     }
 
-    // Valida se é realmente um SPED Fiscal (registro 0000)
     const camposPrim = linhas[0].split('|').filter((c) => c !== '');
     if (camposPrim[0] !== '0000') {
-      return Response.json({
-        success: false,
-        error: 'O arquivo fornecido não é um SPED Fiscal válido (deve iniciar com |0000|).'
-      }, { status: 400 });
+      return Response.json({ success: false, error: 'O arquivo não é um SPED Fiscal válido.' }, { status: 400 });
     }
 
-    // === Extração de dados do SPED Fiscal ===
+    // === Parse SPED Fiscal ===
+    let r0000: any = null;
+    let r0100: any = null;
+    let rE110: any = null;
+    const e116Records: any[] = [];
+    const c190Records: any[] = [];
 
-    let r0000 = null;
-    let rE110 = null;
-    let rE210 = null;
-    const registrosC190 = [];
+    const parseNum = (v: string) => parseFloat((v || '0').replace(',', '.')) || 0;
 
     for (const linha of linhas) {
-      const campos = linha.split('|').filter((c) => c !== '');
-      const reg = campos[0];
+      const p = linha.split('|');
+      const reg = p[1] || '';
 
+      // 0000 layout: |0000|COD_VER|COD_FIN|DT_INI|DT_FIN|NOME|CNPJ|CPF|UF|IE|COD_MUN|SUFRAMA|IND_PERFIL|IND_ATIV|
       if (reg === '0000' && !r0000) {
-        // |0000|COD_VERSAO|COD_FINALIDADE|DT_INI|DT_FIM|NOME|CNPJ|UF|IE|COD_MUN|SUFRAMA|IND_PERFIL|IND_ATIV|
         r0000 = {
-          razao: campos[5] || '',
-          cnpj: campos[6] || '',
-          uf: campos[7] || 'SC',
-          ie: campos[8] || '',
-          municipio: campos[9] || '',
-          dataIni: campos[3] || '',
-          dataFim: campos[4] || '',
-          perfil: campos[11] || 'A'
+          razao: (p[6] || '').trim(),
+          cnpj: (p[7] || '').trim(),
+          uf: (p[9] || 'SC').trim(),
+          ie: (p[10] || '').trim(),
+          municipio: (p[11] || '').trim(),
+          dataIni: (p[4] || '').trim(),
+          dataFim: (p[5] || '').trim(),
+          perfil: (p[13] || 'A').trim()
+        };
+      }
+
+      if (reg === '0100' && !r0100) {
+        r0100 = {
+          nome: (p[2] || '').trim(),
+          cpf: (p[3] || '').replace(/\D/g, '')
         };
       }
 
       if (reg === 'C190') {
-        // |C190|CST|CFOP|ALIQ|VL_OPER|VL_BC_ICMS|VL_ICMS|VL_BC_ST|VL_ICMS_ST|VL_RED_BC|VL_BC_IPI|...|
-        registrosC190.push({
-          cst: campos[1] || '00',
-          cfop: campos[2] || '0000',
-          aliq: parseFloat((campos[3] || '0').replace(',', '.')) || 0,
-          vlOper: parseFloat((campos[4] || '0').replace(',', '.')) || 0,
-          vlBc: parseFloat((campos[5] || '0').replace(',', '.')) || 0,
-          vlIcms: parseFloat((campos[6] || '0').replace(',', '.')) || 0,
-          vlBcSt: parseFloat((campos[7] || '0').replace(',', '.')) || 0,
-          vlIcmsSt: parseFloat((campos[8] || '0').replace(',', '.')) || 0
+        // Raw split: p[2]=CST, p[3]=CFOP, p[4]=ALIQ, p[5]=VL_OPR, p[6]=VL_BC, p[7]=VL_ICMS,
+        //            p[8]=VL_BC_ST, p[9]=VL_ICMS_ST, p[10]=VL_RED_BC, p[11]=VL_BC_IPI, p[12]=VL_IPI
+        c190Records.push({
+          cst: (p[2] || '00').trim(),
+          cfop: (p[3] || '0000').trim(),
+          vlOpr: parseNum(p[5]),
+          vlBc: parseNum(p[6]),
+          vlIcms: parseNum(p[7]),
+          vlBcSt: parseNum(p[8]),
+          vlIcmsSt: parseNum(p[9]),
+          vlIpi: parseNum(p[12])
         });
       }
 
       if (reg === 'E110' && !rE110) {
-        // |E110|VL_TOT_DEB_ICMS|VL_DEB_ANTEC|VL_DEB_DESC|VL_DEB_OUT|VL_TOT_CRED_ICMS|...
+        // p[2]=VL_TOT_DEB, p[6]=VL_TOT_CRED
         rE110 = {
-          totDebitos: parseFloat((campos[1] || '0').replace(',', '.')) || 0,
-          debAntec: parseFloat((campos[2] || '0').replace(',', '.')) || 0,
-          totCreditos: parseFloat((campos[5] || '0').replace(',', '.')) || 0
+          totDebitos: parseNum(p[2]),
+          totCreditos: parseNum(p[6])
         };
       }
 
-      if (reg === 'E210' && !rE210) {
-        // |E210|IND_MOV_ST|VL_SLD_CRED_ST_ANT|VL_DEVOL_ST|VL_RESSARC_ST|VL_OUT_CRED_ST|VL_TOT_DEB_ST|VL_OUT_DEB_ST|VL_TOT_CRED_ST|VL_SLD_APUR_ST|VL_SLD_CRED_ST_TRANSP|...|
-        rE210 = {
-          slcCredAnt: parseFloat((campos[2] || '0').replace(',', '.')) || 0,
-          totDebSt: parseFloat((campos[6] || '0').replace(',', '.')) || 0,
-          totCredSt: parseFloat((campos[8] || '0').replace(',', '.')) || 0
-        };
+      if (reg === 'E116') {
+        // p[2]=COD_OR, p[3]=VL_OR, p[4]=DT_VCTO, p[5]=COD_REC
+        e116Records.push({
+          codOr: (p[2] || '').trim(),
+          vlOr: parseNum(p[3]),
+          dtVcto: (p[4] || '').trim(),
+          codRec: (p[5] || '').trim()
+        });
       }
     }
 
     if (!r0000) {
-      return Response.json({ success: false, error: 'Registro 0000 (abertura) não encontrado no SPED Fiscal.' }, { status: 400 });
+      return Response.json({ success: false, error: 'Registro 0000 não encontrado.' }, { status: 400 });
     }
 
-    // === Mapeamento SPED Fiscal -> DIME-SC ===
+    // === Aggregate C190 by CFOP ===
+    const cfopsMap: Record<string, any> = {};
+    for (const c of c190Records) {
+      if (!cfopsMap[c.cfop]) {
+        cfopsMap[c.cfop] = { cfop: c.cfop, vlCont: 0, vlBc: 0, vlIcms: 0, isentas: 0, outras: 0, vlBcSt: 0, vlIcmsSt: 0 };
+      }
+      const g = cfopsMap[c.cfop];
+      // VL_CONT = VL_OPR + VL_IPI (valor contábil inclui IPI)
+      g.vlCont += c.vlOpr + c.vlIpi;
+      g.vlBc += c.vlBc;
+      g.vlIcms += c.vlIcms;
+      g.vlBcSt += c.vlBcSt;
+      g.vlIcmsSt += c.vlIcmsSt;
+      // Isentas: CST 40, 41, 50, 60 (isento/não tributado)
+      if (['40', '41', '50', '60'].includes(c.cst)) {
+        g.isentas += c.vlOpr;
+      }
+    }
 
-    const linhasDime = [];
-    let totalLinhas = 0;
+    // Outras = VL_CONT - VL_BC - ISENTAS
+    for (const g of Object.values(cfopsMap)) {
+      g.outras = Math.max(0, g.vlCont - g.vlBc - g.isentas);
+    }
 
-    const fmt = (val, dec = 2) => {
-      const n = typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.')) || 0;
-      return n.toFixed(dec).replace('.', ',');
+    // Separate entradas (1xxx, 2xxx) and saídas (5xxx, 6xxx)
+    const entradas = Object.values(cfopsMap)
+      .filter((c: any) => c.cfop.startsWith('1') || c.cfop.startsWith('2') || c.cfop.startsWith('3'))
+      .sort((a: any, b: any) => a.cfop.localeCompare(b.cfop));
+    const saidas = Object.values(cfopsMap)
+      .filter((c: any) => c.cfop.startsWith('5') || c.cfop.startsWith('6') || c.cfop.startsWith('7'))
+      .sort((a: any, b: any) => a.cfop.localeCompare(b.cfop));
+
+    // === Generate DIME-SC fixed-width file ===
+    const linhasDime: string[] = [];
+    let totalRegistros = 0;
+
+    // Helper: format value as fixed-width (cents, zero-padded)
+    const fmtVal = (val: number, width = 17) => {
+      const cents = Math.round((val || 0) * 100);
+      return String(Math.abs(cents)).padStart(width, '0').slice(-width);
     };
 
-    // Mês/ano de apuração: extrair da data final do SPED (DDMMAAAA -> MMAAAA)
+    // Helper: format text (left-justified, space-padded)
+    const fmtTxt = (text: string, width: number) => {
+      return (text || '').substring(0, width).padEnd(width, ' ');
+    };
+
+    // --- Record 20: Contabilista ---
+    // "20" + "  " + CPF(11) + NOME(50) + DATA_HORA(14) = 79 chars
+    const cpfCont = (r0100?.cpf || '00000000000').padStart(11, '0').slice(-11);
+    const nomeCont = r0100?.nome || 'CONTABILISTA';
+    const now = new Date();
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const dataHora = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+    linhasDime.push(`20  ${cpfCont}${fmtTxt(nomeCont, 50)}${dataHora}`);
+    totalRegistros++;
+
+    // --- Record 21: Início da Declaração ---
+    // "21" + "00" + IE(9) + RAZAO(50) + MMAAAA(6) + flags(11) + QTD_TRAB(5) = 85 chars
     const dtFim = r0000.dataFim;
-    let mesAno = '';
-    if (dtFim && dtFim.length === 8) {
-      mesAno = dtFim.substring(2, 4) + dtFim.substring(4);
+    const mesAno = dtFim.length === 8 ? dtFim.substring(2, 4) + dtFim.substring(4) : '000000';
+    const ie = r0000.ie.replace(/\D/g, '').padStart(9, '0').slice(-9);
+    const regimeApur = '2'; // 2=Normal, 9=Produtor Primário
+    const flags = `1${regimeApur}32222${c190Records.length > 0 ? '3' : '2'}221`; // tipoDecl=1, regime=2, porte=3, consolidada=2, centralizada=2, transCred=2, credPresumido=2, credIncentivo=2, movimento=3(com)/2(sem), substituto=2, escrita=1
+    linhasDime.push(`2100${ie}${fmtTxt(r0000.razao, 50)}${mesAno}${flags}00000`);
+    totalRegistros++;
+
+    // --- Record 22: Entradas (CFOP 1xxx, 2xxx, 3xxx) ---
+    // "22" + "01" + CFOP(5) + 8×value(17) = 145 chars
+    for (const c of entradas) {
+      const cfop = c.cfop.padStart(5, '0').slice(-5);
+      const campos = [
+        fmtVal(c.vlCont),    // Valor Contábil
+        fmtVal(c.vlBc),      // Base de Cálculo
+        fmtVal(c.vlIcms),    // Imposto Creditado
+        fmtVal(c.isentas),   // Isentas/Não Tributadas
+        fmtVal(c.outras),    // Outras
+        fmtVal(c.vlBcSt),    // BC Retido
+        fmtVal(c.vlIcmsSt),  // Imposto Retido
+        fmtVal(0)             // Dif. Alíquota
+      ].join('');
+      linhasDime.push(`2201${cfop}${campos}`);
+      totalRegistros++;
     }
 
-    // --- Registro 01: Identificação do Contribuinte ---
-    // |01|CNPJ|IE|Razão Social|UF|Município|Regime|Mês/Ano Apuração|...|
-    // Regime: 1 = Normal, 2 = Simples (simplificado)
-    const regimeDime = r0000.perfil === 'B' ? '2' : '1';
-    const r01 = [
-      '01',
-      r0000.cnpj,
-      r0000.ie,
-      r0000.razao,
-      r0000.uf,
-      r0000.municipio,
-      regimeDime,
-      mesAno,
-      '0', '0', '0'
-    ];
-    linhasDime.push(`|${r01.join('|')}|`);
-    totalLinhas++;
-
-    // --- Registro 04: Operações por CFOP ---
-    // Agrupar C190 por CFOP
-    const cfopsAgrupados = {};
-    for (const c of registrosC190) {
-      if (!cfopsAgrupados[c.cfop]) {
-        cfopsAgrupados[c.cfop] = { cfop: c.cfop, valorContabil: 0, bcCalculo: 0, impostoDebitado: 0, isentas: 0, outras: 0, st: 0 };
-      }
-      const g = cfopsAgrupados[c.cfop];
-      g.valorContabil += c.vlOper;
-      g.bcCalculo += c.vlBc;
-      g.impostoDebitado += c.vlIcms;
-      g.st += c.vlIcmsSt;
-      // Isentas: CST que indicam isenção/não tributado (40, 41, 50, 60)
-      if (['40', '41', '50', '60'].includes(c.cst)) {
-        g.isentas += c.vlOper;
-      }
-      // Outras: CST que indicam outras operações (70, 90, etc.)
-      if (['70', '90', '30'].includes(c.cst)) {
-        g.outras += c.vlOper;
-      }
+    // --- Record 23: Saídas (CFOP 5xxx, 6xxx, 7xxx) ---
+    // "23" + "02" + CFOP(5) + 8×value(17) = 145 chars
+    for (const c of saidas) {
+      const cfop = c.cfop.padStart(5, '0').slice(-5);
+      const campos = [
+        fmtVal(c.vlCont),    // Valor Contábil
+        fmtVal(c.vlBc),      // Base de Cálculo
+        fmtVal(c.vlIcms),    // Imposto Debitado
+        fmtVal(c.isentas),   // Isentas/Não Tributadas
+        fmtVal(c.outras),    // Outras
+        fmtVal(c.vlBcSt),    // BC Retido
+        fmtVal(c.vlIcmsSt),  // Imposto Retido
+        fmtVal(0)             // Dif. Alíquota
+      ].join('');
+      linhasDime.push(`2302${cfop}${campos}`);
+      totalRegistros++;
     }
 
-    // Ordenar CFOPs numericamente
-    const cfopsOrdenados = Object.values(cfopsAgrupados).sort((a, b) => a.cfop.localeCompare(b.cfop));
-
-    for (const cfop of cfopsOrdenados) {
-      // |04|CFOP|ValorContabil|BaseCalculo|ImpostoDebitado|IsentasNaoTrib|Outras|ImpostoRetidoST|
-      const r04 = [
-        '04',
-        cfop.cfop,
-        fmt(cfop.valorContabil),
-        fmt(cfop.bcCalculo),
-        fmt(cfop.impostoDebitado),
-        fmt(cfop.isentas),
-        fmt(cfop.outras),
-        fmt(cfop.st)
-      ];
-      linhasDime.push(`|${r04.join('|')}|`);
-      totalLinhas++;
+    // --- Record 24: Resumo dos Valores Fiscais (Quadro 03) ---
+    // "24" + "03" + line(2) + value(18) = 24 chars
+    if (rE110) {
+      const totalEntradasVC = entradas.reduce((s: number, c: any) => s + c.vlCont, 0);
+      const totalSaidasVC = saidas.reduce((s: number, c: any) => s + c.vlCont, 0);
+      const fmtVal18 = (val: number) => {
+        const cents = Math.round((val || 0) * 100);
+        return String(Math.abs(cents)).padStart(18, '0').slice(-18);
+      };
+      linhasDime.push(`240301${fmtVal18(totalEntradasVC)}`);   // Total entradas
+      totalRegistros++;
+      linhasDime.push(`240302${fmtVal18(totalSaidasVC)}`);    // Total saídas
+      totalRegistros++;
+      linhasDime.push(`240308${fmtVal18(rE110.totDebitos)}`); // Total débitos
+      totalRegistros++;
+      linhasDime.push(`240309${fmtVal18(rE110.totCreditos)}`); // Total créditos
+      totalRegistros++;
+      const saldo = rE110.totDebitos - rE110.totCreditos;
+      linhasDime.push(`240310${fmtVal18(saldo)}`);             // Saldo
+      totalRegistros++;
     }
 
-    // --- Registro 03: Apuração do ICMS (Operações Próprias) ---
-    if (rE110 || registrosC190.length > 0) {
-      const debitos = rE110 ? rE110.totDebitos : registrosC190
-        .filter((c) => c.cfop.startsWith('5') || c.cfop.startsWith('6'))
-        .reduce((s, c) => s + c.vlIcms, 0);
-      const creditos = rE110 ? rE110.totCreditos : registrosC190
-        .filter((c) => c.cfop.startsWith('1') || c.cfop.startsWith('2'))
-        .reduce((s, c) => s + c.vlIcms, 0);
-
-      const saldo = debitos - creditos;
-      const impostoRecolher = saldo > 0 ? saldo : 0;
-      const credorTransportar = saldo < 0 ? Math.abs(saldo) : 0;
-
-      // |03|COD_APURACAO|DEBITOS|DEDUCOES|CREDITOS|...|SALDO_RECOLHER|CREDOR_TRANSPORTAR|
-      const r03 = [
-        '03',
-        '01',
-        fmt(debitos),
-        '0,00',
-        fmt(creditos),
-        '0,00',
-        '0,00',
-        '0,00',
-        fmt(credorTransportar),
-        fmt(impostoRecolher),
-        '0,00',
-        '0,00'
-      ];
-      linhasDime.push(`|${r03.join('|')}|`);
-      totalLinhas++;
+    // --- Record 33: Discriminação dos Pagamentos (Quadro 03) ---
+    // "33" + "03" + origem(1) + cod_receita(4) + dt_vcto(8) + valor(17) + classe(5) + acordo(15) = 54 chars
+    for (const e of e116Records) {
+      const origem = '1'; // 1=Imposto
+      const codRec = (e.codRec || '0000').replace(/\D/g, '').padStart(4, '0').slice(-4);
+      const dtVcto = (e.dtVcto || '00000000').padStart(8, '0').slice(-8);
+      const valor = fmtVal(e.vlOr);
+      const classe = '00001';
+      const acordo = ''.padStart(15, '0');
+      linhasDime.push(`3303${origem}${codRec}${dtVcto}${valor}${classe}${acordo}`);
+      totalRegistros++;
     }
 
-    // --- Registro 05: Apuração da Substituição Tributária ---
-    if (rE210) {
-      const saldoSt = rE210.totDebSt - rE210.totCredSt - rE210.slcCredAnt;
-      const recolherSt = saldoSt > 0 ? saldoSt : 0;
-      const credorSt = saldoSt < 0 ? Math.abs(saldoSt) : 0;
+    // --- Record 98: Fim da Declaração ---
+    // "98" + "  " + qtd_registros(5) = 9 chars
+    const qtdReg = String(totalRegistros + 1).padStart(5, '0');
+    linhasDime.push(`98  ${qtdReg}`);
+    totalRegistros++;
 
-      const r05 = [
-        '05',
-        '01',
-        fmt(rE210.slcCredAnt),
-        fmt(rE210.totDebSt),
-        '0,00',
-        fmt(rE210.totCredSt),
-        '0,00',
-        '0,00',
-        fmt(credorSt),
-        fmt(recolherSt)
-      ];
-      linhasDime.push(`|${r05.join('|')}|`);
-      totalLinhas++;
-    } else if (registrosC190.some((c) => c.vlIcmsSt > 0)) {
-      // Se há ICMS ST nos CFOPs mas não há E210, gerar registro 05 com valores do C190
-      const debSt = registrosC190
-        .filter((c) => c.cfop.startsWith('5') || c.cfop.startsWith('6'))
-        .reduce((s, c) => s + c.vlIcmsSt, 0);
-      const credSt = registrosC190
-        .filter((c) => c.cfop.startsWith('1') || c.cfop.startsWith('2'))
-        .reduce((s, c) => s + c.vlIcmsSt, 0);
-      const saldoSt = debSt - credSt;
-      const recolherSt = saldoSt > 0 ? saldoSt : 0;
-      const credorSt = saldoSt < 0 ? Math.abs(saldoSt) : 0;
+    // --- Record 99: Fechamento do Arquivo ---
+    // "99" + "  " + qtd_registros(5) + qtd_declaracoes(5) = 14 chars
+    const qtdTotal = String(totalRegistros + 1).padStart(5, '0');
+    linhasDime.push(`99  ${qtdTotal}00001`);
+    totalRegistros++;
 
-      const r05 = [
-        '05',
-        '01',
-        '0,00',
-        fmt(debSt),
-        '0,00',
-        fmt(credSt),
-        '0,00',
-        '0,00',
-        fmt(credorSt),
-        fmt(recolherSt)
-      ];
-      linhasDime.push(`|${r05.join('|')}|`);
-      totalLinhas++;
-    }
-
-    // --- Registro 90: Encerramento ---
-    // |90|TOTAL_REGISTROS|
-    linhasDime.push(`|90|${totalLinhas + 1}|`);
-    totalLinhas++;
-
-    // === Gera arquivo final ===
-    const conteudoFinal = linhasDime.join('\r\n');
+    // === Generate final file ===
+    const conteudoFinal = linhasDime.join('\r\n') + '\r\n';
     const prefixoEmpresa = (r0000.razao || 'EMPRESA').substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
-    const nomeDime = `DIME_SC_${prefixoEmpresa}_${Date.now()}.txt`;
+    const nomeDime = nomeArquivo || `DIME_SC_${prefixoEmpresa}_${Date.now()}.txt`;
 
-    // Salva registro no banco (SpedFile com sped_type DIMESC)
+    // Save to database
     const spedRecord = await base44.entities.SpedFile.create({
       cliente_id: r0000.cnpj,
       cliente_nome: r0000.razao,
       nome_arquivo: nomeDime,
       conteudo: conteudoFinal,
       tamanho_kb: Math.round((conteudoFinal.length / 1024) * 100) / 100,
-      linhas: totalLinhas,
+      linhas: totalRegistros,
       total_participantes: 0,
       total_produtos: 0,
-      debitos: rE110 ? fmt(rE110.totDebitos) : fmt(0),
-      creditos: rE110 ? fmt(rE110.totCreditos) : fmt(0),
+      debitos: rE110 ? rE110.totDebitos.toFixed(2).replace('.', ',') : '0,00',
+      creditos: rE110 ? rE110.totCreditos.toFixed(2).replace('.', ',') : '0,00',
       saldo: 'DIME-SC GERADO',
       sped_type: 'DIMESC'
     });
 
-    // Apuração para resumo
-    const debitosApur = rE110 ? rE110.totDebitos : registrosC190
-      .filter((c) => c.cfop.startsWith('5') || c.cfop.startsWith('6'))
-      .reduce((s, c) => s + c.vlIcms, 0);
-    const creditosApur = rE110 ? rE110.totCreditos : registrosC190
-      .filter((c) => c.cfop.startsWith('1') || c.cfop.startsWith('2'))
-      .reduce((s, c) => s + c.vlIcms, 0);
+    // Summary for response
+    const debitosApur = rE110 ? rE110.totDebitos : 0;
+    const creditosApur = rE110 ? rE110.totCreditos : 0;
     const saldoApur = debitosApur - creditosApur;
 
     return Response.json({
       success: true,
       arquivoGerado: nomeDime,
       conteudo: conteudoFinal,
-      linhasGeradas: totalLinhas,
+      linhasGeradas: totalRegistros,
       empresa: {
         razao: r0000.razao,
         cnpj: r0000.cnpj,
@@ -294,11 +283,13 @@ Deno.serve(async (req) => {
         mesAno
       },
       resumo: {
-        totalCfops: cfopsOrdenados.length,
-        debitos: fmt(debitosApur),
-        creditos: fmt(creditosApur),
+        totalCfops: entradas.length + saidas.length,
+        totalEntradas: entradas.length,
+        totalSaidas: saidas.length,
+        debitos: debitosApur.toFixed(2).replace('.', ','),
+        creditos: creditosApur.toFixed(2).replace('.', ','),
         saldo: saldoApur > 0 ? `A RECOLHER: R$ ${saldoApur.toFixed(2)}` : `CREDOR: R$ ${Math.abs(saldoApur).toFixed(2)}`,
-        icmsSt: rE210 || registrosC190.some((c) => c.vlIcmsSt > 0) ? 'Sim' : 'Não'
+        format: 'fixed-width (posição fixa)'
       },
       spedId: spedRecord.id
     });
