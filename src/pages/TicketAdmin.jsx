@@ -8,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock, Boxes, Shield } from "lucide-react";
 import { ModuleManager } from "@/components/tickets/ModuleManager";
+import UserEditModal from "@/components/tickets/UserEditModal";
 import { getTicketUser, setTicketUser, clearTicketUser } from "@/lib/ticketSession";
 function clearPortalUser() { clearTicketUser(); }
+
+const ROLE_LABELS = { system_admin: "Admin do Sistema", company_admin: "Admin da Empresa", admin: "Admin da Empresa", agent: "Agente", requester: "Solicitante" };
 
 const maskCNPJ = (v) => v.replace(/\D/g, "").slice(0, 14).replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
 
@@ -91,6 +94,7 @@ function UserManager({ user }) {
   const [form, setForm] = useState({ name: "", email: "", password: "Premier@123", role: "agent", company_id: "" });
   const [companies, setCompanies] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,6 +122,14 @@ function UserManager({ user }) {
       await load();
     } catch (e) { alert(e.response?.data?.error || "Erro"); }
     setSaving(false);
+  };
+
+  const handleEdit = async (userId, updates) => {
+    try {
+      await base44.functions.invoke('ticketSystem', { operation: 'updateUser', user_id: userId, ...updates, updated_by_role: user.role });
+      setEditingUser(null);
+      await load();
+    } catch (e) { alert(e.response?.data?.error || "Erro ao atualizar"); }
   };
 
   const toggleActive = async (u) => {
@@ -169,16 +181,20 @@ function UserManager({ user }) {
           <Card key={u.id}><CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">{u.name} {u.id === user.id && <Badge variant="secondary" className="text-[10px] ml-1">Você</Badge>}</p>
-              <p className="text-xs text-muted-foreground">{u.email} · {u.role}{user.role === "system_admin" && u.company_name ? ` · ${u.company_name}` : ""}</p>
+              <p className="text-xs text-muted-foreground">{u.email} · {ROLE_LABELS[u.role] || u.role}{user.role === "system_admin" && u.company_name ? ` · ${u.company_name}` : ""}</p>
             </div>
             <div className="flex items-center gap-1">
               <Badge variant={u.is_active ? "default" : "secondary"} className="text-xs">{u.is_active ? "Ativo" : "Inativo"}</Badge>
+              <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)} title="Editar"><Pencil className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" onClick={() => toggleActive(u)} title={u.is_active ? "Desativar" : "Ativar"}><Check className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" onClick={() => handleDelete(u)} title="Excluir"><Trash2 className="w-4 h-4 text-destructive" /></Button>
             </div>
           </CardContent></Card>
         ))}
       </div>
+      {editingUser && (
+        <UserEditModal user={editingUser} currentUser={user} onSave={handleEdit} onClose={() => setEditingUser(null)} />
+      )}
     </div>
   );
 }

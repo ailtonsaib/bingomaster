@@ -124,7 +124,17 @@ Deno.serve(async (req) => {
 
     // ─── USER: update ───
     if (operation === 'updateUser') {
-      const { user_id, ...updates } = body;
+      const { user_id, updated_by_role, ...updates } = body;
+      if (updates.role) {
+        if (updated_by_role === 'company_admin' || updated_by_role === 'admin') {
+          if (['system_admin', 'company_admin', 'admin'].includes(updates.role)) {
+            return Response.json({ error: 'Sem permissão para atribuir papel administrativo' }, { status: 403 });
+          }
+        }
+        if (updated_by_role !== 'system_admin' && updates.role === 'system_admin') {
+          return Response.json({ error: 'Sem permissão para atribuir admin do sistema' }, { status: 403 });
+        }
+      }
       if (updates.password) {
         updates.password_hash = await hashPassword(updates.password);
         delete updates.password;
