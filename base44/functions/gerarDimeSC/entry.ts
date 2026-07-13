@@ -73,10 +73,32 @@ Deno.serve(async (req) => {
       }
 
       if (reg === 'E110' && !rE110) {
-        // p[2]=VL_TOT_DEB, p[6]=VL_TOT_CRED
+        // Layout oficial E110:
+        // p[2]=VL_TOT_DEB_ICMS (débitos do imposto)
+        // p[3]=VL_DEB_AJ (ajustes a débito - doc fiscal)
+        // p[4]=VL_AJ (ajustes a débito)
+        // p[5]=VL_TOT_DEB (total débitos = p[2]+p[3]+p[4])
+        // p[6]=VL_SLD_CRED_ANT (saldo credor período anterior)
+        // p[7]=VL_TOT_CRED_ICMS (créditos do imposto)
+        // p[8]=VL_CRED_AJ (ajustes a crédito - doc fiscal)
+        // p[9]=VL_AJ_CRED (ajustes a crédito)
+        // p[10]=VL_TOT_CRED (total créditos = p[7]+p[8]+p[9])
+        // p[11]=VL_SLD_DEVEDOR (saldo devedor / A RECOLHER)
+        // p[12]=VL_SLD_CRED_TRANSPORTAR (saldo credor a transportar)
+        // p[13]=DEB_ESP (débitos especiais)
         rE110 = {
-          totDebitos: parseNum(p[2]),
-          totCreditos: parseNum(p[6])
+          debImposto: parseNum(p[2]),
+          debAjustosDocFiscal: parseNum(p[3]),
+          debAjustos: parseNum(p[4]),
+          totDebitos: parseNum(p[5]),
+          saldoCredorAnt: parseNum(p[6]),
+          credImposto: parseNum(p[7]),
+          credAjustosDocFiscal: parseNum(p[8]),
+          credAjustos: parseNum(p[9]),
+          totCreditos: parseNum(p[10]),
+          saldoDevedor: parseNum(p[11]),
+          saldoCredorTransportar: parseNum(p[12]),
+          debEspeciais: parseNum(p[13])
         };
       }
 
@@ -211,11 +233,14 @@ Deno.serve(async (req) => {
       totalRegistros++;
       linhasDime.push(`240302${fmtVal18(totalSaidasVC)}`);    // Total saídas
       totalRegistros++;
-      linhasDime.push(`240308${fmtVal18(rE110.totDebitos)}`); // Total débitos
+      linhasDime.push(`240308${fmtVal18(rE110.totDebitos)}`); // Total débitos (com ajustes)
       totalRegistros++;
-      linhasDime.push(`240309${fmtVal18(rE110.totCreditos)}`); // Total créditos
+      linhasDime.push(`240309${fmtVal18(rE110.totCreditos)}`); // Total créditos (com ajustes)
       totalRegistros++;
-      const saldo = rE110.totDebitos - rE110.totCreditos;
+      // Saldo devedor (A RECOLHER) — já calculado pelo ERP no campo VL_SLD_DEVEDOR
+      const saldo = rE110.saldoDevedor > 0
+        ? rE110.saldoDevedor
+        : rE110.totDebitos - rE110.totCreditos - rE110.saldoCredorAnt;
       linhasDime.push(`240310${fmtVal18(saldo)}`);             // Saldo
       totalRegistros++;
     }
@@ -267,10 +292,11 @@ Deno.serve(async (req) => {
       sped_type: 'DIMESC'
     });
 
-    // Summary for response
+    // Summary for response — usa VL_SLD_DEVEDOR (p[11]) que já inclui todos os ajustes
     const debitosApur = rE110 ? rE110.totDebitos : 0;
     const creditosApur = rE110 ? rE110.totCreditos : 0;
-    const saldoApur = debitosApur - creditosApur;
+    const saldoApur = rE110 ? rE110.saldoDevedor : 0;
+    const saldoCredor = rE110 ? rE110.saldoCredorTransportar : 0;
 
     return Response.json({
       success: true,
@@ -289,7 +315,9 @@ Deno.serve(async (req) => {
         totalSaidas: saidas.length,
         debitos: debitosApur.toFixed(2).replace('.', ','),
         creditos: creditosApur.toFixed(2).replace('.', ','),
-        saldo: saldoApur > 0 ? `A RECOLHER: R$ ${saldoApur.toFixed(2)}` : `CREDOR: R$ ${Math.abs(saldoApur).toFixed(2)}`,
+        saldo: saldoApur > 0
+          ? `A RECOLHER: R$ ${saldoApur.toFixed(2)}`
+          : `CREDOR: R$ ${Math.abs(saldoCredor).toFixed(2)}`,
         format: 'fixed-width (posição fixa)'
       },
       spedId: spedRecord.id
