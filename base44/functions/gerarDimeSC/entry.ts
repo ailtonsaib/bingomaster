@@ -247,8 +247,9 @@ Deno.serve(async (req) => {
 
     // === Generate final file ===
     const conteudoFinal = linhasDime.join('\r\n') + '\r\n';
-    const prefixoEmpresa = (r0000.razao || 'EMPRESA').substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
-    const nomeDime = nomeArquivo || `DIME_SC_${prefixoEmpresa}_${Date.now()}.txt`;
+    const mm = (r0000.dataFim || '').length >= 6 ? r0000.dataFim.substring(2, 4) : '01';
+    const yyyy = (r0000.dataFim || '').length >= 8 ? r0000.dataFim.substring(4) : '2026';
+    const nomeDime = `DIME_${mm}${yyyy}.txt`;
 
     // Save to database
     const spedRecord = await base44.entities.SpedFile.create({
