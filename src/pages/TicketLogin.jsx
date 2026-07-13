@@ -111,7 +111,7 @@ export default function TicketLogin() {
     try {
       const companyRes = await base44.functions.invoke('ticketSystem', { operation: 'createCompany', razao_social, cnpj: regCnpj, endereco });
       const company = companyRes.data.company;
-      const userRes = await base44.functions.invoke('ticketSystem', { operation: 'createUser', name, email: regEmail, password: regPassword, company_id: company.id, role: 'admin' });
+      const userRes = await base44.functions.invoke('ticketSystem', { operation: 'createUser', name, email: regEmail, password: regPassword, company_id: company.id, role: 'company_admin' });
       setTicketUser(userRes.data.user);
       navigate('/chamados/kanban');
     } catch (err) {

@@ -94,7 +94,12 @@ Deno.serve(async (req) => {
 
     // ─── USER: create ───
     if (operation === 'createUser') {
-      const { name, email, password, company_id, role } = body;
+      const { name, email, password, company_id, role, created_by_role } = body;
+      if (created_by_role === 'company_admin' || created_by_role === 'admin') {
+        if (role === 'system_admin' || role === 'company_admin') {
+          return Response.json({ error: 'Sem permissão para criar usuário administrador' }, { status: 403 });
+        }
+      }
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       const existing = await base44.asServiceRole.entities.SupportUser.filter({ email, company_id });
@@ -109,8 +114,10 @@ Deno.serve(async (req) => {
 
     // ─── USER: list by company ───
     if (operation === 'getUsers') {
-      const { company_id } = body;
-      const users = await base44.asServiceRole.entities.SupportUser.filter({ company_id });
+      const { company_id, user_role } = body;
+      const users = user_role === 'system_admin'
+        ? await base44.asServiceRole.entities.SupportUser.list()
+        : await base44.asServiceRole.entities.SupportUser.filter({ company_id });
       const safeUsers = users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, company_id: u.company_id, company_name: u.company_name, is_active: u.is_active, last_login_at: u.last_login_at }));
       return Response.json({ users: safeUsers });
     }
@@ -139,7 +146,7 @@ Deno.serve(async (req) => {
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
       const ticketCount = tickets.length;
-      const isAdmin = user_role === 'admin';
+      const isAdmin = user_role === 'system_admin' || user_role === 'company_admin' || user_role === 'admin';
       const fullAccess = company.ticket_full_access || company.ticket_plan === 'full' || isAdmin;
       const limit = company.ticket_limit ?? 10;
       return Response.json({ company: { id: company.id, razao_social: company.razao_social, cnpj: company.cnpj, ticket_plan: company.ticket_plan || 'free', ticket_limit: limit, ticket_full_access: fullAccess, is_active: company.is_active }, ticket_count: ticketCount, limit_reached: !fullAccess && ticketCount >= limit });
@@ -147,6 +154,7 @@ Deno.serve(async (req) => {
 
     // ─── COMPANY: list with plan info (admin) ───
     if (operation === 'getCompaniesWithPlan') {
+      if (body.user_role !== 'system_admin') return Response.json({ error: 'Acesso negado ao painel de planos' }, { status: 403 });
       const companies = await base44.asServiceRole.entities.SupportCompany.list();
       const result = [];
       for (const c of companies) {
@@ -158,6 +166,7 @@ Deno.serve(async (req) => {
 
     // ─── COMPANY: update plan (admin) ───
     if (operation === 'updateCompanyPlan') {
+      if (body.user_role !== 'system_admin') return Response.json({ error: 'Acesso negado ao painel de planos' }, { status: 403 });
       const { company_id, ticket_full_access, ticket_limit, ticket_plan } = body;
       const updates = {};
       if (ticket_full_access !== undefined) updates.ticket_full_access = ticket_full_access;
@@ -171,7 +180,7 @@ Deno.serve(async (req) => {
     if (operation === 'createTicket') {
       const { title, description, company_id, company_name, type_id, type_name, module_id, module_name, submodule_id, submodule_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments, created_by_role } = body;
       // Admin tem acesso ilimitado por padrão
-      const isAdmin = created_by_role === 'admin';
+      const isAdmin = ['system_admin', 'company_admin', 'admin'].includes(created_by_role);
       // Verifica limite do plano
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
@@ -205,8 +214,10 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: list by company ───
     if (operation === 'getTickets') {
-      const { company_id } = body;
-      const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
+      const { company_id, user_role } = body;
+      const tickets = user_role === 'system_admin'
+        ? await base44.asServiceRole.entities.SupportTicket.list()
+        : await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
       return Response.json({ tickets });
     }
 
@@ -342,6 +353,18 @@ Deno.serve(async (req) => {
     if (operation === 'deletePriority') {
       await base44.asServiceRole.entities.TicketPriority.delete(body.priority_id);
       return Response.json({ success: true });
+    }
+
+    // ─── PROMOTE TO SYSTEM ADMIN (one-time, exclusive) ───
+    if (operation === 'promoteSystemAdmin') {
+      const { user_id } = body;
+      const existingAdmins = await base44.asServiceRole.entities.SupportUser.filter({ role: 'system_admin' });
+      if (existingAdmins.length > 0) return Response.json({ error: 'Já existe um administrador do sistema' }, { status: 403 });
+      const targetUser = await base44.asServiceRole.entities.SupportUser.get(user_id);
+      if (!targetUser) return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      if (targetUser.role !== 'admin' && targetUser.role !== 'company_admin') return Response.json({ error: 'Apenas administradores podem ser promovidos' }, { status: 403 });
+      const updated = await base44.asServiceRole.entities.SupportUser.update(user_id, { role: 'system_admin' });
+      return Response.json({ user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, company_id: updated.company_id, company_name: updated.company_name } });
     }
 
     return Response.json({ error: 'Operação não reconhecida: ' + operation }, { status: 400 });

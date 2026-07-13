@@ -35,8 +35,8 @@ export default function TicketKanban() {
     setLoading(true);
     try {
       const [txRes, usersRes, typesRes, priRes, modRes, subModRes, planRes] = await Promise.all([
-        base44.functions.invoke('ticketSystem', { operation: 'getTickets', company_id: user.company_id }),
-        base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id }),
+        base44.functions.invoke('ticketSystem', { operation: 'getTickets', company_id: user.company_id, user_role: user.role }),
+        base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id, user_role: user.role }),
         base44.functions.invoke('ticketSystem', { operation: 'getTypes' }),
         base44.functions.invoke('ticketSystem', { operation: 'getPriorities' }),
         base44.functions.invoke('ticketSystem', { operation: 'getModules' }),
@@ -108,7 +108,9 @@ export default function TicketKanban() {
             <div>
               <h1 className="text-lg font-bold font-heading">Central de Chamados</h1>
               <p className="text-xs text-muted-foreground">
-                {user.company_name} · {user.name}
+                {user.role === "system_admin" ? "Todas as Empresas" : user.company_name} · {user.name}
+                {user.role === "system_admin" && <span className="ml-1 text-primary">· Admin do Sistema</span>}
+                {user.role === "company_admin" && <span className="ml-1 text-primary">· Admin da Empresa</span>}
                 {isRequester && <span className="ml-1 text-primary">· Cliente</span>}
               </p>
             </div>
@@ -125,7 +127,7 @@ export default function TicketKanban() {
                 Plano Completo · {companyPlan.ticket_count} chamados
               </span>
             )}
-            {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/chamados/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Cadastrar Clientes e Usuários</span></Button>}
+            {(user.role === "system_admin" || user.role === "company_admin" || user.role === "admin") && <Button variant="outline" size="sm" onClick={() => navigate("/chamados/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Cadastrar Clientes e Usuários</span></Button>}
             <Button variant={showDashboard ? "default" : "outline"} size="sm" onClick={() => setShowDashboard((v) => !v)} className="gap-2"><BarChart3 className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span></Button>
             <Button size="sm" onClick={() => setShowForm(true)} disabled={companyPlan?.limit_reached} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>

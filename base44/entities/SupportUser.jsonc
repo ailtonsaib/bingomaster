@@ -25,12 +25,14 @@
     "role": {
       "type": "string",
       "enum": [
+        "system_admin",
+        "company_admin",
         "admin",
         "agent",
         "requester"
       ],
       "default": "agent",
-      "description": "Papel: admin, agente ou solicitante"
+      "description": "Papel: system_admin (acesso total a tudo), company_admin (acesso total do CNPJ vinculado, sem painel de planos), admin (legacy = company_admin), agent (atendente), requester (solicitante)"
     },
     "is_active": {
       "type": "boolean",

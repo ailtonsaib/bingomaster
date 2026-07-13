@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock, Boxes } from "lucide-react";
+import { ArrowLeft, Building2, Users, Tag, Flag, Plus, Trash2, LogOut, Loader2, Pencil, Check, X, KanbanSquare, Lock, Unlock, Boxes, Shield } from "lucide-react";
 import { ModuleManager } from "@/components/tickets/ModuleManager";
-import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
+import { getTicketUser, setTicketUser, clearTicketUser } from "@/lib/ticketSession";
 function clearPortalUser() { clearTicketUser(); }
 
 const maskCNPJ = (v) => v.replace(/\D/g, "").slice(0, 14).replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
@@ -55,7 +55,7 @@ export default function TicketAdmin() {
             { key: "modules", label: "Módulos e Sub-módulos", icon: Boxes },
             { key: "types", label: "Tipos de Chamado", icon: Tag },
             { key: "priorities", label: "Prioridades", icon: Flag },
-            ...(user.role === "admin" ? [{ key: "companies", label: "Empresas", icon: Building2 }] : []),
+            ...(user.role === "system_admin" ? [{ key: "companies", label: "Empresas", icon: Building2 }] : []),
           ].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
@@ -64,6 +64,15 @@ export default function TicketAdmin() {
           ))}
         </div>
 
+        {user.role === "admin" && (
+          <Card className="bg-purple-50 border-purple-200 mb-4"><CardContent className="p-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-purple-900">Tornar-se Administrador do Sistema</p>
+              <p className="text-xs text-purple-700">Você terá acesso total a todas as empresas e ao painel de planos. Esta ação é exclusiva e não pode ser desfeita.</p>
+            </div>
+            <PromoteButton user={user} />
+          </CardContent></Card>
+        )}
         {tab === "users" && <UserManager user={user} />}
         {tab === "modules" && <ModuleManager />}
         {tab === "types" && <TypeManager />}
@@ -79,17 +88,22 @@ function UserManager({ user }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "Premier@123", role: "agent" });
+  const [form, setForm] = useState({ name: "", email: "", password: "Premier@123", role: "agent", company_id: "" });
+  const [companies, setCompanies] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id });
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id, user_role: user.role });
       setUsers(res.data.users || []);
+      if (user.role === "system_admin") {
+        const compRes = await base44.functions.invoke('ticketSystem', { operation: 'getCompanies' });
+        setCompanies(compRes.data.companies || []);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [user.company_id]);
+  }, [user.company_id, user.role]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -97,8 +111,9 @@ function UserManager({ user }) {
     if (!form.name || !form.email || !form.password) return;
     setSaving(true);
     try {
-      await base44.functions.invoke('ticketSystem', { operation: 'createUser', ...form, company_id: user.company_id });
-      setForm({ name: "", email: "", password: "Premier@123", role: "agent" });
+      const targetCompanyId = user.role === "system_admin" ? (form.company_id || user.company_id) : user.company_id;
+      await base44.functions.invoke('ticketSystem', { operation: 'createUser', ...form, company_id: targetCompanyId, created_by_role: user.role });
+      setForm({ name: "", email: "", password: "Premier@123", role: "agent", company_id: "" });
       setShowForm(false);
       await load();
     } catch (e) { alert(e.response?.data?.error || "Erro"); }
@@ -125,7 +140,7 @@ function UserManager({ user }) {
           <div className="flex items-center justify-between"><h3 className="font-semibold">Cadastrar Cliente ou Usuário</h3><Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="w-4 h-4" /></Button></div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-800">
-              <strong>Solicitante</strong>: cliente que abre chamados (SAC). <strong>Agente</strong>: atendente que resolve chamados. <strong>Admin</strong>: acesso total.
+              <strong>Solicitante</strong>: cliente que abre chamados (SAC). <strong>Agente</strong>: atendente que resolve chamados.{user.role === "system_admin" && " <strong>Admin da Empresa</strong>: acesso total do CNPJ vinculado."}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -133,8 +148,16 @@ function UserManager({ user }) {
             <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div><Label>Senha inicial</Label><Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
             <div><Label>Tipo de Acesso</Label><select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="requester">Solicitante (Cliente - abre chamados)</option><option value="agent">Agente (Atendente)</option><option value="admin">Administrador</option>
+              <option value="requester">Solicitante (Cliente - abre chamados)</option>
+              <option value="agent">Agente (Atendente)</option>
+              {user.role === "system_admin" && <option value="company_admin">Administrador da Empresa</option>}
             </select></div>
+            {user.role === "system_admin" && (
+              <div className="col-span-2"><Label>Empresa</Label><select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.company_id} onChange={(e) => setForm({ ...form, company_id: e.target.value })}>
+                <option value="">Selecione uma empresa...</option>
+                {companies.map((c) => <option key={c.id} value={c.id}>{c.razao_social}</option>)}
+              </select></div>
+            )}
           </div>
           <Button onClick={handleCreate} disabled={saving}>{saving ? "Salvando..." : "Criar Usuário"}</Button>
         </CardContent></Card>
@@ -146,7 +169,7 @@ function UserManager({ user }) {
           <Card key={u.id}><CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">{u.name} {u.id === user.id && <Badge variant="secondary" className="text-[10px] ml-1">Você</Badge>}</p>
-              <p className="text-xs text-muted-foreground">{u.email} · {u.role}</p>
+              <p className="text-xs text-muted-foreground">{u.email} · {u.role}{user.role === "system_admin" && u.company_name ? ` · ${u.company_name}` : ""}</p>
             </div>
             <div className="flex items-center gap-1">
               <Badge variant={u.is_active ? "default" : "secondary"} className="text-xs">{u.is_active ? "Ativo" : "Inativo"}</Badge>
@@ -265,7 +288,7 @@ function CompanyManager({ user }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompaniesWithPlan' }); setCompanies(res.data.companies || []); } catch (e) {}
+    try {       const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompaniesWithPlan', user_role: user.role }); setCompanies(res.data.companies || []); } catch (e) {}
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -277,6 +300,7 @@ function CompanyManager({ user }) {
       await base44.functions.invoke('ticketSystem', {
         operation: 'updateCompanyPlan',
         company_id: c.id,
+        user_role: user.role,
         ticket_full_access: newAccess,
         ticket_plan: newAccess ? "full" : "free",
       });
@@ -329,5 +353,28 @@ function CompanyManager({ user }) {
         );
       })}
     </div>
+  );
+}
+
+// ─── PROMOTE BUTTON (one-time: admin → system_admin) ───
+function PromoteButton({ user }) {
+  const [loading, setLoading] = useState(false);
+  const handlePromote = async () => {
+    if (!confirm("Confirmar: você se tornará o Administrador do Sistema com acesso total. Esta ação não pode ser desfeita.")) return;
+    setLoading(true);
+    try {
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'promoteSystemAdmin', user_id: user.id });
+      setTicketUser(res.data.user);
+      window.location.reload();
+    } catch (e) {
+      alert(e.response?.data?.error || "Erro ao promover");
+    }
+    setLoading(false);
+  };
+  return (
+    <Button size="sm" onClick={handlePromote} disabled={loading} className="bg-purple-600 hover:bg-purple-700 gap-2 shrink-0">
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+      Promover
+    </Button>
   );
 }
