@@ -695,15 +695,18 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
         // C100: split sem filtro para preservar índices
         const c = linhas[i].split('|');
         const f = c.slice(1, c[c.length - 1] === '' ? -1 : undefined);
-        // f[1]=IND_OPER, f[3]=COD_PART, f[7]=NUM_DOC, f[14]=VL_PIS(TOTAL), f[18]=VL_COFINS(TOTAL)
-        // CNPJ está em COD_PART (0150) — chave do documento está em f[12]=CHV_NFE
+        // Layout C100: f[2]=IND_EMIT, f[3]=COD_PART
+        // CHV_NFE pode estar em f[8] (sem SUB) ou f[9] (com SUB) — buscar campo de 44 dígitos
+        let chvNfeField = '';
+        for (let j = 8; j <= 9; j++) { if (f[j] && /^\d{44}$/.test(f[j])) { chvNfeField = f[j]; break; } }
         currentC100Linha = i;
         c100Docs[i] = {
           linha: i + 1,
           indOper: f[1] || '',
+          indEmit: f[2] || '',
           codPart: f[3] || '',
           numDoc: f[7] || '',
-          chvNfe: f[12] || '',
+          chvNfe: chvNfeField,
           vlPisC100: f[14] ? parseNum(f[14]) : 0,
           vlCofinsC100: f[18] ? parseNum(f[18]) : 0,
           somaPisC170: 0,
@@ -762,16 +765,16 @@ export function validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos)
       if (doc.vlCofinsC100 > 0 && doc.somaCofinsC170 > 0 && doc.vlCofinsC100 < doc.somaCofinsC170 - 0.02) {
         erros.push({ linha: doc.linha, registro: 'C100', mensagem: `Valor inválido. O valor deve ser maior ou igual à soma dos valores da COFINS (VL_COFINS) dos Itens do Documento (Registros C170) onde CST (CST_COFINS) for diferente de 05 e 75.`, severidade: 'erro' });
       }
-      // CHV_NFE: CNPJ na chave deve confecer com CNPJ do participante
-      if (doc.chvNfe && doc.chvNfe.length >= 22) {
+      // CHV_NFE: CNPJ na chave deve conferir com CNPJ do participante
+      // IND_EMIT=0 → participante é o emitente → CNPJ da chave deve conferir
+      // IND_EMIT=1 → participante é o destinatário → CNPJ da chave é do emitente (terceiro) → NÃO comparar
+      if (doc.chvNfe && doc.chvNfe.length >= 22 && doc.indEmit === '0') {
         const cnpjChave = doc.chvNfe.substring(6, 20);
-        // Buscar CNPJ do participante no 0150
         const codPart = doc.codPart;
         if (codPart) {
           for (const linha of linhas) {
             const c = linha.split('|').filter((x) => x !== '');
             if (c[0] === '0150' && c[1] === codPart) {
-              // 0150: 1=0150, 2=COD_PART, 3=NOME, 4=COD_PAIS, 5=CNPJ, 6=IE, 7=COD_MUN
               const cnpjPart = (c[4] || '').replace(/\D/g, '');
               if (cnpjPart && cnpjPart.length === 14 && cnpjChave !== cnpjPart) {
                 erros.push({ linha: doc.linha, registro: 'C100', mensagem: `O CNPJ da chave do documento eletrônico (${cnpjChave}) não confere com o CNPJ ou CPF do participante informado (${cnpjPart}).`, severidade: 'erro' });

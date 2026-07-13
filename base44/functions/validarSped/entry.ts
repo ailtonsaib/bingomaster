@@ -897,7 +897,7 @@ Deno.serve(async (req) => {
 
     // --- 4. Segunda passada: validações específicas por registro ---
     linhaAtual = 0;
-    let c100ChvNfeMap: Array<{linha: number; codPart: string; cnpjChave: string}> | null = null;
+    let c100ChvNfeMap: Array<{linha: number; codPart: string; cnpjChave: string; indEmit: string}> | null = null;
     const part0150Map = construirMapaParticipantes(linhas);
 
     for (const linha of linhas) {
@@ -1001,19 +1001,20 @@ Deno.serve(async (req) => {
             });
           }
         }
-        // Validar CHV_NFE (posição 8 no fC100): CNPJ na chave deve conferir com CNPJ/CPF do participante (COD_PART)
-        // Layout C100: fC100[0]=C100, fC100[1]=IND_OPER, fC100[2]=IND_EMIT, fC100[3]=COD_PART, fC100[4]=COD_MOD,
-        //              fC100[5]=COD_SIT, fC100[6]=SER, fC100[7]=NUM_DOC, fC100[8]=CHV_NFE, ...
-        // A chave NF-e (44 dígitos) tem CNPJ do emitente nas posições 6-19 (índices 6..19)
-        const chvNfe = fC100[8] || '';
+        // Validar CHV_NFE: CNPJ na chave deve conferir com CNPJ/CPF do participante (COD_PART)
+        // Layout C100: fC100[2]=IND_EMIT (0=Emitente próprio, 1=Terceiros), fC100[3]=COD_PART
+        // CHV_NFE pode estar em fC100[8] (sem SUB) ou fC100[9] (com SUB) — buscar campo de 44 dígitos
+        // A chave NF-e (44 dígitos) tem CNPJ do emitente nas posições 6-19 (substring 6..20)
+        // IND_EMIT=0 → participante é o emitente → CNPJ da chave deve conferir com participante
+        // IND_EMIT=1 → participante é o destinatário → CNPJ da chave é do emitente (outra empresa) → NÃO comparar
+        let chvNfe = '';
+        for (let j = 8; j <= 9; j++) { if (fC100[j] && /^\d{44}$/.test(fC100[j])) { chvNfe = fC100[j]; break; } }
         const codPartC100 = fC100[3] || '';
-        if (chvNfe.length >= 22 && codPartC100) {
-          const cnpjChave = chvNfe.substring(6, 20); // posições 7-20 da chave = CNPJ emitente
-          // Buscar CNPJ do participante no 0150 acumulado antes desta linha
-          // Precisamos de acesso ao mapa de participantes — faremos a validação em segunda passada
-          // guardando os dados para cruzamento posterior
+        const indEmitC100 = fC100[2] || '';
+        if (chvNfe && codPartC100) {
+          const cnpjChave = chvNfe.substring(6, 20);
           if (!c100ChvNfeMap) c100ChvNfeMap = [];
-          c100ChvNfeMap.push({ linha: linhaAtual, codPart: codPartC100, cnpjChave });
+          c100ChvNfeMap.push({ linha: linhaAtual, codPart: codPartC100, cnpjChave, indEmit: indEmitC100 });
         }
       }
 

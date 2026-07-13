@@ -15,12 +15,15 @@ export function construirMapaParticipantes(linhas: string[]): Record<string, str
 }
 
 // Validação CHV_NFE × participante 0150
+// IND_EMIT=0 → participante é o emitente → CNPJ da chave deve conferir com participante
+// IND_EMIT=1 → participante é o destinatário → CNPJ da chave é do emitente (terceiro) → NÃO comparar
 export function validarCruzadaFiscal(
-  c100ChvNfeMap: Array<{linha: number; codPart: string; cnpjChave: string}>,
+  c100ChvNfeMap: Array<{linha: number; codPart: string; cnpjChave: string; indEmit: string}>,
   part0150Map: Record<string, string>,
   erros: Array<{linha: number; registro: string; mensagem: string; severidade: string}>
 ) {
   for (const item of c100ChvNfeMap) {
+    if (item.indEmit !== '0') continue;
     const cnpjPart = part0150Map[item.codPart] || '';
     if (!cnpjPart || cnpjPart.length < 11) continue;
     if (item.cnpjChave !== cnpjPart.substring(0, 14)) {
