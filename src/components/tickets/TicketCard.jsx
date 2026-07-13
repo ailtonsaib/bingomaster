@@ -10,18 +10,16 @@ const PRIORITY_COLORS = {
   gray: "bg-gray-100 text-gray-700 border-gray-300",
 };
 
-export default function TicketCard({ ticket, index, onClick }) {
+export default function TicketCard({ ticket, index, onClick, readOnly }) {
   const priorityColor = PRIORITY_COLORS[ticket.priority_level >= 4 ? 'red' : ticket.priority_level === 3 ? 'orange' : ticket.priority_level === 2 ? 'yellow' : 'blue'] || PRIORITY_COLORS.gray;
 
-  return (
-    <Draggable draggableId={ticket.id} index={index}>
-      {(provided, snapshot) => (
+  const inner = (provided, snapshot) => (
         <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
+          ref={provided?.innerRef}
+          {...(provided?.draggableProps || {})}
+          {...(provided?.dragHandleProps || {})}
           onClick={onClick}
-          className={`bg-card border rounded-lg p-3 cursor-pointer transition-shadow hover:shadow-md ${snapshot.isDragging ? "shadow-lg ring-2 ring-primary/30" : ""}`}
+          className={`bg-card border rounded-lg p-3 cursor-pointer transition-shadow hover:shadow-md ${snapshot?.isDragging ? "shadow-lg ring-2 ring-primary/30" : ""}`}
         >
           <div className="flex items-start justify-between gap-2 mb-2">
             <p className="text-sm font-medium leading-tight">{ticket.title}</p>
@@ -44,7 +42,13 @@ export default function TicketCard({ ticket, index, onClick }) {
             <span>#{ticket.id?.slice(-4)}</span>
           </div>
         </div>
-      )}
+  );
+
+  if (readOnly) return inner();
+
+  return (
+    <Draggable draggableId={ticket.id} index={index}>
+      {(provided, snapshot) => inner(provided, snapshot)}
     </Draggable>
   );
 }

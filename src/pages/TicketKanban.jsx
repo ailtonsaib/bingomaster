@@ -3,16 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock, UserCircle } from "lucide-react";
+import { ArrowLeft, Plus, LogOut, Settings, Loader2, Search, AlertTriangle, Lock } from "lucide-react";
 import { getTicketUser, clearTicketUser } from "@/lib/ticketSession";
 import KanbanBoard from "@/components/tickets/KanbanBoard";
 import TicketForm from "@/components/tickets/TicketForm";
 import TicketDetailModal from "@/components/tickets/TicketDetailModal";
 
 export default function TicketKanban() {
-  const isRequester = user?.role === "requester";
   const navigate = useNavigate();
   const [user, setUser] = useState(getTicketUser());
+  const isRequester = user?.role === "requester";
   const [tickets, setTickets] = useState([]);
   const [users, setUsers] = useState([]);
   const [types, setTypes] = useState([]);
@@ -118,7 +118,7 @@ export default function TicketKanban() {
                 Plano Completo · {companyPlan.ticket_count} chamados
               </span>
             )}
-            {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/chamados/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Administração</span></Button>}
+            {user.role === "admin" && <Button variant="outline" size="sm" onClick={() => navigate("/chamados/admin")} className="gap-2"><Settings className="w-4 h-4" /> <span className="hidden sm:inline">Cadastrar Clientes e Usuários</span></Button>}
             <Button size="sm" onClick={() => setShowForm(true)} disabled={companyPlan?.limit_reached} className="gap-2"><Plus className="w-4 h-4" /> Novo Chamado</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair"><LogOut className="w-4 h-4" /></Button>
           </div>

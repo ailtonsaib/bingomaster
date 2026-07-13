@@ -1,4 +1,4 @@
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import TicketCard from "./TicketCard";
 
 const COLUMNS = [
@@ -34,7 +34,7 @@ export default function KanbanBoard({ tickets, onMove, onTicketClick, readOnly }
               </div>
               <div className="space-y-2 min-h-[200px] p-2 rounded-lg bg-muted/30">
                 {colTickets.map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} index={0} onClick={() => onTicketClick(ticket)} />
+                  <TicketCard key={ticket.id} ticket={ticket} index={0} onClick={() => onTicketClick(ticket)} readOnly />
                 ))}
                 {colTickets.length === 0 && (
                   <div className="text-center text-xs text-muted-foreground py-8">Nenhum chamado</div>

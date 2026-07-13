@@ -50,8 +50,8 @@ export default function TicketAdmin() {
       <div className="px-4 py-4">
         <div className="flex gap-2 mb-6 border-b">
           {[
-            { key: "users", label: "Usuários", icon: Users },
-            { key: "types", label: "Tipos", icon: Tag },
+            { key: "users", label: "Clientes e Usuários", icon: Users },
+            { key: "types", label: "Tipos de Chamado", icon: Tag },
             { key: "priorities", label: "Prioridades", icon: Flag },
             ...(user.role === "admin" ? [{ key: "companies", label: "Empresas", icon: Building2 }] : []),
           ].map((t) => (
@@ -119,19 +119,24 @@ function UserManager({ user }) {
     <div className="space-y-4">
       {showForm ? (
         <Card><CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-semibold">Novo Usuário</h3><Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="w-4 h-4" /></Button></div>
+          <div className="flex items-center justify-between"><h3 className="font-semibold">Cadastrar Cliente ou Usuário</h3><Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="w-4 h-4" /></Button></div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-800">
+              <strong>Solicitante</strong>: cliente que abre chamados (SAC). <strong>Agente</strong>: atendente que resolve chamados. <strong>Admin</strong>: acesso total.
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div><Label>Senha inicial</Label><Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-            <div><Label>Papel</Label><select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="admin">Administrador</option><option value="agent">Agente</option><option value="requester">Solicitante</option>
+            <div><Label>Tipo de Acesso</Label><select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+              <option value="requester">Solicitante (Cliente - abre chamados)</option><option value="agent">Agente (Atendente)</option><option value="admin">Administrador</option>
             </select></div>
           </div>
           <Button onClick={handleCreate} disabled={saving}>{saving ? "Salvando..." : "Criar Usuário"}</Button>
         </CardContent></Card>
       ) : (
-        <Button onClick={() => setShowForm(true)} className="gap-2"><Plus className="w-4 h-4" /> Novo Usuário</Button>
+        <Button onClick={() => setShowForm(true)} className="gap-2"><Plus className="w-4 h-4" /> Cadastrar Cliente ou Usuário</Button>
       )}
       <div className="space-y-2">
         {users.map((u) => (
