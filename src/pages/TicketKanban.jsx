@@ -116,6 +116,7 @@ export default function TicketKanban() {
                 {user.role === "system_admin" ? "Todas as Empresas" : user.company_name} · {user.name}
                 {user.role === "system_admin" && <span className="ml-1 text-primary">· Admin do Sistema</span>}
                 {user.role === "company_admin" && <span className="ml-1 text-primary">· Admin da Empresa</span>}
+                {user.role === "master_agent" && <span className="ml-1 text-primary">· Atendente Master</span>}
                 {isAgent && <span className="ml-1 text-primary">· Atendente</span>}
                 {isRequester && <span className="ml-1 text-primary">· Cliente</span>}
               </p>

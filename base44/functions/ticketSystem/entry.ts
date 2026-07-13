@@ -102,6 +102,11 @@ Deno.serve(async (req) => {
       }
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      // master_agent é exclusivo (um por empresa)
+      if (role === 'master_agent') {
+        const existingMasters = await base44.asServiceRole.entities.SupportUser.filter({ company_id, role: 'master_agent', is_active: true });
+        if (existingMasters.length > 0) return Response.json({ error: 'Já existe um atendente master para esta empresa' }, { status: 409 });
+      }
       const existing = await base44.asServiceRole.entities.SupportUser.filter({ email });
       if (existing.length) return Response.json({ error: 'Email já cadastrado no sistema' }, { status: 409 });
       const password_hash = await hashPassword(password);
@@ -208,11 +213,21 @@ Deno.serve(async (req) => {
           return Response.json({ error: `Limite de ${limit} chamados atingido no plano Free. Contate o administrador para liberar acesso completo.` }, { status: 403 });
         }
       }
+      // Se nenhum responsável foi atribuído, busca o atendente master da empresa
+      let finalAssignedToId = assigned_to_id || '';
+      let finalAssignedToName = assigned_to_name || '';
+      if (!finalAssignedToId) {
+        const masterAgents = await base44.asServiceRole.entities.SupportUser.filter({ company_id, role: 'master_agent', is_active: true });
+        if (masterAgents.length > 0) {
+          finalAssignedToId = masterAgents[0].id;
+          finalAssignedToName = masterAgents[0].name;
+        }
+      }
       const now = new Date().toISOString();
       const ticket = await base44.asServiceRole.entities.SupportTicket.create({
         title, description, company_id, company_name, type_id, type_name, module_id: module_id || '', module_name: module_name || '', submodule_id: submodule_id || '', submodule_name: submodule_name || '', priority_id, priority_name, priority_level,
         status: 'aberto', created_by_id, created_by_name,
-        assigned_to_id: assigned_to_id || '', assigned_to_name: assigned_to_name || '',
+        assigned_to_id: finalAssignedToId, assigned_to_name: finalAssignedToName,
         aberto_at: now,
         history: [{ from_status: '', to_status: 'aberto', moved_at: now, moved_by_id: created_by_id, moved_by_name: created_by_name, direction: 'forward' }]
       });

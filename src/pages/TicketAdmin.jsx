@@ -13,7 +13,7 @@ import CompanyLogoUploader from "@/components/tickets/CompanyLogoUploader";
 import { getTicketUser, setTicketUser, clearTicketUser } from "@/lib/ticketSession";
 function clearPortalUser() { clearTicketUser(); }
 
-const ROLE_LABELS = { system_admin: "Admin do Sistema", company_admin: "Admin da Empresa", admin: "Admin da Empresa", agent: "Agente", requester: "Solicitante" };
+const ROLE_LABELS = { system_admin: "Admin do Sistema", company_admin: "Admin da Empresa", master_agent: "Atendente Master", admin: "Admin da Empresa", agent: "Agente", requester: "Solicitante" };
 
 const maskCNPJ = (v) => v.replace(/\D/g, "").slice(0, 14).replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
 
@@ -161,7 +161,7 @@ function UserManager({ user }) {
           <div className="flex items-center justify-between"><h3 className="font-semibold">Cadastrar Cliente ou Usuário</h3><Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="w-4 h-4" /></Button></div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-800">
-              <strong>Solicitante</strong>: cliente que abre chamados (SAC). <strong>Agente</strong>: atendente que resolve chamados.{user.role === "system_admin" && " <strong>Admin da Empresa</strong>: acesso total do CNPJ vinculado."}
+              <strong>Solicitante</strong>: cliente que abre chamados (SAC). <strong>Agente</strong>: atendente que resolve chamados. <strong>Atendente Master</strong>: recebe todos os chamados e distribui para os atendentes (um por empresa).{user.role === "system_admin" && " <strong>Admin da Empresa</strong>: acesso total do CNPJ vinculado."}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -171,6 +171,7 @@ function UserManager({ user }) {
             <div><Label>Tipo de Acesso</Label><select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="requester">Solicitante (Cliente - abre chamados)</option>
               <option value="agent">Agente (Atendente)</option>
+              <option value="master_agent">Atendente Master (recebe e distribui chamados)</option>
               {user.role === "system_admin" && <option value="company_admin">Administrador da Empresa</option>}
             </select></div>
             {user.role === "system_admin" && (

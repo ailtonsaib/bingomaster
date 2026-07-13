@@ -45,6 +45,7 @@ export default function UserEditModal({ user, currentUser, onSave, onClose }) {
             <select className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="requester">Solicitante (Cliente)</option>
               <option value="agent">Agente (Atendente)</option>
+              <option value="master_agent">Atendente Master</option>
               {isSystemAdmin && <option value="company_admin">Administrador da Empresa</option>}
             </select>
           </div>
