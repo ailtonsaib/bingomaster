@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -16,6 +16,7 @@ import ExitOrderManager from "@/components/pdv/ExitOrderManager";
 import ExitTaxParameterManager from "@/components/pdv/ExitTaxParameterManager";
 import MonofasicTaxManager from "@/components/pdv/MonofasicTaxManager";
 import TaxReportPanel from "@/components/pdv/TaxReportPanel";
+import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function PDV() {
   const [cart, setCart] = useState([]);
   const [showCheckout, setShowCheckout] = useState(false);
   const [activeTab, setActiveTab] = useState("caixa");
+  const [showCompanyConfig, setShowCompanyConfig] = useState(false);
 
   useEffect(() => {
     if (!user) navigate("/pdv");
@@ -132,9 +134,14 @@ export default function PDV() {
             <p className="text-xs text-gray-500">{user.name}</p>
           </div>
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500">
-          <LogOut className="w-4 h-4" /> Sair
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setShowCompanyConfig(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+            <Settings className="w-4 h-4" /> Empresa
+          </button>
+          <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500">
+            <LogOut className="w-4 h-4" /> Sair
+          </button>
+        </div>
       </header>
 
       {/* Tabs */}
@@ -192,6 +199,12 @@ export default function PDV() {
           total={total}
           onClose={() => setShowCheckout(false)}
           onConfirm={handleCheckout}
+        />
+      )}
+      {showCompanyConfig && (
+        <CompanyConfigModal
+          user={user}
+          onClose={() => setShowCompanyConfig(false)}
         />
       )}
     </div>

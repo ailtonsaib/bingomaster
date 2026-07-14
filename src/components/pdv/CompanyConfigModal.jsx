@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Loader2, Building, Save, AlertTriangle } from "lucide-react";
+import { X, Loader2, Building, Save, AlertTriangle, User, Calculator } from "lucide-react";
 
 const UF_OPTIONS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -12,6 +12,9 @@ const EMPTY = {
   crt: 1, regime_caixa: false, lucro_type: "nao_se_aplica",
   cep: "", address: "", number: "", complement: "",
   district: "", city: "", uf: "", ibge_code: "", phone: "",
+  responsible_name: "", responsible_cpf: "", responsible_phone: "", responsible_email: "",
+  accountant_name: "", accountant_company_name: "", accountant_crc_number: "", accountant_crc_uf: "",
+  accountant_cpf: "", accountant_cnpj: "", accountant_address: "", accountant_phone: "", accountant_email: "",
   nfe_series: 1, nfe_number_next: 1, nfe_environment: "2",
 };
 
@@ -195,6 +198,73 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
               <div>
                 <Label>Código IBGE (7 dígitos)</Label>
                 <Input value={form.ibge_code} onChange={e => setForm({...form, ibge_code: e.target.value.replace(/\D/g, '').slice(0,7)})} className="h-9 font-mono" placeholder="4205407" />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-semibold mb-2 text-gray-700 flex items-center gap-1"><User className="w-4 h-4 text-orange-600" /> Responsável pela Empresa</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Nome do Responsável</Label>
+                <Input value={form.responsible_name} onChange={e => setForm({...form, responsible_name: e.target.value})} className="h-9" placeholder="Nome completo" />
+              </div>
+              <div>
+                <Label>CPF</Label>
+                <Input value={form.responsible_cpf} onChange={e => setForm({...form, responsible_cpf: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9 font-mono" placeholder="00000000000" />
+              </div>
+              <div>
+                <Label>Telefone</Label>
+                <Input value={form.responsible_phone} onChange={e => setForm({...form, responsible_phone: e.target.value})} className="h-9" placeholder="(00) 0000-0000" />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={form.responsible_email} onChange={e => setForm({...form, responsible_email: e.target.value})} className="h-9" placeholder="responsavel@email.com" />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-semibold mb-2 text-gray-700 flex items-center gap-1"><Calculator className="w-4 h-4 text-orange-600" /> Contador</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Nome do Contador</Label>
+                <Input value={form.accountant_name} onChange={e => setForm({...form, accountant_name: e.target.value})} className="h-9" placeholder="Nome completo" />
+              </div>
+              <div>
+                <Label>Empresa de Contabilidade</Label>
+                <Input value={form.accountant_company_name} onChange={e => setForm({...form, accountant_company_name: e.target.value})} className="h-9" placeholder="Nome do escritório" />
+              </div>
+              <div>
+                <Label>Número do CRC</Label>
+                <Input value={form.accountant_crc_number} onChange={e => setForm({...form, accountant_crc_number: e.target.value})} className="h-9 font-mono" placeholder="000000/O" />
+              </div>
+              <div>
+                <Label>UF do CRC</Label>
+                <select value={form.accountant_crc_uf} onChange={e => setForm({...form, accountant_crc_uf: e.target.value})} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                  <option value="">Selecione</option>
+                  {UF_OPTIONS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>CPF do Contador</Label>
+                <Input value={form.accountant_cpf} onChange={e => setForm({...form, accountant_cpf: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9 font-mono" placeholder="00000000000" />
+              </div>
+              <div>
+                <Label>CNPJ do Escritório</Label>
+                <Input value={form.accountant_cnpj} onChange={e => setForm({...form, accountant_cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} className="h-9 font-mono" placeholder="00000000000000" />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Endereço do Escritório</Label>
+                <Input value={form.accountant_address} onChange={e => setForm({...form, accountant_address: e.target.value})} className="h-9" placeholder="Logradouro, número, bairro, cidade/UF" />
+              </div>
+              <div>
+                <Label>Telefone</Label>
+                <Input value={form.accountant_phone} onChange={e => setForm({...form, accountant_phone: e.target.value})} className="h-9" placeholder="(00) 0000-0000" />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={form.accountant_email} onChange={e => setForm({...form, accountant_email: e.target.value})} className="h-9" placeholder="contador@email.com" />
               </div>
             </div>
           </div>

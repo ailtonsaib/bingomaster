@@ -82,6 +82,58 @@
       "type": "string",
       "description": "Telefone"
     },
+    "responsible_name": {
+      "type": "string",
+      "description": "Nome do respons\u00e1vel pela empresa"
+    },
+    "responsible_cpf": {
+      "type": "string",
+      "description": "CPF do respons\u00e1vel (apenas n\u00fameros)"
+    },
+    "responsible_phone": {
+      "type": "string",
+      "description": "Telefone do respons\u00e1vel"
+    },
+    "responsible_email": {
+      "type": "string",
+      "description": "Email do respons\u00e1vel"
+    },
+    "accountant_name": {
+      "type": "string",
+      "description": "Nome do contador"
+    },
+    "accountant_company_name": {
+      "type": "string",
+      "description": "Nome da empresa de contabilidade"
+    },
+    "accountant_crc_number": {
+      "type": "string",
+      "description": "N\u00famero do CRC do contador"
+    },
+    "accountant_crc_uf": {
+      "type": "string",
+      "description": "UF do CRC do contador"
+    },
+    "accountant_cpf": {
+      "type": "string",
+      "description": "CPF do contador (apenas n\u00fameros)"
+    },
+    "accountant_cnpj": {
+      "type": "string",
+      "description": "CNPJ do escrit\u00f3rio de contabilidade (apenas n\u00fameros)"
+    },
+    "accountant_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do escrit\u00f3rio de contabilidade"
+    },
+    "accountant_phone": {
+      "type": "string",
+      "description": "Telefone do contador"
+    },
+    "accountant_email": {
+      "type": "string",
+      "description": "Email do contador"
+    },
     "nfe_series": {
       "type": "number",
       "default": 1,
