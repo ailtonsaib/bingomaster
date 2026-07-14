@@ -1,20 +1,23 @@
 import { useEffect } from "react";
-import { useAuth } from "@/lib/AuthContext";
+import { getPortalUser } from "@/lib/portalSession";
 
 /**
  * Oculta o widget "Edit with Base 44" (injetado pela plataforma)
- * para usuários que não são administradores do sistema.
+ * para todos usuários exceto o Administrador do sistema (is_admin: true no portal).
  */
 export default function HideBase44Widget() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
-
   useEffect(() => {
-    if (isAdmin) return;
-
     const WIDGET_TEXT = "Edit with Base";
 
+    const isSystemAdmin = () => {
+      const portalUser = getPortalUser();
+      return !!portalUser?.is_admin;
+    };
+
     const hideWidget = () => {
+      // Não ocultar para o administrador do sistema
+      if (isSystemAdmin()) return;
+
       // O widget é um elemento fixed injetado como filho direto do body
       const bodyChildren = document.body.children;
       for (let i = 0; i < bodyChildren.length; i++) {
@@ -39,7 +42,7 @@ export default function HideBase44Widget() {
       observer.disconnect();
       clearInterval(interval);
     };
-  }, [isAdmin]);
+  }, []);
 
   return null;
 }
