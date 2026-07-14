@@ -8,21 +8,48 @@
     },
     "ncm": {
       "type": "string",
-      "description": "C\u00f3digo NCM sujeito \u00e0 monofasia (Lei 13.097/2015)"
+      "description": "C\u00f3digo NCM sujeito \u00e0 monofasia (Lei 13.097/2015 e demais leis)"
     },
     "description": {
       "type": "string",
       "description": "Descri\u00e7\u00e3o do produto/tipo sujeito \u00e0 monofasia"
     },
+    "product_category": {
+      "type": "string",
+      "enum": [
+        "combustivel",
+        "bebida_fria",
+        "medicamento",
+        "cosmetico",
+        "autopeca",
+        "cigarro",
+        "outro"
+      ],
+      "default": "outro",
+      "description": "Categoria do produto monof\u00e1sico \u2014 cada categoria tem regras espec\u00edficas de CST e al\u00edquotas"
+    },
+    "tax_regime": {
+      "type": "string",
+      "enum": [
+        "monofasico",
+        "bifasico"
+      ],
+      "default": "monofasico",
+      "description": "monofasico: tributado uma vez (fabricante paga, revenda 0%). bifasico: tributado em duas etapas (fabricante + distribuidor), revenda 0% \u2014 aplic\u00e1vel a bebidas frias (Lei 13.097 art. 14)"
+    },
+    "legal_law": {
+      "type": "string",
+      "description": "Lei aplic\u00e1vel (ex: Lei 13.097/2015, Lei 10.147/2000, Lei 10.485/2002)"
+    },
     "pis_rate": {
       "type": "number",
       "default": 0,
-      "description": "Al\u00edquota PIS monof\u00e1sica original (%) - paga pelo fabricante/importador (informativo)"
+      "description": "Al\u00edquota PIS monof\u00e1sica original (%) \u2014 paga pelo fabricante/importador (informativo)"
     },
     "cofins_rate": {
       "type": "number",
       "default": 0,
-      "description": "Al\u00edquota COFINS monof\u00e1sica original (%) - paga pelo fabricante/importador (informativo)"
+      "description": "Al\u00edquota COFINS monof\u00e1sica original (%) \u2014 paga pelo fabricante/importador (informativo)"
     },
     "ipi_rate": {
       "type": "number",
@@ -32,36 +59,52 @@
     "effective_pis_rate": {
       "type": "number",
       "default": 0,
-      "description": "Al\u00edquota efetiva de PIS a aplicar na sa\u00edda (geralmente 0% - tributa\u00e7\u00e3o monof\u00e1sica)"
+      "description": "Al\u00edquota efetiva de PIS na revenda/varejo (geralmente 0% \u2014 CST 04)"
     },
     "effective_cofins_rate": {
       "type": "number",
       "default": 0,
-      "description": "Al\u00edquota efetiva de COFINS a aplicar na sa\u00edda (geralmente 0% - tributa\u00e7\u00e3o monof\u00e1sica)"
+      "description": "Al\u00edquota efetiva de COFINS na revenda/varejo (geralmente 0% \u2014 CST 04)"
     },
     "effective_ipi_rate": {
       "type": "number",
       "default": 0,
-      "description": "Al\u00edquota efetiva de IPI a aplicar na sa\u00edda"
+      "description": "Al\u00edquota efetiva de IPI na sa\u00edda"
     },
     "cst_pis": {
       "type": "string",
-      "default": "08",
-      "description": "CST do PIS na sa\u00edda: 08=Opera\u00e7\u00e3o sem incid\u00eancia (monof\u00e1sico)"
+      "default": "04",
+      "description": "CST do PIS na revenda: 04=Monof\u00e1sica revenda al\u00edquota zero, 06=Monof\u00e1sica al\u00edquota zero, 07=Combust\u00edveis al\u00edquota zero"
     },
     "cst_cofins": {
       "type": "string",
-      "default": "08",
-      "description": "CST do COFINS na sa\u00edda: 08=Opera\u00e7\u00e3o sem incid\u00eancia (monof\u00e1sico)"
+      "default": "04",
+      "description": "CST do COFINS na revenda: 04=Monof\u00e1sica revenda al\u00edquota zero, 06=Monof\u00e1sica al\u00edquota zero, 07=Combust\u00edveis al\u00edquota zero"
     },
     "cst_ipi": {
       "type": "string",
       "default": "99",
       "description": "CST do IPI na sa\u00edda"
     },
-    "legal_basis": {
+    "pis_rate_distributor": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota PIS para venda a distribuidor (bif\u00e1sico \u2014 ex: bebidas frias 1,86%)"
+    },
+    "cofins_rate_distributor": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota COFINS para venda a distribuidor (bif\u00e1sico \u2014 ex: bebidas frias 8,54%)"
+    },
+    "cst_pis_distributor": {
       "type": "string",
-      "description": "Fundamento legal (ex: Lei 13.097/2015 art. 2\u00ba)"
+      "default": "02",
+      "description": "CST do PIS na venda a distribuidor (bif\u00e1sico): 02=Tribut\u00e1vel al\u00edquota diferenciada"
+    },
+    "cst_cofins_distributor": {
+      "type": "string",
+      "default": "02",
+      "description": "CST do COFINS na venda a distribuidor (bif\u00e1sico): 02=Tribut\u00e1vel al\u00edquota diferenciada"
     },
     "is_active": {
       "type": "boolean",

@@ -50,6 +50,16 @@
       "type": "string",
       "description": "Bairro do cliente (cache)"
     },
+    "buyer_type": {
+      "type": "string",
+      "enum": [
+        "consumidor_final",
+        "revendedor",
+        "distribuidor"
+      ],
+      "default": "consumidor_final",
+      "description": "Tipo de comprador: consumidor_final, revendedor (varejista) ou distribuidor \u2014 afeta c\u00e1lculo de PIS/COFINS em produtos bif\u00e1sicos (Lei 13.097)"
+    },
     "order_number": {
       "type": "string",
       "description": "N\u00famero interno do pedido"
@@ -107,6 +117,14 @@
           "monofasic": {
             "type": "boolean",
             "default": false
+          },
+          "tax_regime": {
+            "type": "string",
+            "description": "monofasico ou bifasico"
+          },
+          "product_category": {
+            "type": "string",
+            "description": "combustivel, bebida_fria, etc."
           },
           "csosn": {
             "type": "string"

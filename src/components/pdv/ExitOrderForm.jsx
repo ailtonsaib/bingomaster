@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Loader2, Search, Trash2, Plus, ShoppingCart } from "lucide-react";
+import { X, Loader2, Search, Trash2, Plus, ShoppingCart, AlertTriangle } from "lucide-react";
 
 const num = (v) => Number(v) || 0;
 
@@ -22,6 +22,7 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   const [cfop, setCfop] = useState("5102");
   const [paymentMethod, setPaymentMethod] = useState("0");
   const [notes, setNotes] = useState("");
+  const [buyerType, setBuyerType] = useState("consumidor_final");
 
   useEffect(() => {
     (async () => {
@@ -85,6 +86,11 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
     const taxParam = lookupTaxParam(product.ncm, uf);
     const isMonofasic = product.monofasic === true;
     const monofasicTax = isMonofasic ? monofasicTaxes.find(m => m.ncm === product.ncm && m.is_active !== false) : null;
+    const isBifasico = isMonofasic && monofasicTax?.tax_regime === "bifasico";
+    const isDistributor = buyerType === "distribuidor";
+    // Bifásico: venda a distribuidor usa alíquota reduzida (CST 02); venda a consumidor/varejista usa 0% (CST 04)
+    // Monofásico: sempre 0% na revenda (CST 04 ou 07 para combustíveis)
+    const useDistributorRates = isBifasico && isDistributor;
     const newItem = {
       product_id: product.id,
       product_code: product.barcode || product.id,
@@ -98,6 +104,8 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
       total: product.price,
       origin: taxParam?.origin || 0,
       monofasic: isMonofasic,
+      tax_regime: monofasicTax?.tax_regime || null,
+      product_category: monofasicTax?.product_category || null,
       csosn: taxParam?.csosn || "102",
       cst_icms: taxParam?.cst_icms || "00",
       icms_rate: num(taxParam?.icms_rate),
@@ -105,11 +113,19 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
       cst_ipi: isMonofasic ? (monofasicTax?.cst_ipi || "99") : (taxParam?.cst_ipi || "99"),
       ipi_rate: isMonofasic ? num(monofasicTax?.effective_ipi_rate) : num(taxParam?.ipi_rate),
       ipi_value: 0,
-      cst_pis: isMonofasic ? (monofasicTax?.cst_pis || "08") : (taxParam?.cst_pis || "49"),
-      pis_rate: isMonofasic ? num(monofasicTax?.effective_pis_rate) : num(taxParam?.pis_rate),
+      cst_pis: isMonofasic
+        ? (useDistributorRates ? (monofasicTax?.cst_pis_distributor || "02") : (monofasicTax?.cst_pis || "04"))
+        : (taxParam?.cst_pis || "49"),
+      pis_rate: isMonofasic
+        ? (useDistributorRates ? num(monofasicTax?.pis_rate_distributor) : num(monofasicTax?.effective_pis_rate))
+        : num(taxParam?.pis_rate),
       pis_value: 0,
-      cst_cofins: isMonofasic ? (monofasicTax?.cst_cofins || "08") : (taxParam?.cst_cofins || "49"),
-      cofins_rate: isMonofasic ? num(monofasicTax?.effective_cofins_rate) : num(taxParam?.cofins_rate),
+      cst_cofins: isMonofasic
+        ? (useDistributorRates ? (monofasicTax?.cst_cofins_distributor || "02") : (monofasicTax?.cst_cofins || "04"))
+        : (taxParam?.cst_cofins || "49"),
+      cofins_rate: isMonofasic
+        ? (useDistributorRates ? num(monofasicTax?.cofins_rate_distributor) : num(monofasicTax?.effective_cofins_rate))
+        : num(taxParam?.cofins_rate),
       cofins_value: 0,
     };
     recalcItem(newItem);
@@ -176,6 +192,7 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
         total_nota: totals.total_nota,
         status: "rascunho",
         payment_method: paymentMethod,
+        buyer_type: buyerType,
         notes,
       });
       onSaved?.();
@@ -221,7 +238,25 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
                 <option value="1">A Prazo</option>
               </select>
             </div>
+            <div>
+              <Label>Tipo de Comprador</Label>
+              <select value={buyerType} onChange={e => setBuyerType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="consumidor_final">Consumidor Final</option>
+                <option value="revendedor">Revendedor / Varejista</option>
+                <option value="distribuidor">Distribuidor / Atacadista</option>
+              </select>
+            </div>
           </div>
+
+          {buyerType === "distribuidor" && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-2 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <p className="text-xs text-amber-700">
+                <b>Regime Bifásico ativo:</b> Para produtos monofásicos bifásicos (bebidas frias — Lei 13.097 art. 14),
+                a venda a distribuidor aplica alíquota reduzida de PIS (1,86%) e COFINS (8,54%) com CST 02.
+              </p>
+            </div>
+          )}
 
           {/* Product search */}
           <div className="border rounded-lg p-3 bg-gray-50">
