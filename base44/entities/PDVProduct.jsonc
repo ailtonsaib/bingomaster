@@ -54,6 +54,11 @@
       "type": "string",
       "description": "CFOP padr\u00e3o para entrada (ex: 1102)"
     },
+    "monofasic": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o produto participa do regime monof\u00e1sico (Lei 13.097/2015) para PIS/COFINS/IPI"
+    },
     "user_email": {
       "type": "string",
       "description": "Email do propriet\u00e1rio"

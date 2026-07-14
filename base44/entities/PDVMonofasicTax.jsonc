@@ -1,0 +1,76 @@
+{
+  "name": "PDVMonofasicTax",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "ncm": {
+      "type": "string",
+      "description": "C\u00f3digo NCM sujeito \u00e0 monofasia (Lei 13.097/2015)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do produto/tipo sujeito \u00e0 monofasia"
+    },
+    "pis_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota PIS monof\u00e1sica original (%) - paga pelo fabricante/importador (informativo)"
+    },
+    "cofins_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota COFINS monof\u00e1sica original (%) - paga pelo fabricante/importador (informativo)"
+    },
+    "ipi_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota IPI original (%) (informativo)"
+    },
+    "effective_pis_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota efetiva de PIS a aplicar na sa\u00edda (geralmente 0% - tributa\u00e7\u00e3o monof\u00e1sica)"
+    },
+    "effective_cofins_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota efetiva de COFINS a aplicar na sa\u00edda (geralmente 0% - tributa\u00e7\u00e3o monof\u00e1sica)"
+    },
+    "effective_ipi_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota efetiva de IPI a aplicar na sa\u00edda"
+    },
+    "cst_pis": {
+      "type": "string",
+      "default": "08",
+      "description": "CST do PIS na sa\u00edda: 08=Opera\u00e7\u00e3o sem incid\u00eancia (monof\u00e1sico)"
+    },
+    "cst_cofins": {
+      "type": "string",
+      "default": "08",
+      "description": "CST do COFINS na sa\u00edda: 08=Opera\u00e7\u00e3o sem incid\u00eancia (monof\u00e1sico)"
+    },
+    "cst_ipi": {
+      "type": "string",
+      "default": "99",
+      "description": "CST do IPI na sa\u00edda"
+    },
+    "legal_basis": {
+      "type": "string",
+      "description": "Fundamento legal (ex: Lei 13.097/2015 art. 2\u00ba)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o par\u00e2metro est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "ncm"
+  ]
+}

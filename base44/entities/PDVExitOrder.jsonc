@@ -104,6 +104,10 @@
           "origin": {
             "type": "number"
           },
+          "monofasic": {
+            "type": "boolean",
+            "default": false
+          },
           "csosn": {
             "type": "string"
           },
@@ -116,17 +120,26 @@
           "icms_value": {
             "type": "number"
           },
+          "cst_ipi": {
+            "type": "string"
+          },
           "ipi_rate": {
             "type": "number"
           },
           "ipi_value": {
             "type": "number"
           },
+          "cst_pis": {
+            "type": "string"
+          },
           "pis_rate": {
             "type": "number"
           },
           "pis_value": {
             "type": "number"
+          },
+          "cst_cofins": {
+            "type": "string"
           },
           "cofins_rate": {
             "type": "number"

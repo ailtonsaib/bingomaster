@@ -132,19 +132,25 @@ Deno.serve(async (req) => {
         ipiXml = `<IPI><cEnq>999</cEnq><IPINT><CST>${cstIpi}</CST></IPINT></IPI>`;
       }
 
-      // PIS block
+      // PIS block — CST 04-09 = Não Tributada (PISNT), usado para monofásicos (Lei 13.097)
       const cstPis = item.cst_pis || '49';
       let pisXml = '';
-      if (Number(item.pis_rate) > 0) {
+      const pisNT = ['04','05','06','07','08','09'].includes(cstPis);
+      if (pisNT) {
+        pisXml = `<PIS><PISNT><CST>${cstPis}</CST></PISNT></PIS>`;
+      } else if (Number(item.pis_rate) > 0) {
         pisXml = `<PIS><PISAliq><CST>${cstPis}</CST><vBC>${fmtN(item.total)}</vBC><pPIS>${fmtN(item.pis_rate, 4)}</pPIS><vPIS>${fmtN(item.pis_value)}</vPIS></PISAliq></PIS>`;
       } else {
         pisXml = `<PIS><PISOutr><CST>${cstPis}</CST><vBC>0.00</vBC><pPIS>0.0000</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
       }
 
-      // COFINS block
+      // COFINS block — CST 04-09 = Não Tributada (COFINSNT), usado para monofásicos (Lei 13.097)
       const cstCofins = item.cst_cofins || '49';
       let cofinsXml = '';
-      if (Number(item.cofins_rate) > 0) {
+      const cofinsNT = ['04','05','06','07','08','09'].includes(cstCofins);
+      if (cofinsNT) {
+        cofinsXml = `<COFINS><COFINSNT><CST>${cstCofins}</CST></COFINSNT></COFINS>`;
+      } else if (Number(item.cofins_rate) > 0) {
         cofinsXml = `<COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${fmtN(item.total)}</vBC><pCOFINS>${fmtN(item.cofins_rate, 4)}</pCOFINS><vCOFINS>${fmtN(item.cofins_value)}</vCOFINS></COFINSAliq></COFINS>`;
       } else {
         cofinsXml = `<COFINS><COFINSOutr><CST>${cstCofins}</CST><vBC>0.00</vBC><pCOFINS>0.0000</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;

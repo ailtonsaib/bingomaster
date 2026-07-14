@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { X } from "lucide-react";
+import { X, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ProductForm({ user, categories, product, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -17,6 +18,7 @@ export default function ProductForm({ user, categories, product, onClose, onSave
     unit: product?.unit || "UN",
     ncm: product?.ncm || "",
     cfop_default: product?.cfop_default || "",
+    monofasic: product?.monofasic || false,
     description: product?.description || "",
   });
   const [saving, setSaving] = useState(false);
@@ -79,6 +81,19 @@ export default function ProductForm({ user, categories, product, onClose, onSave
             <div>
               <Label className="mb-1 block">NCM</Label>
               <Input value={form.ncm} onChange={e => setForm({ ...form, ncm: e.target.value.replace(/\D/g, '').slice(0, 8) })} placeholder="12345678" className="font-mono" maxLength={8} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <Checkbox
+              id="monofasic"
+              checked={form.monofasic}
+              onCheckedChange={(v) => setForm({ ...form, monofasic: v })}
+            />
+            <div>
+              <label htmlFor="monofasic" className="text-sm font-medium flex items-center gap-1 cursor-pointer">
+                <Scale className="w-3.5 h-3.5 text-indigo-600" /> Monofásico (Lei 13.097/2015)
+              </label>
+              <p className="text-xs text-indigo-600">Aplica CST 08 (sem incidência) para PIS/COFINS nas saídas</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

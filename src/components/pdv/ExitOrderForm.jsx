@@ -11,6 +11,7 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [taxParams, setTaxParams] = useState([]);
+  const [monofasicTaxes, setMonofasicTaxes] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
@@ -25,14 +26,16 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   useEffect(() => {
     (async () => {
       try {
-        const [custs, prods, taxes] = await Promise.all([
+        const [custs, prods, taxes, monofasic] = await Promise.all([
           base44.entities.PDVCustomer.filter({ user_email: user.email, is_active: true }),
           base44.entities.PDVProduct.filter({ user_email: user.email, is_active: true }),
           base44.entities.PDVExitTaxParameter.filter({ user_email: user.email }),
+          base44.entities.PDVMonofasicTax.filter({ user_email: user.email }),
         ]);
         setCustomers(custs);
         setProducts(prods);
         setTaxParams(taxes);
+        setMonofasicTaxes(monofasic);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
@@ -80,6 +83,8 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
     }
     const uf = customer?.uf || "";
     const taxParam = lookupTaxParam(product.ncm, uf);
+    const isMonofasic = product.monofasic === true;
+    const monofasicTax = isMonofasic ? monofasicTaxes.find(m => m.ncm === product.ncm && m.is_active !== false) : null;
     const newItem = {
       product_id: product.id,
       product_code: product.barcode || product.id,
@@ -92,15 +97,19 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
       unit_price: product.price,
       total: product.price,
       origin: taxParam?.origin || 0,
+      monofasic: isMonofasic,
       csosn: taxParam?.csosn || "102",
       cst_icms: taxParam?.cst_icms || "00",
       icms_rate: num(taxParam?.icms_rate),
       icms_value: 0,
-      ipi_rate: num(taxParam?.ipi_rate),
+      cst_ipi: isMonofasic ? (monofasicTax?.cst_ipi || "99") : (taxParam?.cst_ipi || "99"),
+      ipi_rate: isMonofasic ? num(monofasicTax?.effective_ipi_rate) : num(taxParam?.ipi_rate),
       ipi_value: 0,
-      pis_rate: num(taxParam?.pis_rate),
+      cst_pis: isMonofasic ? (monofasicTax?.cst_pis || "08") : (taxParam?.cst_pis || "49"),
+      pis_rate: isMonofasic ? num(monofasicTax?.effective_pis_rate) : num(taxParam?.pis_rate),
       pis_value: 0,
-      cofins_rate: num(taxParam?.cofins_rate),
+      cst_cofins: isMonofasic ? (monofasicTax?.cst_cofins || "08") : (taxParam?.cst_cofins || "49"),
+      cofins_rate: isMonofasic ? num(monofasicTax?.effective_cofins_rate) : num(taxParam?.cofins_rate),
       cofins_value: 0,
     };
     recalcItem(newItem);
@@ -222,14 +231,15 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
             </div>
             <div className="max-h-32 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-2">
               {filteredProducts.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => addItem(p)}
-                  className="text-left p-2 bg-white border rounded-md hover:border-orange-400 hover:bg-orange-50/50 transition-colors text-xs"
-                >
-                  <p className="font-medium truncate">{p.name}</p>
-                  <p className="text-gray-500">R$ {num(p.price).toFixed(2)} {p.ncm ? `· NCM ${p.ncm}` : ""}</p>
-                </button>
+              <button
+                key={p.id}
+                onClick={() => addItem(p)}
+                className="text-left p-2 bg-white border rounded-md hover:border-orange-400 hover:bg-orange-50/50 transition-colors text-xs relative"
+              >
+                <p className="font-medium truncate">{p.name}</p>
+                <p className="text-gray-500">R$ {num(p.price).toFixed(2)} {p.ncm ? `· NCM ${p.ncm}` : ""}</p>
+                {p.monofasic && <span className="absolute top-1 right-1 text-[9px] bg-indigo-600 text-white px-1 rounded">LEI 13.097</span>}
+              </button>
               ))}
               {filteredProducts.length === 0 && <p className="text-xs text-gray-400 col-span-full text-center py-2">Nenhum produto encontrado</p>}
             </div>
@@ -255,7 +265,10 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
                 <tbody>
                   {items.map((item, i) => (
                     <tr key={i} className="border-b">
-                      <td className="p-2">{item.product_name}</td>
+                      <td className="p-2">
+                        {item.product_name}
+                        {item.monofasic && <span className="ml-1 text-[9px] bg-indigo-600 text-white px-1 rounded align-middle">MONOFÁSICO</span>}
+                      </td>
                       <td className="p-2 text-center font-mono">{item.ncm || "—"}</td>
                       <td className="p-2 text-center">
                         <input type="text" value={item.cfop} onChange={e => updateItem(i, "cfop", e.target.value)} className="w-12 text-center border rounded h-7 text-xs" />

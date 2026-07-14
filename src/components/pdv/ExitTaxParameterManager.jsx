@@ -93,6 +93,7 @@ export default function ExitTaxParameterManager({ user }) {
         <p className="text-xs text-amber-700">
           Alíquotas de <b>saída</b> por <b>NCM</b> e <b>UF de destino</b> (cliente). Use <b>UF = *</b> para todas as UFs.
           CFOPs de saída iniciam com 5 (mesmo estado), 6 (outro estado) ou 7 (exterior). Estes parâmetros são usados no cálculo de impostos das notas de saída.
+          <br /><b className="text-indigo-700">⚠ Produtos marcados como monofásicos (Lei 13.097)</b> ignoram PIS/COFINS/IPI desta tabela e usam a CST 08 (sem incidência) — cadastre-os na aba "Monofásicos".
         </p>
       </div>
 

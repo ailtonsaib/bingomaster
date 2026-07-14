@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck, Scale } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -14,6 +14,7 @@ import EntryOperations from "@/components/pdv/EntryOperations";
 import TaxParameterManager from "@/components/pdv/TaxParameterManager";
 import ExitOrderManager from "@/components/pdv/ExitOrderManager";
 import ExitTaxParameterManager from "@/components/pdv/ExitTaxParameterManager";
+import MonofasicTaxManager from "@/components/pdv/MonofasicTaxManager";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -108,6 +109,7 @@ export default function PDV() {
     { id: "saidas", label: "Saídas", icon: FileOutput },
     { id: "trib-entrada", label: "Trib. Entrada", icon: Percent },
     { id: "trib-saida", label: "Trib. Saída", icon: FileCheck },
+    { id: "monofasicos", label: "Monofásicos", icon: Scale },
     { id: "fornecedores", label: "Fornecedores", icon: Building2 },
     { id: "clientes", label: "Clientes", icon: Users },
   ];
@@ -179,6 +181,7 @@ export default function PDV() {
         {activeTab === "clientes" && <CustomerManager user={user} />}
         {activeTab === "trib-entrada" && <TaxParameterManager user={user} />}
         {activeTab === "trib-saida" && <ExitTaxParameterManager user={user} />}
+        {activeTab === "monofasicos" && <MonofasicTaxManager user={user} />}
       </div>
 
       {showCheckout && (
