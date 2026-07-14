@@ -417,20 +417,16 @@ Deno.serve(async (req) => {
       // -----------------------------------------------
       if (rE110) {
         // Quadro 05 — Apuração dos Créditos (layout oficial SEF-SC):
-        // 010 = Saldo credor do mês anterior
-        // 020 = ICMS creditado nas entradas (= Quadro 03 item 030)
+        // 010 = Saldo credor do mês anterior (NÃO gerar — o SEF valida contra a DIME anterior;
+        //       se não houver DIME anterior ou 998=0, deve ser 0. O saldo credor anterior do
+        //       SPED só é reconhecido se a DIME do mês anterior o informou em 998.)
+        // 020 = ICMS creditado nas entradas
         // 150 = Outros créditos
-        // 990 = Subtotal (010 + 020 + 150) — DEVE bater com Quadro 09 item 050
-        const saldoCredorAntQ5 = rE110.saldoCredorAnt || 0;
+        // 990 = Subtotal (020 + 150) — DEVE bater com Quadro 09 item 050
         const credEntradas = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
-        const subtotalCreditos = saldoCredorAntQ5 + credEntradas + outrosCred;
+        const subtotalCreditos = credEntradas + outrosCred;
 
-        if (saldoCredorAntQ5 > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(10) + fmtVal(saldoCredorAntQ5));
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
         if (credEntradas > 0) {
           linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
           totalRegsArquivo++;
@@ -469,13 +465,14 @@ Deno.serve(async (req) => {
         //   120 = Imposto a Recolher (se saldo devedor > 0)
         //   999 = Imposto a Recolher — total final (se saldo devedor > 0)
         //   140 = Saldo Credor p/ Mês Seguinte (se saldo credor > 0)
+        //   998 = Saldo Credor p/ Mês Seguinte — total final (OBRIGATÓRIO se saldo credor > 0)
         //
-        // NÃO EXISTEM no Quadro 09: itens 099, 100, 105, 110, 998
-        // (998 é totalizador que causa dupla contagem no validador SEF)
+        // NÃO EXISTEM no Quadro 09: itens 099, 100, 105, 110
         // =====================================================
-        const saldoCredorAnt = rE110.saldoCredorAnt || 0;
+        // saldoCredorAnt NÃO é incluído aqui — o SEF valida item 010 contra a DIME do mês
+        // anterior. Se não houve DIME anterior (ou 998=0), item 010 deve ser 0,00.
         const totalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
-        const totalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + saldoCredorAnt;
+        const totalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
         const saldoDevedor = Math.max(0, totalDebitos - totalCreditos);
         const saldoCredorTransportar = Math.max(0, totalCreditos - totalDebitos);
 
@@ -527,6 +524,13 @@ Deno.serve(async (req) => {
           totalRegsArquivo++;
           totalRegsDecl++;
         }
+
+        // Item 998 — Saldo Credor p/ Mês Seguinte — total final (OBRIGATÓRIO se saldo credor > 0)
+        if (saldoCredorTransportar > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
       }
 
       // -----------------------------------------------
@@ -536,7 +540,7 @@ Deno.serve(async (req) => {
       // -----------------------------------------------
       const saldoDevedor33 = rE110 ? Math.max(0,
         (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) -
-        (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0))
+        (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes)
       ) : 0;
 
       if (saldoDevedor33 > 0) {
