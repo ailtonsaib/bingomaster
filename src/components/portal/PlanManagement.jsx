@@ -37,13 +37,13 @@ const CHAMADOS_DEFAULTS = [
 ];
 
 const BINGO_DEFAULTS = [
-  { plan_key: "free", plan_name: "FREE", price: 0, max_cards: 50, description: "Para conhecer o sistema", app_generator: true, app_seller: false, app_buyer: false, app_telao: false, app_rifa: false },
-  { plan_key: "basic", plan_name: "BASIC", price: 400, max_cards: 2000, description: "Para pequenos eventos", app_generator: true, app_seller: true, app_buyer: false, app_telao: false, app_rifa: true },
-  { plan_key: "pro", plan_name: "PRO", price: 700, max_cards: 4000, description: "Para eventos frequentes", app_generator: true, app_seller: true, app_buyer: false, app_telao: true, app_rifa: true },
-  { plan_key: "max", plan_name: "MAX", price: 900, max_cards: 8000, description: "Para grandes eventos", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true },
-  { plan_key: "ultra", plan_name: "ULTRA", price: 1100, max_cards: 12000, description: "Para eventos de grande porte", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true },
-  { plan_key: "enterprise", plan_name: "ENTERPRISE", price: 1500, max_cards: 15000, description: "Para empresas e operações maiores", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true },
-  { plan_key: "mega", plan_name: "MEGA", price: 2500, max_cards: 50000, description: "Para operações de larga escala", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true },
+  { plan_key: "free", plan_name: "FREE", price: 0, max_cards: 50, description: "Para conhecer o sistema", app_generator: true, app_seller: false, app_buyer: false, app_telao: false, app_rifa: false, app_pdv: false },
+  { plan_key: "basic", plan_name: "BASIC", price: 400, max_cards: 2000, description: "Para pequenos eventos", app_generator: true, app_seller: true, app_buyer: false, app_telao: false, app_rifa: true, app_pdv: false },
+  { plan_key: "pro", plan_name: "PRO", price: 700, max_cards: 4000, description: "Para eventos frequentes", app_generator: true, app_seller: true, app_buyer: false, app_telao: true, app_rifa: true, app_pdv: false },
+  { plan_key: "max", plan_name: "MAX", price: 900, max_cards: 8000, description: "Para grandes eventos", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true, app_pdv: true },
+  { plan_key: "ultra", plan_name: "ULTRA", price: 1100, max_cards: 12000, description: "Para eventos de grande porte", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true, app_pdv: true },
+  { plan_key: "enterprise", plan_name: "ENTERPRISE", price: 1500, max_cards: 15000, description: "Para empresas e operações maiores", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true, app_pdv: true },
+  { plan_key: "mega", plan_name: "MEGA", price: 2500, max_cards: 50000, description: "Para operações de larga escala", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true, app_pdv: true },
 ];
 
 const BINGO_APPS = [
@@ -52,6 +52,7 @@ const BINGO_APPS = [
   { key: "app_buyer", label: "Comprador" },
   { key: "app_telao", label: "Telão" },
   { key: "app_rifa", label: "Rifas" },
+  { key: "app_pdv", label: "PDV" },
 ];
 
 const SPED_TYPES = [
@@ -138,6 +139,7 @@ export default function PlanManagement() {
       app_buyer: plan.app_buyer ?? false,
       app_telao: plan.app_telao ?? false,
       app_rifa: plan.app_rifa ?? false,
+      app_pdv: plan.app_pdv ?? false,
     });
   };
 
@@ -153,6 +155,7 @@ export default function PlanManagement() {
         app_buyer: !!bingoForm.app_buyer,
         app_telao: !!bingoForm.app_telao,
         app_rifa: !!bingoForm.app_rifa,
+        app_pdv: !!bingoForm.app_pdv,
       };
       if (plan.id) {
         await base44.entities.PlanConfig.update(plan.id, updated);

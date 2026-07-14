@@ -46,6 +46,11 @@
       "type": "boolean",
       "default": false,
       "description": "Gerador de Rifas dispon\u00edvel"
+    },
+    "app_pdv": {
+      "type": "boolean",
+      "default": false,
+      "description": "PDV (Frente de Caixa) dispon\u00edvel"
     }
   },
   "required": [
