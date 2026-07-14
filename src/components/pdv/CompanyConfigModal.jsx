@@ -27,6 +27,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
   const [loading, setLoading] = useState(true);
   const [configId, setConfigId] = useState(null);
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -40,6 +41,32 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
       setLoading(false);
     })();
   }, [user.email]);
+
+  const handleCepLookup = async (cepValue) => {
+    const clean = (cepValue || "").replace(/\D/g, "");
+    if (clean.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const resp = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+      const data = await resp.json();
+      if (data?.erro) {
+        alert("CEP não encontrado.");
+      } else if (data) {
+        setForm(prev => ({
+          ...prev,
+          cep: clean,
+          address: data.logradouro || prev.address,
+          district: data.bairro || prev.district,
+          city: data.localidade || prev.city,
+          uf: data.uf || prev.uf,
+          ibge_code: data.ibge || prev.ibge_code,
+        }));
+      }
+    } catch (e) {
+      console.error("Erro ao buscar CEP:", e);
+    }
+    setCepLoading(false);
+  };
 
   const handleCnpjLookup = async (cnpjValue) => {
     const clean = (cnpjValue || "").replace(/\D/g, "");
@@ -201,7 +228,12 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div>
                 <Label>CEP</Label>
-                <Input value={maskCep(form.cep)} onChange={e => setForm({...form, cep: e.target.value.replace(/\D/g, '').slice(0,8)})} className="h-9" placeholder="00000-000" />
+                <div className="flex gap-1">
+                  <Input value={maskCep(form.cep)} onChange={e => setForm({...form, cep: e.target.value.replace(/\D/g, '').slice(0,8)})} onBlur={e => handleCepLookup(e.target.value)} className="h-9 font-mono" placeholder="00000-000" />
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" disabled={form.cep?.length !== 8 || cepLoading} onClick={() => handleCepLookup(form.cep)} title="Buscar CEP">
+                    {cepLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  </Button>
+                </div>
               </div>
               <div className="md:col-span-2">
                 <Label>Logradouro</Label>
