@@ -4,11 +4,19 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "Nome da categoria"
+      "description": "Nome da categoria ou sub-categoria"
     },
     "user_email": {
       "type": "string",
       "description": "Email do propriet\u00e1rio"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID da categoria pai (vazio = categoria raiz)"
+    },
+    "parent_name": {
+      "type": "string",
+      "description": "Nome da categoria pai (cache)"
     },
     "is_active": {
       "type": "boolean",

@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
-import { Plus, Pencil, Trash2, Package, AlertTriangle, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, AlertTriangle, Search, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProductForm from "./ProductForm";
+import CategoryModal from "./CategoryModal";
 
 export default function ProductManager({ user }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [search, setSearch] = useState("");
 
@@ -35,10 +37,9 @@ export default function ProductManager({ user }) {
     loadData();
   };
 
-  const handleAddCategory = async () => {
-    const name = prompt("Nome da nova categoria:");
-    if (!name) return;
-    await base44.entities.PDVCategory.create({ name, user_email: user.email, is_active: true });
+  const handleDeleteCategory = async (cat) => {
+    if (!confirm(`Excluir a categoria "${cat.name}"?`)) return;
+    await base44.entities.PDVCategory.update(cat.id, { is_active: false });
     loadData();
   };
 
@@ -54,7 +55,9 @@ export default function ProductManager({ user }) {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar produto..." className="pl-10 w-64" />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleAddCategory}>+ Categoria</Button>
+          <Button variant="outline" onClick={() => setShowCategoryModal(true)}>
+            <Tags className="w-4 h-4 mr-1" /> Categorias
+          </Button>
           <Button onClick={() => { setEditProduct(null); setShowForm(true); }} style={{ backgroundColor: "#EA580C" }}>
             <Plus className="w-4 h-4 mr-1" /> Novo Produto
           </Button>
@@ -114,6 +117,13 @@ export default function ProductManager({ user }) {
           product={editProduct}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); loadData(); }}
+        />
+      )}
+      {showCategoryModal && (
+        <CategoryModal
+          user={user}
+          onClose={() => setShowCategoryModal(false)}
+          onSaved={() => loadData()}
         />
       )}
     </div>

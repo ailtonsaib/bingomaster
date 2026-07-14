@@ -100,7 +100,17 @@ export default function ProductForm({ user, categories, product, onClose, onSave
             <select value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}
               className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
               <option value="">Sem categoria</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categories.filter(c => !c.parent_id).map(parent => (
+                <optgroup key={parent.id} label={parent.name}>
+                  <option value={parent.id}>{parent.name}</option>
+                  {categories.filter(c => c.parent_id === parent.id).map(sub => (
+                    <option key={sub.id} value={sub.id}>  ↳ {sub.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+              {categories.filter(c => !c.parent_id).length === 0 &&
+                categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+              }
             </select>
           </div>
           <div className="flex gap-2 pt-2">
