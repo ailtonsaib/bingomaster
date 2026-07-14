@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, PackagePlus } from "lucide-react";
 import SupplierFormModal from "@/components/pdv/SupplierFormModal";
+import ProductForm from "@/components/pdv/ProductForm";
 
 // Parse NF-e XML using browser DOMParser
 function parseNfeXml(xmlText) {
@@ -115,13 +116,20 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
   const [updateStock, setUpdateStock] = useState(true);
   const [companyConfig, setCompanyConfig] = useState(null);
   const [editSupplier, setEditSupplier] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [editProduct, setEditProduct] = useState(null);
+  const [pendingProducts, setPendingProducts] = useState([]);
   const fileRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const configs = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
+        const [configs, cats] = await Promise.all([
+          base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),
+          base44.entities.PDVCategory.filter({ user_email: user.email }),
+        ]);
         setCompanyConfig(configs[0] || null);
+        setCategories(cats || []);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
@@ -131,6 +139,7 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
   const finishImport = async (d, supplierId) => {
     // Create products and update stock
     const processedItems = [];
+    const newProducts = [];
     for (const item of d.items) {
       if (createProducts) {
         const existingProd = await base44.entities.PDVProduct.filter({
@@ -149,9 +158,10 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
             await base44.entities.PDVProduct.update(prod.id, { ncm: item.ncm });
           }
         } else if (item.product_name) {
-          await base44.entities.PDVProduct.create({
+          const newProd = await base44.entities.PDVProduct.create({
             name: item.product_name,
             barcode: item.barcode || "",
+            description: item.product_name,
             price: item.unit_price * 1.3,
             cost: item.unit_price,
             stock: updateStock ? item.quantity : 0,
@@ -161,6 +171,7 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
             user_email: user.email,
             is_active: true,
           });
+          newProducts.push(newProd);
         }
       }
       processedItems.push(item);
@@ -189,20 +200,39 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
       items: processedItems,
       status: "registrada",
     });
+
+    return newProducts;
   };
 
   const handleSupplierSaved = async (updatedSupplier) => {
-    // After adjusting supplier info, finish the import
     setSaving(true);
     setEditSupplier(null);
     try {
-      await finishImport(parsedData, updatedSupplier.id);
+      const newProducts = await finishImport(parsedData, updatedSupplier.id);
       onSaved?.();
-      onClose();
+      if (newProducts.length > 0) {
+        setPendingProducts(newProducts);
+        setEditProduct(newProducts[0]);
+        setSaving(false);
+      } else {
+        onClose();
+      }
     } catch (e) {
       setError("Erro ao finalizar importação: " + e.message);
     }
     setSaving(false);
+  };
+
+  const handleProductSaved = () => {
+    // Move to next pending product, or close
+    const remaining = pendingProducts.slice(1);
+    setPendingProducts(remaining);
+    if (remaining.length > 0) {
+      setEditProduct(remaining[0]);
+    } else {
+      setEditProduct(null);
+      onClose();
+    }
   };
 
   const handleFile = async (file) => {
@@ -225,7 +255,6 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
     try {
       const d = parsedData;
       let supplierId = null;
-      let isNewSupplier = false;
 
       // Create or find supplier
       if (createSupplier && d.supplier.cnpj) {
@@ -242,7 +271,6 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
             is_active: true,
           });
           supplierId = supp.id;
-          isNewSupplier = true;
           // Open supplier form to adjust info before finishing import
           setEditSupplier(supp);
           setSaving(false);
@@ -250,10 +278,16 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
         }
       }
 
-      await finishImport(d, supplierId);
+      const newProducts = await finishImport(d, supplierId);
 
       onSaved?.();
-      onClose();
+      if (newProducts.length > 0) {
+        setPendingProducts(newProducts);
+        setEditProduct(newProducts[0]);
+        setSaving(false);
+      } else {
+        onClose();
+      }
     } catch (e) {
       setError("Erro ao salvar: " + e.message);
     }
@@ -440,6 +474,16 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
           title="Ajustar Dados do Fornecedor"
           onClose={() => { setEditSupplier(null); onSaved?.(); onClose(); }}
           onSaved={handleSupplierSaved}
+        />
+        )}
+
+        {editProduct && (
+        <ProductForm
+          user={user}
+          categories={categories}
+          product={editProduct}
+          onClose={handleProductSaved}
+          onSaved={handleProductSaved}
         />
         )}
         </div>
