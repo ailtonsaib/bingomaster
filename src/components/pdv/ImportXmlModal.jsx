@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, PackagePlus } from "lucide-react";
+import SupplierFormModal from "@/components/pdv/SupplierFormModal";
 
 // Parse NF-e XML using browser DOMParser
 function parseNfeXml(xmlText) {
@@ -113,6 +114,7 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
   const [createSupplier, setCreateSupplier] = useState(true);
   const [updateStock, setUpdateStock] = useState(true);
   const [companyConfig, setCompanyConfig] = useState(null);
+  const [editSupplier, setEditSupplier] = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -125,6 +127,83 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
   }, [user.email]);
 
   const isSimples = companyConfig?.crt === 1 || companyConfig?.crt === 2;
+
+  const finishImport = async (d, supplierId) => {
+    // Create products and update stock
+    const processedItems = [];
+    for (const item of d.items) {
+      if (createProducts) {
+        const existingProd = await base44.entities.PDVProduct.filter({
+          user_email: user.email,
+          barcode: item.barcode || item.product_code,
+        });
+        if (existingProd.length > 0) {
+          const prod = existingProd[0];
+          if (updateStock) {
+            await base44.entities.PDVProduct.update(prod.id, {
+              stock: (prod.stock || 0) + item.quantity,
+              cost: item.unit_price,
+            });
+          }
+          if (!prod.ncm && item.ncm) {
+            await base44.entities.PDVProduct.update(prod.id, { ncm: item.ncm });
+          }
+        } else if (item.product_name) {
+          await base44.entities.PDVProduct.create({
+            name: item.product_name,
+            barcode: item.barcode || "",
+            price: item.unit_price * 1.3,
+            cost: item.unit_price,
+            stock: updateStock ? item.quantity : 0,
+            unit: item.unit || "UN",
+            ncm: item.ncm,
+            cfop_default: item.cfop,
+            user_email: user.email,
+            is_active: true,
+          });
+        }
+      }
+      processedItems.push(item);
+    }
+
+    // Create entry operation
+    await base44.entities.PDVEntryOperation.create({
+      user_email: user.email,
+      supplier_id: supplierId,
+      supplier_name: d.supplier.name,
+      supplier_cnpj: d.supplier.cnpj,
+      supplier_uf: d.supplier.uf,
+      nota_number: d.nota.number,
+      nota_series: d.nota.series,
+      nota_model: d.nota.model,
+      issue_date: d.nota.issue_date ? new Date(d.nota.issue_date).toISOString() : new Date().toISOString(),
+      entry_date: new Date().toISOString(),
+      cfop: d.nota.cfop,
+      nature_operation: d.nota.nature_operation,
+      total_products: d.totals.total_products,
+      total_icms: d.totals.total_icms,
+      total_ipi: d.totals.total_ipi,
+      total_pis: d.totals.total_pis,
+      total_cofins: d.totals.total_cofins,
+      total_nota: d.totals.total_nota,
+      items: processedItems,
+      status: "registrada",
+    });
+  };
+
+  const handleSupplierSaved = async (updatedSupplier) => {
+    // After adjusting supplier info, finish the import
+    setSaving(true);
+    setEditSupplier(null);
+    try {
+      await finishImport(parsedData, updatedSupplier.id);
+      onSaved?.();
+      onClose();
+    } catch (e) {
+      setError("Erro ao finalizar importação: " + e.message);
+    }
+    setSaving(false);
+  };
 
   const handleFile = async (file) => {
     setError("");
@@ -146,6 +225,7 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
     try {
       const d = parsedData;
       let supplierId = null;
+      let isNewSupplier = false;
 
       // Create or find supplier
       if (createSupplier && d.supplier.cnpj) {
@@ -162,69 +242,15 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
             is_active: true,
           });
           supplierId = supp.id;
+          isNewSupplier = true;
+          // Open supplier form to adjust info before finishing import
+          setEditSupplier(supp);
+          setSaving(false);
+          return;
         }
       }
 
-      // Create products and update stock
-      const processedItems = [];
-      for (const item of d.items) {
-        if (createProducts) {
-          const existingProd = await base44.entities.PDVProduct.filter({
-            user_email: user.email,
-            barcode: item.barcode || item.product_code,
-          });
-          if (existingProd.length > 0) {
-            const prod = existingProd[0];
-            if (updateStock) {
-              await base44.entities.PDVProduct.update(prod.id, {
-                stock: (prod.stock || 0) + item.quantity,
-                cost: item.unit_price,
-              });
-            }
-            if (!prod.ncm && item.ncm) {
-              await base44.entities.PDVProduct.update(prod.id, { ncm: item.ncm });
-            }
-          } else if (item.product_name) {
-            const newProd = await base44.entities.PDVProduct.create({
-              name: item.product_name,
-              barcode: item.barcode || "",
-              price: item.unit_price * 1.3, // Sugestão: 30% margem
-              cost: item.unit_price,
-              stock: updateStock ? item.quantity : 0,
-              unit: item.unit || "UN",
-              ncm: item.ncm,
-              cfop_default: item.cfop,
-              user_email: user.email,
-              is_active: true,
-            });
-          }
-        }
-        processedItems.push(item);
-      }
-
-      // Create entry operation
-      await base44.entities.PDVEntryOperation.create({
-        user_email: user.email,
-        supplier_id: supplierId,
-        supplier_name: d.supplier.name,
-        supplier_cnpj: d.supplier.cnpj,
-        supplier_uf: d.supplier.uf,
-        nota_number: d.nota.number,
-        nota_series: d.nota.series,
-        nota_model: d.nota.model,
-        issue_date: d.nota.issue_date ? new Date(d.nota.issue_date).toISOString() : new Date().toISOString(),
-        entry_date: new Date().toISOString(),
-        cfop: d.nota.cfop,
-        nature_operation: d.nota.nature_operation,
-        total_products: d.totals.total_products,
-        total_icms: d.totals.total_icms,
-        total_ipi: d.totals.total_ipi,
-        total_pis: d.totals.total_pis,
-        total_cofins: d.totals.total_cofins,
-        total_nota: d.totals.total_nota,
-        items: processedItems,
-        status: "registrada",
-      });
+      await finishImport(d, supplierId);
 
       onSaved?.();
       onClose();
@@ -405,7 +431,17 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
             </Button>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
+        </div>
+
+        {editSupplier && (
+        <SupplierFormModal
+          user={user}
+          supplier={editSupplier}
+          title="Ajustar Dados do Fornecedor"
+          onClose={() => { setEditSupplier(null); onSaved?.(); onClose(); }}
+          onSaved={handleSupplierSaved}
+        />
+        )}
+        </div>
+        );
+        }
