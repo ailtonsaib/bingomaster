@@ -456,10 +456,6 @@ Deno.serve(async (req) => {
         const totCred = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
         const saldoDevedor = Math.max(0, totDeb - totCred);
         const saldoCredor = Math.max(0, totCred - totDeb);
-        // Soma dos pagamentos informados no E116 — DEVE bater com item 999 do Quadro 09
-        const totalPagamentos = e116Records.reduce((s: number, e: any) => s + (e.vlOr > 0 ? e.vlOr : 0), 0);
-        // Imposto a recolher = soma dos pagamentos quando há E116, senão = saldo devedor
-        const impostoRecolher = totalPagamentos > 0 ? totalPagamentos : saldoDevedor;
 
         if (totDeb > 0) {
           linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(totDeb));   // 010 Subtotal débitos
@@ -477,13 +473,11 @@ Deno.serve(async (req) => {
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        if (saldoDevedor > 0 || totalPagamentos > 0) {
-          if (saldoDevedor > 0) {
-            linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(saldoDevedor)); // 120 Saldo devedor
-            totalRegsArquivo++;
-            totalRegsDecl++;
-          }
-          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(impostoRecolher)); // 999 Imposto a recolher (= soma pagamentos E116)
+        if (saldoDevedor > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(saldoDevedor)); // 120 Saldo devedor
+          totalRegsArquivo++;
+          totalRegsDecl++;
+          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(saldoDevedor)); // 999 Imposto a recolher (= item 120)
           totalRegsArquivo++;
           totalRegsDecl++;
         }
@@ -506,8 +500,18 @@ Deno.serve(async (req) => {
       // Pos 040/054 = Número Acordo (N, 15)
       // Total = 54 chars
       // -----------------------------------------------
-      for (const e of e116Records) {
-        if (e.vlOr <= 0) continue;
+      // Ajustar os valores dos pagamentos para que a soma seja igual ao saldo devedor (item 999)
+      const totalE116 = e116Records.reduce((s: number, e: any) => s + (e.vlOr > 0 ? e.vlOr : 0), 0);
+      const saldoDevedor33 = rE110 ? Math.max(0,
+        (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) -
+        (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes)
+      ) : totalE116;
+      let somaPagamentos = 0;
+      const e116Validos = e116Records.filter((e: any) => e.vlOr > 0);
+
+      for (let idxE = 0; idxE < e116Validos.length; idxE++) {
+        const e = e116Validos[idxE];
+        const isLast = idxE === e116Validos.length - 1;
 
         const origem = '1'; // 1=Imposto ICMS
 
@@ -533,8 +537,19 @@ Deno.serve(async (req) => {
           dtVcto = '00000000';
         }
 
-        // Valor: 17 dígitos em centavos
-        const valor = fmtVal(e.vlOr, 17);
+        // Valor ajustado para que a soma dos pagamentos seja igual ao saldo devedor (item 999)
+        let valorPgto: number;
+        if (totalE116 > 0 && saldoDevedor33 > 0) {
+          if (isLast) {
+            valorPgto = saldoDevedor33 - somaPagamentos;
+          } else {
+            valorPgto = e.vlOr * (saldoDevedor33 / totalE116);
+          }
+        } else {
+          valorPgto = e.vlOr;
+        }
+        somaPagamentos += valorPgto;
+        const valor = fmtVal(valorPgto, 17);
 
         // Classe Vencimento: 5 dígitos (conforme PDF pos 035-039, tamanho 5)
         // Código 10014 = ICMS normal apurado no mês, vencimento até o 10º dia após o período
