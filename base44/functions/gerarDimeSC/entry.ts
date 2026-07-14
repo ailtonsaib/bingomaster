@@ -456,6 +456,10 @@ Deno.serve(async (req) => {
         const totCred = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
         const saldoDevedor = Math.max(0, totDeb - totCred);
         const saldoCredor = Math.max(0, totCred - totDeb);
+        // Soma dos pagamentos informados no E116 — DEVE bater com item 999 do Quadro 09
+        const totalPagamentos = e116Records.reduce((s: number, e: any) => s + (e.vlOr > 0 ? e.vlOr : 0), 0);
+        // Imposto a recolher = soma dos pagamentos quando há E116, senão = saldo devedor
+        const impostoRecolher = totalPagamentos > 0 ? totalPagamentos : saldoDevedor;
 
         if (totDeb > 0) {
           linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(totDeb));   // 010 Subtotal débitos
@@ -473,11 +477,13 @@ Deno.serve(async (req) => {
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        if (saldoDevedor > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(saldoDevedor)); // 120 Saldo devedor
-          totalRegsArquivo++;
-          totalRegsDecl++;
-          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(saldoDevedor)); // 999 Imposto a recolher
+        if (saldoDevedor > 0 || totalPagamentos > 0) {
+          if (saldoDevedor > 0) {
+            linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(saldoDevedor)); // 120 Saldo devedor
+            totalRegsArquivo++;
+            totalRegsDecl++;
+          }
+          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(impostoRecolher)); // 999 Imposto a recolher (= soma pagamentos E116)
           totalRegsArquivo++;
           totalRegsDecl++;
         }
