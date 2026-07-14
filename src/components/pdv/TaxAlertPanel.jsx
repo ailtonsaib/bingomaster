@@ -18,7 +18,7 @@ export default function TaxAlertPanel({ user }) {
     try {
       const [prods, custs, taxes, monofasic, configs] = await Promise.all([
         base44.entities.PDVProduct.filter({ user_email: user.email, is_active: true }),
-        base44.entities.PDVCustomer.filter({ user_email: user.email, is_active: true }),
+        base44.entities.PDVContact.filter({ user_email: user.email, is_active: true, is_cliente: true }),
         base44.entities.PDVExitTaxParameter.filter({ user_email: user.email, is_active: true }),
         base44.entities.PDVMonofasicTax.filter({ user_email: user.email, is_active: true }),
         base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),

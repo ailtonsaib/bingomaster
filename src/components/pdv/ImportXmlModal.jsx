@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, PackagePlus } from "lucide-react";
-import SupplierFormModal from "@/components/pdv/SupplierFormModal";
+import ContactFormModal from "@/components/pdv/ContactFormModal";
 import ProductForm from "@/components/pdv/ProductForm";
 import { ArrowDownToLine } from "lucide-react";
 
@@ -278,17 +278,21 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
 
       // Create or find supplier
       if (createSupplier && d.supplier.cnpj) {
-        const existing = await base44.entities.PDVSupplier.filter({
+        const existing = await base44.entities.PDVContact.filter({
           user_email: user.email,
           cpf_cnpj: d.supplier.cnpj,
         });
         if (existing.length > 0) {
           supplierId = existing[0].id;
         } else {
-          const supp = await base44.entities.PDVSupplier.create({
+          const supp = await base44.entities.PDVContact.create({
             ...d.supplier,
             user_email: user.email,
             is_active: true,
+            is_cliente: false,
+            is_fornecedor: true,
+            is_funcionario: false,
+            buyer_type: "consumidor_final",
           });
           supplierId = supp.id;
           // Open supplier form to adjust info before finishing import
@@ -513,9 +517,9 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
         </div>
 
         {editSupplier && (
-        <SupplierFormModal
+        <ContactFormModal
           user={user}
-          supplier={editSupplier}
+          contact={editSupplier}
           title="Ajustar Dados do Fornecedor"
           onClose={() => { setEditSupplier(null); onSaved?.(); onClose(); }}
           onSaved={handleSupplierSaved}

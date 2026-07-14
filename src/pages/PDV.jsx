@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
 import CheckoutModal from "@/components/pdv/CheckoutModal";
 import ProductManager from "@/components/pdv/ProductManager";
 import SalesHistory from "@/components/pdv/SalesHistory";
-import SupplierManager from "@/components/pdv/SupplierManager";
-import CustomerManager from "@/components/pdv/CustomerManager";
+import ContactManager from "@/components/pdv/ContactManager";
 import EntryOperations from "@/components/pdv/EntryOperations";
 import TaxParameterManager from "@/components/pdv/TaxParameterManager";
 import ExitOrderManager from "@/components/pdv/ExitOrderManager";
@@ -120,8 +119,7 @@ export default function PDV() {
     { id: "relatorio-trib", label: "Rel. Tributário", icon: FileBarChart },
     { id: "alertas", label: "Alertas Trib.", icon: Bell },
     { id: "financeiro", label: "Financeiro", icon: Wallet },
-    { id: "fornecedores", label: "Fornecedores", icon: Building2 },
-    { id: "clientes", label: "Clientes", icon: Users },
+    { id: "contatos", label: "Contatos", icon: Users },
   ];
 
   return (
@@ -193,8 +191,7 @@ export default function PDV() {
         {activeTab === "entradas" && <EntryOperations user={user} />}
         {activeTab === "saidas" && <ExitOrderManager user={user} />}
     {activeTab === "operacoes" && <OperationManager user={user} />}
-        {activeTab === "fornecedores" && <SupplierManager user={user} />}
-        {activeTab === "clientes" && <CustomerManager user={user} />}
+        {activeTab === "contatos" && <ContactManager user={user} />}
         {activeTab === "trib-entrada" && <TaxParameterManager user={user} />}
         {activeTab === "trib-saida" && <ExitTaxParameterManager user={user} />}
         {activeTab === "monofasicos" && <MonofasicTaxManager user={user} />}

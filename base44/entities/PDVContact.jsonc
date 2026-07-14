@@ -1,0 +1,96 @@
+{
+  "name": "PDVContact",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome / Raz\u00e3o Social do contato"
+    },
+    "cpf_cnpj": {
+      "type": "string",
+      "description": "CPF ou CNPJ (apenas n\u00fameros)"
+    },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "cep": {
+      "type": "string",
+      "description": "CEP"
+    },
+    "address": {
+      "type": "string",
+      "description": "Logradouro"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero"
+    },
+    "complement": {
+      "type": "string",
+      "description": "Complemento"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF (sigla do estado)"
+    },
+    "ibge_code": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio (7 d\u00edgitos)"
+    },
+    "is_cliente": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o contato \u00e9 cliente"
+    },
+    "is_fornecedor": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o contato \u00e9 fornecedor"
+    },
+    "is_funcionario": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o contato \u00e9 funcion\u00e1rio"
+    },
+    "buyer_type": {
+      "type": "string",
+      "enum": [
+        "consumidor_final",
+        "revendedor",
+        "distribuidor"
+      ],
+      "default": "consumidor_final",
+      "description": "Tipo de comprador (aplic\u00e1vel a clientes): consumidor_final, revendedor (varejista) ou distribuidor \u2014 afeta c\u00e1lculo de PIS/COFINS em produtos bif\u00e1sicos (Lei 13.097)."
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o contato est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "name",
+    "user_email"
+  ]
+}
