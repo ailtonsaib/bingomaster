@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Loader2, Building, Save, AlertTriangle, User, Calculator } from "lucide-react";
+import { X, Loader2, Building, Save, AlertTriangle, User, Calculator, Search } from "lucide-react";
+import { lookupCnpj } from "@/lib/cnpjLookup";
 
 const UF_OPTIONS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -23,6 +24,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [configId, setConfigId] = useState(null);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -36,6 +38,30 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
       setLoading(false);
     })();
   }, [user.email]);
+
+  const handleCnpjLookup = async (cnpjValue) => {
+    const clean = (cnpjValue || "").replace(/\D/g, "");
+    if (clean.length !== 14) return;
+    setCnpjLoading(true);
+    const data = await lookupCnpj(clean);
+    if (data) {
+      setForm(prev => ({
+        ...prev,
+        razao_social: data.razao_social || prev.razao_social,
+        nome_fantasia: data.nome_fantasia || prev.nome_fantasia,
+        cep: data.cep || prev.cep,
+        address: data.address || prev.address,
+        number: data.number || prev.number,
+        complement: data.complement || prev.complement,
+        district: data.district || prev.district,
+        city: data.city || prev.city,
+        uf: data.uf || prev.uf,
+        ibge_code: data.ibge_code || prev.ibge_code,
+        phone: data.phone || prev.phone,
+      }));
+    }
+    setCnpjLoading(false);
+  };
 
   const save = async () => {
     if (!form.razao_social || !form.cnpj) { alert("Preencha razão social e CNPJ!"); return; }
@@ -92,7 +118,12 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
             </div>
             <div>
               <Label>CNPJ *</Label>
-              <Input value={form.cnpj} onChange={e => setForm({...form, cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} className="h-9 font-mono" />
+              <div className="flex gap-1">
+                <Input value={form.cnpj} onChange={e => setForm({...form, cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} onBlur={e => handleCnpjLookup(e.target.value)} className="h-9 font-mono" placeholder="00000000000000" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" disabled={form.cnpj?.length !== 14 || cnpjLoading} onClick={() => handleCnpjLookup(form.cnpj)} title="Buscar dados na Receita">
+                  {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
             <div>
               <Label>Inscrição Estadual</Label>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil, Trash2, Plus, X, Loader2, Users, Search } from "lucide-react";
+import { lookupCnpj } from "@/lib/cnpjLookup";
 
 const EMPTY = {
   name: "", cpf_cnpj: "", ie: "", email: "", phone: "",
@@ -33,6 +34,31 @@ export default function CustomerManager({ user }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+
+  const handleCnpjLookup = async (cnpjValue) => {
+    const clean = (cnpjValue || "").replace(/\D/g, "");
+    if (clean.length !== 14) return;
+    setCnpjLoading(true);
+    const data = await lookupCnpj(clean);
+    if (data) {
+      setForm(prev => ({
+        ...prev,
+        name: data.razao_social || prev.name,
+        cep: data.cep || prev.cep,
+        address: data.address || prev.address,
+        number: data.number || prev.number,
+        complement: data.complement || prev.complement,
+        district: data.district || prev.district,
+        city: data.city || prev.city,
+        uf: data.uf || prev.uf,
+        ibge_code: data.ibge_code || prev.ibge_code,
+        phone: data.phone || prev.phone,
+        email: data.email || prev.email,
+      }));
+    }
+    setCnpjLoading(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -147,7 +173,12 @@ export default function CustomerManager({ user }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>CPF / CNPJ</Label>
-                  <Input value={form.cpf_cnpj} onChange={e => setForm({...form, cpf_cnpj: e.target.value})} className="h-9" />
+                  <div className="flex gap-1">
+                    <Input value={form.cpf_cnpj} onChange={e => setForm({...form, cpf_cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} onBlur={e => handleCnpjLookup(e.target.value)} className="h-9 font-mono" placeholder="CPF ou CNPJ" />
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" disabled={form.cpf_cnpj?.length !== 14 || cnpjLoading} onClick={() => handleCnpjLookup(form.cpf_cnpj)} title="Buscar dados na Receita">
+                      {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <Label>Inscrição Estadual</Label>
