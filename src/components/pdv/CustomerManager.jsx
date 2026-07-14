@@ -8,7 +8,19 @@ import { Pencil, Trash2, Plus, X, Loader2, Users, Search } from "lucide-react";
 const EMPTY = {
   name: "", cpf_cnpj: "", ie: "", email: "", phone: "",
   cep: "", address: "", number: "", complement: "", district: "",
-  city: "", uf: "", ibge_code: "", is_active: true,
+  city: "", uf: "", ibge_code: "", buyer_type: "consumidor_final", is_active: true,
+};
+
+const BUYER_TYPE_LABELS = {
+  consumidor_final: "Consumidor Final",
+  revendedor: "Revendedor / Varejista",
+  distribuidor: "Distribuidor / Atacadista",
+};
+
+const BUYER_TYPE_COLORS = {
+  consumidor_final: "bg-gray-100 text-gray-700",
+  revendedor: "bg-blue-100 text-blue-700",
+  distribuidor: "bg-amber-100 text-amber-700",
 };
 
 const UF_OPTIONS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -108,6 +120,9 @@ export default function CustomerManager({ user }) {
                 </div>
               </div>
               <div className="text-xs text-gray-500 space-y-0.5">
+                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${BUYER_TYPE_COLORS[c.buyer_type] || BUYER_TYPE_COLORS.consumidor_final}`}>
+                  {BUYER_TYPE_LABELS[c.buyer_type] || "Consumidor Final"}
+                </span>
                 {c.phone && <p>📞 {c.phone}</p>}
                 {c.email && <p>✉️ {c.email}</p>}
                 {c.address && <p>📍 {c.address}</p>}
@@ -191,6 +206,18 @@ export default function CustomerManager({ user }) {
                   <Label>Código IBGE (7 dígitos)</Label>
                   <Input value={form.ibge_code} onChange={e => setForm({...form, ibge_code: e.target.value.replace(/\D/g, '').slice(0,7)})} className="h-9 font-mono" placeholder="4205407" />
                 </div>
+              </div>
+              <div>
+                <Label>Tipo de Comprador *</Label>
+                <select value={form.buyer_type} onChange={e => setForm({...form, buyer_type: e.target.value})} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                  <option value="consumidor_final">Consumidor Final</option>
+                  <option value="revendedor">Revendedor / Varejista</option>
+                  <option value="distribuidor">Distribuidor / Atacadista</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Determina a regra de PIS/COFINS em produtos monofásicos bifásicos (Lei 13.097/2015).
+                  Venda a distribuidor aplica alíquota reduzida; demais = 0%.
+                </p>
               </div>
             </div>
             <div className="flex justify-end gap-2 p-4 border-t sticky bottom-0 bg-white">

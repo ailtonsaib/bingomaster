@@ -22,7 +22,6 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   const [cfop, setCfop] = useState("5102");
   const [paymentMethod, setPaymentMethod] = useState("0");
   const [notes, setNotes] = useState("");
-  const [buyerType, setBuyerType] = useState("consumidor_final");
 
   useEffect(() => {
     (async () => {
@@ -45,11 +44,6 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
     if (customerId) {
       const c = customers.find(c => c.id === customerId);
       setCustomer(c);
-      // Auto-set CFOP based on customer UF
-      if (c?.uf) {
-        // We need company UF to determine if it's internal/external
-        // For now, default to 5102 (same state) - can be overridden
-      }
     } else {
       setCustomer(null);
     }
@@ -87,7 +81,7 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
     const isMonofasic = product.monofasic === true;
     const monofasicTax = isMonofasic ? monofasicTaxes.find(m => m.ncm === product.ncm && m.is_active !== false) : null;
     const isBifasico = isMonofasic && monofasicTax?.tax_regime === "bifasico";
-    const isDistributor = buyerType === "distribuidor";
+    const isDistributor = (customer?.buyer_type || "consumidor_final") === "distribuidor";
     // Bifásico: venda a distribuidor usa alíquota reduzida (CST 02); venda a consumidor/varejista usa 0% (CST 04)
     // Monofásico: sempre 0% na revenda (CST 04 ou 07 para combustíveis)
     const useDistributorRates = isBifasico && isDistributor;
@@ -192,7 +186,7 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
         total_nota: totals.total_nota,
         status: "rascunho",
         payment_method: paymentMethod,
-        buyer_type: buyerType,
+        buyer_type: customer.buyer_type || "consumidor_final",
         notes,
       });
       onSaved?.();
@@ -238,22 +232,14 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
                 <option value="1">A Prazo</option>
               </select>
             </div>
-            <div>
-              <Label>Tipo de Comprador</Label>
-              <select value={buyerType} onChange={e => setBuyerType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
-                <option value="consumidor_final">Consumidor Final</option>
-                <option value="revendedor">Revendedor / Varejista</option>
-                <option value="distribuidor">Distribuidor / Atacadista</option>
-              </select>
-            </div>
           </div>
 
-          {buyerType === "distribuidor" && (
-            <div className="bg-amber-50 border border-amber-300 rounded-lg p-2 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                <b>Regime Bifásico ativo:</b> Para produtos monofásicos bifásicos (bebidas frias — Lei 13.097 art. 14),
-                a venda a distribuidor aplica alíquota reduzida de PIS (1,86%) e COFINS (8,54%) com CST 02.
+          {customer && (
+            <div className={`rounded-lg p-2 flex items-center gap-2 ${customer.buyer_type === "distribuidor" ? "bg-amber-50 border border-amber-300" : "bg-gray-50 border border-gray-200"}`}>
+              {customer.buyer_type === "distribuidor" && <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />}
+              <p className="text-xs text-gray-600">
+                <b>Tipo de Cliente:</b> {customer.buyer_type === "distribuidor" ? "Distribuidor / Atacadista" : customer.buyer_type === "revendedor" ? "Revendedor / Varejista" : "Consumidor Final"}
+                {customer.buyer_type === "distribuidor" && " — Regime Bifásico ativo: alíquota reduzida de PIS (1,86%) e COFINS (8,54%) com CST 02 para produtos monofásicos bifásicos (Lei 13.097 art. 14)."}
               </p>
             </div>
           )}
