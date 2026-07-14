@@ -23,22 +23,26 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   const [cfop, setCfop] = useState("5102");
   const [paymentMethod, setPaymentMethod] = useState("0");
   const [notes, setNotes] = useState("");
+  const [operations, setOperations] = useState([]);
+  const [selectedOperationId, setSelectedOperationId] = useState("");
 
   useEffect(() => {
     (async () => {
       try {
-        const [custs, prods, taxes, monofasic, configs] = await Promise.all([
+        const [custs, prods, taxes, monofasic, configs, ops] = await Promise.all([
           base44.entities.PDVCustomer.filter({ user_email: user.email, is_active: true }),
           base44.entities.PDVProduct.filter({ user_email: user.email, is_active: true }),
           base44.entities.PDVExitTaxParameter.filter({ user_email: user.email }),
           base44.entities.PDVMonofasicTax.filter({ user_email: user.email }),
           base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),
+          base44.entities.PDVOperation.filter({ user_email: user.email, operation_type: "saida", is_active: true }),
         ]);
         setCustomers(custs);
         setProducts(prods);
         setTaxParams(taxes);
         setMonofasicTaxes(monofasic);
         setCompanyConfig(configs[0] || null);
+        setOperations(ops || []);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
@@ -273,6 +277,27 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
                 <option value="">Selecione um cliente...</option>
                 {customers.map(c => (
                   <option key={c.id} value={c.id}>{c.name} {c.cpf_cnpj ? `(${c.cpf_cnpj})` : ""}</option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Modelo de Operação</Label>
+              <select
+                value={selectedOperationId}
+                onChange={e => {
+                  const opId = e.target.value;
+                  setSelectedOperationId(opId);
+                  const op = operations.find(o => o.id === opId);
+                  if (op) {
+                    if (op.nature_operation) setNatureOp(op.nature_operation);
+                    if (op.cfop_default) setCfop(op.cfop_default);
+                  }
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="">Selecionar manualmente...</option>
+                {operations.map(op => (
+                  <option key={op.id} value={op.id}>{op.name} {op.cfop_default ? `— CFOP ${op.cfop_default}` : ""}</option>
                 ))}
               </select>
             </div>

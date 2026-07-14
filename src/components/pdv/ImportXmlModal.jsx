@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, PackagePlus } from "lucide-react";
 import SupplierFormModal from "@/components/pdv/SupplierFormModal";
 import ProductForm from "@/components/pdv/ProductForm";
+import { ArrowDownToLine } from "lucide-react";
 
 // Parse NF-e XML using browser DOMParser
 function parseNfeXml(xmlText) {
@@ -119,17 +120,21 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
   const [categories, setCategories] = useState([]);
   const [editProduct, setEditProduct] = useState(null);
   const [pendingProducts, setPendingProducts] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [selectedOperationId, setSelectedOperationId] = useState("");
   const fileRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [configs, cats] = await Promise.all([
+        const [configs, cats, ops] = await Promise.all([
           base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),
           base44.entities.PDVCategory.filter({ user_email: user.email }),
+          base44.entities.PDVOperation.filter({ user_email: user.email, operation_type: "entrada", is_active: true }),
         ]);
         setCompanyConfig(configs[0] || null);
         setCategories(cats || []);
+        setOperations(ops || []);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
@@ -202,6 +207,21 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
     });
 
     return newProducts;
+  };
+
+  const applyOperation = (opId) => {
+    setSelectedOperationId(opId);
+    if (!opId || !parsedData) return;
+    const op = operations.find(o => o.id === opId);
+    if (!op) return;
+    setParsedData(prev => ({
+      ...prev,
+      nota: {
+        ...prev.nota,
+        cfop: op.cfop_default || prev.nota.cfop,
+        nature_operation: op.nature_operation || prev.nota.nature_operation,
+      },
+    }));
   };
 
   const handleSupplierSaved = async (updatedSupplier) => {
@@ -375,6 +395,31 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
                   <div><span className="text-gray-500">Cidade:</span> {parsedData.supplier.city}</div>
                 </div>
               </div>
+
+              {/* Operation selector */}
+              {operations.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowDownToLine className="w-4 h-4 text-blue-600" />
+                    <h4 className="text-sm font-semibold">Modelo de Operação</h4>
+                  </div>
+                  <select
+                    value={selectedOperationId}
+                    onChange={e => applyOperation(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  >
+                    <option value="">Usar dados do XML (sem modelo)</option>
+                    {operations.map(op => (
+                      <option key={op.id} value={op.id}>{op.name} {op.cfop_default ? `— CFOP ${op.cfop_default}` : ""}</option>
+                    ))}
+                  </select>
+                  {selectedOperationId && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      CFOP e natureza da operação foram ajustados conforme o modelo selecionado.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Nota info */}
               <div className="bg-gray-50 rounded-lg p-3">

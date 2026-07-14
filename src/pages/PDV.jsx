@@ -15,6 +15,7 @@ import TaxParameterManager from "@/components/pdv/TaxParameterManager";
 import ExitOrderManager from "@/components/pdv/ExitOrderManager";
 import ExitTaxParameterManager from "@/components/pdv/ExitTaxParameterManager";
 import MonofasicTaxManager from "@/components/pdv/MonofasicTaxManager";
+import OperationManager from "@/components/pdv/OperationManager";
 import TaxReportPanel from "@/components/pdv/TaxReportPanel";
 import TaxAlertPanel from "@/components/pdv/TaxAlertPanel";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
@@ -111,6 +112,7 @@ export default function PDV() {
     { id: "vendas", label: "Vendas", icon: Receipt },
     { id: "entradas", label: "Entradas", icon: FileInput },
     { id: "saidas", label: "Saídas", icon: FileOutput },
+    { id: "operacoes", label: "Operações", icon: Settings },
     { id: "trib-entrada", label: "Trib. Entrada", icon: Percent },
     { id: "trib-saida", label: "Trib. Saída", icon: FileCheck },
     { id: "monofasicos", label: "Monofásicos", icon: Scale },
@@ -188,6 +190,7 @@ export default function PDV() {
         {activeTab === "vendas" && <SalesHistory user={user} />}
         {activeTab === "entradas" && <EntryOperations user={user} />}
         {activeTab === "saidas" && <ExitOrderManager user={user} />}
+    {activeTab === "operacoes" && <OperationManager user={user} />}
         {activeTab === "fornecedores" && <SupplierManager user={user} />}
         {activeTab === "clientes" && <CustomerManager user={user} />}
         {activeTab === "trib-entrada" && <TaxParameterManager user={user} />}
