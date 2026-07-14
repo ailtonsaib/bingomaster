@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Loader2, Building, Save, AlertTriangle, User, Calculator, Search } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
+import { maskCnpj, maskCpf, maskPhone, maskCep } from "@/lib/brMasks";
 
 const UF_OPTIONS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -121,7 +122,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
             <div>
               <Label>CNPJ *</Label>
               <div className="flex gap-1">
-                <Input value={form.cnpj} onChange={e => setForm({...form, cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} onBlur={e => handleCnpjLookup(e.target.value)} className="h-9 font-mono" placeholder="00000000000000" />
+                <Input value={maskCnpj(form.cnpj)} onChange={e => setForm({...form, cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} onBlur={e => handleCnpjLookup(e.target.value)} className="h-9 font-mono" placeholder="00.000.000/0000-00" />
                 <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" disabled={form.cnpj?.length !== 14 || cnpjLoading} onClick={() => handleCnpjLookup(form.cnpj)} title="Buscar dados na Receita">
                   {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 </Button>
@@ -137,7 +138,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
             </div>
             <div>
               <Label>Telefone</Label>
-              <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="h-9" />
+              <Input value={maskPhone(form.phone)} onChange={e => setForm({...form, phone: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9" placeholder="(00) 00000-0000" />
             </div>
             <div>
               <Label>CRT (Regime Tributário) *</Label>
@@ -199,7 +200,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div>
                 <Label>CEP</Label>
-                <Input value={form.cep} onChange={e => setForm({...form, cep: e.target.value})} className="h-9" />
+                <Input value={maskCep(form.cep)} onChange={e => setForm({...form, cep: e.target.value.replace(/\D/g, '').slice(0,8)})} className="h-9" placeholder="00000-000" />
               </div>
               <div className="md:col-span-2">
                 <Label>Logradouro</Label>
@@ -244,11 +245,11 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
               </div>
               <div>
                 <Label>CPF</Label>
-                <Input value={form.responsible_cpf} onChange={e => setForm({...form, responsible_cpf: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9 font-mono" placeholder="00000000000" />
+                <Input value={maskCpf(form.responsible_cpf)} onChange={e => setForm({...form, responsible_cpf: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9 font-mono" placeholder="000.000.000-00" />
               </div>
               <div>
                 <Label>Telefone</Label>
-                <Input value={form.responsible_phone} onChange={e => setForm({...form, responsible_phone: e.target.value})} className="h-9" placeholder="(00) 0000-0000" />
+                <Input value={maskPhone(form.responsible_phone)} onChange={e => setForm({...form, responsible_phone: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9" placeholder="(00) 00000-0000" />
               </div>
               <div>
                 <Label>Email</Label>
@@ -281,11 +282,11 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
               </div>
               <div>
                 <Label>CPF do Contador</Label>
-                <Input value={form.accountant_cpf} onChange={e => setForm({...form, accountant_cpf: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9 font-mono" placeholder="00000000000" />
+                <Input value={maskCpf(form.accountant_cpf)} onChange={e => setForm({...form, accountant_cpf: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9 font-mono" placeholder="000.000.000-00" />
               </div>
               <div>
                 <Label>CNPJ do Escritório</Label>
-                <Input value={form.accountant_cnpj} onChange={e => setForm({...form, accountant_cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} className="h-9 font-mono" placeholder="00000000000000" />
+                <Input value={maskCnpj(form.accountant_cnpj)} onChange={e => setForm({...form, accountant_cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} className="h-9 font-mono" placeholder="00.000.000/0000-00" />
               </div>
               <div className="md:col-span-2">
                 <Label>Endereço do Escritório</Label>
@@ -293,7 +294,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
               </div>
               <div>
                 <Label>Telefone</Label>
-                <Input value={form.accountant_phone} onChange={e => setForm({...form, accountant_phone: e.target.value})} className="h-9" placeholder="(00) 0000-0000" />
+                <Input value={maskPhone(form.accountant_phone)} onChange={e => setForm({...form, accountant_phone: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9" placeholder="(00) 00000-0000" />
               </div>
               <div>
                 <Label>Email</Label>

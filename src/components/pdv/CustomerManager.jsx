@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil, Trash2, Plus, X, Loader2, Users, Search } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
+import { maskCpfCnpj, maskPhone, maskCep } from "@/lib/brMasks";
 
 const EMPTY = {
   name: "", cpf_cnpj: "", ie: "", email: "", phone: "",
@@ -176,7 +177,7 @@ export default function CustomerManager({ user }) {
                 <div>
                   <Label>CPF / CNPJ</Label>
                   <div className="flex gap-1">
-                    <Input value={form.cpf_cnpj} onChange={e => setForm({...form, cpf_cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} onBlur={e => handleCnpjLookup(e.target.value)} className="h-9 font-mono" placeholder="CPF ou CNPJ" />
+                    <Input value={maskCpfCnpj(form.cpf_cnpj)} onChange={e => setForm({...form, cpf_cnpj: e.target.value.replace(/\D/g, '').slice(0,14)})} onBlur={e => handleCnpjLookup(e.target.value)} className="h-9 font-mono" placeholder="000.000.000-00 ou 00.000.000/0000-00" />
                     <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" disabled={form.cpf_cnpj?.length !== 14 || cnpjLoading} onClick={() => handleCnpjLookup(form.cpf_cnpj)} title="Buscar dados na Receita">
                       {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                     </Button>
@@ -194,13 +195,13 @@ export default function CustomerManager({ user }) {
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="h-9" />
+                  <Input value={maskPhone(form.phone)} onChange={e => setForm({...form, phone: e.target.value.replace(/\D/g, '').slice(0,11)})} className="h-9" placeholder="(00) 00000-0000" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>CEP</Label>
-                  <Input value={form.cep} onChange={e => setForm({...form, cep: e.target.value})} className="h-9" />
+                  <Input value={maskCep(form.cep)} onChange={e => setForm({...form, cep: e.target.value.replace(/\D/g, '').slice(0,8)})} className="h-9" placeholder="00000-000" />
                 </div>
                 <div>
                   <Label>UF</Label>
