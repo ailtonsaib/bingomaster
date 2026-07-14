@@ -382,11 +382,12 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Item 10 = ICMS debitado nas saídas — DEVE ser igual ao item 80 do Quadro 03
-        // Usar sempre a soma dos C190 (mesma base do Quadro 03) para garantir consistência
+        // Quadro 04 — Apuração dos Débitos (layout oficial DIME-SC):
+        // 010 = ICMS debitado nas saídas (= Quadro 03 item 080)
+        // 040 = Outros débitos
+        // 050 = Subtotal (010 + 040)
         const debSaidas = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosDebitos = rE110.debAjDocFiscal + rE110.debAjustes;
-        // Subtotal = soma dos itens 10 + 70 (sem saldo devedor anterior)
         const subtotalDebitos = debSaidas + outrosDebitos;
 
         if (debSaidas > 0) {
@@ -395,12 +396,12 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
         if (outrosDebitos > 0) {
-          linhasDime.push(`25` + `04` + fmtItem(70) + fmtVal(outrosDebitos));
+          linhasDime.push(`25` + `04` + fmtItem(40) + fmtVal(outrosDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (subtotalDebitos > 0) {
-          linhasDime.push(`25` + `04` + fmtItem(990) + fmtVal(subtotalDebitos));
+          linhasDime.push(`25` + `04` + fmtItem(50) + fmtVal(subtotalDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
@@ -415,27 +416,26 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Item 10 (saldo credor anterior) NÃO é emitido — não é possível confirmar
-        // contra a DIME do mês anterior. Se a DIME anterior tinha saldo 0,00,
-        // emitir um valor diferente causa erro de validação.
-        // Item 20 = ICMS creditado nas entradas — DEVE ser igual ao item 30 do Quadro 03
+        // Quadro 05 — Apuração dos Créditos (layout oficial DIME-SC):
+        // 060 = ICMS creditado nas entradas (= Quadro 03 item 030)
+        // 080 = Outros créditos
+        // 100 = Subtotal (060 + 080)
         const credEntradas = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
-        // Subtotal = soma dos itens 20 + 150 (sem item 10)
         const subtotalCreditos = credEntradas + outrosCred;
 
         if (credEntradas > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
+          linhasDime.push(`26` + `05` + fmtItem(60) + fmtVal(credEntradas));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (outrosCred > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(150) + fmtVal(outrosCred));
+          linhasDime.push(`26` + `05` + fmtItem(80) + fmtVal(outrosCred));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (subtotalCreditos > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(990) + fmtVal(subtotalCreditos));
+          linhasDime.push(`26` + `05` + fmtItem(100) + fmtVal(subtotalCreditos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
@@ -450,39 +450,37 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Totais ajustados: devem coincidir com os subtotais dos Quadros 04 e 05
-        // (sem saldo credor anterior, que não foi emitido no Quadro 05)
-        const totDeb = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
-        const totCred = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
-        const saldoDevedor = Math.max(0, totDeb - totCred);
-        const saldoCredor = Math.max(0, totCred - totDeb);
+        // Quadro 09 — Cálculo do Imposto a Pagar (layout oficial DIME-SC):
+        // 010 = Total de débitos (= Quadro 04 item 050)
+        // 050 = Total de créditos (= Quadro 05 item 100)
+        // 100 = Saldo devedor (010 - 050, se positivo)
+        // 999 = Imposto a recolher (= 100)
+        // 098 = Saldo credor a transportar (050 - 010, se positivo)
+        const subtotalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
+        const subtotalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
+        const saldoDevedor = Math.max(0, subtotalDebitos - subtotalCreditos);
+        const saldoCredor = Math.max(0, subtotalCreditos - subtotalDebitos);
 
-        if (totDeb > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(totDeb));   // 010 Subtotal débitos
-          totalRegsArquivo++;
-          totalRegsDecl++;
-          linhasDime.push(`30` + `09` + fmtItem(40) + fmtVal(totDeb));   // 040 Total débitos
+        if (subtotalDebitos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(subtotalDebitos));  // 010 Total de débitos
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        if (totCred > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(50) + fmtVal(totCred));  // 050 Subtotal créditos
-          totalRegsArquivo++;
-          totalRegsDecl++;
-          linhasDime.push(`30` + `09` + fmtItem(80) + fmtVal(totCred));  // 080 Total créditos
+        if (subtotalCreditos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(50) + fmtVal(subtotalCreditos)); // 050 Total de créditos
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (saldoDevedor > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(saldoDevedor)); // 120 Saldo devedor
+          linhasDime.push(`30` + `09` + fmtItem(100) + fmtVal(saldoDevedor));    // 100 Saldo devedor
           totalRegsArquivo++;
           totalRegsDecl++;
-          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(saldoDevedor)); // 999 Imposto a recolher (= item 120)
+          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(saldoDevedor));    // 999 Imposto a recolher (= 100)
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (saldoCredor > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredor));  // 998 Saldo credor próx. mês
+          linhasDime.push(`30` + `09` + fmtItem(98) + fmtVal(saldoCredor));      // 098 Saldo credor a transportar
           totalRegsArquivo++;
           totalRegsDecl++;
         }
