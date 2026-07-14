@@ -416,14 +416,21 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Quadro 05 — Apuração dos Créditos:
+        // Quadro 05 — Apuração dos Créditos (layout oficial SEF-SC):
+        // 010 = Saldo credor do mês anterior
         // 020 = ICMS creditado nas entradas (= Quadro 03 item 030)
         // 150 = Outros créditos
-        // 990 = Subtotal (020 + 150)
+        // 990 = Subtotal (010 + 020 + 150) — DEVE bater com Quadro 09 item 050
+        const saldoCredorAntQ5 = rE110.saldoCredorAnt || 0;
         const credEntradas = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
-        const subtotalCreditos = credEntradas + outrosCred;
+        const subtotalCreditos = saldoCredorAntQ5 + credEntradas + outrosCred;
 
+        if (saldoCredorAntQ5 > 0) {
+          linhasDime.push(`26` + `05` + fmtItem(10) + fmtVal(saldoCredorAntQ5));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
         if (credEntradas > 0) {
           linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
           totalRegsArquivo++;
@@ -462,9 +469,9 @@ Deno.serve(async (req) => {
         //   120 = Imposto a Recolher (se saldo devedor > 0)
         //   999 = Imposto a Recolher — total final (se saldo devedor > 0)
         //   140 = Saldo Credor p/ Mês Seguinte (se saldo credor > 0)
-        //   998 = Saldo Credor p/ Mês Seguinte — total final (se saldo credor > 0)
         //
-        // NÃO EXISTEM no Quadro 09: itens 099, 100, 105, 110
+        // NÃO EXISTEM no Quadro 09: itens 099, 100, 105, 110, 998
+        // (998 é totalizador que causa dupla contagem no validador SEF)
         // =====================================================
         const saldoCredorAnt = rE110.saldoCredorAnt || 0;
         const totalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
@@ -520,90 +527,80 @@ Deno.serve(async (req) => {
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-
-        // Item 998 — Saldo Credor p/ Mês Seguinte — total final (se saldo credor > 0)
-        if (saldoCredorTransportar > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
       }
 
       // -----------------------------------------------
       // Registro 33 - Discriminação dos Pagamentos (Quadro 12)
-      // Pos 001/002 = "33" (N, 2)
-      // Pos 003/004 = "12" (C, 2)
-      // Pos 005/005 = Origem Recolhimento (N, 1): 1=Imposto, 2=ST, 3=Débitos Específicos
-      // Pos 006/009 = Código Receita (N, 4)  ← 4 DÍGITOS conforme PDF
-      // Pos 010/017 = Data Vencimento DDMMAAAA (N, 8)
-      // Pos 018/034 = Valor ($, 17)
-      // Pos 035/039 = Classe Vencimento (N, 5)  ← 5 DÍGITOS conforme PDF
-      // Pos 040/054 = Número Acordo (N, 15)
-      // Total = 54 chars
+      // SÓ gerar pagamentos de origem 1 (ICMS) quando há imposto a recolher
+      // (saldo devedor > 0). Quando há saldo credor, NÃO gerar pagamentos.
       // -----------------------------------------------
-      // Ajustar os valores dos pagamentos para que a soma seja igual ao saldo devedor (item 999)
-      const totalE116 = e116Records.reduce((s: number, e: any) => s + (e.vlOr > 0 ? e.vlOr : 0), 0);
       const saldoDevedor33 = rE110 ? Math.max(0,
         (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) -
         (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0))
-      ) : totalE116;
-      let somaPagamentos = 0;
-      const e116Validos = e116Records.filter((e: any) => e.vlOr > 0);
+      ) : 0;
 
-      for (let idxE = 0; idxE < e116Validos.length; idxE++) {
-        const e = e116Validos[idxE];
-        const isLast = idxE === e116Validos.length - 1;
+      if (saldoDevedor33 > 0) {
+        const e116Validos = e116Records.filter((e: any) => e.vlOr > 0);
+        const totalE116 = e116Validos.reduce((s: number, e: any) => s + e.vlOr, 0);
+        let somaPagamentos = 0;
 
-        const origem = '1'; // 1=Imposto ICMS
-
-        // Código de receita: 4 dígitos (conforme PDF pos 006-009, tamanho 4)
-        // Para ICMS SC mensal normal: código 1449 (4 dígitos)
-        const codRecRaw = (e.codRec || '').replace(/\D/g, '');
-        const codRec = codRecRaw.length >= 4
-          ? codRecRaw.padStart(4, '0').slice(-4)
-          : codRecRaw.length > 0
-            ? codRecRaw.padStart(4, '0')
-            : '1449'; // código ICMS mensal SC
-
-        // DT_VCTO: DDMMAAAA
-        let dtVcto = (e.dtVcto || '').replace(/\D/g, '');
-        if (dtVcto.length === 8) {
-          const anoPos0 = parseInt(dtVcto.substring(0, 4));
-          if (anoPos0 >= 1900 && anoPos0 <= 2100) {
-            // Estava em AAAAMMDD → converter para DDMMAAAA
-            dtVcto = dtVcto.substring(6, 8) + dtVcto.substring(4, 6) + dtVcto.substring(0, 4);
-          }
-          // else: já está em DDMMAAAA
+        // Se não há E116, gerar um pagamento único com o valor do imposto a recolher
+        if (e116Validos.length === 0) {
+          const codRec = '1449';
+          const dtVcto = '00000000';
+          const valor = fmtVal(saldoDevedor33, 17);
+          const classeVcto = '10014';
+          const acordo = '000000000000000';
+          linhasDime.push(`33` + `12` + `1` + codRec + dtVcto + valor + classeVcto + acordo);
+          totalRegsArquivo++;
+          totalRegsDecl++;
         } else {
-          dtVcto = '00000000';
-        }
+          for (let idxE = 0; idxE < e116Validos.length; idxE++) {
+            const e = e116Validos[idxE];
+            const isLast = idxE === e116Validos.length - 1;
 
-        // Valor ajustado para que a soma dos pagamentos seja igual ao saldo devedor (item 999)
-        let valorPgto: number;
-        if (totalE116 > 0 && saldoDevedor33 > 0) {
-          if (isLast) {
-            valorPgto = saldoDevedor33 - somaPagamentos;
-          } else {
-            valorPgto = e.vlOr * (saldoDevedor33 / totalE116);
+            const origem = '1'; // 1=Imposto ICMS
+
+            const codRecRaw = (e.codRec || '').replace(/\D/g, '');
+            const codRec = codRecRaw.length >= 4
+              ? codRecRaw.padStart(4, '0').slice(-4)
+              : codRecRaw.length > 0
+                ? codRecRaw.padStart(4, '0')
+                : '1449';
+
+            let dtVcto = (e.dtVcto || '').replace(/\D/g, '');
+            if (dtVcto.length === 8) {
+              const anoPos0 = parseInt(dtVcto.substring(0, 4));
+              if (anoPos0 >= 1900 && anoPos0 <= 2100) {
+                dtVcto = dtVcto.substring(6, 8) + dtVcto.substring(4, 6) + dtVcto.substring(0, 4);
+              }
+            } else {
+              dtVcto = '00000000';
+            }
+
+            // Valor ajustado para que a soma dos pagamentos seja igual ao saldo devedor (item 999)
+            let valorPgto: number;
+            if (totalE116 > 0) {
+              if (isLast) {
+                valorPgto = saldoDevedor33 - somaPagamentos;
+              } else {
+                valorPgto = e.vlOr * (saldoDevedor33 / totalE116);
+              }
+            } else {
+              valorPgto = e.vlOr;
+            }
+            somaPagamentos += valorPgto;
+            const valor = fmtVal(valorPgto, 17);
+
+            const classeVcto = '10014';
+            const acordo = '000000000000000';
+
+            linhasDime.push(`33` + `12` + origem + codRec + dtVcto + valor + classeVcto + acordo);
+            totalRegsArquivo++;
+            totalRegsDecl++;
           }
-        } else {
-          valorPgto = e.vlOr;
         }
-        somaPagamentos += valorPgto;
-        const valor = fmtVal(valorPgto, 17);
-
-        // Classe Vencimento: 5 dígitos (conforme PDF pos 035-039, tamanho 5)
-        // Código 10014 = ICMS normal apurado no mês, vencimento até o 10º dia após o período
-        // Conforme Portaria SEF 269/2018 (tabela oficial de classes de vencimento)
-        const classeVcto = '10014';
-
-        // Número Acordo: 15 dígitos zeros (sem acordo)
-        const acordo = '000000000000000';
-
-        linhasDime.push(`33` + `12` + origem + codRec + dtVcto + valor + classeVcto + acordo);
-        totalRegsArquivo++;
-        totalRegsDecl++;
-      }
+      } // fim if (saldoDevedor33 > 0)
 
     } // fim if(temMovimento)
 
