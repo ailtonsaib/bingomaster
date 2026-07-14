@@ -1,0 +1,64 @@
+{
+  "name": "PDVProduct",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "barcode": {
+      "type": "string",
+      "description": "C\u00f3digo de barras (EAN)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do produto"
+    },
+    "price": {
+      "type": "number",
+      "description": "Pre\u00e7o de venda"
+    },
+    "cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o de custo"
+    },
+    "stock": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade em estoque"
+    },
+    "min_stock": {
+      "type": "number",
+      "default": 0,
+      "description": "Estoque m\u00ednimo para alerta"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "ID da categoria"
+    },
+    "category_name": {
+      "type": "string",
+      "description": "Nome da categoria (cache)"
+    },
+    "unit": {
+      "type": "string",
+      "default": "UN",
+      "description": "Unidade: UN, KG, LT, CX, MT"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o produto est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "name",
+    "price",
+    "user_email"
+  ]
+}

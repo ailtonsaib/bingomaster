@@ -39,6 +39,11 @@
       "default": false,
       "description": "Se tem acesso ao Validador SPED"
     },
+    "can_access_pdv": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso ao PDV (Frente de Caixa)"
+    },
     "bingo_plan": {
       "type": "string",
       "default": "free",
@@ -98,7 +103,8 @@
         "bingo",
         "finance",
         "chamados",
-        "sped"
+        "sped",
+        "pdv"
       ],
       "default": "portal",
       "description": "Aplicativo que o usu\u00e1rio est\u00e1 usando no momento"

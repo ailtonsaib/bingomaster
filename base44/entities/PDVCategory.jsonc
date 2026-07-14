@@ -1,0 +1,22 @@
+{
+  "name": "PDVCategory",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da categoria"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "user_email"
+  ]
+}

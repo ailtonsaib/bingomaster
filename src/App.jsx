@@ -51,6 +51,8 @@ import PortalGuard from '@/components/PortalGuard';
 import TicketLogin from '@/pages/TicketLogin';
 import TicketKanban from '@/pages/TicketKanban';
 import TicketAdmin from '@/pages/TicketAdmin';
+import PDVLogin from '@/pages/PDVLogin';
+import PDV from '@/pages/PDV';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -138,6 +140,13 @@ const AuthenticatedApp = () => {
           <Route path="/sales-dashboard" element={<SalesDashboard />} />
           <Route path="/monitor" element={<GameMonitor />} />
           <Route path="/admin-financial" element={<AdminFinancialPanel />} />
+        </Route>
+      </Route>
+      {/* PDV — Frente de Caixa */}
+      <Route path="/pdv" element={<PDVLogin />} />
+      <Route element={<PortalGuard permission="can_access_pdv" />}>
+        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+          <Route path="/pdv-caixa" element={<PDV />} />
         </Route>
       </Route>
       {/* Sistema de Chamados — login próprio por CNPJ + senha */}

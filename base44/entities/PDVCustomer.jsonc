@@ -1,0 +1,38 @@
+{
+  "name": "PDVCustomer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "cpf_cnpj": {
+      "type": "string",
+      "description": "CPF ou CNPJ"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "user_email"
+  ]
+}
