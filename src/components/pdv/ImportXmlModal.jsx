@@ -77,7 +77,7 @@ function parseNfeXml(xmlText) {
   return {
     supplier: {
       name: getText(emit, "xNome"),
-      cnpj: getText(emit, "CNPJ") || getText(emit, "CPF"),
+      cpf_cnpj: getText(emit, "CNPJ") || getText(emit, "CPF"),
       ie: getText(emit, "IE"),
       address: getText(emit, "xLgr"),
       number: getText(emit, "nro"),
