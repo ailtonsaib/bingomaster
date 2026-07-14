@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -19,6 +19,7 @@ import OperationManager from "@/components/pdv/OperationManager";
 import TaxReportPanel from "@/components/pdv/TaxReportPanel";
 import TaxAlertPanel from "@/components/pdv/TaxAlertPanel";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
+import FinancePanel from "@/components/pdv/FinancePanel";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -118,6 +119,7 @@ export default function PDV() {
     { id: "monofasicos", label: "Monofásicos", icon: Scale },
     { id: "relatorio-trib", label: "Rel. Tributário", icon: FileBarChart },
     { id: "alertas", label: "Alertas Trib.", icon: Bell },
+    { id: "financeiro", label: "Financeiro", icon: Wallet },
     { id: "fornecedores", label: "Fornecedores", icon: Building2 },
     { id: "clientes", label: "Clientes", icon: Users },
   ];
@@ -198,6 +200,7 @@ export default function PDV() {
         {activeTab === "monofasicos" && <MonofasicTaxManager user={user} />}
         {activeTab === "relatorio-trib" && <TaxReportPanel user={user} />}
         {activeTab === "alertas" && <TaxAlertPanel user={user} />}
+        {activeTab === "financeiro" && <FinancePanel user={user} />}
       </div>
 
       {showCheckout && (

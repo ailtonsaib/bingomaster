@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Lock, Clock, LogOut, ArrowLeft, Mail, MessageCircle, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function LockScreen({ user, onRefresh, onLogout, transactions }) {
+export default function LockScreen({ user, onRefresh, onLogout, transactions, embedded }) {
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(user.finance_release_requested);
   const navigate = useNavigate();
@@ -26,12 +26,14 @@ export default function LockScreen({ user, onRefresh, onLogout, transactions }) 
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+    <div className={`${embedded ? 'h-full' : 'min-h-screen'} bg-background flex flex-col items-center justify-center p-6`}>
       <div className="max-w-md w-full">
         {/* Back button */}
-        <Button variant="ghost" size="sm" className="mb-4 gap-1" onClick={() => navigate('/')}>
-          <ArrowLeft className="w-4 h-4" /> Voltar ao Portal
-        </Button>
+        {!embedded && (
+          <Button variant="ghost" size="sm" className="mb-4 gap-1" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-4 h-4" /> Voltar ao Portal
+          </Button>
+        )}
 
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
@@ -119,9 +121,11 @@ export default function LockScreen({ user, onRefresh, onLogout, transactions }) 
           </Button>
         )}
 
-        <Button variant="ghost" className="w-full gap-2" onClick={onLogout}>
-          <LogOut className="w-4 h-4" /> Sair
-        </Button>
+        {!embedded && (
+          <Button variant="ghost" className="w-full gap-2" onClick={onLogout}>
+            <LogOut className="w-4 h-4" /> Sair
+          </Button>
+        )}
       </div>
     </div>
   );

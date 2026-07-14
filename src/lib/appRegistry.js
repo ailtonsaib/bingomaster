@@ -44,38 +44,6 @@ export const APPS = [
     ],
   },
   {
-    id: "financeiro",
-    name: "Controle de Finanças",
-    icon: "Wallet",
-    iconBg: "bg-[#D1FAE5]",
-    iconColor: "text-[#059669]",
-    url: "/finance",
-    entryRoute: "/financ",
-    permission: "can_access_finance",
-    external: false,
-    tagline: "Gestão financeira simplificada",
-    image: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?w=800&auto=format&fit=crop&q=80",
-    description:
-      "Controle suas receitas e despesas com categorias personalizadas. Acompanhe seu fluxo de caixa, organize suas finanças e gere relatórios. Comece grátis com 10 movimentações e faça upgrade para uso ilimitado.",
-    features: [
-      "Registro de receitas e despesas",
-      "Categorias personalizadas",
-      "Relatórios e resumos",
-      "Controle de fluxo de caixa",
-      "Interface simples e intuitiva",
-    ],
-    plans: [
-      { name: "Free", price: 0, limit: "10 movimentações" },
-      { name: "Full", price: 49.9, limit: "Movimentações ilimitadas" },
-    ],
-    accent: "#059669",
-    previewRoute: "/financ",
-    screenshots: [
-      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/e8796aa21_generated_image.png", caption: "Tela de Login" },
-      { src: "https://media.base44.com/images/public/6a2055dca9eaba25f3a7de8f/06fd24b05_generated_image.png", caption: "Dashboard Financeiro" },
-    ],
-  },
-  {
     id: "pdv",
     name: "PDV — Frente de Caixa",
     icon: "ShoppingCart",
@@ -88,7 +56,7 @@ export const APPS = [
     tagline: "Ponto de venda e gestão",
     image: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&auto=format&fit=crop&q=80",
     description:
-      "Sistema completo de frente de caixa com catálogo de produtos, controle de estoque, finalização de vendas com múltiplas formas de pagamento (dinheiro, cartão, PIX) e relatórios de vendas em tempo real.",
+      "Sistema completo de frente de caixa com catálogo de produtos, controle de estoque, finalização de vendas com múltiplas formas de pagamento (dinheiro, cartão, PIX), relatórios de vendas em tempo real e controle financeiro integrado (receitas, despesas, fluxo de caixa, contas bancárias e centros de custo).",
     features: [
       "Catálogo de produtos com código de barras",
       "Controle de estoque automático",
@@ -96,6 +64,9 @@ export const APPS = [
       "Busca rápida por produto",
       "Relatórios de vendas em tempo real",
       "Gestão de categorias",
+      "Controle financeiro integrado",
+      "Fluxo de caixa e contas bancárias",
+      "Centros de custo e relatórios",
     ],
     plans: [
       { name: "Free", price: 0, limit: "50 produtos" },

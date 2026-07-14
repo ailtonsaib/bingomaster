@@ -10,7 +10,6 @@ import Home from '@/pages/Home';
 import Landing from '@/pages/Landing';
 import Portal from '@/pages/Portal';
 import BingoLogin from '@/pages/BingoLogin';
-import FinanceLogin from '@/pages/FinanceLogin';
 import ValidadorLogin from '@/pages/ValidadorLogin';
 import NewGame from '@/pages/NewGame';
 import GamePlay from '@/pages/GamePlay';
@@ -45,7 +44,6 @@ import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PortalLogin from '@/pages/PortalLogin';
-import Finance from '@/pages/Finance';
 import PortalAdmin from '@/pages/PortalAdmin';
 import PortalGuard from '@/components/PortalGuard';
 import TicketLogin from '@/pages/TicketLogin';
@@ -97,16 +95,14 @@ const AuthenticatedApp = () => {
       <Route path="/" element={<Landing />} />
       {/* Entrada de cada app — login específico por aplicativo */}
       <Route path="/bingo" element={<BingoLogin />} />
-      <Route path="/financ" element={<FinanceLogin />} />
+      <Route path="/financ" element={<Navigate to="/pdv" replace />} />
       <Route path="/validador" element={<ValidadorLogin />} />
       {/* Painel admin — exige login + admin */}
       <Route element={<PortalGuard requireAdmin />}>
         <Route path="/portal-admin" element={<PortalAdmin />} />
       </Route>
-      {/* Finance — exige login + permissão financeira */}
-      <Route element={<PortalGuard permission="can_access_finance" />}>
-        <Route path="/finance" element={<Finance />} />
-      </Route>
+      {/* Finance integrado ao PDV — redireciona */}
+      <Route path="/finance" element={<Navigate to="/pdv-caixa" replace />} />
       {/* Validador SPED — exige login + permissão SPED + auth Base44 */}
       <Route element={<PortalGuard permission="can_access_sped" />}>
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
