@@ -465,7 +465,7 @@ Deno.serve(async (req) => {
         // Itens condicionais:
         //   010 = Saldo credor do período anterior (se > 0)
         //   100 = Saldo devedor antes das deduções (se > 0)
-        //   098 = Saldo credor a transportar (se > 0)
+        //   099 = Saldo credor a transportar (se > 0)
         //
         // NÃO PREENCHER (a partir de 03/2023):
         //   105 = Deduções (campo extinto)
@@ -485,15 +485,19 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
 
-        // Item 040 — Total de débitos (OBRIGATÓRIO, mesmo se zero)
-        linhasDime.push(`30` + `09` + fmtItem(40) + fmtVal(totalDebitos));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        // Item 040 — Total de débitos (apenas se > 0 — validador rejeita valores zerados)
+        if (totalDebitos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(40) + fmtVal(totalDebitos));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
 
-        // Item 080 — Total de créditos (OBRIGATÓRIO, mesmo se zero)
-        linhasDime.push(`30` + `09` + fmtItem(80) + fmtVal(totalCreditos));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        // Item 080 — Total de créditos (apenas se > 0)
+        if (totalCreditos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(80) + fmtVal(totalCreditos));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
 
         // Item 100 — Saldo devedor antes das deduções (se > 0)
         if (saldoDevedorAntes > 0) {
@@ -504,19 +508,23 @@ Deno.serve(async (req) => {
 
         // NÃO PREENCHER item 105 — Deduções (extinto a partir de 03/2023)
 
-        // Item 110 — Saldo devedor (OBRIGATÓRIO, mesmo se zero)
-        linhasDime.push(`30` + `09` + fmtItem(110) + fmtVal(saldoDevedorFinal));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        // Item 110 — Saldo devedor (apenas se > 0)
+        if (saldoDevedorFinal > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(110) + fmtVal(saldoDevedorFinal));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
 
-        // Item 120 — Imposto a recolher (OBRIGATÓRIO, mesmo se zero)
-        linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(impostoRecolher));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        // Item 120 — Imposto a recolher (apenas se > 0)
+        if (impostoRecolher > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(impostoRecolher));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
 
-        // Item 098 — Saldo credor a transportar (se > 0)
+        // Item 099 — Saldo credor a transportar (se > 0) — item CORRETO é 099, não 098
         if (saldoCredorTransportar > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(98) + fmtVal(saldoCredorTransportar));
+          linhasDime.push(`30` + `09` + fmtItem(99) + fmtVal(saldoCredorTransportar));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
