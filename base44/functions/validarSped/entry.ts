@@ -677,10 +677,9 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Conteúdo do arquivo não fornecido.' }, { status: 400 });
     }
 
-    const linhas = conteudo.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    if (linhas.length === 0) {
-      return Response.json({ success: false, error: 'Arquivo vazio ou sem linhas válidas.' }, { status: 400 });
-    }
+    // Split eficiente sem regex/trim — remove \r e ignora vazias
+    const linhas = conteudo.split('\n').map(l => l.charCodeAt(l.length-1)===13 ? l.slice(0,-1) : l).filter(l => l.length > 0);
+    if (linhas.length === 0) return Response.json({ success: false, error: 'Arquivo vazio ou sem linhas válidas.' }, { status: 400 });
 
     // --- Detecção de REINF (formato XML) ---
     const conteudoTrim = conteudo.trim();
@@ -728,100 +727,64 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- 1a. Verificar unicidade de 0000 e 9999 ---
-    const count0000 = linhas.filter((l) => l.split('|').filter((c) => c !== '')[0] === '0000').length;
-    const count9999 = linhas.filter((l) => l.split('|').filter((c) => c !== '')[0] === '9999').length;
-    if (count0000 > 1) {
-      erros.push({
-        linha: 0, registro: '0000',
-        mensagem: `Existe mais de um registro |0000| no arquivo (${count0000} ocorrências). Deve haver exatamente um.`,
-        severidade: 'erro'
-      });
-    }
-    if (count9999 > 1) {
-      erros.push({
-        linha: 0, registro: '9999',
-        mensagem: `Existe mais de um registro |9999| no arquivo (${count9999} ocorrências). Deve haver exatamente um.`,
-        severidade: 'erro'
-      });
-    }
-
-    // --- 2. Primeira passada: coletar estatísticas e detectar tipo ---
+    // --- 1a+2. Passada unificada: estatísticas + contagem 0000/9999 + mapa participantes + pré-parse ---
     let linhaAtual = 0;
     let blocoAnterior = '';
     let entrouBloco9 = false;
+    let count0000 = 0;
+    let count9999 = 0;
     const registros9900 = [];
+    const part0150Map = {};
+    const parsedLines = new Array(linhas.length);
+    let parsedCount = 0;
     for (const linha of linhas) {
       linhaAtual++;
       const campos = linha.split('|').filter((c) => c !== '');
       if (campos.length === 0) continue;
       const registro = campos[0];
       const bloco = registro.charAt(0);
-
+      // Pré-armazena campos parseados para reuso na segunda passada (evita re-split)
+      parsedLines[parsedCount++] = { linha: linhaAtual, campos, registro, texto: linha };
+      // Contagem 0000/9999 (elimina 2 passadas separadas)
+      if (registro === '0000') count0000++;
+      if (registro === '9999') count9999++;
+      // Mapa de participantes 0150 (elimina passada separada de construirMapaParticipantes)
+      if (registro === '0150') {
+        const p = linha.split('|');
+        if (p[2]) {
+          const cnpjP = (p[5] || '').replace(/\D/g, '');
+          const cpfP = (p[6] || '').replace(/\D/g, '');
+          part0150Map[p[2]] = cnpjP.length === 14 ? cnpjP : cpfP;
+        }
+      }
       estatisticas.blocos[bloco] = (estatisticas.blocos[bloco] || 0) + 1;
       estatisticas.registros[registro] = (estatisticas.registros[registro] || 0) + 1;
-
-      // Validar estrutura básica da linha
       if (!linha.startsWith('|') || !linha.endsWith('|')) {
-        erros.push({
-          linha: linhaAtual,
-          registro,
-          mensagem: 'Linha mal formatada: deve iniciar e terminar com o caractere | (pipe).',
-          severidade: 'erro'
-        });
+        erros.push({ linha: linhaAtual, registro, mensagem: 'Linha mal formatada: deve iniciar e terminar com o caractere | (pipe).', severidade: 'erro' });
       }
-
-      // Validar tamanho máximo da linha (Guia Prático SPED: 4500 caracteres)
       if (linha.length > 4500) {
-        erros.push({
-          linha: linhaAtual,
-          registro,
-          mensagem: `Linha excede o limite máximo de 4500 caracteres estabelecido pelo Guia Prático do SPED (encontrados ${linha.length} caracteres).`,
-          severidade: 'erro'
-        });
+        erros.push({ linha: linhaAtual, registro, mensagem: `Linha excede o limite máximo de 4500 caracteres estabelecido pelo Guia Prático do SPED (encontrados ${linha.length} caracteres).`, severidade: 'erro' });
       }
-
-      // Validar ordenação de blocos (sequência oficial do SPED: 0 → A-Z → 1 → 9)
       if (entrouBloco9 && bloco !== '9') {
-        erros.push({
-          linha: linhaAtual,
-          registro,
-          mensagem: `Registro "${registro}" do bloco "${bloco}" aparece após o início do bloco 9. O bloco 9 deve ser o último do arquivo.`,
-          severidade: 'erro'
-        });
+        erros.push({ linha: linhaAtual, registro, mensagem: `Registro "${registro}" do bloco "${bloco}" aparece após o início do bloco 9. O bloco 9 deve ser o último do arquivo.`, severidade: 'erro' });
       }
       if (bloco === '9') {
         entrouBloco9 = true;
       } else if (!entrouBloco9 && blocoAnterior && blocoOrdem(bloco) < blocoOrdem(blocoAnterior)) {
-        erros.push({
-          linha: linhaAtual,
-          registro,
-          mensagem: `Bloco "${bloco}" aparece após o bloco "${blocoAnterior}". Os blocos devem seguir a sequência oficial do SPED (0 → A-Z → 1 → 9).`,
-          severidade: 'erro'
-        });
+        erros.push({ linha: linhaAtual, registro, mensagem: `Bloco "${bloco}" aparece após o bloco "${blocoAnterior}". Os blocos devem seguir a sequência oficial do SPED (0 → A-Z → 1 → 9).`, severidade: 'erro' });
       }
-      if (!entrouBloco9 && (!blocoAnterior || blocoOrdem(bloco) > blocoOrdem(blocoAnterior))) {
-        blocoAnterior = bloco;
-      }
-
-      // Coletar registros 9900 para validação cruzada
-      if (registro === '9900') {
-        registros9900.push({ registroDeclarado: campos[1], qtdDeclarada: parseInt(campos[2], 10) || 0 });
-      }
-
-      // Validar contador do registro 9999
+      if (!entrouBloco9 && (!blocoAnterior || blocoOrdem(bloco) > blocoOrdem(blocoAnterior))) blocoAnterior = bloco;
+      if (registro === '9900') registros9900.push({ registroDeclarado: campos[1], qtdDeclarada: parseInt(campos[2], 10) || 0 });
       if (registro === '9999') {
         const totalDeclarado = parseInt(campos[1], 10);
         if (!isNaN(totalDeclarado) && totalDeclarado !== linhas.length) {
-          erros.push({
-            linha: linhaAtual,
-            registro: '9999',
-            mensagem: `Contador de registros no registro 9999 (${totalDeclarado}) não confere com o total de linhas processadas (${linhas.length}).`,
-            severidade: 'erro'
-          });
+          erros.push({ linha: linhaAtual, registro: '9999', mensagem: `Contador de registros no registro 9999 (${totalDeclarado}) não confere com o total de linhas processadas (${linhas.length}).`, severidade: 'erro' });
         }
       }
     }
+    parsedLines.length = parsedCount;
+    if (count0000 > 1) erros.push({ linha: 0, registro: '0000', mensagem: `Existe mais de um registro |0000| no arquivo (${count0000} ocorrências). Deve haver exatamente um.`, severidade: 'erro' });
+    if (count9999 > 1) erros.push({ linha: 0, registro: '9999', mensagem: `Existe mais de um registro |9999| no arquivo (${count9999} ocorrências). Deve haver exatamente um.`, severidade: 'erro' });
 
     // --- 3. Detectar tipo de SPED ---
     // ECF deve ser verificado ANTES de ECD, pois ambos podem ter bloco J (J050/J100)
@@ -849,8 +812,8 @@ Deno.serve(async (req) => {
 
     const registrosValidos = REGISTROS_POR_TIPO[tipoDetectado] || REG_FISCAL;
 
-    // --- 3b. Extrair CNPJ do registro 0000 e verificar/cadastrar cliente automaticamente ---
-    const campos0000 = linhas[0].split('|').filter((c) => c !== '');
+    // --- 3b. Extrair CNPJ e iniciar consulta em paralelo (não bloqueia a validação) ---
+    const campos0000 = parsedLines[0]?.campos || linhas[0].split('|').filter((c) => c !== '');
     let cnpjArquivo = '';
     let razaoSocialArquivo = '';
     if (tipoDetectado === 'ECD' || tipoDetectado === 'ECF') {
@@ -860,41 +823,24 @@ Deno.serve(async (req) => {
       cnpjArquivo = (campos0000[6] || '').replace(/\D/g, '');
       razaoSocialArquivo = campos0000[5] || '';
     }
-
-    let clienteInfo = null;
-    if (cnpjArquivo.length === 14) {
+    // Consulta/cadastro do cliente roda em paralelo com toda a validação (economiza até 10s)
+    const clientePromise = (async () => {
+      if (cnpjArquivo.length !== 14) return null;
       try {
-        const clientesExistentes = await base44.asServiceRole.entities.ClienteSped.filter({ cnpj: cnpjArquivo });
-        if (clientesExistentes && clientesExistentes.length > 0) {
-          clienteInfo = { ...clientesExistentes[0], auto_cadastrado: false };
-        } else {
-          // Buscar dados na Receita Federal via BrasilAPI
-          const apiResp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjArquivo}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(10000)
-          });
-          if (apiResp.ok) {
-            const dadosReceita = await apiResp.json();
-            const isSimples = dadosReceita.opcao_pelo_simples && !dadosReceita.opcao_pelo_simples.data_exclusao;
-            const ie = dadosReceita.inscricoes_estaduais && Array.isArray(dadosReceita.inscricoes_estaduais) && dadosReceita.inscricoes_estaduais.length > 0
-              ? (dadosReceita.inscricoes_estaduais[0].inscricao_estadual || '')
-              : '';
-            const novoCliente = await base44.asServiceRole.entities.ClienteSped.create({
-              razao_social: dadosReceita.razao_social || razaoSocialArquivo || '',
-              cnpj: cnpjArquivo,
-              ie: ie || '',
-              uf: dadosReceita.uf || '',
-              municipio: dadosReceita.codigo_municipio || '',
-              regime: isSimples ? 'SIMPLES' : 'NORMAL',
-              perfil: 'PRESUMIDO'
-            });
-            clienteInfo = { ...novoCliente, auto_cadastrado: true };
-          }
-        }
-      } catch (e) {
-        // Falha no cadastro do cliente não é crítica para a validação
-      }
-    }
+        const ex = await base44.asServiceRole.entities.ClienteSped.filter({ cnpj: cnpjArquivo });
+        if (ex && ex.length > 0) return { ...ex[0], auto_cadastrado: false };
+        const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjArquivo}`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
+        if (!r.ok) return null;
+        const d = await r.json();
+        const isSimples = d.opcao_pelo_simples && !d.opcao_pelo_simples.data_exclusao;
+        const ie = d.inscricoes_estaduais?.[0]?.inscricao_estadual || '';
+        const novo = await base44.asServiceRole.entities.ClienteSped.create({
+          razao_social: d.razao_social || razaoSocialArquivo || '', cnpj: cnpjArquivo, ie: ie || '',
+          uf: d.uf || '', municipio: d.codigo_municipio || '', regime: isSimples ? 'SIMPLES' : 'NORMAL', perfil: 'PRESUMIDO'
+        });
+        return { ...novo, auto_cadastrado: true };
+      } catch { return null; }
+    })();
 
     // --- 3a. Validar blocos válidos e sequência para o tipo detectado ---
     const blocosEsperados = BLOCOS_POR_TIPO[tipoDetectado] || BLOCOS_POR_TIPO.FISCAL;
@@ -910,16 +856,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- 4. Segunda passada: validações específicas por registro ---
-    linhaAtual = 0;
+    // --- 4. Segunda passada: validações específicas por registro (usa dados pré-parseados) ---
     let c100ChvNfeMap: Array<{linha: number; codPart: string; cnpjChave: string; indEmit: string}> | null = null;
-    const part0150Map = construirMapaParticipantes(linhas);
 
-    for (const linha of linhas) {
-      linhaAtual++;
-      const campos = linha.split('|').filter((c) => c !== '');
-      if (campos.length === 0) continue;
-      const registro = campos[0];
+    for (let pi = 0; pi < parsedCount; pi++) {
+      const { linha: linhaAtualNum, campos, registro, texto: linha } = parsedLines[pi];
+      linhaAtual = linhaAtualNum;
 
       // === Registros comuns a todos os tipos ===
 
@@ -2471,6 +2413,9 @@ Deno.serve(async (req) => {
     estatisticas.linhasComAviso = avisos.length;
 
     const isValid = erros.length === 0;
+
+    // Aguarda consulta de CNPJ (rodou em paralelo com toda a validação)
+    const clienteInfo = await clientePromise;
 
     const resultadoSped = {
       success: true,
