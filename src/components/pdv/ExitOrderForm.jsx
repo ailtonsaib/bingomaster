@@ -12,6 +12,7 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   const [products, setProducts] = useState([]);
   const [taxParams, setTaxParams] = useState([]);
   const [monofasicTaxes, setMonofasicTaxes] = useState([]);
+  const [companyConfig, setCompanyConfig] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
@@ -26,19 +27,33 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
   useEffect(() => {
     (async () => {
       try {
-        const [custs, prods, taxes, monofasic] = await Promise.all([
+        const [custs, prods, taxes, monofasic, configs] = await Promise.all([
           base44.entities.PDVCustomer.filter({ user_email: user.email, is_active: true }),
           base44.entities.PDVProduct.filter({ user_email: user.email, is_active: true }),
           base44.entities.PDVExitTaxParameter.filter({ user_email: user.email }),
           base44.entities.PDVMonofasicTax.filter({ user_email: user.email }),
+          base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),
         ]);
         setCustomers(custs);
         setProducts(prods);
         setTaxParams(taxes);
         setMonofasicTaxes(monofasic);
+        setCompanyConfig(configs[0] || null);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
+
+  // Configuração de impostos conforme regime da empresa
+  const isSimples = companyConfig?.crt === 1 || companyConfig?.crt === 2;
+  const isRegimeNormal = companyConfig?.crt === 3;
+  const isRegimeCaixa = isRegimeNormal && companyConfig?.regime_caixa === true;
+  const isLucroPresumido = isRegimeNormal && companyConfig?.lucro_type === "presumido";
+
+  // Alíquotas PIS/COFINS por tipo de lucro (Regime Normal)
+  // Lucro Presumido: PIS 0,65% / COFINS 3,00%
+  // Lucro Real: PIS 1,65% / COFINS 7,60%
+  const PIS_NORMAL_RATE = isLucroPresumido ? 0.65 : 1.65;
+  const COFINS_NORMAL_RATE = isLucroPresumido ? 3.00 : 7.60;
 
   useEffect(() => {
     if (customerId) {
@@ -107,19 +122,36 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
       cst_ipi: isMonofasic ? (monofasicTax?.cst_ipi || "99") : (taxParam?.cst_ipi || "99"),
       ipi_rate: isMonofasic ? num(monofasicTax?.effective_ipi_rate) : num(taxParam?.ipi_rate),
       ipi_value: 0,
+      // PIS: monofásico usa CST 04/06/07 (alíquota zero na revenda — Lei 13.097)
+      // Simples Nacional: CST 49, alíquota zero (recolhido via DAS)
+      // Regime Normal + Competência: CST 01/02 do parâmetro tributário, alíquota conforme lucro
+      // Regime Normal + Caixa: CST 98, alíquota conforme lucro
       cst_pis: isMonofasic
         ? (useDistributorRates ? (monofasicTax?.cst_pis_distributor || "02") : (monofasicTax?.cst_pis || "04"))
-        : (taxParam?.cst_pis || "49"),
+        : isSimples
+          ? "49"
+          : isRegimeCaixa
+            ? "98"
+            : (taxParam?.cst_pis || "01"),
       pis_rate: isMonofasic
         ? (useDistributorRates ? num(monofasicTax?.pis_rate_distributor) : num(monofasicTax?.effective_pis_rate))
-        : num(taxParam?.pis_rate),
+        : isSimples
+          ? 0
+          : PIS_NORMAL_RATE,
       pis_value: 0,
+      // COFINS: mesma lógica do PIS
       cst_cofins: isMonofasic
         ? (useDistributorRates ? (monofasicTax?.cst_cofins_distributor || "02") : (monofasicTax?.cst_cofins || "04"))
-        : (taxParam?.cst_cofins || "49"),
+        : isSimples
+          ? "49"
+          : isRegimeCaixa
+            ? "98"
+            : (taxParam?.cst_cofins || "01"),
       cofins_rate: isMonofasic
         ? (useDistributorRates ? num(monofasicTax?.cofins_rate_distributor) : num(monofasicTax?.effective_cofins_rate))
-        : num(taxParam?.cofins_rate),
+        : isSimples
+          ? 0
+          : COFINS_NORMAL_RATE,
       cofins_value: 0,
     };
     recalcItem(newItem);
@@ -206,6 +238,33 @@ export default function ExitOrderForm({ user, onClose, onSaved }) {
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Indicador do regime tributário da empresa */}
+          {companyConfig ? (
+            <div className="bg-gray-50 border rounded-lg p-2 flex items-center gap-2 flex-wrap text-xs">
+              <span className="font-medium text-gray-700">Regime:</span>
+              <span className={`px-2 py-0.5 rounded font-medium ${isSimples ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                {isSimples ? "Simples Nacional" : `Regime Normal (${isLucroPresumido ? "Presumido" : "Real"})`}
+              </span>
+              {isRegimeNormal && (
+                <span className={`px-2 py-0.5 rounded font-medium ${isRegimeCaixa ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
+                  PIS/COFINS: {isRegimeCaixa ? "Caixa (CST 98)" : "Competência (CST 01)"}
+                </span>
+              )}
+              {isSimples && (
+                <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
+                  PIS/COFINS: DAS (CST 49)
+                </span>
+              )}
+              <span className="text-gray-400">·</span>
+              <span className="text-gray-500">PIS {isSimples ? "0%" : `${PIS_NORMAL_RATE}%`} / COFINS {isSimples ? "0%" : `${COFINS_NORMAL_RATE}%`}</span>
+              <span className="text-gray-400">·</span>
+              <span className="text-indigo-600">Monofásicos (Lei 13.097): CST 04</span>
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">
+              ⚠ Configure os dados da empresa (regime tributário) para cálculo correto dos impostos.
+            </div>
+          )}
           {/* Customer + info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>

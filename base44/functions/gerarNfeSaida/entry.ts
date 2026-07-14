@@ -132,28 +132,41 @@ Deno.serve(async (req) => {
         ipiXml = `<IPI><cEnq>999</cEnq><IPINT><CST>${cstIpi}</CST></IPINT></IPI>`;
       }
 
-      // PIS block — CST 04-09 = Não Tributada (PISNT), usado para monofásicos (Lei 13.097)
+      // PIS block:
+      // CST 04-09 = Não Tributada (PISNT) → monofásicos (Lei 13.097)
+      // CST 01/02 = Tributada por Alíquota (PISAliq) → Regime Normal + Competência
+      // CST 49 = Outras Operações → Simples Nacional (PIS via DAS, valor zero)
+      // CST 98 = Outras Operações (Regime de Caixa) → PISOutr com valor
       const cstPis = item.cst_pis || '49';
       let pisXml = '';
       const pisNT = ['04','05','06','07','08','09'].includes(cstPis);
+      const pisAliq = ['01','02'].includes(cstPis) && Number(item.pis_rate) > 0;
       if (pisNT) {
         pisXml = `<PIS><PISNT><CST>${cstPis}</CST></PISNT></PIS>`;
-      } else if (Number(item.pis_rate) > 0) {
+      } else if (pisAliq) {
         pisXml = `<PIS><PISAliq><CST>${cstPis}</CST><vBC>${fmtN(item.total)}</vBC><pPIS>${fmtN(item.pis_rate, 4)}</pPIS><vPIS>${fmtN(item.pis_value)}</vPIS></PISAliq></PIS>`;
       } else {
-        pisXml = `<PIS><PISOutr><CST>${cstPis}</CST><vBC>0.00</vBC><pPIS>0.0000</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>`;
+        // CST 49 (Simples, valor 0) ou CST 98 (Caixa, com valor) → PISOutr
+        const vBC = Number(item.pis_rate) > 0 ? fmtN(item.total) : '0.00';
+        const pPIS = Number(item.pis_rate) > 0 ? fmtN(item.pis_rate, 4) : '0.0000';
+        const vPIS = Number(item.pis_rate) > 0 ? fmtN(item.pis_value) : '0.00';
+        pisXml = `<PIS><PISOutr><CST>${cstPis}</CST><vBC>${vBC}</vBC><pPIS>${pPIS}</pPIS><vPIS>${vPIS}</vPIS></PISOutr></PIS>`;
       }
 
-      // COFINS block — CST 04-09 = Não Tributada (COFINSNT), usado para monofásicos (Lei 13.097)
+      // COFINS block — mesma lógica do PIS
       const cstCofins = item.cst_cofins || '49';
       let cofinsXml = '';
       const cofinsNT = ['04','05','06','07','08','09'].includes(cstCofins);
+      const cofinsAliq = ['01','02'].includes(cstCofins) && Number(item.cofins_rate) > 0;
       if (cofinsNT) {
         cofinsXml = `<COFINS><COFINSNT><CST>${cstCofins}</CST></COFINSNT></COFINS>`;
-      } else if (Number(item.cofins_rate) > 0) {
+      } else if (cofinsAliq) {
         cofinsXml = `<COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${fmtN(item.total)}</vBC><pCOFINS>${fmtN(item.cofins_rate, 4)}</pCOFINS><vCOFINS>${fmtN(item.cofins_value)}</vCOFINS></COFINSAliq></COFINS>`;
       } else {
-        cofinsXml = `<COFINS><COFINSOutr><CST>${cstCofins}</CST><vBC>0.00</vBC><pCOFINS>0.0000</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
+        const vBC = Number(item.cofins_rate) > 0 ? fmtN(item.total) : '0.00';
+        const pCOFINS = Number(item.cofins_rate) > 0 ? fmtN(item.cofins_rate, 4) : '0.0000';
+        const vCOFINS = Number(item.cofins_rate) > 0 ? fmtN(item.cofins_value) : '0.00';
+        cofinsXml = `<COFINS><COFINSOutr><CST>${cstCofins}</CST><vBC>${vBC}</vBC><pCOFINS>${pCOFINS}</pCOFINS><vCOFINS>${vCOFINS}</vCOFINS></COFINSOutr></COFINS>`;
       }
 
       itemsXml += `

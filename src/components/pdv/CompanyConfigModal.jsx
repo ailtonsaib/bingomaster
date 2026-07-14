@@ -9,7 +9,8 @@ const UF_OPTIONS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
 
 const EMPTY = {
   razao_social: "", nome_fantasia: "", cnpj: "", ie: "", im: "",
-  crt: 1, cep: "", address: "", number: "", complement: "",
+  crt: 1, regime_caixa: false, lucro_type: "nao_se_aplica",
+  cep: "", address: "", number: "", complement: "",
   district: "", city: "", uf: "", ibge_code: "", phone: "",
   nfe_series: 1, nfe_number_next: 1, nfe_environment: "2",
 };
@@ -103,14 +104,59 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
               <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="h-9" />
             </div>
             <div>
-              <Label>CRT (Regime Tributário)</Label>
-              <select value={form.crt} onChange={e => setForm({...form, crt: Number(e.target.value)})} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+              <Label>CRT (Regime Tributário) *</Label>
+              <select value={form.crt} onChange={e => {
+                const crt = Number(e.target.value);
+                setForm({...form, crt, lucro_type: crt === 3 ? form.lucro_type !== "nao_se_aplica" ? form.lucro_type : "presumido" : "nao_se_aplica", regime_caixa: crt === 3 ? form.regime_caixa : false});
+              }} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value={1}>1 - Simples Nacional</option>
-                <option value={2}>2 - Simples Nacional (excesso)</option>
+                <option value={2}>2 - Simples Nacional (excesso sublimite)</option>
                 <option value={3}>3 - Regime Normal</option>
               </select>
             </div>
+            {form.crt === 3 && (
+              <>
+                <div>
+                  <Label>Tipo de Lucro *</Label>
+                  <select value={form.lucro_type} onChange={e => setForm({...form, lucro_type: e.target.value})} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                    <option value="presumido">Lucro Presumido</option>
+                    <option value="real">Lucro Real</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Presumido: PIS 0,65% / COFINS 3,00%. Real: PIS 1,65% / COFINS 7,60%.
+                  </p>
+                </div>
+                <div>
+                  <Label>Regime PIS/COFINS *</Label>
+                  <select value={form.regime_caixa ? "caixa" : "competencia"} onChange={e => setForm({...form, regime_caixa: e.target.value === "caixa"})} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                    <option value="competencia">Competência</option>
+                    <option value="caixa">Caixa</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Caixa: tributa na entrada do pagamento (CST 98). Competência: tributa na emissão da nota (CST 01/02).
+                  </p>
+                </div>
+              </>
+            )}
           </div>
+
+          {form.crt === 3 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs text-amber-700">
+                <b>Regime Normal ({form.lucro_type === "real" ? "Lucro Real" : "Lucro Presumido"}):</b> PIS/COFINS calculados por operação.
+                {form.regime_caixa && " Regime de Caixa ativo — CST 98 aplicado aos produtos tributados."}
+              </p>
+            </div>
+          )}
+          {form.crt !== 3 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-700">
+                <b>Simples Nacional:</b> PIS/COFINS recolhidos via DAS (alíquota única sobre receita).
+                Na NF-e usa-se CST 49 (Outras Operações) com valor zero.
+                Produtos monofásicos (Lei 13.097) mantêm CST 04/06/07 (alíquota zero na revenda).
+              </p>
+            </div>
+          )}
 
           <div className="border-t pt-3">
             <h4 className="text-sm font-semibold mb-2 text-gray-700">Endereço</h4>

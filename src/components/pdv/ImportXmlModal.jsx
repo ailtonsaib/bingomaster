@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, PackagePlus } from "lucide-react";
@@ -112,7 +112,19 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
   const [createProducts, setCreateProducts] = useState(true);
   const [createSupplier, setCreateSupplier] = useState(true);
   const [updateStock, setUpdateStock] = useState(true);
+  const [companyConfig, setCompanyConfig] = useState(null);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const configs = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
+        setCompanyConfig(configs[0] || null);
+      } catch (e) { console.error(e); }
+    })();
+  }, [user.email]);
+
+  const isSimples = companyConfig?.crt === 1 || companyConfig?.crt === 2;
 
   const handleFile = async (file) => {
     setError("");
@@ -233,6 +245,18 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Indicador do regime da empresa para creditabilidade */}
+          {companyConfig && (
+            <div className={`border rounded-lg p-2 flex items-center gap-2 text-xs ${isSimples ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-green-50 border-green-200 text-green-700"}`}>
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>
+                <b>{isSimples ? "Simples Nacional" : `Regime Normal (${companyConfig.lucro_type === "presumido" ? "Presumido" : "Real"})`}:</b>{" "}
+                {isSimples
+                  ? "ICMS/PIS/COFINS da entrada NÃO são creditáveis (recolhidos via DAS). Valores são informativos."
+                  : "ICMS/PIS/COFINS da entrada são creditáveis conforme CST do fornecedor."}
+              </span>
+            </div>
+          )}
           {/* Upload area */}
           {!parsedData && (
             <div className="space-y-3">
