@@ -45,7 +45,7 @@ export const APPS = [
   },
   {
     id: "pdv",
-    name: "PDV — Frente de Caixa",
+    name: "ERP — COMERCIAL",
     icon: "ShoppingCart",
     iconBg: "bg-[#FFEDD5]",
     iconColor: "text-[#EA580C]",

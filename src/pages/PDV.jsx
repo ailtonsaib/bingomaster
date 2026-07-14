@@ -134,7 +134,7 @@ export default function PDV() {
             <ShoppingCart className="w-5 h-5 text-orange-600" />
           </div>
           <div>
-            <h1 className="font-bold text-lg">PDV — Frente de Caixa</h1>
+            <h1 className="font-bold text-lg">ERP — COMERCIAL</h1>
             <p className="text-xs text-gray-500">{user.name}</p>
           </div>
         </div>
