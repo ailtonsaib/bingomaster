@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
     const cnpj = (body.cnpj || '').replace(/\D/g, '');
 
     if (cnpj.length !== 14) {
-      return Response.json({ success: false, error: 'CNPJ deve ter 14 dígitos.' }, { status: 400 });
+      return Response.json({ success: false, error: 'CNPJ deve ter 14 dígitos.' });
     }
 
     // Validação do dígito verificador
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     const dig1 = calcDig(cnpj, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
     const dig2 = calcDig(cnpj + dig1, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
     if (parseInt(cnpj[12]) !== dig1 || parseInt(cnpj[13]) !== dig2) {
-      return Response.json({ success: false, error: `CNPJ ${cnpj.slice(0,2)}.${cnpj.slice(2,5)}.${cnpj.slice(5,8)}/${cnpj.slice(8,12)}-${cnpj.slice(12)} inválido (dígito verificador incorreto).` }, { status: 400 });
+      return Response.json({ success: false, error: `CNPJ ${cnpj.slice(0,2)}.${cnpj.slice(2,5)}.${cnpj.slice(5,8)}/${cnpj.slice(8,12)}-${cnpj.slice(12)} inválido (dígito verificador incorreto).` });
     }
 
     // Tentativa 1: BrasilAPI
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
               fonte: 'receitaws'
             };
           } else if (d?.status === 'ERROR') {
-            return Response.json({ success: false, error: d.message || 'CNPJ inválido.' }, { status: 400 });
+            return Response.json({ success: false, error: d.message || 'CNPJ inválido.' });
           } else {
             ultimoErro = d?.message || 'ReceitaWS sem dados';
           }
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     }
 
     if (!dados) {
-      return Response.json({ success: false, error: `Não foi possível consultar o CNPJ. ${ultimoErro || ''}`.trim() }, { status: 502 });
+      return Response.json({ success: false, error: `Não foi possível consultar o CNPJ. ${ultimoErro || ''}`.trim() });
     }
 
     return Response.json({ success: true, dados });
