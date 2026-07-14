@@ -450,37 +450,73 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Quadro 09 — Cálculo do Imposto a Pagar (layout oficial DIME-SC):
-        // 010 = Total de débitos (= Quadro 04 item 050)
-        // 050 = Total de créditos (= Quadro 05 item 100)
-        // 100 = Saldo devedor (010 - 050, se positivo)
-        // 999 = Imposto a recolher (= 100)
-        // 098 = Saldo credor a transportar (050 - 010, se positivo)
-        const subtotalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
-        const subtotalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
-        const saldoDevedor = Math.max(0, subtotalDebitos - subtotalCreditos);
-        const saldoCredor = Math.max(0, subtotalCreditos - subtotalDebitos);
+        // =====================================================
+        // Quadro 09 — Cálculo do Imposto a Pagar ou Saldo Credor
+        // Layout oficial DIME-SC (Portaria SEF 153/2012)
+        // A partir da referência 03/2023: item 105 (Deduções) foi
+        // DESCONTINUADO e não deve ser preenchido.
+        //
+        // Itens obrigatórios (devem constar mesmo com valor zero):
+        //   040 = Total de débitos (transportado do Quadro 04)
+        //   080 = Total de créditos (inclui saldo credor anterior)
+        //   110 = Saldo devedor (= 100, pois 105 = 0)
+        //   120 = Imposto a recolher (= 110)
+        //
+        // Itens condicionais:
+        //   010 = Saldo credor do período anterior (se > 0)
+        //   100 = Saldo devedor antes das deduções (se > 0)
+        //   098 = Saldo credor a transportar (se > 0)
+        //
+        // NÃO PREENCHER (a partir de 03/2023):
+        //   105 = Deduções (campo extinto)
+        // =====================================================
+        const saldoCredorAnt = rE110.saldoCredorAnt || 0;
+        const totalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
+        const totalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + saldoCredorAnt;
+        const saldoDevedorAntes = Math.max(0, totalDebitos - totalCreditos);
+        const saldoDevedorFinal = saldoDevedorAntes; // 105 = 0 (discontinuado em 03/2023)
+        const impostoRecolher = saldoDevedorFinal;
+        const saldoCredorTransportar = Math.max(0, totalCreditos - totalDebitos);
 
-        if (subtotalDebitos > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(subtotalDebitos));  // 010 Total de débitos
+        // Item 010 — Saldo credor do período anterior (opcional, se > 0)
+        if (saldoCredorAnt > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(saldoCredorAnt));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        if (subtotalCreditos > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(50) + fmtVal(subtotalCreditos)); // 050 Total de créditos
+
+        // Item 040 — Total de débitos (OBRIGATÓRIO, mesmo se zero)
+        linhasDime.push(`30` + `09` + fmtItem(40) + fmtVal(totalDebitos));
+        totalRegsArquivo++;
+        totalRegsDecl++;
+
+        // Item 080 — Total de créditos (OBRIGATÓRIO, mesmo se zero)
+        linhasDime.push(`30` + `09` + fmtItem(80) + fmtVal(totalCreditos));
+        totalRegsArquivo++;
+        totalRegsDecl++;
+
+        // Item 100 — Saldo devedor antes das deduções (se > 0)
+        if (saldoDevedorAntes > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(100) + fmtVal(saldoDevedorAntes));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        if (saldoDevedor > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(100) + fmtVal(saldoDevedor));    // 100 Saldo devedor
-          totalRegsArquivo++;
-          totalRegsDecl++;
-          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(saldoDevedor));    // 999 Imposto a recolher (= 100)
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
-        if (saldoCredor > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(98) + fmtVal(saldoCredor));      // 098 Saldo credor a transportar
+
+        // NÃO PREENCHER item 105 — Deduções (extinto a partir de 03/2023)
+
+        // Item 110 — Saldo devedor (OBRIGATÓRIO, mesmo se zero)
+        linhasDime.push(`30` + `09` + fmtItem(110) + fmtVal(saldoDevedorFinal));
+        totalRegsArquivo++;
+        totalRegsDecl++;
+
+        // Item 120 — Imposto a recolher (OBRIGATÓRIO, mesmo se zero)
+        linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(impostoRecolher));
+        totalRegsArquivo++;
+        totalRegsDecl++;
+
+        // Item 098 — Saldo credor a transportar (se > 0)
+        if (saldoCredorTransportar > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(98) + fmtVal(saldoCredorTransportar));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
@@ -502,7 +538,7 @@ Deno.serve(async (req) => {
       const totalE116 = e116Records.reduce((s: number, e: any) => s + (e.vlOr > 0 ? e.vlOr : 0), 0);
       const saldoDevedor33 = rE110 ? Math.max(0,
         (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) -
-        (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes)
+        (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0))
       ) : totalE116;
       let somaPagamentos = 0;
       const e116Validos = e116Records.filter((e: any) => e.vlOr > 0);
@@ -606,13 +642,13 @@ Deno.serve(async (req) => {
       total_participantes: 0,
       total_produtos: 0,
       debitos: rE110 ? (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes).toFixed(2).replace('.', ',') : '0,00',
-      creditos: rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes).toFixed(2).replace('.', ',') : '0,00',
+      creditos: rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0)).toFixed(2).replace('.', ',') : '0,00',
       saldo: 'DIME-SC GERADO',
       sped_type: 'DIMESC'
     });
 
     const debitosApur = rE110 ? (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) : 0;
-    const creditosApur = rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes) : 0;
+    const creditosApur = rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0)) : 0;
     const saldoApur = rE110 ? Math.max(0, debitosApur - creditosApur) : 0;
     const saldoCredor = rE110 ? Math.max(0, creditosApur - debitosApur) : 0;
 
