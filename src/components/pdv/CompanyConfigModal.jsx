@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { X, Loader2, Building, Save, AlertTriangle, User, Calculator, Search } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
 import { maskCnpj, maskCpf, maskPhone, maskCep } from "@/lib/brMasks";
+import CitySelect from "@/components/pdv/CitySelect";
 
 const UF_OPTIONS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -219,8 +220,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
                 <Input value={form.district} onChange={e => setForm({...form, district: e.target.value})} className="h-9" />
               </div>
               <div>
-                <Label>Município</Label>
-                <Input value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="h-9" />
+                <CitySelect form={form} setForm={setForm} />
               </div>
               <div>
                 <Label>UF</Label>
