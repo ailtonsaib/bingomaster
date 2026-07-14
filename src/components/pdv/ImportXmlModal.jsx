@@ -277,10 +277,10 @@ export default function ImportXmlModal({ user, onClose, onSaved }) {
       let supplierId = null;
 
       // Create or find supplier
-      if (createSupplier && d.supplier.cnpj) {
+      if (createSupplier && d.supplier.cpf_cnpj) {
         const existing = await base44.entities.PDVContact.filter({
           user_email: user.email,
-          cpf_cnpj: d.supplier.cnpj,
+          cpf_cnpj: d.supplier.cpf_cnpj,
         });
         if (existing.length > 0) {
           supplierId = existing[0].id;
