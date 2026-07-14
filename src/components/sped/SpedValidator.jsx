@@ -81,6 +81,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         userEmail = user?.email || '';
       } catch (_) {}
 
+      // Não armazenar conteúdo muito grande no banco (pode causar erro/timeout)
+      const conteudoToStore = (conteudoFinal && conteudoFinal.length > 500000) ? '' : conteudoFinal;
+
       await base44.entities.SpedValidation.create({
         arquivo_nome: nome,
         tipo_detectado: dados.tipoDetectado || 'DESCONHECIDO',
@@ -89,7 +92,7 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         total_avisos: dados.avisos?.length || 0,
         total_linhas: dados.estatisticas?.totalLinhas || 0,
         foi_corrigido: corrigido,
-        conteudo_final: conteudoFinal,
+        conteudo_final: conteudoToStore,
         cliente_id: dados.cliente?.id || clienteId || '',
         cliente_nome: dados.cliente?.razao_social || clienteNome || '',
         validated_by: userEmail,
@@ -100,15 +103,25 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
     }
   };
 
+  // Para arquivos grandes (> 2MB), faz upload primeiro e envia file_url
+  // para evitar travamento do navegador ao serializar JSON muito grande
+  const prepararPayload = async (conteudoParaValidar, nome) => {
+    if (conteudoParaValidar.length > 2 * 1024 * 1024) {
+      const blob = new Blob([conteudoParaValidar], { type: 'text/plain;charset=utf-8' });
+      const fileObj = new File([blob], nome, { type: 'text/plain' });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: fileObj });
+      return { file_url, nomeArquivo: nome };
+    }
+    return { conteudo: conteudoParaValidar, nomeArquivo: nome };
+  };
+
   const validarConteudo = async (conteudoParaValidar, nome) => {
     setLoading(true);
     setErro('');
 
     try {
-      const response = await base44.functions.invoke('validarSped', {
-        conteudo: conteudoParaValidar,
-        nomeArquivo: nome,
-      });
+      const payload = await prepararPayload(conteudoParaValidar, nome);
+      const response = await base44.functions.invoke('validarSped', payload);
       const dados = response.data;
 
       if (dados.success) {
@@ -165,9 +178,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
     setLoading(true);
     setErro('');
     try {
+      const payloadFix = await prepararPayload(conteudoEditado || conteudo, arquivo?.name || 'arquivo_sped.txt');
       const response = await base44.functions.invoke('validarSped', {
-        conteudo: conteudoEditado || conteudo,
-        nomeArquivo: arquivo?.name || 'arquivo_sped.txt',
+        ...payloadFix,
         autoFix: true,
       });
       const dados = response.data;
@@ -192,10 +205,8 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         // Re-validar o arquivo corrigido para gerar o comparativo
         setRevalidando(true);
         try {
-          const reResp = await base44.functions.invoke('validarSped', {
-            conteudo: dados.conteudo_corrigido,
-            nomeArquivo: arquivo?.name || 'arquivo_sped.txt',
-          });
+          const payloadReval = await prepararPayload(dados.conteudo_corrigido, arquivo?.name || 'arquivo_sped.txt');
+          const reResp = await base44.functions.invoke('validarSped', payloadReval);
           if (reResp.data?.success) {
             setResultadoCorrigido(reResp.data);
             setResultado(reResp.data);

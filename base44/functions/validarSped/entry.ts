@@ -656,7 +656,13 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { conteudo, nomeArquivo } = body;
+    let { conteudo, nomeArquivo, file_url } = body;
+
+    // Se file_url for fornecido (arquivos grandes), baixar o conteúdo do storage
+    if (!conteudo && file_url) {
+      const fetchResp = await fetch(file_url);
+      conteudo = await fetchResp.text();
+    }
 
     if (!conteudo || typeof conteudo !== 'string') {
       return Response.json({ success: false, error: 'Conteúdo do arquivo não fornecido.' }, { status: 400 });
