@@ -4,35 +4,35 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) return Response.json({ success: false, error: 'Usuário não autenticado.' });
 
     const body = await req.json();
     const { order_id } = body;
 
     if (!order_id) {
-      return Response.json({ success: false, error: 'ID do pedido não informado.' }, { status: 400 });
+      return Response.json({ success: false, error: 'ID do pedido não informado.' });
     }
 
     // Load the exit order
     const order = await base44.entities.PDVExitOrder.get(order_id);
     if (!order) {
-      return Response.json({ success: false, error: 'Pedido não encontrado.' }, { status: 404 });
+      return Response.json({ success: false, error: 'Pedido não encontrado.' });
     }
     if (order.status === 'emitida') {
-      return Response.json({ success: false, error: 'NF-e já emitida para este pedido.' }, { status: 400 });
+      return Response.json({ success: false, error: 'NF-e já emitida para este pedido.' });
     }
     if (!order.items || order.items.length === 0) {
-      return Response.json({ success: false, error: 'Pedido sem itens.' }, { status: 400 });
+      return Response.json({ success: false, error: 'Pedido sem itens.' });
     }
 
     // Load company config
     const configs = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
     const company = configs[0];
     if (!company) {
-      return Response.json({ success: false, error: 'Configure os dados da empresa antes de emitir NF-e.' }, { status: 400 });
+      return Response.json({ success: false, error: 'Configure os dados da empresa antes de emitir NF-e.' });
     }
     if (!company.cnpj || !company.ie || !company.uf || !company.ibge_code) {
-      return Response.json({ success: false, error: 'Dados da empresa incompletos. Preencha CNPJ, IE, UF e código IBGE.' }, { status: 400 });
+      return Response.json({ success: false, error: 'Dados da empresa incompletos. Preencha CNPJ, IE, UF e código IBGE.' });
     }
 
     // UF codes (SEFAZ cUF)
@@ -319,6 +319,6 @@ Deno.serve(async (req) => {
       message: `NF-e ${nNF} gerada com sucesso. Chave: ${chaveAcesso}`
     });
   } catch (error) {
-    return Response.json({ success: false, error: error.message }, { status: 500 });
+    return Response.json({ success: false, error: error.message });
   }
 });

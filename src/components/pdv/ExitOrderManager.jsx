@@ -64,13 +64,14 @@ export default function ExitOrderManager({ user }) {
     try {
       const res = await base44.functions.invoke("gerarNfeSaida", { order_id: order.id });
       if (res.data?.success) {
-        alert(`NF-e emitida!\nNúmero: ${res.data.nfe_number}\nChave: ${res.data.nfe_key}`);
+        alert(`NF-e gerada com sucesso!\nNúmero: ${res.data.nfe_number}\nChave: ${res.data.nfe_key}`);
         load();
       } else {
-        alert("Erro ao emitir NF-e: " + (res.data?.error || ""));
+        alert("Erro ao emitir NF-e:\n" + (res.data?.error || "Erro desconhecido."));
       }
     } catch (e) {
-      alert("Erro ao emitir NF-e: " + e.message);
+      const errMsg = e?.response?.data?.error || e?.message || "Erro desconhecido.";
+      alert("Erro ao emitir NF-e:\n" + errMsg);
     }
     setEmitting(null);
   };
