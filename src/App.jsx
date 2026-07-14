@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
+import HideBase44Widget from './components/HideBase44Widget';
 import Home from '@/pages/Home';
 import Landing from '@/pages/Landing';
 import Portal from '@/pages/Portal';
@@ -162,6 +163,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ScrollToTop />
+          <HideBase44Widget />
           <AuthenticatedApp />
         </Router>
         <Toaster />
