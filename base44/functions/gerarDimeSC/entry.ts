@@ -382,10 +382,10 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Quadro 04 — Apuração dos Débitos (layout oficial DIME-SC):
+        // Quadro 04 — Apuração dos Débitos:
         // 010 = ICMS debitado nas saídas (= Quadro 03 item 080)
-        // 040 = Outros débitos
-        // 050 = Subtotal (010 + 040)
+        // 070 = Outros débitos
+        // 990 = Subtotal (010 + 070)
         const debSaidas = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosDebitos = rE110.debAjDocFiscal + rE110.debAjustes;
         const subtotalDebitos = debSaidas + outrosDebitos;
@@ -396,12 +396,12 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
         if (outrosDebitos > 0) {
-          linhasDime.push(`25` + `04` + fmtItem(40) + fmtVal(outrosDebitos));
+          linhasDime.push(`25` + `04` + fmtItem(70) + fmtVal(outrosDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (subtotalDebitos > 0) {
-          linhasDime.push(`25` + `04` + fmtItem(50) + fmtVal(subtotalDebitos));
+          linhasDime.push(`25` + `04` + fmtItem(990) + fmtVal(subtotalDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
@@ -416,26 +416,26 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Quadro 05 — Apuração dos Créditos (layout oficial DIME-SC):
-        // 060 = ICMS creditado nas entradas (= Quadro 03 item 030)
-        // 080 = Outros créditos
-        // 100 = Subtotal (060 + 080)
+        // Quadro 05 — Apuração dos Créditos:
+        // 020 = ICMS creditado nas entradas (= Quadro 03 item 030)
+        // 150 = Outros créditos
+        // 990 = Subtotal (020 + 150)
         const credEntradas = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
         const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
         const subtotalCreditos = credEntradas + outrosCred;
 
         if (credEntradas > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(60) + fmtVal(credEntradas));
+          linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (outrosCred > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(80) + fmtVal(outrosCred));
+          linhasDime.push(`26` + `05` + fmtItem(150) + fmtVal(outrosCred));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
         if (subtotalCreditos > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(100) + fmtVal(subtotalCreditos));
+          linhasDime.push(`26` + `05` + fmtItem(990) + fmtVal(subtotalCreditos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
