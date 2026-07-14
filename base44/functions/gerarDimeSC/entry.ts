@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
         if (outrosCred > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(150) + fmtVal(outrosCred));
+          linhasDime.push(`26` + `05` + fmtItem(40) + fmtVal(outrosCred));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
