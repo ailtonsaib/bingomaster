@@ -46,7 +46,7 @@ export default function AppLogin({ appId }) {
       });
       if (res.data.user) {
         const user = res.data.user;
-        if (!user[app.permission]) {
+        if (!user.is_admin && !user[app.permission]) {
           setError(`Sua licença não inclui acesso ao ${app.name}. Contate o suporte para adquirir.`);
           setLoading(false);
           return;

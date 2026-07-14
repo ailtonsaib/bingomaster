@@ -38,6 +38,7 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [canAccessChamados, setCanAccessChamados] = useState(false);
   const [canAccessSped, setCanAccessSped] = useState(false);
   const [spedPlan, setSpedPlan] = useState("free");
+  const [canAccessPdv, setCanAccessPdv] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -49,6 +50,7 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
         can_access_finance: canAccessFinance,
         can_access_chamados: canAccessChamados,
         can_access_sped: canAccessSped,
+        can_access_pdv: canAccessPdv,
         bingo_plan: canAccessBingo ? bingoPlan : "free",
         sped_plan: canAccessSped ? spedPlan : "free",
         finance_full_access: canAccessFinance && financePlan === "full",
@@ -154,6 +156,14 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* PDV permissions */}
+          <div className="pt-2 border-t">
+            <label className="flex items-center gap-2 text-sm font-medium mb-2">
+              <input type="checkbox" checked={canAccessPdv} onChange={(e) => setCanAccessPdv(e.target.checked)} className="w-4 h-4" />
+              PDV — Frente de Caixa
+            </label>
           </div>
 
           <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">

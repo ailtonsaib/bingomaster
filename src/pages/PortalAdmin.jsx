@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
@@ -140,6 +140,7 @@ export default function PortalAdmin() {
   const financeUsers = users.filter((u) => u.can_access_finance);
   const chamadosUsers = users.filter((u) => u.can_access_chamados);
   const spedUsers = users.filter((u) => u.can_access_sped);
+  const pdvUsers = users.filter((u) => u.can_access_pdv);
 
   const TabBar = (
     <div className="flex gap-2 mb-6 border-b">
@@ -190,7 +191,7 @@ export default function PortalAdmin() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {TabBar}
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -246,6 +247,17 @@ export default function PortalAdmin() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">PDV</p>
+                <p className="text-lg font-bold">{pdvUsers.length}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {pendingReleases.length > 0 && (
@@ -298,6 +310,7 @@ export default function PortalAdmin() {
                     <th className="text-left p-3 font-medium">Finanças</th>
                     <th className="text-left p-3 font-medium">Chamados</th>
                     <th className="text-left p-3 font-medium">SPED</th>
+                    <th className="text-left p-3 font-medium">PDV</th>
                     <th className="text-left p-3 font-medium">Acesso</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-right p-3 font-medium">Ações</th>
@@ -421,6 +434,24 @@ export default function PortalAdmin() {
                               ))}
                             </select>
                           )}
+                        </div>
+                      </td>
+
+                      {/* PDV permissions */}
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={u.can_access_pdv}
+                              disabled={u.is_admin}
+                              onChange={() => handleToggle(u.id, 'can_access_pdv', u.can_access_pdv)}
+                              className="w-3.5 h-3.5"
+                            />
+                            <span className={u.can_access_pdv ? 'text-foreground' : 'text-muted-foreground'}>
+                              {u.can_access_pdv ? 'Com acesso' : 'Sem acesso'}
+                            </span>
+                          </label>
                         </div>
                       </td>
 
