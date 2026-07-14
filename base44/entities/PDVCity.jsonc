@@ -1,0 +1,27 @@
+{
+  "name": "PDVCity",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF (sigla do estado)"
+    },
+    "ibge_code": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio (7 d\u00edgitos)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "uf",
+    "ibge_code"
+  ]
+}

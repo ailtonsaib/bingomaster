@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { X, Loader2, Search, User, Building2, Briefcase } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
 import { maskCpfCnpj, maskPhone, maskCep } from "@/lib/brMasks";
+import CitySelect from "@/components/pdv/CitySelect";
 
 const EMPTY = {
   name: "", cpf_cnpj: "", ie: "", email: "", phone: "",
@@ -177,8 +178,7 @@ export default function ContactFormModal({ user, contact, title, onClose, onSave
               <Input value={form.district} onChange={e => setForm({...form, district: e.target.value})} className="h-9" />
             </div>
             <div>
-              <Label>Município</Label>
-              <Input value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="h-9" />
+              <CitySelect form={form} setForm={setForm} />
             </div>
             <div>
               <Label>Código IBGE (7 dígitos)</Label>
