@@ -1,0 +1,90 @@
+{
+  "name": "PDVExitTaxParameter",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "ncm": {
+      "type": "string",
+      "description": "C\u00f3digo NCM (Nomenclatura Comum do Mercosul)"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF de destino (sigla). '*' para todas as UFs"
+    },
+    "origin": {
+      "type": "number",
+      "default": 0,
+      "description": "Origem da mercadoria: 0=Nacional, 1=Estrangeira Importa\u00e7\u00e3o Direta, 2=Estrangeira Adquirida Mercado Interno, 3-8=Mistos"
+    },
+    "csosn": {
+      "type": "string",
+      "description": "CSOSN (Simples Nacional): 101, 102, 103, 201, 202, 203, 300, 400, 500, 900"
+    },
+    "cst_icms": {
+      "type": "string",
+      "description": "CST do ICMS (sa\u00edda): 00, 10, 20, 30, 40, 41, 50, 51, 60, 70, 90"
+    },
+    "icms_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota ICMS (%) na sa\u00edda"
+    },
+    "mva_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "MVA - Margem de Valor Agregado (%) para c\u00e1lculo de ST na sa\u00edda"
+    },
+    "icms_st_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota ICMS-ST (%)"
+    },
+    "cst_ipi": {
+      "type": "string",
+      "description": "CST do IPI (sa\u00edda): 00-09, 49, 50, 51, 52, 53, 54, 55, 99"
+    },
+    "ipi_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota IPI (%) na sa\u00edda"
+    },
+    "cst_pis": {
+      "type": "string",
+      "description": "CST do PIS (sa\u00edda): 01-08, 49, 98, 99"
+    },
+    "pis_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota PIS (%) na sa\u00edda"
+    },
+    "cst_cofins": {
+      "type": "string",
+      "description": "CST do COFINS (sa\u00edda): 01-08, 49, 98, 99"
+    },
+    "cofins_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota COFINS (%) na sa\u00edda"
+    },
+    "cfop_default": {
+      "type": "string",
+      "description": "CFOP padr\u00e3o de sa\u00edda (ex: 5102 venda dentro do estado, 6102 venda fora do estado)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do par\u00e2metro tribut\u00e1rio de sa\u00edda"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o par\u00e2metro est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "ncm"
+  ]
+}

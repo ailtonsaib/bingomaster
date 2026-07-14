@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent, FileOutput, FileCheck } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -12,6 +12,8 @@ import SupplierManager from "@/components/pdv/SupplierManager";
 import CustomerManager from "@/components/pdv/CustomerManager";
 import EntryOperations from "@/components/pdv/EntryOperations";
 import TaxParameterManager from "@/components/pdv/TaxParameterManager";
+import ExitOrderManager from "@/components/pdv/ExitOrderManager";
+import ExitTaxParameterManager from "@/components/pdv/ExitTaxParameterManager";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -103,9 +105,11 @@ export default function PDV() {
     { id: "produtos", label: "Produtos", icon: Package },
     { id: "vendas", label: "Vendas", icon: Receipt },
     { id: "entradas", label: "Entradas", icon: FileInput },
+    { id: "saidas", label: "Saídas", icon: FileOutput },
+    { id: "trib-entrada", label: "Trib. Entrada", icon: Percent },
+    { id: "trib-saida", label: "Trib. Saída", icon: FileCheck },
     { id: "fornecedores", label: "Fornecedores", icon: Building2 },
     { id: "clientes", label: "Clientes", icon: Users },
-    { id: "tributario", label: "Tributário", icon: Percent },
   ];
 
   return (
@@ -170,9 +174,11 @@ export default function PDV() {
         {activeTab === "produtos" && <ProductManager user={user} />}
         {activeTab === "vendas" && <SalesHistory user={user} />}
         {activeTab === "entradas" && <EntryOperations user={user} />}
+        {activeTab === "saidas" && <ExitOrderManager user={user} />}
         {activeTab === "fornecedores" && <SupplierManager user={user} />}
         {activeTab === "clientes" && <CustomerManager user={user} />}
-        {activeTab === "tributario" && <TaxParameterManager user={user} />}
+        {activeTab === "trib-entrada" && <TaxParameterManager user={user} />}
+        {activeTab === "trib-saida" && <ExitTaxParameterManager user={user} />}
       </div>
 
       {showCheckout && (

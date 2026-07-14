@@ -10,6 +10,10 @@
       "type": "string",
       "description": "CPF ou CNPJ"
     },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual"
+    },
     "email": {
       "type": "string",
       "description": "Email"
@@ -18,9 +22,37 @@
       "type": "string",
       "description": "Telefone"
     },
+    "cep": {
+      "type": "string",
+      "description": "CEP"
+    },
     "address": {
       "type": "string",
-      "description": "Endere\u00e7o"
+      "description": "Logradouro"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero"
+    },
+    "complement": {
+      "type": "string",
+      "description": "Complemento"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF (sigla do estado)"
+    },
+    "ibge_code": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio (7 d\u00edgitos)"
     },
     "user_email": {
       "type": "string",
