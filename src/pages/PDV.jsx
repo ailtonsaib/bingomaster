@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Building2, Users, FileInput, Percent } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
 import CheckoutModal from "@/components/pdv/CheckoutModal";
 import ProductManager from "@/components/pdv/ProductManager";
 import SalesHistory from "@/components/pdv/SalesHistory";
+import SupplierManager from "@/components/pdv/SupplierManager";
+import CustomerManager from "@/components/pdv/CustomerManager";
+import EntryOperations from "@/components/pdv/EntryOperations";
+import TaxParameterManager from "@/components/pdv/TaxParameterManager";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -98,6 +102,10 @@ export default function PDV() {
     { id: "caixa", label: "Caixa", icon: ShoppingCart },
     { id: "produtos", label: "Produtos", icon: Package },
     { id: "vendas", label: "Vendas", icon: Receipt },
+    { id: "entradas", label: "Entradas", icon: FileInput },
+    { id: "fornecedores", label: "Fornecedores", icon: Building2 },
+    { id: "clientes", label: "Clientes", icon: Users },
+    { id: "tributario", label: "Tributário", icon: Percent },
   ];
 
   return (
@@ -161,6 +169,10 @@ export default function PDV() {
         )}
         {activeTab === "produtos" && <ProductManager user={user} />}
         {activeTab === "vendas" && <SalesHistory user={user} />}
+        {activeTab === "entradas" && <EntryOperations user={user} />}
+        {activeTab === "fornecedores" && <SupplierManager user={user} />}
+        {activeTab === "clientes" && <CustomerManager user={user} />}
+        {activeTab === "tributario" && <TaxParameterManager user={user} />}
       </div>
 
       {showCheckout && (

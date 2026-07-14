@@ -15,6 +15,8 @@ export default function ProductForm({ user, categories, product, onClose, onSave
     min_stock: product?.min_stock ?? 0,
     category_id: product?.category_id || "",
     unit: product?.unit || "UN",
+    ncm: product?.ncm || "",
+    cfop_default: product?.cfop_default || "",
     description: product?.description || "",
   });
   const [saving, setSaving] = useState(false);
@@ -61,7 +63,7 @@ export default function ProductForm({ user, categories, product, onClose, onSave
             <Label className="mb-1 block">Nome *</Label>
             <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label className="mb-1 block">Código de Barras</Label>
               <Input value={form.barcode} onChange={e => setForm({ ...form, barcode: e.target.value })} />
@@ -73,6 +75,10 @@ export default function ProductForm({ user, categories, product, onClose, onSave
                 <option value="UN">UN</option><option value="KG">KG</option><option value="LT">LT</option>
                 <option value="CX">CX</option><option value="MT">MT</option><option value="M2">M²</option>
               </select>
+            </div>
+            <div>
+              <Label className="mb-1 block">NCM</Label>
+              <Input value={form.ncm} onChange={e => setForm({ ...form, ncm: e.target.value.replace(/\D/g, '').slice(0, 8) })} placeholder="12345678" className="font-mono" maxLength={8} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

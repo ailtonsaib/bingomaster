@@ -46,6 +46,14 @@
       "default": "UN",
       "description": "Unidade: UN, KG, LT, CX, MT"
     },
+    "ncm": {
+      "type": "string",
+      "description": "C\u00f3digo NCM (Nomenclatura Comum do Mercosul)"
+    },
+    "cfop_default": {
+      "type": "string",
+      "description": "CFOP padr\u00e3o para entrada (ex: 1102)"
+    },
     "user_email": {
       "type": "string",
       "description": "Email do propriet\u00e1rio"
