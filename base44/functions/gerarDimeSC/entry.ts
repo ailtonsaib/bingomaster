@@ -449,11 +449,7 @@ Deno.serve(async (req) => {
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        if (outrosCred > 0) {
-          linhasDime.push(`26` + `05` + fmtItem(40) + fmtVal(outrosCred));
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
+        // "Outros créditos" não tem item próprio no Quadro 05 — valor vai apenas no subtotal (990)
         if (subtotalCreditos > 0) {
           linhasDime.push(`26` + `05` + fmtItem(990) + fmtVal(subtotalCreditos));
           totalRegsArquivo++;
