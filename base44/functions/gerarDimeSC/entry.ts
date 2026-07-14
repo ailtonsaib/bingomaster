@@ -82,22 +82,32 @@ Deno.serve(async (req) => {
       }
 
       if (reg === 'E110' && !rE110) {
+        // Layout oficial SPED Fiscal E110:
+        // p[2] = VL_DEB_ICMS (total débitos por saídas)
+        // p[3] = VL_DEB_AJ (ajustes a débito - apuração)
+        // p[4] = VL_DEB_AJ_DOC_FISCAL (ajustes a débito - documentos fiscais)
+        // p[5] = VL_CRED_ICMS (total créditos por entradas)
+        // p[6] = VL_CRED_AJ (ajustes a crédito - apuração)
+        // p[7] = VL_CRED_AJ_DOC_FISCAL (ajustes a crédito - documentos fiscais)
+        // p[8] = VL_SLD_CREDOR_ANT (saldo credor do período anterior)
+        // p[9] = VL_SLD_DEVEDOR_ANT (saldo devedor do período anterior)
         const debImposto = parseNum(p[2]);
-        const debAjDocFiscal = parseNum(p[3]);
-        const debAjustes = parseNum(p[4]);
-        const saldoCredorAnt = parseNum(p[6]);
-        const credImposto = parseNum(p[7]);
-        const credAjDocFiscal = parseNum(p[8]);
-        const credAjustes = parseNum(p[9]);
+        const debAjApuracao = parseNum(p[3]);
+        const debAjDocFiscal = parseNum(p[4]);
+        const credImposto = parseNum(p[5]);
+        const credAjApuracao = parseNum(p[6]);
+        const credAjDocFiscal = parseNum(p[7]);
+        const saldoCredorAnt = parseNum(p[8]);
 
-        const totDebitos = debImposto + debAjDocFiscal + debAjustes;
-        const totCreditos = saldoCredorAnt + credImposto + credAjDocFiscal + credAjustes;
+        const totDebitos = debImposto + debAjApuracao + debAjDocFiscal;
+        const totCreditos = credImposto + credAjApuracao + credAjDocFiscal;
         const saldoDevedor = Math.max(0, totDebitos - totCreditos);
         const saldoCredorTransportar = Math.max(0, totCreditos - totDebitos);
 
         rE110 = {
-          debImposto, debAjDocFiscal, debAjustes, totDebitos,
-          saldoCredorAnt, credImposto, credAjDocFiscal, credAjustes, totCreditos,
+          debImposto, debAjApuracao, debAjDocFiscal, totDebitos,
+          credImposto, credAjApuracao, credAjDocFiscal, totCreditos,
+          saldoCredorAnt,
           saldoDevedor, saldoCredorTransportar
         };
       }
@@ -386,8 +396,8 @@ Deno.serve(async (req) => {
         // 010 = ICMS debitado nas saídas (= Quadro 03 item 080)
         // 070 = Outros débitos
         // 990 = Subtotal (010 + 070)
-        const debSaidas = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0);
-        const outrosDebitos = rE110.debAjDocFiscal + rE110.debAjustes;
+        const debSaidas = rE110.debImposto;
+        const outrosDebitos = rE110.debAjApuracao + rE110.debAjDocFiscal;
         const subtotalDebitos = debSaidas + outrosDebitos;
 
         if (debSaidas > 0) {
@@ -416,16 +426,22 @@ Deno.serve(async (req) => {
       // Total = 24 chars por linha
       // -----------------------------------------------
       if (rE110) {
-        // Quadro 05 — Apuração dos Créditos (layout oficial SEF-SC):
-        // 010 = Saldo credor do mês anterior (NÃO gerar — o SEF valida contra a DIME anterior;
-        //       se não houver DIME anterior ou 998=0, deve ser 0. O saldo credor anterior do
-        //       SPED só é reconhecido se a DIME do mês anterior o informou em 998.)
+        // Quadro 05 — Apuração dos Créditos (layout oficial SEF-SC Portaria 153/2012):
+        // 010 = Saldo credor do mês anterior (DEVE ser gerado sempre — o SEF valida contra
+        //       o item 998 da DIME do mês anterior. Se não houver DIME anterior ou 998=0,
+        //       o valor deve ser 0,00. Sempre gerar explicitamente para evitar erro.)
         // 020 = ICMS creditado nas entradas
         // 150 = Outros créditos
-        // 990 = Subtotal (020 + 150) — DEVE bater com Quadro 09 item 050
-        const credEntradas = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0);
-        const outrosCred = rE110.credAjDocFiscal + rE110.credAjustes;
-        const subtotalCreditos = credEntradas + outrosCred;
+        // 990 = Subtotal (010 + 020 + 150) — DEVE bater com Quadro 09 item 050
+        const saldoCredorAntQ5 = 0; // SEF exige 0,00 quando não há DIME anterior com 998 > 0
+        const credEntradas = rE110.credImposto;
+        const outrosCred = rE110.credAjApuracao + rE110.credAjDocFiscal;
+        const subtotalCreditos = saldoCredorAntQ5 + credEntradas + outrosCred;
+
+        // Item 010 — Sempre gerar (o validador exige presença explícita)
+        linhasDime.push(`26` + `05` + fmtItem(10) + fmtVal(saldoCredorAntQ5));
+        totalRegsArquivo++;
+        totalRegsDecl++;
 
         if (credEntradas > 0) {
           linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
@@ -469,35 +485,43 @@ Deno.serve(async (req) => {
         //
         // NÃO EXISTEM no Quadro 09: itens 099, 100, 105, 110
         // =====================================================
-        // saldoCredorAnt NÃO é incluído aqui — o SEF valida item 010 contra a DIME do mês
-        // anterior. Se não houve DIME anterior (ou 998=0), item 010 deve ser 0,00.
-        const totalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
-        const totalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes;
+        // saldoCredorAnt = 0,00 — o SEF valida item 010 (Quadro 05) e item 020 (Quadro 09)
+        // contra o item 998 da DIME do mês anterior. Se não houver DIME anterior, deve ser 0,00.
+        const saldoCredorAnt = 0;
+        const subtotalDebitos = rE110.debImposto + rE110.debAjApuracao + rE110.debAjDocFiscal;
+        const subtotalCreditosQ9 = rE110.credImposto + rE110.credAjApuracao + rE110.credAjDocFiscal;
+        const totalDebitos = subtotalDebitos + saldoCredorAnt; // item 040 = 010 + 020
+        const totalCreditos = subtotalCreditosQ9; // item 080 = 050
         const saldoDevedor = Math.max(0, totalDebitos - totalCreditos);
         const saldoCredorTransportar = Math.max(0, totalCreditos - totalDebitos);
 
-        // Item 010 — Subtotal de débitos (transportado do Quadro 04)
-        if (totalDebitos > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(totalDebitos));
+        // Item 010 — Subtotal de débitos (transportado do Quadro 04 item 990)
+        if (subtotalDebitos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(subtotalDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 040 — Total de débitos
+        // Item 020 — Saldo credor do mês anterior (sempre gerar — deve bater com Quadro 05 item 010)
+        linhasDime.push(`30` + `09` + fmtItem(20) + fmtVal(saldoCredorAnt));
+        totalRegsArquivo++;
+        totalRegsDecl++;
+
+        // Item 040 — Total de débitos (010 + 020)
         if (totalDebitos > 0) {
           linhasDime.push(`30` + `09` + fmtItem(40) + fmtVal(totalDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 050 — Subtotal de créditos (transportado do Quadro 05)
-        if (totalCreditos > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(50) + fmtVal(totalCreditos));
+        // Item 050 — Subtotal de créditos (transportado do Quadro 05 item 990)
+        if (subtotalCreditosQ9 > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(50) + fmtVal(subtotalCreditosQ9));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 080 — Total de créditos
+        // Item 080 — Total de créditos (= 050 quando não há outros itens)
         if (totalCreditos > 0) {
           linhasDime.push(`30` + `09` + fmtItem(80) + fmtVal(totalCreditos));
           totalRegsArquivo++;
@@ -525,12 +549,11 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
 
-        // Item 998 — Saldo Credor p/ Mês Seguinte — total final (OBRIGATÓRIO se saldo credor > 0)
-        if (saldoCredorTransportar > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
+        // Item 998 — Saldo Credor p/ Mês Seguinte — total final
+        // OBRIGATÓRIO sempre (o validador exige presença mesmo com valor 0,00)
+        linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
+        totalRegsArquivo++;
+        totalRegsDecl++;
       }
 
       // -----------------------------------------------
@@ -538,10 +561,7 @@ Deno.serve(async (req) => {
       // SÓ gerar pagamentos de origem 1 (ICMS) quando há imposto a recolher
       // (saldo devedor > 0). Quando há saldo credor, NÃO gerar pagamentos.
       // -----------------------------------------------
-      const saldoDevedor33 = rE110 ? Math.max(0,
-        (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) -
-        (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes)
-      ) : 0;
+      const saldoDevedor33 = rE110 ? rE110.saldoDevedor : 0;
 
       if (saldoDevedor33 > 0) {
         const e116Validos = e116Records.filter((e: any) => e.vlOr > 0);
@@ -649,14 +669,14 @@ Deno.serve(async (req) => {
       linhas: totalRegsArquivo,
       total_participantes: 0,
       total_produtos: 0,
-      debitos: rE110 ? (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes).toFixed(2).replace('.', ',') : '0,00',
-      creditos: rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0)).toFixed(2).replace('.', ',') : '0,00',
+      debitos: rE110 ? rE110.totDebitos.toFixed(2).replace('.', ',') : '0,00',
+      creditos: rE110 ? rE110.totCreditos.toFixed(2).replace('.', ',') : '0,00',
       saldo: 'DIME-SC GERADO',
       sped_type: 'DIMESC'
     });
 
-    const debitosApur = rE110 ? (saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes) : 0;
-    const creditosApur = rE110 ? (entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + (rE110.saldoCredorAnt || 0)) : 0;
+    const debitosApur = rE110 ? rE110.totDebitos : 0;
+    const creditosApur = rE110 ? rE110.totCreditos : 0;
     const saldoApur = rE110 ? Math.max(0, debitosApur - creditosApur) : 0;
     const saldoCredor = rE110 ? Math.max(0, creditosApur - debitosApur) : 0;
 
