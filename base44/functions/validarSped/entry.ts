@@ -655,13 +655,22 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const body = await req.json();
-    let { conteudo, nomeArquivo, file_url } = body;
-
-    // Se file_url for fornecido (arquivos grandes), baixar o conteúdo do storage
-    if (!conteudo && file_url) {
-      const fetchResp = await fetch(file_url);
-      conteudo = await fetchResp.text();
+    const contentType = req.headers.get('content-type') || '';
+    let conteudo, nomeArquivo, autoFix, file_url;
+    if (contentType.includes('text/plain')) {
+      conteudo = await req.text();
+      nomeArquivo = req.headers.get('x-file-name') || 'arquivo_sped.txt';
+      autoFix = req.headers.get('x-autofix') === 'true';
+    } else {
+      const body = await req.json();
+      conteudo = body.conteudo;
+      nomeArquivo = body.nomeArquivo;
+      autoFix = body.autoFix;
+      file_url = body.file_url;
+      if (!conteudo && file_url) {
+        const fetchResp = await fetch(file_url);
+        conteudo = await fetchResp.text();
+      }
     }
 
     if (!conteudo || typeof conteudo !== 'string') {
@@ -676,7 +685,7 @@ Deno.serve(async (req) => {
     // --- Detecção de REINF (formato XML) ---
     const conteudoTrim = conteudo.trim();
     if (conteudoTrim.startsWith('<?xml') || conteudoTrim.startsWith('<Reinf') || conteudoTrim.startsWith('<reinf')) {
-      return validarReinf(conteudo, nomeArquivo, body.autoFix);
+      return validarReinf(conteudo, nomeArquivo, autoFix);
     }
 
     // --- Detecção de DIME-SC (formato fixed-width, Anexo II - Portaria SEF SC) ---
@@ -685,7 +694,7 @@ Deno.serve(async (req) => {
     const primeirosTipos = linhas[0].substring(0, 2);
     const temPipes = linhas[0].includes('|');
     if (!temPipes && (primeirosTipos === '20' || primeirosTipos === '21')) {
-      return validarDimeSC(linhas, nomeArquivo, body.autoFix, conteudo);
+      return validarDimeSC(linhas, nomeArquivo, autoFix, conteudo);
     }
 
     const erros = [];
@@ -2481,7 +2490,7 @@ Deno.serve(async (req) => {
         registrosUnicos: Object.keys(estatisticas.registros).length
       }
     };
-    if (body.autoFix && (erros.length > 0 || avisos.length > 0)) {
+    if (autoFix && (erros.length > 0 || avisos.length > 0)) {
       resultadoSped.conteudo_corrigido = corrigirConteudo(conteudo, tipoDetectado);
     }
     return Response.json(resultadoSped);
