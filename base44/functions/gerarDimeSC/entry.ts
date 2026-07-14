@@ -438,10 +438,11 @@ Deno.serve(async (req) => {
         const outrosCred = rE110.credAjApuracao + rE110.credAjDocFiscal;
         const subtotalCreditos = saldoCredorAntQ5 + credEntradas + outrosCred;
 
-        // Item 010 — Sempre gerar (o validador exige presença explícita)
-        linhasDime.push(`26` + `05` + fmtItem(10) + fmtVal(saldoCredorAntQ5));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        if (saldoCredorAntQ5 > 0) {
+          linhasDime.push(`26` + `05` + fmtItem(10) + fmtVal(saldoCredorAntQ5));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
 
         if (credEntradas > 0) {
           linhasDime.push(`26` + `05` + fmtItem(20) + fmtVal(credEntradas));
@@ -502,10 +503,12 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
 
-        // Item 020 — Saldo credor do mês anterior (sempre gerar — deve bater com Quadro 05 item 010)
-        linhasDime.push(`30` + `09` + fmtItem(20) + fmtVal(saldoCredorAnt));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        // Item 020 — Saldo credor do mês anterior (só gerar se > 0 — SEF rejeita valor zero)
+        if (saldoCredorAnt > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(20) + fmtVal(saldoCredorAnt));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
 
         // Item 040 — Total de débitos (010 + 020)
         if (totalDebitos > 0) {
@@ -549,11 +552,12 @@ Deno.serve(async (req) => {
           totalRegsDecl++;
         }
 
-        // Item 998 — Saldo Credor p/ Mês Seguinte — total final
-        // OBRIGATÓRIO sempre (o validador exige presença mesmo com valor 0,00)
-        linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
-        totalRegsArquivo++;
-        totalRegsDecl++;
+        // Item 998 — Saldo Credor p/ Mês Seguinte — total final (só gerar se > 0 — SEF rejeita valor zero)
+        if (saldoCredorTransportar > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
       }
 
       // -----------------------------------------------
