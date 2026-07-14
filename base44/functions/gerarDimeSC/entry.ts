@@ -453,78 +453,77 @@ Deno.serve(async (req) => {
         // =====================================================
         // Quadro 09 — Cálculo do Imposto a Pagar ou Saldo Credor
         // Layout oficial DIME-SC (Portaria SEF 153/2012)
-        // A partir da referência 03/2023: item 105 (Deduções) foi
-        // DESCONTINUADO e não deve ser preenchido.
         //
-        // Itens obrigatórios (devem constar mesmo com valor zero):
-        //   040 = Total de débitos (transportado do Quadro 04)
-        //   080 = Total de créditos (inclui saldo credor anterior)
-        //   110 = Saldo devedor (= 100, pois 105 = 0)
-        //   120 = Imposto a recolher (= 110)
+        // Itens do Quadro 09 (conforme layout oficial SEF-SC):
+        //   010 = Subtotal de débitos (transportado do Quadro 04, item 990)
+        //   040 = Total de débitos
+        //   050 = Subtotal de créditos (transportado do Quadro 05, item 990)
+        //   080 = Total de créditos
+        //   120 = Imposto a Recolher (se saldo devedor > 0)
+        //   999 = Imposto a Recolher — total final (se saldo devedor > 0)
+        //   140 = Saldo Credor p/ Mês Seguinte (se saldo credor > 0)
+        //   998 = Saldo Credor p/ Mês Seguinte — total final (se saldo credor > 0)
         //
-        // Itens condicionais:
-        //   010 = Saldo credor do período anterior (se > 0)
-        //   100 = Saldo devedor antes das deduções (se > 0)
-        //   099 = Saldo credor a transportar (se > 0)
-        //
-        // NÃO PREENCHER (a partir de 03/2023):
-        //   105 = Deduções (campo extinto)
+        // NÃO EXISTEM no Quadro 09: itens 099, 100, 105, 110
         // =====================================================
         const saldoCredorAnt = rE110.saldoCredorAnt || 0;
         const totalDebitos = saidas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.debAjDocFiscal + rE110.debAjustes;
         const totalCreditos = entradas.reduce((s: number, c: any) => s + c.vlIcms, 0) + rE110.credAjDocFiscal + rE110.credAjustes + saldoCredorAnt;
-        const saldoDevedorAntes = Math.max(0, totalDebitos - totalCreditos);
-        const saldoDevedorFinal = saldoDevedorAntes; // 105 = 0 (discontinuado em 03/2023)
-        const impostoRecolher = saldoDevedorFinal;
+        const saldoDevedor = Math.max(0, totalDebitos - totalCreditos);
         const saldoCredorTransportar = Math.max(0, totalCreditos - totalDebitos);
 
-        // Item 010 — Saldo credor do período anterior (opcional, se > 0)
-        if (saldoCredorAnt > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(saldoCredorAnt));
+        // Item 010 — Subtotal de débitos (transportado do Quadro 04)
+        if (totalDebitos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(10) + fmtVal(totalDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 040 — Total de débitos (apenas se > 0 — validador rejeita valores zerados)
+        // Item 040 — Total de débitos
         if (totalDebitos > 0) {
           linhasDime.push(`30` + `09` + fmtItem(40) + fmtVal(totalDebitos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 080 — Total de créditos (apenas se > 0)
+        // Item 050 — Subtotal de créditos (transportado do Quadro 05)
+        if (totalCreditos > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(50) + fmtVal(totalCreditos));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
+
+        // Item 080 — Total de créditos
         if (totalCreditos > 0) {
           linhasDime.push(`30` + `09` + fmtItem(80) + fmtVal(totalCreditos));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 100 — Saldo devedor antes das deduções (se > 0)
-        if (saldoDevedorAntes > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(100) + fmtVal(saldoDevedorAntes));
+        // Item 120 — Imposto a Recolher (se saldo devedor > 0)
+        if (saldoDevedor > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(saldoDevedor));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // NÃO PREENCHER item 105 — Deduções (extinto a partir de 03/2023)
-
-        // Item 110 — Saldo devedor (apenas se > 0)
-        if (saldoDevedorFinal > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(110) + fmtVal(saldoDevedorFinal));
+        // Item 999 — Imposto a Recolher — total final (se saldo devedor > 0)
+        if (saldoDevedor > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(999) + fmtVal(saldoDevedor));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
 
-        // Item 120 — Imposto a recolher (apenas se > 0)
-        if (impostoRecolher > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(120) + fmtVal(impostoRecolher));
-          totalRegsArquivo++;
-          totalRegsDecl++;
-        }
-
-        // Item 099 — Saldo credor a transportar (se > 0) — item CORRETO é 099, não 098
+        // Item 140 — Saldo Credor p/ Mês Seguinte (se saldo credor > 0)
         if (saldoCredorTransportar > 0) {
-          linhasDime.push(`30` + `09` + fmtItem(99) + fmtVal(saldoCredorTransportar));
+          linhasDime.push(`30` + `09` + fmtItem(140) + fmtVal(saldoCredorTransportar));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
+
+        // Item 998 — Saldo Credor p/ Mês Seguinte — total final (se saldo credor > 0)
+        if (saldoCredorTransportar > 0) {
+          linhasDime.push(`30` + `09` + fmtItem(998) + fmtVal(saldoCredorTransportar));
           totalRegsArquivo++;
           totalRegsDecl++;
         }
