@@ -41,7 +41,9 @@ export default function CustomerManager({ user }) {
     if (clean.length !== 14) return;
     setCnpjLoading(true);
     const data = await lookupCnpj(clean);
-    if (data) {
+    if (data?.error) {
+      alert(data.error);
+    } else if (data) {
       setForm(prev => ({
         ...prev,
         name: data.razao_social || prev.name,

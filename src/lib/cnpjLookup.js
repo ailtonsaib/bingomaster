@@ -7,12 +7,14 @@ import { base44 } from "@/api/base44Client";
  */
 export async function lookupCnpj(cnpj) {
   const clean = (cnpj || "").replace(/\D/g, "");
-  if (clean.length !== 14) return null;
+  if (clean.length !== 14) return { error: "CNPJ deve ter 14 dígitos." };
 
   try {
     const resp = await base44.functions.invoke("consultaCnpj", { cnpj: clean });
     const data = resp.data;
-    if (!data?.success || !data?.dados) return null;
+    if (!data?.success || !data?.dados) {
+      return { error: data?.error || "Não foi possível obter os dados do CNPJ." };
+    }
 
     const d = data.dados;
     return {
@@ -30,7 +32,7 @@ export async function lookupCnpj(cnpj) {
       email: d.email || "",
     };
   } catch (e) {
-    console.error("Erro ao consultar CNPJ:", e);
-    return null;
+    const msg = e?.response?.data?.error || e?.message || "Erro ao consultar CNPJ.";
+    return { error: msg };
   }
 }

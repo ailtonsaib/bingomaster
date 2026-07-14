@@ -44,7 +44,9 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
     if (clean.length !== 14) return;
     setCnpjLoading(true);
     const data = await lookupCnpj(clean);
-    if (data) {
+    if (data?.error) {
+      alert(data.error);
+    } else if (data) {
       setForm(prev => ({
         ...prev,
         razao_social: data.razao_social || prev.razao_social,
