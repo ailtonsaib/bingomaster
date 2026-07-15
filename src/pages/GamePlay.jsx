@@ -8,7 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2 } from "lucide-react";
 import { drawNumber, checkAllCardsForBingo, getCardMaxPoints } from "@/lib/bingoUtils";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates } from "@/lib/offlineGameCache";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
+import OfflineBanner from "@/components/bingo/OfflineBanner";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
 import PrizesPanel from "@/components/bingo/PrizesPanel";
 import GameProgressBar from "@/components/bingo/GameProgressBar";
@@ -43,29 +46,82 @@ export default function GamePlay() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const isOnline = useOnlineStatus();
+  const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0);
+
+  const cachedData = getCachedGameData(gameId);
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
     queryFn: () => base44.entities.BingoGame.filter({ id: gameId }),
     select: (data) => data[0],
+    initialData: cachedData ? [cachedData.game] : undefined,
+    retry: false,
   });
 
   const { data: cards = [] } = useQuery({
     queryKey: ["cards", gameId],
     queryFn: () => base44.entities.BingoCard.filter({ game_id: String(gameId) }),
+    initialData: cachedData ? cachedData.cards : undefined,
+    retry: false,
   });
+
+  // Cacheia dados do jogo para funcionamento offline
+  useEffect(() => {
+    if (game && cards) {
+      cacheGameData(gameId, game, cards);
+    }
+  }, [game, cards, gameId]);
+
+  // Sincroniza atualizações pendentes quando volta online
+  useEffect(() => {
+    if (!isOnline) return;
+    const pending = getPendingUpdates();
+    if (pending.length === 0) return;
+    (async () => {
+      // Agrupa atualizações por jogo (última versão de cada campo)
+      const byGame = {};
+      for (const item of pending) {
+        if (!byGame[item.gameId]) byGame[item.gameId] = {};
+        Object.assign(byGame[item.gameId], item.updates);
+      }
+      for (const [gId, updates] of Object.entries(byGame)) {
+        try {
+          const gameData = await base44.entities.BingoGame.filter({ id: gId });
+          if (gameData[0]) {
+            await base44.entities.BingoGame.update(gameData[0].id, updates);
+          }
+        } catch (e) {
+          // falha silenciosa — tentará novamente
+        }
+      }
+      clearPendingUpdates();
+      setHasPendingSync(false);
+      queryClient.invalidateQueries({ queryKey: ["game", gameId] });
+      queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+    })();
+  }, [isOnline, gameId, queryClient]);
 
   const updateGame = useCallback(async (updates) => {
     if (!game) return;
     // Optimistic update — reflete no UI imediatamente (síncrono)
-    queryClient.setQueryData(["game", gameId], (oldData) => {
-      const arr = Array.isArray(oldData) ? oldData : [];
+    const newGameData = (() => {
+      const arr = Array.isArray(queryClient.getQueryData(["game", gameId])) ? queryClient.getQueryData(["game", gameId]) : [];
       const current = arr[0] || game;
-      return [{ ...current, ...updates }];
-    });
+      return { ...current, ...updates };
+    })();
+    queryClient.setQueryData(["game", gameId], [newGameData]);
+
+    // Modo offline: enfileira atualização para sincronizar depois
+    if (!isOnline) {
+      queuePendingUpdate(gameId, updates);
+      setHasPendingSync(true);
+      return;
+    }
+
     await base44.entities.BingoGame.update(game.id, updates);
     queryClient.invalidateQueries({ queryKey: ["game", gameId] });
-  }, [game, gameId, queryClient]);
+  }, [game, gameId, queryClient, isOnline]);
 
   const handleStart = () => updateGame({ status: "in_progress" });
 
@@ -210,6 +266,21 @@ export default function GamePlay() {
     prizes[prizeIndex] = { ...prizes[prizeIndex], awarded: true };
     await updateGame({ prizes });
 
+    if (!isOnline) {
+      // Offline: atualiza cartelas localmente (sincroniza depois)
+      queryClient.setQueryData(["cards", gameId], (old) => {
+        const arr = Array.isArray(old) ? old : [];
+        return arr.map((c) => {
+          if (winners.some((w) => w.card.id === c.id)) {
+            return { ...c, is_winner: true, won_prizes: [...(c.won_prizes || []), { prize_index: prizeIndex, prize_name: prizeName, won_at_draw: lastDrawn, won_at: now }] };
+          }
+          return c;
+        });
+      });
+      setWinners([]);
+      return;
+    }
+
     // Mark each winning card
     for (const { card } of winners) {
       const wonPrizes = [...(card.won_prizes || []), {
@@ -246,6 +317,17 @@ export default function GamePlay() {
       updates.status = "finished";
     }
     await updateGame(updates);
+
+    // Offline: não atualiza cartela no servidor (será sincronizado depois)
+    if (!isOnline) {
+      queryClient.setQueryData(["cards", gameId], (old) => {
+        const arr = Array.isArray(old) ? old : [];
+        return arr.map((c) => c.id === card.id
+          ? { ...c, is_winner: true, won_prizes: [...(c.won_prizes || []), { prize_index: prizeIndex, prize_name: prizes[prizeIndex].name, won_at_draw: lastDrawn, won_at: now }] }
+          : c);
+      });
+      return;
+    }
 
     const wonPrizes = [...(card.won_prizes || []), {
       prize_index: prizeIndex,
@@ -298,6 +380,7 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
+      {!isOnline && <OfflineBanner hasPendingSync={hasPendingSync} />}
       <BingoWinnerAlert
         winners={winners.map(w => ({
           ...w,
