@@ -449,7 +449,14 @@ Deno.serve(async (req) => {
           totalRegsArquivo++;
           totalRegsDecl++;
         }
-        // "Outros créditos" não tem item próprio no Quadro 05 — valor vai apenas no subtotal (990)
+        // Item 150 = Outros créditos (ajustes a crédito da apuração + documentos fiscais)
+        // DEVE ser gerado quando > 0 para que a soma dos itens individuais (010+020+150)
+        // bata com o subtotal (990) — o SEF valida essa consistência.
+        if (outrosCred > 0) {
+          linhasDime.push(`26` + `05` + fmtItem(150) + fmtVal(outrosCred));
+          totalRegsArquivo++;
+          totalRegsDecl++;
+        }
         if (subtotalCreditos > 0) {
           linhasDime.push(`26` + `05` + fmtItem(990) + fmtVal(subtotalCreditos));
           totalRegsArquivo++;
