@@ -400,6 +400,7 @@ export default function CashPanel({ userEmail }) {
                       isReceivable
                       onSettle={() => setSettleTarget(tx)}
                       onEdit={() => setEditTarget(tx)}
+                      onReopen={() => handleReopen(tx.id)}
                       selected={selectedIds.has(tx.id)}
                       onToggleSelect={() => toggleSelection(tx.id)}
                     />
@@ -458,6 +459,7 @@ export default function CashPanel({ userEmail }) {
                       isOverdue={isOverdue}
                       onSettle={() => setSettleTarget(tx)}
                       onEdit={() => setEditTarget(tx)}
+                      onReopen={() => handleReopen(tx.id)}
                       selected={selectedIds.has(tx.id)}
                       onToggleSelect={() => toggleSelection(tx.id)}
                     />
@@ -581,7 +583,7 @@ export default function CashPanel({ userEmail }) {
   );
 }
 
-function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSettle, onEdit, selected, onToggleSelect }) {
+function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSettle, onEdit, onReopen, selected, onToggleSelect }) {
   return (
     <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${selected ? "bg-primary/5 border-primary/30" : "hover:bg-muted/30"}`}>
       <div className="flex items-center gap-3">
@@ -630,16 +632,26 @@ function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSett
             {tx.status === "partial" ? fmtMoney(tx.remaining_amount) : fmtMoney(tx.amount)}
           </span>
          <Button
-           variant="ghost"
-           size="icon"
-           onClick={onEdit}
-           title="Editar"
-         >
-           <Pencil className="w-4 h-4 text-muted-foreground" />
-         </Button>
-         <Button size="sm" onClick={onSettle} className="gap-1">
-           <CheckCircle2 className="w-4 h-4" /> Baixar
-         </Button>
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            title="Editar"
+          >
+            <Pencil className="w-4 h-4 text-muted-foreground" />
+          </Button>
+          {tx.status === "partial" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onReopen}
+              title="Extornar baixa parcial"
+            >
+              <Undo2 className="w-4 h-4 text-amber-600" />
+            </Button>
+          )}
+          <Button size="sm" onClick={onSettle} className="gap-1">
+            <CheckCircle2 className="w-4 h-4" /> Baixar
+          </Button>
         </div>
         </div>
         );
