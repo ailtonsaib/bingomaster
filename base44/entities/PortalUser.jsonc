@@ -44,6 +44,11 @@
       "default": false,
       "description": "Se tem acesso ao PDV (Frente de Caixa)"
     },
+    "can_access_diagnostic": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso ao Diagn\u00f3stico Automotivo"
+    },
     "bingo_plan": {
       "type": "string",
       "default": "free",
@@ -104,7 +109,8 @@
         "finance",
         "chamados",
         "sped",
-        "pdv"
+        "pdv",
+        "diagnostic"
       ],
       "default": "portal",
       "description": "Aplicativo que o usu\u00e1rio est\u00e1 usando no momento"

@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
+
 import { getPortalUser } from '@/lib/portalSession';
 
 export default function PortalGuard({ requireAdmin = false, permission = null }) {

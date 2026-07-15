@@ -56,6 +56,8 @@ import PDV from '@/pages/PDV';
 import SpaceShooter from '@/pages/SpaceShooter';
 import MineSweeper from '@/pages/MineSweeper';
 import InstallInstructions from '@/pages/InstallInstructions';
+import DiagnosticLogin from '@/pages/DiagnosticLogin';
+import DiagnosticAuto from '@/pages/DiagnosticAuto';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -105,6 +107,7 @@ const AuthenticatedApp = () => {
       {/* Landing filtrada por categoria */}
       <Route path="/jogos" element={<Landing category="jogos" />} />
       <Route path="/empresas" element={<Landing category="empresas" />} />
+      <Route path="/servicos" element={<Landing category="servicos" />} />
       {/* Entrada de cada app — login específico por aplicativo */}
       <Route path="/bingo" element={<BingoLogin />} />
       <Route path="/financ" element={<Navigate to="/pdv" replace />} />
@@ -148,6 +151,13 @@ const AuthenticatedApp = () => {
           <Route path="/sales-dashboard" element={<SalesDashboard />} />
           <Route path="/monitor" element={<GameMonitor />} />
           <Route path="/admin-financial" element={<AdminFinancialPanel />} />
+        </Route>
+      </Route>
+      {/* Diagnóstico Automotivo */}
+      <Route path="/diagnostico" element={<DiagnosticLogin />} />
+      <Route element={<PortalGuard permission="can_access_diagnostic" />}>
+        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+          <Route path="/diagnostico-auto" element={<DiagnosticAuto />} />
         </Route>
       </Route>
       {/* PDV — Frente de Caixa */}

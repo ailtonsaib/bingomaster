@@ -1,0 +1,105 @@
+{
+  "name": "DiagnosticRecord",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que solicitou o diagn\u00f3stico"
+    },
+    "vehicle_brand": {
+      "type": "string",
+      "description": "Marca do ve\u00edculo"
+    },
+    "vehicle_model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo"
+    },
+    "vehicle_year": {
+      "type": "string",
+      "description": "Ano do ve\u00edculo"
+    },
+    "vehicle_engine": {
+      "type": "string",
+      "description": "Motor do ve\u00edculo (ex: 1.0, 1.6, 2.0, V6)"
+    },
+    "vehicle_mileage": {
+      "type": "number",
+      "description": "Quilometragem do ve\u00edculo"
+    },
+    "vehicle_fuel": {
+      "type": "string",
+      "enum": [
+        "flex",
+        "gasolina",
+        "etanol",
+        "diesel",
+        "hibrido",
+        "eletrico"
+      ],
+      "default": "flex",
+      "description": "Tipo de combust\u00edvel"
+    },
+    "symptoms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Sintomas selecionados pelo usu\u00e1rio",
+      "default": []
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o livre do problema relatado pelo usu\u00e1rio"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Resumo do diagn\u00f3stico gerado pela IA"
+    },
+    "urgency": {
+      "type": "string",
+      "enum": [
+        "baixa",
+        "media",
+        "alta"
+      ],
+      "description": "N\u00edvel de urg\u00eancia do diagn\u00f3stico"
+    },
+    "possible_causes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string"
+          },
+          "probability": {
+            "type": "string",
+            "enum": [
+              "alta",
+              "media",
+              "baixa"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Poss\u00edveis causas identificadas pela IA",
+      "default": []
+    },
+    "general_recommendation": {
+      "type": "string",
+      "description": "Recomenda\u00e7\u00e3o geral do diagn\u00f3stico"
+    }
+  },
+  "required": [
+    "user_email",
+    "vehicle_brand",
+    "vehicle_model",
+    "symptoms"
+  ]
+}

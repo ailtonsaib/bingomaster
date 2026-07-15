@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Gamepad2, Building2, MessageCircle, ArrowRight, Mail, Phone } from "lucide-react";
+import { Gamepad2, Building2, Wrench, MessageCircle, ArrowRight, Mail, Phone } from "lucide-react";
 import { CONTACT } from "@/lib/appRegistry";
 
 export default function CategorySelect() {
@@ -33,6 +33,19 @@ export default function CategorySelect() {
       image: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&auto=format&fit=crop&q=80",
       route: "/empresas",
       appCount: 3,
+    },
+    {
+      id: "servicos",
+      title: "Serviços Automotivos",
+      subtitle: "Diagnóstico inteligente",
+      description: "Identifique possíveis causas de falhas no seu veículo com análise por inteligência artificial.",
+      icon: Wrench,
+      accent: "#2563EB",
+      iconBg: "bg-[#DBEAFE]",
+      iconColor: "text-[#2563EB]",
+      image: "https://images.unsplash.com/photo-1632823469850-2f77dd9c7f93?w=800&auto=format&fit=crop&q=80",
+      route: "/servicos",
+      appCount: 1,
     },
   ];
 
