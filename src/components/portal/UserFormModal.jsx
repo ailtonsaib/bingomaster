@@ -112,11 +112,11 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
             )}
           </div>
 
-          {/* Finance permissions */}
+          {/* ERP - COMERCIAL (Finanças + PDV agrupados) */}
           <div className="pt-2 border-t">
             <label className="flex items-center gap-2 text-sm font-medium mb-2">
-              <input type="checkbox" checked={canAccessFinance} onChange={(e) => setCanAccessFinance(e.target.checked)} className="w-4 h-4" />
-              Controle de Finanças
+              <input type="checkbox" checked={canAccessFinance} onChange={(e) => { setCanAccessFinance(e.target.checked); setCanAccessPdv(e.target.checked); }} className="w-4 h-4" />
+              ERP - COMERCIAL
             </label>
             {canAccessFinance && (
               <select
@@ -156,14 +156,6 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
                 ))}
               </select>
             )}
-          </div>
-
-          {/* PDV permissions */}
-          <div className="pt-2 border-t">
-            <label className="flex items-center gap-2 text-sm font-medium mb-2">
-              <input type="checkbox" checked={canAccessPdv} onChange={(e) => setCanAccessPdv(e.target.checked)} className="w-4 h-4" />
-              PDV — Frente de Caixa
-            </label>
           </div>
 
           <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
