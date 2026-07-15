@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Gamepad2, Lock, Check, X, Clock, DollarSign } from "lucide-react";
+import { Gamepad2, Lock, Check, X, Clock, DollarSign, TrendingUp } from "lucide-react";
 import { getPortalUser } from "@/lib/portalSession";
 
 const GAME_LABELS = {
@@ -99,6 +99,24 @@ export default function GameAdminPanel() {
 
   const pendingCount = unlocks.filter((u) => u.status === "pending").length;
 
+  // Receita: soma das liberações aprovadas × preço do jogo
+  const getPriceFor = (gameId) => {
+    const cfg = configs.find((c) => c.game_id === gameId);
+    return cfg ? Number(cfg.price) || 0 : 0;
+  };
+  const approvedUnlocks = unlocks.filter((u) => u.status === "approved");
+  const totalRevenue = approvedUnlocks.reduce((sum, u) => sum + getPriceFor(u.game_id), 0);
+
+  // Receita por jogo
+  const revenueByGame = {};
+  approvedUnlocks.forEach((u) => {
+    if (!revenueByGame[u.game_id]) {
+      revenueByGame[u.game_id] = { count: 0, total: 0 };
+    }
+    revenueByGame[u.game_id].count++;
+    revenueByGame[u.game_id].total += getPriceFor(u.game_id);
+  });
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-6">
@@ -114,6 +132,9 @@ export default function GameAdminPanel() {
         <button onClick={() => setActiveSub("unlocks")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeSub === "unlocks" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
           <Clock className="w-4 h-4 inline mr-1" /> Liberações
           {pendingCount > 0 && <Badge className="ml-1.5 bg-red-500 text-white text-xs px-1.5">{pendingCount}</Badge>}
+        </button>
+        <button onClick={() => setActiveSub("revenue")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeSub === "revenue" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+          <TrendingUp className="w-4 h-4 inline mr-1" /> Receita
         </button>
       </div>
 
@@ -210,6 +231,102 @@ export default function GameAdminPanel() {
                 </CardContent>
               </Card>
             ))
+          )}
+        </div>
+      )}
+
+      {/* Receita */}
+      {activeSub === "revenue" && (
+        <div className="space-y-4">
+          {/* Card de total */}
+          <Card>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Recebido com Desbloqueios</p>
+                <p className="text-3xl font-bold text-emerald-600">
+                  {totalRevenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {approvedUnlocks.length} liberação(ões) aprovada(s)
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Receita por jogo */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3">Receita por Jogo</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Object.keys(revenueByGame).length === 0 ? (
+                <Card><CardContent className="p-6 text-center text-muted-foreground text-sm">
+                  Nenhuma liberação aprovada ainda.
+                </CardContent></Card>
+              ) : (
+                Object.entries(revenueByGame).map(([gameId, data]) => (
+                  <Card key={gameId}>
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-sm">{GAME_LABELS[gameId] || gameId}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {data.count} liberação(ões) × {getPriceFor(gameId).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </p>
+                      </div>
+                      <p className="text-lg font-bold text-emerald-600">
+                        {data.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Detalhamento */}
+          {approvedUnlocks.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Detalhamento</h3>
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left p-3 font-medium">Jogo</th>
+                          <th className="text-left p-3 font-medium">Contato</th>
+                          <th className="text-left p-3 font-medium">Data</th>
+                          <th className="text-left p-3 font-medium">Aprovado por</th>
+                          <th className="text-right p-3 font-medium">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {approvedUnlocks.map((u) => (
+                          <tr key={u.id} className="border-t">
+                            <td className="p-3 font-medium">{GAME_LABELS[u.game_id] || u.game_id}</td>
+                            <td className="p-3 text-muted-foreground">{u.contact_info || "—"}</td>
+                            <td className="p-3 text-muted-foreground">
+                              {u.approved_at ? new Date(u.approved_at).toLocaleDateString("pt-BR") : "—"}
+                            </td>
+                            <td className="p-3 text-muted-foreground">{u.approved_by || "—"}</td>
+                            <td className="p-3 text-right font-semibold text-emerald-600">
+                              {getPriceFor(u.game_id).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t bg-emerald-50">
+                          <td colSpan={4} className="p-3 font-bold text-right">Total Geral</td>
+                          <td className="p-3 text-right font-bold text-emerald-600">
+                            {totalRevenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       )}
