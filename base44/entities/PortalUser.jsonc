@@ -49,6 +49,15 @@
       "default": false,
       "description": "Se tem acesso ao Diagn\u00f3stico Automotivo"
     },
+    "diagnostic_plan": {
+      "type": "string",
+      "enum": [
+        "free",
+        "master"
+      ],
+      "default": "free",
+      "description": "Plano do Diagn\u00f3stico Automotivo: free (5 an\u00e1lises, 5 clientes, 5 ve\u00edculos, sem exclus\u00e3o) ou master (ilimitado)"
+    },
     "bingo_plan": {
       "type": "string",
       "default": "free",

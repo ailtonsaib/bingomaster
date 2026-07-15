@@ -25,6 +25,24 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Informe os sintomas ou realize uma leitura OBD2.' }, { status: 400 });
     }
 
+    // ─── Plan limit check ───
+    const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: user.email });
+    if (portalUsers.length === 0) {
+      return Response.json({ error: 'Usuário não encontrado no portal. Contate o administrador.' }, { status: 403 });
+    }
+    const portalUser = portalUsers[0];
+    if (!portalUser.is_admin) {
+      const planId = portalUser.diagnostic_plan || 'free';
+      const configs = await base44.asServiceRole.entities.DiagnosticPlanConfig.filter({ plan_id: planId, is_active: true });
+      const maxDiag = configs.length > 0 ? configs[0].max_diagnostics : (planId === 'master' ? -1 : 5);
+      if (maxDiag >= 0) {
+        const records = await base44.asServiceRole.entities.DiagnosticRecord.filter({ user_email: user.email });
+        if (records.length >= maxDiag) {
+          return Response.json({ error: `Limite de ${maxDiag} diagnósticos atingido no plano ${planId.toUpperCase()}. Faça upgrade para o plano Master.` }, { status: 403 });
+        }
+      }
+    }
+
     let symptomsText = 'Nenhum sintoma selecionado (diagnóstico baseado em leitura OBD2).';
     if (hasSymptoms) {
       symptomsText = symptoms.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n');

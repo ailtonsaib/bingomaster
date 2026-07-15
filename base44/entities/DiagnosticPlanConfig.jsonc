@@ -1,0 +1,48 @@
+{
+  "name": "DiagnosticPlanConfig",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "description": "ID do plano (free, master)"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Nome de exibi\u00e7\u00e3o do plano"
+    },
+    "price": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o mensal em reais"
+    },
+    "max_diagnostics": {
+      "type": "number",
+      "default": 5,
+      "description": "M\u00e1ximo de diagn\u00f3sticos por m\u00eas (-1 = ilimitado)"
+    },
+    "max_clients": {
+      "type": "number",
+      "default": 5,
+      "description": "M\u00e1ximo de clientes cadastr\u00e1veis (-1 = ilimitado)"
+    },
+    "max_vehicles": {
+      "type": "number",
+      "default": 5,
+      "description": "M\u00e1ximo de ve\u00edculos cadastr\u00e1veis (-1 = ilimitado)"
+    },
+    "can_delete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o plano permite excluir clientes e ve\u00edculos"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o plano est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "plan_id",
+    "plan_name"
+  ]
+}
