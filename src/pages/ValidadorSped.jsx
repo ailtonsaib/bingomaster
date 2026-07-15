@@ -78,6 +78,7 @@ export default function ValidadorSped() {
   const [consultandoCnpj, setConsultandoCnpj] = useState(false);
   const [spedType, setSpedType] = useState('FISCAL');
   const { license, loading: loadingLicense } = useLicense();
+  const [companyLogo, setCompanyLogo] = useState(null);
 
   // Form Admin
   const [razaoSocial, setRazaoSocial] = useState('');
@@ -114,6 +115,17 @@ export default function ValidadorSped() {
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const portalUser = getPortalUser();
+        if (!portalUser) return;
+        const list = await base44.entities.PDVCompanyConfig.filter({ user_email: portalUser.email });
+        if (list.length > 0) setCompanyLogo(list[0].logo_url || null);
+      } catch (e) { console.error(e); }
+    })();
+  }, []);
 
   const formatCnpj = (valor) =>
     valor.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
@@ -295,9 +307,14 @@ export default function ValidadorSped() {
             <Button variant="ghost" size="sm" className="mb-2 -ml-2 gap-1" onClick={() => window.history.back()}>
               <ArrowLeft className="h-4 w-4" /> Voltar
             </Button>
-            <h1 className="font-heading text-2xl font-bold text-primary md:text-3xl">
-              Sistema Multi-Cliente SPED
-            </h1>
+            <div className="flex items-center gap-3">
+              {companyLogo && (
+                <img src={companyLogo} alt="Logo" className="max-h-12 max-w-[120px] object-contain" />
+              )}
+              <h1 className="font-heading text-2xl font-bold text-primary md:text-3xl">
+                Sistema Multi-Cliente SPED
+              </h1>
+            </div>
             <p className="text-sm text-muted-foreground">
               Gere arquivos SPED Fiscal de acordo com o regime tributário do contribuinte.
             </p>

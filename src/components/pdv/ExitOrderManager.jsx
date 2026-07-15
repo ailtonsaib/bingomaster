@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, Search, FileText, Download, Send, ChevronDown, ChevronRight, Building, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Loader2, Search, FileText, Download, Send, ChevronDown, ChevronRight, Building, AlertTriangle, CheckCircle2, Printer } from "lucide-react";
 import ExitOrderForm from "@/components/pdv/ExitOrderForm";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
+import DanfePrint from "@/components/pdv/DanfePrint";
 
 export default function ExitOrderManager({ user }) {
   const [orders, setOrders] = useState([]);
@@ -15,6 +16,8 @@ export default function ExitOrderManager({ user }) {
   const [expanded, setExpanded] = useState(null);
   const [emitting, setEmitting] = useState(null);
   const [companyConfigured, setCompanyConfigured] = useState(false);
+  const [companyConfig, setCompanyConfig] = useState(null);
+  const [printOrder, setPrintOrder] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -24,6 +27,7 @@ export default function ExitOrderManager({ user }) {
         base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),
       ]);
       setOrders(orderList);
+      setCompanyConfig(configs[0] || null);
       setCompanyConfigured(configs.length > 0 && configs[0].cnpj && configs[0].ie && configs[0].ibge_code);
     } catch (e) { console.error(e); }
     setLoading(false);
@@ -179,6 +183,11 @@ export default function ExitOrderManager({ user }) {
                       <Download className="w-3.5 h-3.5" /> XML
                     </Button>
                   )}
+                  {order.status === "emitida" && (
+                    <Button size="sm" variant="outline" onClick={() => setPrintOrder(order)} className="h-8 gap-1.5 text-xs">
+                      <Printer className="w-3.5 h-3.5" /> DANFE
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -245,6 +254,13 @@ export default function ExitOrderManager({ user }) {
           user={user}
           onClose={() => setShowCompanyConfig(false)}
           onSaved={load}
+        />
+      )}
+      {printOrder && (
+        <DanfePrint
+          order={printOrder}
+          company={companyConfig}
+          onClose={() => setPrintOrder(null)}
         />
       )}
     </div>
