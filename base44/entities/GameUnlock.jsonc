@@ -1,0 +1,40 @@
+{
+  "name": "GameUnlock",
+  "type": "object",
+  "properties": {
+    "device_code": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico do dispositivo (gerado no localStorage)"
+    },
+    "game_id": {
+      "type": "string",
+      "description": "ID do jogo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Status da libera\u00e7\u00e3o: pending, approved, rejected"
+    },
+    "contact_info": {
+      "type": "string",
+      "description": "Informa\u00e7\u00f5es de contato do jogador (telefone/nome)"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Email do admin que aprovou"
+    },
+    "approved_at": {
+      "type": "string",
+      "description": "Data/hora da aprova\u00e7\u00e3o (ISO)"
+    }
+  },
+  "required": [
+    "device_code",
+    "game_id"
+  ]
+}

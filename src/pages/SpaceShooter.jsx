@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Rocket, Heart, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useGameAccess } from "@/hooks/useGameAccess";
+import LevelGate from "@/components/games/LevelGate";
 
 const GAME_WIDTH = 400;
 const GAME_HEIGHT = 600;
@@ -33,6 +35,14 @@ export default function SpaceShooter() {
   const runningRef = useRef(false);
   const playerXRef = useRef(playerX);
   const scoreRef = useRef(score);
+  const levelRef = useRef(1);
+
+  const { deviceCode, isPremium, price, freeLevels, requestUnlock } = useGameAccess("galaxy-blaster");
+  const isPremiumRef = useRef(false);
+  const freeLevelsRef = useRef(10);
+  useEffect(() => { isPremiumRef.current = isPremium; }, [isPremium]);
+  useEffect(() => { freeLevelsRef.current = freeLevels; }, [freeLevels]);
+  useEffect(() => { levelRef.current = level; }, [level]);
 
   // Load high score
   useEffect(() => {
@@ -204,7 +214,13 @@ export default function SpaceShooter() {
           setEnemies((prevEnemies) => prevEnemies.filter((_, i) => !hitEnemies.has(i)));
           setScore((prev) => {
             const ns = prev + hitCount * 10;
-            setLevel(Math.floor(ns / 100) + 1);
+            const newLevel = Math.floor(ns / 100) + 1;
+            if (newLevel > freeLevelsRef.current && !isPremiumRef.current) {
+              runningRef.current = false;
+              setScreen("gate");
+            } else {
+              setLevel(newLevel);
+            }
             return ns;
           });
         }
@@ -368,17 +384,38 @@ export default function SpaceShooter() {
         ))}
       </div>
 
+      {/* Gate screen */}
+      {screen === "gate" && (
+        <div className="absolute inset-0">
+          <LevelGate
+            gameName="Galaxy Blaster"
+            price={price}
+            freeLevels={freeLevels}
+            deviceCode={deviceCode}
+            onRequestUnlock={requestUnlock}
+          />
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-50">
+            <Button onClick={startGame} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-10 px-5">
+              Jogar de novo
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/jogos")} className="rounded-xl h-10 border-white/20 text-white hover:bg-white/10">
+              Sair
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile fire button */}
       {screen === "playing" && (
-        <div className="mt-4 md:hidden">
-          <Button
-            className="bg-purple-600 active:bg-purple-800 text-white rounded-full w-16 h-16 text-2xl"
-            onTouchStart={(e) => { e.preventDefault(); fireBullet(); }}
-            onClick={() => fireBullet()}
-          >
-            🔥
-          </Button>
-        </div>
+      <div className="mt-4 md:hidden">
+        <Button
+          className="bg-purple-600 active:bg-purple-800 text-white rounded-full w-16 h-16 text-2xl"
+          onTouchStart={(e) => { e.preventDefault(); fireBullet(); }}
+          onClick={() => fireBullet()}
+        >
+          🔥
+        </Button>
+      </div>
       )}
 
       <p className="text-white/30 text-xs mt-4 mb-8 text-center px-4">

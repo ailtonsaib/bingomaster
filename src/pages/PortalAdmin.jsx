@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, Gamepad2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 import PlanManagement from "@/components/portal/PlanManagement";
+import GameAdminPanel from "@/components/games/GameAdminPanel";
 import { useToast } from "@/components/ui/use-toast";
 
 const BINGO_PLANS = ["free", "basic", "pro", "max", "ultra", "enterprise", "mega"];
@@ -149,6 +150,9 @@ export default function PortalAdmin() {
       <button onClick={() => setActiveTab("plans")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "plans" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
         <Settings className="w-4 h-4" /> Planos e Manutenção
       </button>
+      <button onClick={() => setActiveTab("jogos")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "jogos" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+        <Gamepad2 className="w-4 h-4" /> Jogos
+      </button>
     </div>
   );
 
@@ -178,6 +182,18 @@ export default function PortalAdmin() {
         <div className="max-w-5xl mx-auto px-4 py-6">
           {TabBar}
           <PlanManagement />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeTab === "jogos") {
+    return (
+      <div className="min-h-screen bg-background">
+        {Header}
+        <div className="max-w-5xl mx-auto px-4 py-6">
+          {TabBar}
+          <GameAdminPanel />
         </div>
       </div>
     );

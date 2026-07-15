@@ -1,0 +1,33 @@
+{
+  "name": "GamePlanConfig",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "ID \u00fanico do jogo (ex: campo-minado, galaxy-blaster)"
+    },
+    "game_name": {
+      "type": "string",
+      "description": "Nome exibido do jogo"
+    },
+    "price": {
+      "type": "number",
+      "default": 19.9,
+      "description": "Pre\u00e7o do plano premium em reais (controlado pelo admin)"
+    },
+    "free_levels": {
+      "type": "number",
+      "default": 10,
+      "description": "Quantidade de n\u00edveis gratuitos"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o jogo est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "game_id",
+    "game_name"
+  ]
+}
