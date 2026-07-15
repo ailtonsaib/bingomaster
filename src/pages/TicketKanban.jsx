@@ -186,7 +186,7 @@ export default function TicketKanban() {
         {companyPlan?.company?.logo_url && (
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            style={{ backgroundImage: `url(${companyPlan.company.logo_url})`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '400px', opacity: 0.06 }}
+            style={{ backgroundImage: `url(${companyPlan.company.logo_url})`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '400px', opacity: 0.12 }}
           />
         )}
         <div className="relative z-10">
