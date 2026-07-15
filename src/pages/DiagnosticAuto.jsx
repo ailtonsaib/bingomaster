@@ -6,10 +6,13 @@ import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { LogOut, Search, History, Wrench, Loader2 } from "lucide-react";
+import { LogOut, Search, History, Wrench, Loader2, Bluetooth, ClipboardList } from "lucide-react";
 import VehicleDataForm from "@/components/diagnostic/VehicleDataForm";
 import SymptomSelector from "@/components/diagnostic/SymptomSelector";
 import DiagnosticResult from "@/components/diagnostic/DiagnosticResult";
+import OBD2Scanner from "@/components/diagnostic/OBD2Scanner";
+import OBD2Results from "@/components/diagnostic/OBD2Results";
+import DiagnosticPrintView from "@/components/diagnostic/DiagnosticPrintView";
 
 export default function DiagnosticAuto() {
   const navigate = useNavigate();
@@ -22,6 +25,9 @@ export default function DiagnosticAuto() {
   const [result, setResult] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState("manual"); // "manual" | "obd2"
+  const [obd2Data, setObd2Data] = useState(null);
+  const [printData, setPrintData] = useState(null);
 
   const { data: history = [] } = useQuery({
     queryKey: ["diagnostic-history", user?.email],
@@ -41,23 +47,28 @@ export default function DiagnosticAuto() {
       setError("Informe a marca e o modelo do veículo.");
       return;
     }
-    if (symptoms.length === 0) {
+    if (mode === "manual" && symptoms.length === 0) {
       setError("Selecione pelo menos um sintoma.");
       return;
     }
     setLoading(true);
     setResult(null);
     try {
-      const res = await base44.functions.invoke("diagnosticAuto", {
+      const payload = {
         vehicle_brand: vehicle.brand,
         vehicle_model: vehicle.model,
         vehicle_year: vehicle.year,
         vehicle_engine: vehicle.engine,
         vehicle_mileage: vehicle.mileage ? Number(vehicle.mileage) : 0,
         vehicle_fuel: vehicle.fuel,
-        symptoms,
+        symptoms: mode === "manual" ? symptoms : [],
         description,
-      });
+        obd2_data: mode === "obd2" && obd2Data ? {
+          dtcs: obd2Data.dtcs,
+          live_data: obd2Data.liveData,
+        } : undefined,
+      };
+      const res = await base44.functions.invoke("diagnosticAuto", payload);
       setResult(res.data.result);
     } catch (err) {
       const msg = err.response?.data?.error || "Erro ao processar diagnóstico. Tente novamente.";
@@ -65,6 +76,22 @@ export default function DiagnosticAuto() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleScanComplete = (data) => {
+    setObd2Data(data);
+  };
+
+  const handleScanError = (errMsg) => {
+    setError(errMsg);
+  };
+
+  const handlePrint = () => {
+    setPrintData({
+      vehicleInfo: vehicle,
+      scanData: mode === "obd2" ? obd2Data : null,
+      aiResult: result,
+    });
   };
 
   const loadFromHistory = (record) => {
@@ -91,6 +118,10 @@ export default function DiagnosticAuto() {
     clearPortalUser();
     navigate("/");
   };
+
+  if (printData) {
+    return <DiagnosticPrintView data={printData} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFB]">
@@ -149,27 +180,80 @@ export default function DiagnosticAuto() {
           </motion.div>
         )}
 
+        {/* Mode selector */}
+        <div className="mb-6 flex gap-2 p-1 bg-gray-100 rounded-xl">
+          <button
+            onClick={() => { setMode("manual"); setObd2Data(null); setResult(null); setError(""); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              mode === "manual" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#71717A] hover:text-[#52525B]"
+            }`}
+          >
+            <ClipboardList className="w-4 h-4" /> Sintomas
+          </button>
+          <button
+            onClick={() => { setMode("obd2"); setResult(null); setError(""); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              mode === "obd2" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#71717A] hover:text-[#52525B]"
+            }`}
+          >
+            <Bluetooth className="w-4 h-4" /> Scanner OBD2
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Form column */}
+          {/* Left column — vehicle data + scan/symptoms */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-6"
           >
             <VehicleDataForm data={vehicle} onChange={setVehicle} />
-            <SymptomSelector selected={symptoms} onToggle={toggleSymptom} />
 
-            <div>
-              <label className="text-sm font-semibold text-[#1B1C21] mb-2 block">
-                Descrição adicional do problema
-              </label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva em suas palavras o que está acontecendo com o veículo (quando começou, em quais situações ocorre, etc.)"
-                className="min-h-[80px] resize-none"
-              />
-            </div>
+            {mode === "manual" && (
+              <>
+                <SymptomSelector selected={symptoms} onToggle={toggleSymptom} />
+                <div>
+                  <label className="text-sm font-semibold text-[#1B1C21] mb-2 block">
+                    Descrição adicional do problema
+                  </label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Descreva em suas palavras o que está acontecendo com o veículo (quando começou, em quais situações ocorre, etc.)"
+                    className="min-h-[80px] resize-none"
+                  />
+                </div>
+              </>
+            )}
+
+            {mode === "obd2" && !obd2Data && (
+              <OBD2Scanner onScanComplete={handleScanComplete} onScanError={handleScanError} />
+            )}
+
+            {mode === "obd2" && obd2Data && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-[#1B1C21]">Scanner conectado ✓</span>
+                  <button
+                    onClick={() => { setObd2Data(null); setResult(null); }}
+                    className="text-xs text-[#2563EB] hover:underline"
+                  >
+                    Reconectar
+                  </button>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-[#1B1C21] mb-2 block">
+                    Observações adicionais (opcional)
+                  </label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Descreva sintomas que o motorista notou (quando começou, em quais situações ocorre, etc.)"
+                    className="min-h-[60px] resize-none"
+                  />
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
@@ -177,36 +261,67 @@ export default function DiagnosticAuto() {
               </div>
             )}
 
-            <Button
-              onClick={handleAnalyze}
-              disabled={loading}
-              className="w-full h-11 rounded-xl text-white font-medium"
-              style={{ backgroundColor: "#2563EB" }}
-            >
-              {loading ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</>
-              ) : (
-                <><Search className="w-4 h-4 mr-2" /> Diagnosticar</>
-              )}
-            </Button>
+            {!(mode === "obd2" && !obd2Data) && (
+              <Button
+                onClick={handleAnalyze}
+                disabled={loading}
+                className="w-full h-11 rounded-xl text-white font-medium"
+                style={{ backgroundColor: "#2563EB" }}
+              >
+                {loading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</>
+                ) : (
+                  <><Search className="w-4 h-4 mr-2" /> Diagnosticar</>
+                )}
+              </Button>
+            )}
           </motion.div>
 
-          {/* Result column */}
+          {/* Right column — results */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
           >
             {result || loading ? (
-              <DiagnosticResult result={result} loading={loading} vehicleInfo={vehicle} />
+              <>
+                <DiagnosticResult result={result} loading={loading} vehicleInfo={vehicle} />
+                {result && !loading && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <Button
+                      onClick={handlePrint}
+                      variant="outline"
+                      className="w-full h-10 rounded-lg font-medium border-gray-200 hover:bg-gray-50"
+                    >
+                      🖨️ Imprimir Diagnóstico
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : mode === "obd2" && obd2Data ? (
+              <OBD2Results
+                scanData={obd2Data}
+                vehicleInfo={vehicle}
+                onSendToAI={handleAnalyze}
+                onPrint={handlePrint}
+                aiLoading={loading}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-[#DBEAFE] flex items-center justify-center mb-4">
-                  <Search className="w-8 h-8 text-[#2563EB]" />
+                  {mode === "obd2" ? (
+                    <Bluetooth className="w-8 h-8 text-[#2563EB]" />
+                  ) : (
+                    <Search className="w-8 h-8 text-[#2563EB]" />
+                  )}
                 </div>
-                <h3 className="font-bold text-[#1B1C21] mb-1">Pronto para diagnosticar</h3>
+                <h3 className="font-bold text-[#1B1C21] mb-1">
+                  {mode === "obd2" ? "Conecte o scanner OBD2" : "Pronto para diagnosticar"}
+                </h3>
                 <p className="text-sm text-[#71717A] max-w-xs">
-                  Preencha os dados do veículo, selecione os sintomas e clique em <strong>Diagnosticar</strong> para identificar as possíveis causas.
+                  {mode === "obd2"
+                    ? "Conecte o scanner na porta OBD2 do veículo e siga os passos para iniciar a leitura."
+                    : "Preencha os dados do veículo, selecione os sintomas e clique em Diagnosticar."}
                 </p>
               </div>
             )}
