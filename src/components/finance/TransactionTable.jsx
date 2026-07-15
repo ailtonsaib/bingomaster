@@ -10,6 +10,8 @@ export default function TransactionTable({ userEmail }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editTarget, setEditTarget] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const loadData = useCallback(async () => {
     if (!userEmail) return;
@@ -47,16 +49,28 @@ export default function TransactionTable({ userEmail }) {
     return new Date(dueDate) < new Date(new Date().toDateString());
   };
 
-  const sorted = [...transactions].sort((a, b) => {
+  const inDateRange = (tx) => {
+    if (!startDate && !endDate) return true;
+    const ref = tx.due_date || tx.date;
+    if (!ref) return false;
+    const d = new Date(ref).getTime();
+    const s = startDate ? new Date(startDate + "T00:00:00").getTime() : -Infinity;
+    const e = endDate ? new Date(endDate + "T23:59:59").getTime() : Infinity;
+    return d >= s && d <= e;
+  };
+
+  const dateFiltered = transactions.filter(inDateRange);
+
+  const sorted = [...dateFiltered].sort((a, b) => {
     const da = a.due_date || a.date || "";
     const db = b.due_date || b.date || "";
     return new Date(da) - new Date(db);
   });
 
-  const totalReceivable = transactions
+  const totalReceivable = dateFiltered
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + parseFloat(t.amount), 0);
-  const totalPayable = transactions
+  const totalPayable = dateFiltered
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + parseFloat(t.amount), 0);
   const total = totalReceivable - totalPayable;
@@ -71,6 +85,28 @@ export default function TransactionTable({ userEmail }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Filtro de período */}
+          <div className="flex flex-wrap items-end gap-3 mb-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Período inicial</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Período final</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+            </div>
+            {(startDate || endDate) && (
+              <Button variant="outline" size="sm" onClick={() => { setStartDate(""); setEndDate(""); }}>
+                Limpar Filtro
+              </Button>
+            )}
+            {(startDate || endDate) && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                {dateFiltered.length} lançamento(s) no período
+              </span>
+            )}
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />

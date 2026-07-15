@@ -17,6 +17,8 @@ export default function DrillDownDashboard({ userEmail }) {
   const [costCenters, setCostCenters] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // drill-down state
   const [level, setLevel] = useState(0); // 0=sintético, 1=centro de custo, 2=contato, 3=lançamento
@@ -46,16 +48,28 @@ export default function DrillDownDashboard({ userEmail }) {
     loadData();
   }, [loadData]);
 
+  // ====== Filtro de período ======
+  const inDateRange = (tx) => {
+    if (!startDate && !endDate) return true;
+    const ref = tx.due_date || tx.date;
+    if (!ref) return false;
+    const d = new Date(ref).getTime();
+    const s = startDate ? new Date(startDate + "T00:00:00").getTime() : -Infinity;
+    const e = endDate ? new Date(endDate + "T23:59:59").getTime() : Infinity;
+    return d >= s && d <= e;
+  };
+  const dateFiltered = transactions.filter(inDateRange);
+
   // ====== Cálculos por nível ======
 
   // Nível 0: Sintético
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
-  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const totalIncome = dateFiltered.filter((t) => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const totalExpense = dateFiltered.filter((t) => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
   const totalBalance = totalIncome - totalExpense;
 
   // Agrupar por centro de custo (para nível 1)
   const byCostCenter = {};
-  transactions.forEach((tx) => {
+  dateFiltered.forEach((tx) => {
     const ccId = tx.cost_center_id || "none";
     if (!byCostCenter[ccId]) {
       byCostCenter[ccId] = {
@@ -79,7 +93,7 @@ export default function DrillDownDashboard({ userEmail }) {
     .sort((a, b) => (b.income + b.expense) - (a.income + a.expense));
 
   // Filtra transações pelo centro de custo selecionado
-  const txsInCostCenter = transactions.filter((t) =>
+  const txsInCostCenter = dateFiltered.filter((t) =>
     (selectedCostCenter === "none" && !t.cost_center_id) ||
     t.cost_center_id === selectedCostCenter
   );
@@ -183,8 +197,36 @@ export default function DrillDownDashboard({ userEmail }) {
     );
   }
 
+  const periodLabel = startDate || endDate
+    ? `${startDate ? fmtDate(startDate + "T00:00:00") : "Início"} a ${endDate ? fmtDate(endDate + "T00:00:00") : "Hoje"}`
+    : "Todo o período";
+
   return (
     <div className="space-y-4">
+      {/* Filtro de período */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Período inicial</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Período final</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+            </div>
+            {(startDate || endDate) && (
+              <Button variant="outline" size="sm" onClick={() => { setStartDate(""); setEndDate(""); }}>
+                Limpar
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">
+              {periodLabel} · {dateFiltered.length} lançamento(s)
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Breadcrumb / navegação */}
       <div className="flex items-center gap-1 flex-wrap text-sm">
         {level > 0 && (
@@ -238,7 +280,7 @@ export default function DrillDownDashboard({ userEmail }) {
                   <p className="text-xs text-muted-foreground mb-0.5">Total de Receitas</p>
                   <p className="text-2xl font-bold text-emerald-600">{fmtMoney(totalIncome)}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {transactions.filter((t) => t.type === "income").length} lançamentos
+                    {dateFiltered.filter((t) => t.type === "income").length} lançamentos
                   </p>
                 </button>
 
@@ -256,7 +298,7 @@ export default function DrillDownDashboard({ userEmail }) {
                   <p className="text-xs text-muted-foreground mb-0.5">Total de Despesas</p>
                   <p className="text-2xl font-bold text-red-600">{fmtMoney(totalExpense)}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {transactions.filter((t) => t.type === "expense").length} lançamentos
+                    {dateFiltered.filter((t) => t.type === "expense").length} lançamentos
                   </p>
                 </button>
 
@@ -272,7 +314,7 @@ export default function DrillDownDashboard({ userEmail }) {
                     {fmtMoney(totalBalance)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {transactions.length} lançamentos totais
+                    {dateFiltered.length} lançamentos totais
                   </p>
                 </div>
               </div>
@@ -301,7 +343,7 @@ export default function DrillDownDashboard({ userEmail }) {
             </Card>
 
             {/* Gráfico diário */}
-            <DailyChart transactions={transactions} />
+            <DailyChart transactions={dateFiltered} />
             </div>
             )}
 
