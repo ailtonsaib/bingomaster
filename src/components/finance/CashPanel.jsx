@@ -18,6 +18,7 @@ import {
   Search
 } from "lucide-react";
 import BankBalanceChart from "@/components/finance/BankBalanceChart";
+import MonthlyForecastChart from "@/components/finance/MonthlyForecastChart";
 import EditTransactionModal from "@/components/finance/EditTransactionModal";
 
 export default function CashPanel({ userEmail }) {
@@ -311,6 +312,9 @@ export default function CashPanel({ userEmail }) {
       </Card>
 
       <BankBalanceChart bankAccounts={bankAccounts} transactions={transactions} />
+
+      {/* Gráfico de previsão mensal */}
+      <MonthlyForecastChart transactions={transactions} />
 
       {/* Summary - Pendentes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
