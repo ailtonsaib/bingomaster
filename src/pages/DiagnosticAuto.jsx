@@ -14,6 +14,7 @@ import DiagnosticResult from "@/components/diagnostic/DiagnosticResult";
 import OBD2Scanner from "@/components/diagnostic/OBD2Scanner";
 import OBD2Results from "@/components/diagnostic/OBD2Results";
 import DiagnosticPrintView from "@/components/diagnostic/DiagnosticPrintView";
+import VehicleHistoryPanel from "@/components/diagnostic/VehicleHistoryPanel";
 
 export default function DiagnosticAuto() {
   const navigate = useNavigate();
@@ -24,7 +25,6 @@ export default function DiagnosticAuto() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState("manual"); // "manual" | "obd2"
   const [obd2Data, setObd2Data] = useState(null);
@@ -32,10 +32,11 @@ export default function DiagnosticAuto() {
   const [showRegistration, setShowRegistration] = useState(false);
   const [registrationCpf, setRegistrationCpf] = useState("");
   const [registrationClient, setRegistrationClient] = useState(null);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
 
   const { data: history = [] } = useQuery({
     queryKey: ["diagnostic-history", user?.email],
-    queryFn: () => base44.entities.DiagnosticRecord.filter({ user_email: user?.email }, "-created_date", 20),
+    queryFn: () => base44.entities.DiagnosticRecord.filter({ user_email: user?.email }, "-created_date", 100),
     enabled: !!user?.email,
   });
 
@@ -63,6 +64,7 @@ export default function DiagnosticAuto() {
         vehicle_model: vehicle.model,
         vehicle_year: vehicle.year,
         vehicle_engine: vehicle.engine,
+        vehicle_plate: vehicle.plate || "",
         vehicle_mileage: vehicle.mileage ? Number(vehicle.mileage) : 0,
         vehicle_fuel: vehicle.fuel,
         symptoms: mode === "manual" ? symptoms : [],
@@ -125,6 +127,7 @@ export default function DiagnosticAuto() {
       model: record.vehicle_model || "",
       year: record.vehicle_year || "",
       engine: record.vehicle_engine || "",
+      plate: record.vehicle_plate || "",
       mileage: record.vehicle_mileage || "",
       fuel: record.vehicle_fuel || "flex",
     });
@@ -136,7 +139,6 @@ export default function DiagnosticAuto() {
       possible_causes: record.possible_causes,
       general_recommendation: record.general_recommendation,
     });
-    setShowHistory(false);
   };
 
   const handleLogout = () => {
@@ -146,6 +148,19 @@ export default function DiagnosticAuto() {
 
   if (printData) {
     return <DiagnosticPrintView data={printData} />;
+  }
+
+  if (showHistoryPanel) {
+    return (
+      <VehicleHistoryPanel
+        records={history}
+        onSelectDiagnostic={(diag) => {
+          loadFromHistory(diag);
+          setShowHistoryPanel(false);
+        }}
+        onBack={() => setShowHistoryPanel(false)}
+      />
+    );
   }
 
   return (
@@ -163,8 +178,13 @@ export default function DiagnosticAuto() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)} className="text-[#52525B]">
+            <Button variant="ghost" size="sm" onClick={() => setShowHistoryPanel(true)} className="text-[#52525B] relative">
               <History className="w-4 h-4 mr-1" /> Histórico
+              {history.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#2563EB] text-white text-[10px] font-bold">
+                  {history.length}
+                </span>
+              )}
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[#52525B]">
               <LogOut className="w-4 h-4" /> Sair
@@ -174,37 +194,6 @@ export default function DiagnosticAuto() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        {showHistory && history.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm overflow-hidden"
-          >
-            <h3 className="text-sm font-bold text-[#1B1C21] mb-3">Diagnósticos Anteriores</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {history.map((rec) => (
-                <button
-                  key={rec.id}
-                  onClick={() => loadFromHistory(rec)}
-                  className="w-full text-left p-3 rounded-lg border border-gray-100 hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#1B1C21]">
-                      {rec.vehicle_brand} {rec.vehicle_model}
-                    </span>
-                    <span className="text-xs text-[#A1A1AA]">
-                      {new Date(rec.created_date).toLocaleDateString("pt-BR")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#71717A] mt-0.5 truncate">
-                    {(rec.symptoms || []).join(", ")}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
         {/* Mode selector */}
         <div className="mb-6 flex gap-2 p-1 bg-gray-100 rounded-xl">
           <button

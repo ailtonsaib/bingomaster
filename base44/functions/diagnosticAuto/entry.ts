@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       vehicle_brand, vehicle_model, vehicle_year, vehicle_engine,
-      vehicle_mileage, vehicle_fuel, symptoms, description,
+      vehicle_plate, vehicle_mileage, vehicle_fuel, symptoms, description,
       obd2_data
     } = body;
 
@@ -106,6 +106,7 @@ Para cada causa, explique brevemente o porquê e dê uma recomendação prática
       vehicle_model,
       vehicle_year: vehicle_year || '',
       vehicle_engine: vehicle_engine || '',
+      vehicle_plate: vehicle_plate || '',
       vehicle_mileage: vehicle_mileage || 0,
       vehicle_fuel: vehicle_fuel || 'flex',
       symptoms: hasSymptoms ? symptoms : (hasObd2 ? obd2_data.dtcs.map((d: any) => `DTC: ${d.code}`) : []),

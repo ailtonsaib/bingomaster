@@ -22,6 +22,10 @@
       "type": "string",
       "description": "Motor do ve\u00edculo (ex: 1.0, 1.6, 2.0, V6)"
     },
+    "vehicle_plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
     "vehicle_mileage": {
       "type": "number",
       "description": "Quilometragem do ve\u00edculo"
