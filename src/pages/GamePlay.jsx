@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2 } from "lucide-react";
 import { drawNumber, checkAllCardsForBingo, getCardMaxPoints } from "@/lib/bingoUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates } from "@/lib/offlineGameCache";
+import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import OfflineBanner from "@/components/bingo/OfflineBanner";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -47,7 +47,7 @@ export default function GamePlay() {
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const isOnline = useOnlineStatus();
-  const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0);
+  const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0 || getPendingCardUpdates().length > 0);
 
   const cachedData = getCachedGameData(gameId);
 
@@ -76,12 +76,13 @@ export default function GamePlay() {
   // Sincroniza atualizações pendentes quando volta online
   useEffect(() => {
     if (!isOnline) return;
-    const pending = getPendingUpdates();
-    if (pending.length === 0) return;
+    const pendingGames = getPendingUpdates();
+    const pendingCards = getPendingCardUpdates();
+    if (pendingGames.length === 0 && pendingCards.length === 0) return;
     (async () => {
-      // Agrupa atualizações por jogo (última versão de cada campo)
+      // Sincroniza atualizações do jogo (números sorteados, prêmios)
       const byGame = {};
-      for (const item of pending) {
+      for (const item of pendingGames) {
         if (!byGame[item.gameId]) byGame[item.gameId] = {};
         Object.assign(byGame[item.gameId], item.updates);
       }
@@ -96,6 +97,17 @@ export default function GamePlay() {
         }
       }
       clearPendingUpdates();
+
+      // Sincroniza atualizações de cartelas (vencedores)
+      for (const item of pendingCards) {
+        try {
+          await base44.entities.BingoCard.update(item.cardId, item.updates);
+        } catch (e) {
+          // falha silenciosa — tentará novamente
+        }
+      }
+      clearPendingCardUpdates();
+
       setHasPendingSync(false);
       queryClient.invalidateQueries({ queryKey: ["game", gameId] });
       queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
@@ -267,12 +279,14 @@ export default function GamePlay() {
     await updateGame({ prizes });
 
     if (!isOnline) {
-      // Offline: atualiza cartelas localmente (sincroniza depois)
+      // Offline: atualiza cartelas localmente e enfileira para sincronizar depois
       queryClient.setQueryData(["cards", gameId], (old) => {
         const arr = Array.isArray(old) ? old : [];
         return arr.map((c) => {
           if (winners.some((w) => w.card.id === c.id)) {
-            return { ...c, is_winner: true, won_prizes: [...(c.won_prizes || []), { prize_index: prizeIndex, prize_name: prizeName, won_at_draw: lastDrawn, won_at: now }] };
+            const newWonPrizes = [...(c.won_prizes || []), { prize_index: prizeIndex, prize_name: prizeName, won_at_draw: lastDrawn, won_at: now }];
+            queuePendingCardUpdate(c.id, { is_winner: true, won_prizes: newWonPrizes });
+            return { ...c, is_winner: true, won_prizes: newWonPrizes };
           }
           return c;
         });
@@ -318,14 +332,17 @@ export default function GamePlay() {
     }
     await updateGame(updates);
 
-    // Offline: não atualiza cartela no servidor (será sincronizado depois)
+    // Offline: atualiza cartela localmente e enfileira para sincronizar depois
     if (!isOnline) {
+      const wonPrizeEntry = { prize_index: prizeIndex, prize_name: prizes[prizeIndex].name, won_at_draw: lastDrawn, won_at: now };
+      const newWonPrizes = [...(card.won_prizes || []), wonPrizeEntry];
       queryClient.setQueryData(["cards", gameId], (old) => {
         const arr = Array.isArray(old) ? old : [];
         return arr.map((c) => c.id === card.id
-          ? { ...c, is_winner: true, won_prizes: [...(c.won_prizes || []), { prize_index: prizeIndex, prize_name: prizes[prizeIndex].name, won_at_draw: lastDrawn, won_at: now }] }
+          ? { ...c, is_winner: true, won_prizes: newWonPrizes }
           : c);
       });
+      queuePendingCardUpdate(card.id, { is_winner: true, won_prizes: newWonPrizes });
       return;
     }
 

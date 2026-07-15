@@ -24,12 +24,48 @@ export function getCachedGameData(gameId) {
   }
 }
 
-// Fila de atualizações pendentes para sincronizar quando voltar online
+// Fila de atualizações de jogo pendentes para sincronizar quando voltar online
 export function queuePendingUpdate(gameId, updates) {
   try {
     const queue = JSON.parse(localStorage.getItem(PENDING_UPDATES_KEY) || '[]');
     queue.push({ gameId, updates, queuedAt: Date.now() });
     localStorage.setItem(PENDING_UPDATES_KEY, JSON.stringify(queue));
+  } catch (e) {
+    // ignora
+  }
+}
+
+const PENDING_CARD_UPDATES_KEY = 'softpremier_pending_card_updates';
+
+// Fila de atualizações de cartelas vencedoras pendentes
+export function queuePendingCardUpdate(cardId, updates) {
+  try {
+    const queue = JSON.parse(localStorage.getItem(PENDING_CARD_UPDATES_KEY) || '[]');
+    // Acumula atualizações por cartela (merge)
+    const existing = queue.find((q) => q.cardId === cardId);
+    if (existing) {
+      Object.assign(existing.updates, updates);
+      existing.queuedAt = Date.now();
+    } else {
+      queue.push({ cardId, updates, queuedAt: Date.now() });
+    }
+    localStorage.setItem(PENDING_CARD_UPDATES_KEY, JSON.stringify(queue));
+  } catch (e) {
+    // ignora
+  }
+}
+
+export function getPendingCardUpdates() {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_CARD_UPDATES_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+export function clearPendingCardUpdates() {
+  try {
+    localStorage.removeItem(PENDING_CARD_UPDATES_KEY);
   } catch (e) {
     // ignora
   }
