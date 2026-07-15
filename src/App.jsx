@@ -53,6 +53,7 @@ import TicketKanban from '@/pages/TicketKanban';
 import TicketAdmin from '@/pages/TicketAdmin';
 import PDVLogin from '@/pages/PDVLogin';
 import PDV from '@/pages/PDV';
+import SpaceShooter from '@/pages/SpaceShooter';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -90,6 +91,8 @@ const AuthenticatedApp = () => {
       <Route path="/buyer" element={<BuyerApp />} />
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
+      {/* Galaxy Blaster — jogo de ação público */}
+      <Route path="/galaxy-blaster" element={<SpaceShooter />} />
       <Route path="/portal-login" element={<PortalLogin />} />
       {/* Portal principal (admin) — exige login do portal */}
       <Route path="/portal" element={<Portal />} />
