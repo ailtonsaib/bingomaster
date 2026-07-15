@@ -5,7 +5,7 @@ import { APPS, CONTACT } from "@/lib/appRegistry";
 import { getPortalUser } from "@/lib/portalSession";
 import { useDynamicPlans } from "@/hooks/useDynamicPlans";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessageCircle, Mail, Phone, X, Check, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowLeft, MessageCircle, Mail, Phone, X, Check, Sparkles } from "lucide-react";
 import AppPreview from "@/components/AppVideo";
 
 const iconMap = {
@@ -206,13 +206,13 @@ function PlansModal({ app, onClose }) {
   );
 }
 
-export default function Landing() {
+export default function Landing({ category }) {
   const navigate = useNavigate();
   const [plansApp, setPlansApp] = useState(null);
   const { bingoPlans, spedPlans, financePlans, chamadosPlans, loading } = useDynamicPlans();
 
-  // Sobrescreve planos hardcoded com dados reais do banco
-  const publicApps = APPS.filter((a) => !a.adminOnly).map((app) => {
+  // Filtra apps pela categoria (se informada) e exclui admin
+  const publicApps = APPS.filter((a) => !a.adminOnly && (!category || a.category === category)).map((app) => {
     if (app.id === "bingo" && bingoPlans) return { ...app, plans: bingoPlans };
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
     if (app.id === "financeiro" && financePlans) return { ...app, plans: financePlans };
@@ -231,6 +231,9 @@ export default function Landing() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="-ml-2 gap-1 text-[#52525B]" onClick={() => navigate("/")}>
+              <ArrowLeft className="w-4 h-4" /> Voltar
+            </Button>
             <span className="text-xl font-bold font-display tracking-tight text-[#1B1C21]">SoftPremier</span>
           </div>
           <div className="flex items-center gap-3">
@@ -249,11 +252,14 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1B1C21]">
-              Soluções digitais para você e sua empresa
+              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções Empresariais" : "Soluções digitais para você e sua empresa"}
             </h1>
             <p className="mt-4 text-lg text-[#71717A] max-w-2xl mx-auto">
-              Aplicativos profissionais para bingo, controle financeiro controle de chamados e validação fiscal.
-              Comece grátis e faça upgrade quando precisar.
+              {category === "jogos"
+                ? "Aplicativos profissionais para bingo, rifas e entretenimento. Comece grátis e faça upgrade quando precisar."
+                : category === "empresas"
+                ? "Aplicativos profissionais para frente de caixa, validação fiscal e controle de chamados. Comece grátis e faça upgrade quando precisar."
+                : "Aplicativos profissionais para bingo, controle financeiro controle de chamados e validação fiscal. Comece grátis e faça upgrade quando precisar."}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <a href={CONTACT.whatsapp} target="_blank" rel="noreferrer">

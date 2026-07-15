@@ -1,6 +1,7 @@
 export const APPS = [
   {
     id: "bingo",
+    category: "jogos",
     name: "BingoPremier",
     icon: "Grid3x3",
     iconBg: "bg-[#E9E5FF]",
@@ -45,6 +46,7 @@ export const APPS = [
   },
   {
     id: "pdv",
+    category: "empresas",
     name: "ERP — COMERCIAL",
     icon: "ShoppingCart",
     iconBg: "bg-[#FFEDD5]",
@@ -77,6 +79,7 @@ export const APPS = [
   },
   {
     id: "sped",
+    category: "empresas",
     name: "Validador SPED",
     icon: "FileText",
     iconBg: "bg-[#DBEAFE]",
@@ -114,6 +117,7 @@ export const APPS = [
   },
   {
     id: "chamados",
+    category: "empresas",
     name: "Central de Chamados",
     icon: "LifeBuoy",
     iconBg: "bg-[#FEE2E2]",

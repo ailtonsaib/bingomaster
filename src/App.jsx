@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import HideBase44Widget from './components/HideBase44Widget';
 import Home from '@/pages/Home';
+import CategorySelect from '@/pages/CategorySelect';
 import Landing from '@/pages/Landing';
 import Portal from '@/pages/Portal';
 import BingoLogin from '@/pages/BingoLogin';
@@ -92,8 +93,11 @@ const AuthenticatedApp = () => {
       <Route path="/portal-login" element={<PortalLogin />} />
       {/* Portal principal (admin) — exige login do portal */}
       <Route path="/portal" element={<Portal />} />
-      {/* Landing page pública — mostra todos os aplicativos */}
-      <Route path="/" element={<Landing />} />
+      {/* Menu inicial de categorias — separa Jogos de Empresas */}
+      <Route path="/" element={<CategorySelect />} />
+      {/* Landing filtrada por categoria */}
+      <Route path="/jogos" element={<Landing category="jogos" />} />
+      <Route path="/empresas" element={<Landing category="empresas" />} />
       {/* Entrada de cada app — login específico por aplicativo */}
       <Route path="/bingo" element={<BingoLogin />} />
       <Route path="/financ" element={<Navigate to="/pdv" replace />} />
