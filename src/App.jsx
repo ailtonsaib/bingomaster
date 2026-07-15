@@ -54,6 +54,7 @@ import TicketAdmin from '@/pages/TicketAdmin';
 import PDVLogin from '@/pages/PDVLogin';
 import PDV from '@/pages/PDV';
 import SpaceShooter from '@/pages/SpaceShooter';
+import MineSweeper from '@/pages/MineSweeper';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -93,6 +94,8 @@ const AuthenticatedApp = () => {
       <Route path="/sell" element={<SellApp />} />
       {/* Galaxy Blaster — jogo de ação público */}
       <Route path="/galaxy-blaster" element={<SpaceShooter />} />
+      {/* Campo Minado — jogo de estratégia público */}
+      <Route path="/campo-minado" element={<MineSweeper />} />
       <Route path="/portal-login" element={<PortalLogin />} />
       {/* Portal principal (admin) — exige login do portal */}
       <Route path="/portal" element={<Portal />} />
