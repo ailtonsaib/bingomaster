@@ -354,12 +354,60 @@ Deno.serve(async (req) => {
         updateData.status = 'settled';
       }
       await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, updateData);
+
+      // Registrar histórico
+      try {
+        const tx = await base44.asServiceRole.entities.PortalFinanceTransaction.get(transaction_id);
+        const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email });
+        const actedByName = portalUsers.length > 0 ? portalUsers[0].name : email;
+        await base44.asServiceRole.entities.FinanceSettlementHistory.create({
+          user_email: email,
+          acted_by_email: email,
+          acted_by_name: actedByName,
+          transaction_id,
+          transaction_description: tx?.description || '',
+          transaction_type: tx?.type || 'expense',
+          action_type: is_partial ? 'partial_settle' : 'settle',
+          action_date: new Date().toISOString(),
+          amount: tx?.amount || 0,
+          settled_amount: settled_amount || 0,
+          interest_amount: interest_amount || 0,
+          discount_amount: discount_amount || 0,
+          bank_name: bank_name || '',
+          contact_name: tx?.contact_name || '',
+        });
+      } catch (_) {}
+
       return Response.json({ success: true });
     }
 
     // ─── FINANCE: reopen transaction (estornar baixa) ───
     if (operation === 'reopenTransaction') {
       const { email, transaction_id } = body;
+
+      // Registrar histórico antes de limpar
+      try {
+        const tx = await base44.asServiceRole.entities.PortalFinanceTransaction.get(transaction_id);
+        const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email });
+        const actedByName = portalUsers.length > 0 ? portalUsers[0].name : email;
+        await base44.asServiceRole.entities.FinanceSettlementHistory.create({
+          user_email: email,
+          acted_by_email: email,
+          acted_by_name: actedByName,
+          transaction_id,
+          transaction_description: tx?.description || '',
+          transaction_type: tx?.type || 'expense',
+          action_type: 'reopen',
+          action_date: new Date().toISOString(),
+          amount: tx?.amount || 0,
+          settled_amount: tx?.settled_amount || 0,
+          interest_amount: tx?.interest_amount || 0,
+          discount_amount: tx?.discount_amount || 0,
+          bank_name: tx?.bank_name || '',
+          contact_name: tx?.contact_name || '',
+        });
+      } catch (_) {}
+
       await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, {
         status: 'pending',
         bank_account_id: undefined,
@@ -372,6 +420,17 @@ Deno.serve(async (req) => {
         is_partial: false,
       });
       return Response.json({ success: true });
+    }
+
+    // ─── FINANCE: get settlement history ───
+    if (operation === 'getSettlementHistory') {
+      const { email } = body;
+      const history = await base44.asServiceRole.entities.FinanceSettlementHistory.filter(
+        { user_email: email },
+        '-action_date',
+        200
+      );
+      return Response.json({ history });
     }
 
     // ─── FINANCE: delete transaction ───

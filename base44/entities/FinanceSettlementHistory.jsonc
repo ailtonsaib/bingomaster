@@ -1,0 +1,82 @@
+{
+  "name": "FinanceSettlementHistory",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio propriet\u00e1rio da conta"
+    },
+    "acted_by_email": {
+      "type": "string",
+      "description": "Email de quem fez a a\u00e7\u00e3o (baixa ou estorno)"
+    },
+    "acted_by_name": {
+      "type": "string",
+      "description": "Nome de quem fez a a\u00e7\u00e3o"
+    },
+    "transaction_id": {
+      "type": "string",
+      "description": "ID da transa\u00e7\u00e3o relacionada"
+    },
+    "transaction_description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do t\u00edtulo (cache para exibi\u00e7\u00e3o)"
+    },
+    "transaction_type": {
+      "type": "string",
+      "enum": [
+        "income",
+        "expense"
+      ],
+      "description": "Tipo da transa\u00e7\u00e3o: receita ou despesa"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "settle",
+        "partial_settle",
+        "reopen"
+      ],
+      "description": "Tipo de a\u00e7\u00e3o: settle (baixa total), partial_settle (baixa parcial), reopen (estorno)"
+    },
+    "action_date": {
+      "type": "string",
+      "description": "Data/hora da a\u00e7\u00e3o (ISO)"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da transa\u00e7\u00e3o"
+    },
+    "settled_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor baixado (para baixas parciais/totais)"
+    },
+    "interest_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Juros aplicados na baixa"
+    },
+    "discount_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Descontos aplicados na baixa"
+    },
+    "bank_name": {
+      "type": "string",
+      "description": "Nome do banco utilizado na baixa"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Nome do contato vinculado \u00e0 transa\u00e7\u00e3o (cache)"
+    }
+  },
+  "required": [
+    "user_email",
+    "acted_by_email",
+    "transaction_id",
+    "action_type",
+    "action_date"
+  ]
+}

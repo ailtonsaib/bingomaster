@@ -15,11 +15,13 @@ import {
   CalendarRange,
   Pencil,
   CheckSquare,
-  Search
+  Search,
+  History
 } from "lucide-react";
 import BankBalanceChart from "@/components/finance/BankBalanceChart";
 import MonthlyForecastChart from "@/components/finance/MonthlyForecastChart";
 import EditTransactionModal from "@/components/finance/EditTransactionModal";
+import SettlementHistoryTab from "@/components/finance/SettlementHistoryTab";
 
 export default function CashPanel({ userEmail }) {
   const [transactions, setTransactions] = useState([]);
@@ -32,6 +34,7 @@ export default function CashPanel({ userEmail }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkSettleType, setBulkSettleType] = useState(null); // 'receivable' | 'payable'
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [activeView, setActiveView] = useState("movimentacoes");
 
   const loadData = useCallback(async () => {
     if (!userEmail) return;
@@ -220,8 +223,43 @@ export default function CashPanel({ userEmail }) {
   const selectedReceivableTotal = pendingReceivable.filter(t => selectedIds.has(t.id)).reduce((s, t) => s + parseFloat(t.amount), 0);
   const selectedPayableTotal = pendingPayable.filter(t => selectedIds.has(t.id)).reduce((s, t) => s + parseFloat(t.amount), 0);
 
+  const tabBar = (
+    <div className="flex gap-1 border-b">
+      <button
+        onClick={() => setActiveView("movimentacoes")}
+        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+          activeView === "movimentacoes"
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Wallet className="w-4 h-4" /> Movimentações
+      </button>
+      <button
+        onClick={() => setActiveView("historico")}
+        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+          activeView === "historico"
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <History className="w-4 h-4" /> Histórico de Baixas
+      </button>
+    </div>
+  );
+
+  if (activeView === "historico") {
+    return (
+      <div className="space-y-6">
+        {tabBar}
+        <SettlementHistoryTab userEmail={userEmail} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {tabBar}
       {/* Painel de Resumo Financeiro */}
       <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
         <CardHeader className="pb-3">
