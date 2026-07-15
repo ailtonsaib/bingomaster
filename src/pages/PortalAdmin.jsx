@@ -12,6 +12,7 @@ import PlanManagement from "@/components/portal/PlanManagement";
 import GameAdminPanel from "@/components/games/GameAdminPanel";
 import RevenueSummary from "@/components/portal/RevenueSummary";
 import { useToast } from "@/components/ui/use-toast";
+import OfflineSyncAlert from "@/components/bingo/OfflineSyncAlert";
 
 const BINGO_PLANS = ["free", "basic", "pro", "max", "ultra", "enterprise", "mega"];
 const SPED_PLANS = ["free", "basic", "pro", "max"];
@@ -221,6 +222,7 @@ export default function PortalAdmin() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {TabBar}
+        <OfflineSyncAlert />
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <Card>

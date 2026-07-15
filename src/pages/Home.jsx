@@ -19,6 +19,7 @@ import GameManagementModal from "@/components/bingo/GameManagementModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useBrandName } from "@/hooks/useBrandName";
 import { BRAND_OPTIONS } from "@/lib/brandConfig";
+import OfflineSyncAlert from "@/components/bingo/OfflineSyncAlert";
 
 const statusLabels = {
   waiting: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -201,6 +202,9 @@ export default function Home() {
         <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => setShowChangePassword(true)}>
           <KeyRound className="w-4 h-4" /> Alterar Senha
         </Button>
+      </div>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <OfflineSyncAlert />
       </div>
       {/* Hero */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
