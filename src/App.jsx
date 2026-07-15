@@ -55,6 +55,7 @@ import PDVLogin from '@/pages/PDVLogin';
 import PDV from '@/pages/PDV';
 import SpaceShooter from '@/pages/SpaceShooter';
 import MineSweeper from '@/pages/MineSweeper';
+import InstallInstructions from '@/pages/InstallInstructions';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -157,6 +158,7 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
       {/* Sistema de Chamados — login próprio por CNPJ + senha */}
+      <Route path="/instalar" element={<InstallInstructions />} />
       <Route path="/chamados" element={<TicketLogin />} />
       <Route path="/chamados/kanban" element={<TicketKanban />} />
       <Route path="/chamados/admin" element={<TicketAdmin />} />
