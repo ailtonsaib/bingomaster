@@ -252,7 +252,7 @@ export default function Landing({ category }) {
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1B1C21]">
-              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções Empresariais" : "Soluções digitais para você e sua empresa"}
+              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções para sua Empresa" : "Soluções digitais para você e sua empresa"}
             </h1>
             <p className="mt-4 text-lg text-[#71717A] max-w-2xl mx-auto">
               {category === "jogos"

@@ -23,7 +23,7 @@ export default function CategorySelect() {
     },
     {
       id: "empresas",
-      title: "Soluções Empresariais",
+      title: "Soluções para sua Empresa",
       subtitle: "ERP, fiscal e suporte",
       description: "Ponto de venda, validação fiscal SPED/DIME-SC e central de chamados.",
       icon: Building2,
