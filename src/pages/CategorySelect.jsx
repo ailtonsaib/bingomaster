@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Gamepad2, Building2, MessageCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { Gamepad2, Building2, MessageCircle, ArrowRight, Mail, Phone } from "lucide-react";
 import { CONTACT } from "@/lib/appRegistry";
 
 export default function CategorySelect() {
@@ -132,9 +132,36 @@ export default function CategorySelect() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-sm text-[#71717A]">© {new Date().getFullYear()} SoftPremier — {CONTACT.domain}. Todos os direitos reservados.</p>
+      <footer className="bg-[#fcfcfc] border-t border-gray-100 py-8">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <p className="text-sm text-[#666666]">© {new Date().getFullYear()} SoftPremier — {CONTACT.domain}. Todos os direitos reservados.</p>
+          <p className="text-xs text-[#666666] mt-2 leading-relaxed">
+            Este software, sua marca, design, código e funcionalidades são protegidos por direitos autorais. Reprodução ou uso não autorizado é proibido.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+            <a
+              href={CONTACT.whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#25D366" }}
+            >
+              <MessageCircle className="w-4 h-4" /> Suporte WhatsApp
+            </a>
+            <a
+              href={`mailto:${CONTACT.email}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#5C00FF" }}
+            >
+              <Mail className="w-4 h-4" /> {CONTACT.email}
+            </a>
+            <a
+              href={`tel:${CONTACT.phone}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-[#333333] text-sm font-medium border border-[#E0E0E0] transition-colors hover:bg-gray-50"
+            >
+              <Phone className="w-4 h-4" /> {CONTACT.phone}
+            </a>
+          </div>
         </div>
       </footer>
     </div>
