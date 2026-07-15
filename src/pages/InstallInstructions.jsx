@@ -276,7 +276,7 @@ export default function InstallInstructions() {
                       num={3}
                       title="Adicione à tela inicial"
                       icon={Download}
-                      desc="Toque em **"Adicionar à tela inicial"** e confirme."
+                      desc={<>Toque em <strong>"Adicionar à tela inicial"</strong> e confirme.</>}
                     />
                     <Step
                       num={4}
