@@ -337,13 +337,23 @@ Deno.serve(async (req) => {
 
     // ─── FINANCE: settle transaction (baixa de título) ───
     if (operation === 'settleTransaction') {
-      const { email, transaction_id, bank_account_id, bank_name } = body;
-      await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, {
-        status: 'settled',
+      const { email, transaction_id, bank_account_id, bank_name, is_partial, settled_amount, remaining_amount, interest_amount, discount_amount } = body;
+      const updateData = {
         bank_account_id: bank_account_id || undefined,
         bank_name: bank_name || undefined,
         settled_date: new Date().toISOString(),
-      });
+        interest_amount: interest_amount || 0,
+        discount_amount: discount_amount || 0,
+        is_partial: is_partial || false,
+        settled_amount: settled_amount || 0,
+        remaining_amount: remaining_amount || 0,
+      };
+      if (is_partial) {
+        updateData.status = 'partial';
+      } else {
+        updateData.status = 'settled';
+      }
+      await base44.asServiceRole.entities.PortalFinanceTransaction.update(transaction_id, updateData);
       return Response.json({ success: true });
     }
 
@@ -355,6 +365,11 @@ Deno.serve(async (req) => {
         bank_account_id: undefined,
         bank_name: undefined,
         settled_date: undefined,
+        settled_amount: 0,
+        remaining_amount: 0,
+        interest_amount: 0,
+        discount_amount: 0,
+        is_partial: false,
       });
       return Response.json({ success: true });
     }
