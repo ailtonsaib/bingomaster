@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogOut, Search, History, Wrench, Loader2, Bluetooth, ClipboardList } from "lucide-react";
-import VehicleDataForm from "@/components/diagnostic/VehicleDataForm";
+import ClientVehicleSelector from "@/components/diagnostic/ClientVehicleSelector";
+import VehicleRegistrationModal from "@/components/diagnostic/VehicleRegistrationModal";
 import SymptomSelector from "@/components/diagnostic/SymptomSelector";
 import DiagnosticResult from "@/components/diagnostic/DiagnosticResult";
 import OBD2Scanner from "@/components/diagnostic/OBD2Scanner";
@@ -28,6 +29,9 @@ export default function DiagnosticAuto() {
   const [mode, setMode] = useState("manual"); // "manual" | "obd2"
   const [obd2Data, setObd2Data] = useState(null);
   const [printData, setPrintData] = useState(null);
+  const [showRegistration, setShowRegistration] = useState(false);
+  const [registrationCpf, setRegistrationCpf] = useState("");
+  const [registrationClient, setRegistrationClient] = useState(null);
 
   const { data: history = [] } = useQuery({
     queryKey: ["diagnostic-history", user?.email],
@@ -84,6 +88,27 @@ export default function DiagnosticAuto() {
 
   const handleScanError = (errMsg) => {
     setError(errMsg);
+  };
+
+  const handleRegisterNew = (cpf, client) => {
+    setRegistrationCpf(cpf);
+    setRegistrationClient(client);
+    setShowRegistration(true);
+  };
+
+  const handleRegistered = (vehicleData) => {
+    setVehicle({
+      brand: vehicleData.brand || "",
+      model: vehicleData.model || "",
+      year: vehicleData.year || "",
+      engine: vehicleData.engine || "",
+      mileage: vehicleData.mileage || "",
+      fuel: vehicleData.fuel || "flex",
+      plate: vehicleData.plate || "",
+      color: vehicleData.color || "",
+      vin: vehicleData.vin || "",
+      observations: vehicleData.observations || "",
+    });
   };
 
   const handlePrint = () => {
@@ -207,7 +232,20 @@ export default function DiagnosticAuto() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-6"
           >
-            <VehicleDataForm data={vehicle} onChange={setVehicle} />
+            <ClientVehicleSelector
+              userEmail={user?.email}
+              onVehicleSelect={(v) => setVehicle(v)}
+              onRegisterNew={handleRegisterNew}
+            />
+            {vehicle.brand && (
+              <div className="rounded-lg bg-[#2563EB]/5 border border-[#2563EB]/20 p-3">
+                <p className="text-xs text-[#71717A] mb-1">Veículo selecionado:</p>
+                <p className="text-sm font-semibold text-[#1B1C21]">
+                  {vehicle.brand} {vehicle.model} {vehicle.year}
+                  {vehicle.plate && ` | ${vehicle.plate}`}
+                </p>
+              </div>
+            )}
 
             {mode === "manual" && (
               <>
@@ -321,13 +359,24 @@ export default function DiagnosticAuto() {
                 <p className="text-sm text-[#71717A] max-w-xs">
                   {mode === "obd2"
                     ? "Conecte o scanner na porta OBD2 do veículo e siga os passos para iniciar a leitura."
-                    : "Preencha os dados do veículo, selecione os sintomas e clique em Diagnosticar."}
+                    : "Busque o cliente por CPF/CNPJ, selecione o veículo e descreva os sintomas."}
                 </p>
               </div>
             )}
           </motion.div>
         </div>
       </div>
+
+      {showRegistration && (
+        <VehicleRegistrationModal
+          open={showRegistration}
+          onClose={() => setShowRegistration(false)}
+          userEmail={user?.email}
+          cpfCnpj={registrationCpf}
+          existingClient={registrationClient}
+          onRegistered={handleRegistered}
+        />
+      )}
     </div>
   );
 }

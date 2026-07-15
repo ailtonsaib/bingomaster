@@ -1,0 +1,74 @@
+{
+  "name": "DiagnosticVehicle",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador do sistema"
+    },
+    "client_cpf_cnpj": {
+      "type": "string",
+      "description": "CPF/CNPJ do cliente propriet\u00e1rio (apenas n\u00fameros)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nome do cliente (cache)"
+    },
+    "plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marca do ve\u00edculo"
+    },
+    "model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo"
+    },
+    "year": {
+      "type": "string",
+      "description": "Ano de fabrica\u00e7\u00e3o"
+    },
+    "engine": {
+      "type": "string",
+      "description": "Motor (ex: 1.0, 1.6, 2.0, V6)"
+    },
+    "fuel": {
+      "type": "string",
+      "enum": [
+        "flex",
+        "gasolina",
+        "etanol",
+        "diesel",
+        "hibrido",
+        "eletrico"
+      ],
+      "default": "flex",
+      "description": "Tipo de combust\u00edvel"
+    },
+    "mileage": {
+      "type": "number",
+      "default": 0,
+      "description": "Quilometragem atual"
+    },
+    "color": {
+      "type": "string",
+      "description": "Cor do ve\u00edculo"
+    },
+    "vin": {
+      "type": "string",
+      "description": "Chassi (VIN)"
+    },
+    "observations": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o ve\u00edculo"
+    }
+  },
+  "required": [
+    "user_email",
+    "client_cpf_cnpj",
+    "brand",
+    "model"
+  ]
+}

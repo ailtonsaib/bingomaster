@@ -1,0 +1,35 @@
+{
+  "name": "DiagnosticClient",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador do sistema"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do cliente ou raz\u00e3o social"
+    },
+    "cpf_cnpj": {
+      "type": "string",
+      "description": "CPF ou CNPJ (apenas n\u00fameros)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone de contato"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de contato"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "cpf_cnpj"
+  ]
+}
