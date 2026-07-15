@@ -226,7 +226,7 @@ export default function PlanManagement() {
           onClick={() => setSection("finance")}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${section === "finance" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
-          <Wallet className="w-4 h-4" /> Planos Finance
+          <Wallet className="w-4 h-4" /> ERP - COMERCIAL
         </button>
         <button
           onClick={() => setSection("chamados")}
@@ -425,7 +425,7 @@ export default function PlanManagement() {
           featureDefs={FINANCE_FEATURES}
           icon={Wallet}
           iconColor="#059669"
-          title="Plano Financeiro"
+          title="ERP - COMERCIAL"
           billingCycle="one_time"
         />
       )}
