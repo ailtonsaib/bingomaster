@@ -46,6 +46,10 @@
       "default": "nao_se_aplica",
       "description": "Tipo de lucro (apenas CRT=3): real=Lucro Real, presumido=Lucro Presumido, nao_se_aplica=Simples Nacional. Lucro Presumido tem al\u00edquotas diferenciadas de PIS (0,65%) e COFINS (3,00%)."
     },
+    "logo_url": {
+      "type": "string",
+      "description": "URL da logo da empresa para exibi\u00e7\u00e3o no menu e documentos"
+    },
     "cep": {
       "type": "string",
       "description": "CEP"

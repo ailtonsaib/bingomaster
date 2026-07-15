@@ -3,7 +3,7 @@ import { X, Banknote, CreditCard, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export default function CheckoutModal({ total, onClose, onConfirm }) {
+export default function CheckoutModal({ total, companyConfig, onClose, onConfirm }) {
   const [method, setMethod] = useState("dinheiro");
   const [amountReceived, setAmountReceived] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,12 +34,22 @@ export default function CheckoutModal({ total, onClose, onConfirm }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-bold">Finalizar Venda</h2>
+          <div className="flex items-center gap-2">
+            {companyConfig?.logo_url && (
+              <img src={companyConfig.logo_url} alt="Logo" className="max-h-8 max-w-[120px] object-contain" />
+            )}
+            <h2 className="text-lg font-bold">Finalizar Venda</h2>
+          </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6">
+          {companyConfig?.logo_url && (
+            <div className="flex justify-center mb-4">
+              <img src={companyConfig.logo_url} alt="Logo" className="max-h-12 max-w-[140px] object-contain" />
+            </div>
+          )}
           <div className="text-center mb-6">
             <p className="text-sm text-gray-500">Total a pagar</p>
             <p className="text-4xl font-bold text-orange-600">

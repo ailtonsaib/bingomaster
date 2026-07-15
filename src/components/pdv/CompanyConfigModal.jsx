@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Loader2, Building, Save, AlertTriangle, User, Calculator, Search } from "lucide-react";
+import { X, Loader2, Building, Save, AlertTriangle, User, Calculator, Search, Upload, ImageIcon } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
 import { maskCnpj, maskCpf, maskPhone, maskCep } from "@/lib/brMasks";
 import CitySelect from "@/components/pdv/CitySelect";
@@ -28,6 +28,7 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
   const [configId, setConfigId] = useState(null);
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -41,6 +42,17 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
       setLoading(false);
     })();
   }, [user.email]);
+
+  const handleLogoUpload = async (file) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("A imagem deve ter no máximo 2MB."); return; }
+    setLogoUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm(prev => ({ ...prev, logo_url: file_url }));
+    } catch (e) { alert("Erro ao enviar logo: " + e.message); }
+    setLogoUploading(false);
+  };
 
   const handleCepLookup = async (cepValue) => {
     const clean = (cepValue || "").replace(/\D/g, "");
@@ -139,9 +151,32 @@ export default function CompanyConfigModal({ user, onClose, onSaved }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="md:col-span-2">
-              <Label>Razão Social *</Label>
-              <Input value={form.razao_social} onChange={e => setForm({...form, razao_social: e.target.value})} className="h-9" />
+            <div className="md:col-span-2 flex items-center gap-4">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                  {logoUploading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  ) : form.logo_url ? (
+                    <img src={form.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-gray-300" />
+                  )}
+                </div>
+                <label className="cursor-pointer text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                  <Upload className="w-3 h-3" />
+                  {form.logo_url ? "Trocar logo" : "Enviar logo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={e => handleLogoUpload(e.target.files?.[0])} />
+                </label>
+                {form.logo_url && (
+                  <button type="button" onClick={() => setForm({...form, logo_url: ""})} className="text-xs text-red-500 hover:text-red-700">
+                    Remover
+                  </button>
+                )}
+              </div>
+              <div className="flex-1">
+                <Label>Razão Social *</Label>
+                <Input value={form.razao_social} onChange={e => setForm({...form, razao_social: e.target.value})} className="h-9" />
+              </div>
             </div>
             <div>
               <Label>Nome Fantasia</Label>

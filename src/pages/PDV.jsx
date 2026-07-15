@@ -27,10 +27,24 @@ export default function PDV() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [activeTab, setActiveTab] = useState("caixa");
   const [showCompanyConfig, setShowCompanyConfig] = useState(false);
+  const [companyConfig, setCompanyConfig] = useState(null);
 
   useEffect(() => {
-    if (!user) navigate("/pdv");
+    if (!user) { navigate("/pdv"); return; }
+    (async () => {
+      try {
+        const list = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
+        if (list.length > 0) setCompanyConfig(list[0]);
+      } catch (e) { console.error(e); }
+    })();
   }, [user, navigate]);
+
+  const reloadCompanyConfig = async () => {
+    try {
+      const list = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
+      if (list.length > 0) setCompanyConfig(list[0]);
+    } catch (e) { console.error(e); }
+  };
 
   if (!user) return null;
 
@@ -130,11 +144,17 @@ export default function PDV() {
           <button onClick={() => navigate("/portal")} className="p-1 hover:bg-gray-100 rounded">
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </button>
-          <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
-            <ShoppingCart className="w-5 h-5 text-orange-600" />
-          </div>
+          {companyConfig?.logo_url ? (
+            <div className="h-10 flex items-center">
+              <img src={companyConfig.logo_url} alt="Logo" className="max-h-10 max-w-[160px] object-contain" />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+              <ShoppingCart className="w-5 h-5 text-orange-600" />
+            </div>
+          )}
           <div>
-            <h1 className="font-bold text-lg">ERP — COMERCIAL</h1>
+            <h1 className="font-bold text-lg">{companyConfig?.nome_fantasia || companyConfig?.razao_social || "ERP — COMERCIAL"}</h1>
             <p className="text-xs text-gray-500">{user.name}</p>
           </div>
         </div>
@@ -203,6 +223,7 @@ export default function PDV() {
       {showCheckout && (
         <CheckoutModal
           total={total}
+          companyConfig={companyConfig}
           onClose={() => setShowCheckout(false)}
           onConfirm={handleCheckout}
         />
@@ -211,6 +232,7 @@ export default function PDV() {
         <CompanyConfigModal
           user={user}
           onClose={() => setShowCompanyConfig(false)}
+          onSaved={reloadCompanyConfig}
         />
       )}
     </div>
