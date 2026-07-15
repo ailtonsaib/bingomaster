@@ -18,7 +18,7 @@ const FINANCE_FEATURES = [
 ];
 
 const FINANCE_DEFAULTS = [
-  { plan_key: "free", plan_name: "FREE", price: 0, description: "10 movimentações gratuitas", features: { unlimited_transactions: false, cost_centers: true, bank_accounts: true, contacts: true, agape_migration: false, reports: true } },
+  { plan_key: "free", plan_name: "FREE", price: 0, description: "30 movimentações gratuitas", features: { unlimited_transactions: false, cost_centers: true, bank_accounts: true, contacts: true, agape_migration: false, reports: true } },
   { plan_key: "gold", plan_name: "GOLD", price: 49.90, description: "Movimentações ilimitadas", features: { unlimited_transactions: true, cost_centers: true, bank_accounts: true, contacts: true, agape_migration: true, reports: true } },
 ];
 
@@ -37,7 +37,7 @@ const CHAMADOS_DEFAULTS = [
 ];
 
 const BINGO_DEFAULTS = [
-  { plan_key: "free", plan_name: "FREE", price: 0, max_cards: 50, description: "Para conhecer o sistema", app_generator: true, app_seller: false, app_buyer: false, app_telao: false, app_rifa: false, app_pdv: false },
+  { plan_key: "free", plan_name: "FREE", price: 0, max_cards: 50, description: "50 cartelas gratuitas", app_generator: true, app_seller: false, app_buyer: false, app_telao: false, app_rifa: false, app_pdv: false },
   { plan_key: "basic", plan_name: "BASIC", price: 400, max_cards: 2000, description: "Para pequenos eventos", app_generator: true, app_seller: true, app_buyer: false, app_telao: false, app_rifa: true, app_pdv: false },
   { plan_key: "pro", plan_name: "PRO", price: 700, max_cards: 4000, description: "Para eventos frequentes", app_generator: true, app_seller: true, app_buyer: false, app_telao: true, app_rifa: true, app_pdv: false },
   { plan_key: "max", plan_name: "MAX", price: 900, max_cards: 8000, description: "Para grandes eventos", app_generator: true, app_seller: true, app_buyer: true, app_telao: true, app_rifa: true, app_pdv: true },
@@ -65,7 +65,7 @@ const SPED_TYPES = [
 ];
 
 const SPED_FALLBACK = [
-  { plan_key: "free", plan_name: "FREE", price: 0, downloads_limit: 5, sped_types: ["FISCAL"], description: "Para testes", is_active: true, order: 1 },
+  { plan_key: "free", plan_name: "FREE", price: 0, downloads_limit: 5, sped_types: ["FISCAL"], description: "5 arquivos", is_active: true, order: 1 },
   { plan_key: "basic", plan_name: "BÁSICO", price: 49.90, downloads_limit: null, sped_types: ["FISCAL"], description: "SPED Fiscal ilimitado", is_active: true, order: 2 },
   { plan_key: "pro", plan_name: "PRO", price: 99.90, downloads_limit: null, sped_types: ["FISCAL", "CONTRIBUICOES"], description: "Fiscal + Contribuições", is_active: true, order: 3 },
   { plan_key: "max", plan_name: "MAX", price: 199.90, downloads_limit: null, sped_types: ["FISCAL", "CONTRIBUICOES", "ECD", "ECF", "DIMESC", "REINF"], description: "Todos os módulos", is_active: true, order: 4 },

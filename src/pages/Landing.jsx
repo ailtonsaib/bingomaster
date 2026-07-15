@@ -95,7 +95,7 @@ function AppCard({ app, onOpenPlans, loading }) {
           ) : (
             app.plans?.map((plan, i) => (
               <span key={i} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: `${app.accent}15`, color: app.accent }}>
-                {plan.name}: {currency(plan.price)}
+                {plan.name}: {plan.price === 0 && plan.description ? plan.description : currency(plan.price)}
               </span>
             ))
           )}
@@ -218,7 +218,7 @@ export default function Landing({ category }) {
   const publicApps = APPS.filter((a) => !a.adminOnly && (!category || a.category === category)).map((app) => {
     if (app.id === "bingo" && bingoPlans) return { ...app, plans: bingoPlans };
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
-    if (app.id === "financeiro" && financePlans) return { ...app, plans: financePlans };
+    if (app.id === "pdv" && financePlans) return { ...app, plans: financePlans };
     if (app.id === "chamados" && chamadosPlans) return { ...app, plans: chamadosPlans };
     return app;
   });

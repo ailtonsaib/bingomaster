@@ -85,7 +85,7 @@ export function useDynamicPlans() {
         price: p.price ?? 0,
         downloads: p.downloads_limit,
         types: typeLabels,
-        description: p.description || "",
+        description: p.description || (p.plan_key === "free" && p.downloads_limit != null ? `${p.downloads_limit} arquivos` : ""),
       };
     });
 
