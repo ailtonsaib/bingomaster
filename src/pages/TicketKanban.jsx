@@ -182,8 +182,16 @@ export default function TicketKanban() {
         </div>
       )}
 
-      <div className="p-4">
-        <KanbanBoard tickets={filtered} onMove={canManage ? handleMove : undefined} onTicketClick={setSelectedTicket} readOnly={isRequester || isAgent} />
+      <div className="p-4 relative min-h-[60vh]">
+        {companyPlan?.company?.logo_url && (
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{ backgroundImage: `url(${companyPlan.company.logo_url})`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '400px', opacity: 0.06 }}
+          />
+        )}
+        <div className="relative z-10">
+          <KanbanBoard tickets={filtered} onMove={canManage ? handleMove : undefined} onTicketClick={setSelectedTicket} readOnly={isRequester || isAgent} />
+        </div>
       </div>
 
       {showForm && (
