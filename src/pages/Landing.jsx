@@ -7,6 +7,7 @@ import { useDynamicPlans } from "@/hooks/useDynamicPlans";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft, MessageCircle, Mail, Phone, X, Check, Sparkles } from "lucide-react";
 import AppPreview from "@/components/AppVideo";
+import BingoRankingBoard from "@/components/bingo/BingoRankingBoard";
 
 const iconMap = {
   Grid3x3: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>,
@@ -284,6 +285,36 @@ export default function Landing({ category }) {
           ))}
         </div>
       </section>
+
+      {/* Placar Global de Vencedores — visível apenas na categoria jogos */}
+      {category === "jogos" && (
+        <section className="max-w-7xl mx-auto px-6 pb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <BingoRankingBoard />
+            </div>
+            <div className="lg:col-span-2 flex items-center">
+              <div className="bg-gradient-to-br from-[#6200EA] to-[#7C3AED] rounded-3xl p-8 text-white w-full">
+                <h2 className="text-2xl font-bold mb-3">🏆 Ranking de Campeões</h2>
+                <p className="text-white/90 leading-relaxed mb-4">
+                  Acompanhe os jogadores com mais vitórias em toda a plataforma SoftPremier! 
+                  Cada prêmio conquistado em um bingo é contabilizado automaticamente no placar global.
+                </p>
+                <p className="text-white/70 text-sm">
+                  Quer ver seu nome no topo? Participe dos próximos eventos de bingo e concorra a prêmios!
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a href={CONTACT.whatsapp} target="_blank" rel="noreferrer">
+                    <Button className="bg-white text-[#6200EA] hover:bg-white/90 rounded-xl h-10 px-5 text-sm">
+                      Participar de um bingo
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* How it works */}
       <section className="max-w-6xl mx-auto px-6 py-12">
