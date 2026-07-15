@@ -13,7 +13,9 @@ import {
   ArrowUpCircle,
   Wallet,
   CalendarRange,
-  Pencil
+  Pencil,
+  CheckSquare,
+  Search
 } from "lucide-react";
 import BankBalanceChart from "@/components/finance/BankBalanceChart";
 import EditTransactionModal from "@/components/finance/EditTransactionModal";
@@ -22,8 +24,13 @@ export default function CashPanel({ userEmail }) {
   const [transactions, setTransactions] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [settleTarget, setSettleTarget] = useState(null); // transaction being settled
-  const [editTarget, setEditTarget] = useState(null); // transaction being edited
+  const [settleTarget, setSettleTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkSettleType, setBulkSettleType] = useState(null); // 'receivable' | 'payable'
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!userEmail) return;
@@ -51,11 +58,21 @@ export default function CashPanel({ userEmail }) {
     loadData();
   }, [loadData]);
 
+  const inDateRange = (dueDate) => {
+    if (!startDate && !endDate) return true;
+    const ref = dueDate || new Date().toISOString();
+    const d = new Date(ref).getTime();
+    if (isNaN(d)) return false;
+    const s = startDate ? new Date(startDate + "T00:00:00").getTime() : -Infinity;
+    const e = endDate ? new Date(endDate + "T23:59:59").getTime() : Infinity;
+    return d >= s && d <= e;
+  };
+
   const pendingReceivable = transactions.filter(
-    (t) => t.type === "income" && (!t.status || t.status === "pending")
+    (t) => t.type === "income" && (!t.status || t.status === "pending") && inDateRange(t.due_date)
   );
   const pendingPayable = transactions.filter(
-    (t) => t.type === "expense" && (!t.status || t.status === "pending")
+    (t) => t.type === "expense" && (!t.status || t.status === "pending") && inDateRange(t.due_date)
   );
   const settled = transactions.filter((t) => t.status === "settled");
 
@@ -94,6 +111,61 @@ export default function CashPanel({ userEmail }) {
     }
   };
 
+  // --- Multi-seleção e baixa em lote ---
+  const toggleSelection = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (ids) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => next.has(id));
+      if (allSelected) {
+        ids.forEach(id => next.delete(id));
+      } else {
+        ids.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkSettle = async (bankAccountId, bankName) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkSaving(true);
+    let ok = 0;
+    let fail = 0;
+    for (const id of ids) {
+      try {
+        await base44.functions.invoke("portalAuth", {
+          operation: "settleTransaction",
+          email: userEmail,
+          transaction_id: id,
+          bank_account_id: bankAccountId,
+          bank_name: bankName,
+        });
+        ok++;
+      } catch (e) {
+        fail++;
+        console.error("Erro ao baixar título:", id, e);
+      }
+    }
+    setBulkSaving(false);
+    setSelectedIds(new Set());
+    setBulkSettleType(null);
+    await loadData();
+    if (fail > 0) {
+      alert(`${ok} título(s) baixado(s) com sucesso. ${fail} falha(s).`);
+    }
+  };
+
+  const clearFilters = () => { setStartDate(""); setEndDate(""); };
+
   const fmtDate = (iso) => {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("pt-BR");
@@ -109,7 +181,6 @@ export default function CashPanel({ userEmail }) {
   const totalReceivable = pendingReceivable.reduce((s, t) => s + parseFloat(t.amount), 0);
   const totalPayable = pendingPayable.reduce((s, t) => s + parseFloat(t.amount), 0);
 
-  // Resumo do mês vigente
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -136,6 +207,13 @@ export default function CashPanel({ userEmail }) {
 
   const monthName = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
+  const receivableIds = pendingReceivable.map(t => t.id);
+  const payableIds = pendingPayable.map(t => t.id);
+  const selectedReceivableCount = receivableIds.filter(id => selectedIds.has(id)).length;
+  const selectedPayableCount = payableIds.filter(id => selectedIds.has(id)).length;
+  const selectedReceivableTotal = pendingReceivable.filter(t => selectedIds.has(t.id)).reduce((s, t) => s + parseFloat(t.amount), 0);
+  const selectedPayableTotal = pendingPayable.filter(t => selectedIds.has(t.id)).reduce((s, t) => s + parseFloat(t.amount), 0);
+
   return (
     <div className="space-y-6">
       {/* Painel de Resumo Financeiro */}
@@ -148,7 +226,6 @@ export default function CashPanel({ userEmail }) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Saldo Atual */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentBalance >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
                 <Wallet className={`w-5 h-5 ${currentBalance >= 0 ? "text-emerald-600" : "text-red-600"}`} />
@@ -162,7 +239,6 @@ export default function CashPanel({ userEmail }) {
               </div>
             </div>
 
-            {/* A Receber no Mês */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
               <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-emerald-600" />
@@ -176,7 +252,6 @@ export default function CashPanel({ userEmail }) {
               </div>
             </div>
 
-            {/* A Pagar no Mês */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
               <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
                 <TrendingDown className="w-5 h-5 text-red-600" />
@@ -190,7 +265,6 @@ export default function CashPanel({ userEmail }) {
               </div>
             </div>
 
-            {/* Saldo do Mês */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${(monthReceivable - monthPayable) >= 0 ? "bg-primary/10" : "bg-red-100"}`}>
                 <Wallet className={`w-5 h-5 ${(monthReceivable - monthPayable) >= 0 ? "text-primary" : "text-red-600"}`} />
@@ -207,7 +281,30 @@ export default function CashPanel({ userEmail }) {
         </CardContent>
       </Card>
 
-      {/* Gráfico de Saldos por Banco */}
+      {/* Filtro de Vencimento */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Vencimento inicial</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Vencimento final</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+            </div>
+            <Button variant="outline" size="sm" onClick={clearFilters} className="gap-2">
+              <Search className="w-4 h-4" /> Limpar Filtro
+            </Button>
+            {(startDate || endDate) && (
+              <span className="text-xs text-muted-foreground ml-2">
+                Filtrando: {pendingReceivable.length + pendingPayable.length} título(s) no período
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <BankBalanceChart bankAccounts={bankAccounts} transactions={transactions} />
 
       {/* Summary - Pendentes */}
@@ -247,10 +344,35 @@ export default function CashPanel({ userEmail }) {
           {/* A Receber */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-600" />
-                Contas a Receber
-              </CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  Contas a Receber
+                </CardTitle>
+                {pendingReceivable.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedReceivableCount === receivableIds.length && receivableIds.length > 0}
+                        onChange={() => toggleSelectAll(receivableIds)}
+                        className="w-4 h-4"
+                      />
+                      Selecionar todos
+                    </label>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={selectedReceivableCount === 0}
+                      onClick={() => setBulkSettleType("receivable")}
+                      className="gap-1.5"
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                      Baixar Selecionados ({selectedReceivableCount})
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {pendingReceivable.length === 0 ? (
@@ -261,15 +383,17 @@ export default function CashPanel({ userEmail }) {
                 <div className="space-y-2">
                   {pendingReceivable.map((tx) => (
                     <TransactionRow
-                       key={tx.id}
-                       tx={tx}
-                       fmtDate={fmtDate}
-                       fmtMoney={fmtMoney}
-                       isOverdue={isOverdue}
-                       isReceivable
-                       onSettle={() => setSettleTarget(tx)}
-                       onEdit={() => setEditTarget(tx)}
-                     />
+                      key={tx.id}
+                      tx={tx}
+                      fmtDate={fmtDate}
+                      fmtMoney={fmtMoney}
+                      isOverdue={isOverdue}
+                      isReceivable
+                      onSettle={() => setSettleTarget(tx)}
+                      onEdit={() => setEditTarget(tx)}
+                      selected={selectedIds.has(tx.id)}
+                      onToggleSelect={() => toggleSelection(tx.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -279,10 +403,35 @@ export default function CashPanel({ userEmail }) {
           {/* A Pagar */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-red-600" />
-                Contas a Pagar
-              </CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                  Contas a Pagar
+                </CardTitle>
+                {pendingPayable.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedPayableCount === payableIds.length && payableIds.length > 0}
+                        onChange={() => toggleSelectAll(payableIds)}
+                        className="w-4 h-4"
+                      />
+                      Selecionar todos
+                    </label>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={selectedPayableCount === 0}
+                      onClick={() => setBulkSettleType("payable")}
+                      className="gap-1.5"
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                      Baixar Selecionados ({selectedPayableCount})
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {pendingPayable.length === 0 ? (
@@ -293,14 +442,16 @@ export default function CashPanel({ userEmail }) {
                 <div className="space-y-2">
                   {pendingPayable.map((tx) => (
                     <TransactionRow
-                       key={tx.id}
-                       tx={tx}
-                       fmtDate={fmtDate}
-                       fmtMoney={fmtMoney}
-                       isOverdue={isOverdue}
-                       onSettle={() => setSettleTarget(tx)}
-                       onEdit={() => setEditTarget(tx)}
-                     />
+                      key={tx.id}
+                      tx={tx}
+                      fmtDate={fmtDate}
+                      fmtMoney={fmtMoney}
+                      isOverdue={isOverdue}
+                      onSettle={() => setSettleTarget(tx)}
+                      onEdit={() => setEditTarget(tx)}
+                      selected={selectedIds.has(tx.id)}
+                      onToggleSelect={() => toggleSelection(tx.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -394,6 +545,20 @@ export default function CashPanel({ userEmail }) {
         />
       )}
 
+      {/* Bulk settle modal */}
+      {bulkSettleType && (
+        <BulkSettleModal
+          type={bulkSettleType}
+          count={bulkSettleType === "receivable" ? selectedReceivableCount : selectedPayableCount}
+          total={bulkSettleType === "receivable" ? selectedReceivableTotal : selectedPayableTotal}
+          bankAccounts={bankAccounts}
+          fmtMoney={fmtMoney}
+          saving={bulkSaving}
+          onClose={() => setBulkSettleType(null)}
+          onConfirm={handleBulkSettle}
+        />
+      )}
+
       {/* Edit modal */}
       {editTarget && (
         <EditTransactionModal
@@ -407,10 +572,16 @@ export default function CashPanel({ userEmail }) {
   );
 }
 
-function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSettle, onEdit }) {
+function TransactionRow({ tx, fmtDate, fmtMoney, isOverdue, isReceivable, onSettle, onEdit, selected, onToggleSelect }) {
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+    <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${selected ? "bg-primary/5 border-primary/30" : "hover:bg-muted/30"}`}>
       <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={selected || false}
+          onChange={onToggleSelect}
+          className="w-4 h-4 shrink-0 cursor-pointer"
+        />
         <div
           className={`w-8 h-8 rounded-full flex items-center justify-center ${
             tx.type === "income" ? "bg-emerald-100" : "bg-red-100"
@@ -523,6 +694,77 @@ function SettleModal({ tx, bankAccounts, fmtMoney, fmtDate, onClose, onConfirm }
                 {saving ? "Baixando..." : "Confirmar Baixa"}
               </Button>
               <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function BulkSettleModal({ type, count, total, bankAccounts, fmtMoney, saving, onClose, onConfirm }) {
+  const [selectedBank, setSelectedBank] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedBank) {
+      alert("Selecione a conta bancária utilizada");
+      return;
+    }
+    const account = bankAccounts.find((b) => b.id === selectedBank);
+    await onConfirm(selectedBank, account?.bank_name || "");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <CheckSquare className="w-4 h-4 text-primary" />
+            Baixa em Lote — {type === "receivable" ? "Contas a Receber" : "Contas a Pagar"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 p-3 rounded-lg bg-muted/30 space-y-1">
+            <p className="text-sm font-medium">
+              {count} título(s) selecionado(s)
+            </p>
+            <p className={`text-lg font-bold ${type === "receivable" ? "text-emerald-600" : "text-red-600"}`}>
+              Total: {fmtMoney(total)}
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                Conta Bancária Utilizada
+              </label>
+              {bankAccounts.length === 0 ? (
+                <p className="text-sm text-destructive">
+                  Nenhuma conta bancária cadastrada. Cadastre uma conta na aba "Contas Bancárias".
+                </p>
+              ) : (
+                <select
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                  required
+                >
+                  <option value="">Selecione o banco...</option>
+                  {bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.bank_name} — Ag {b.agency} / Conta {b.account_number}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" disabled={saving || bankAccounts.length === 0 || count === 0}>
+                {saving ? `Baixando ${count} título(s)...` : `Confirmar Baixa de ${count} Título(s)`}
+              </Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
                 Cancelar
               </Button>
             </div>
