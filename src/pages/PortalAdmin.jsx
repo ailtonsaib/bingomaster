@@ -4,13 +4,14 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, Gamepad2 } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, Gamepad2, Wrench } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 import PlanManagement from "@/components/portal/PlanManagement";
 import GameAdminPanel from "@/components/games/GameAdminPanel";
 import RevenueSummary from "@/components/portal/RevenueSummary";
+import DiagnosticPlanManagement from "@/components/portal/DiagnosticPlanManagement";
 import { useToast } from "@/components/ui/use-toast";
 import OfflineSyncAlert from "@/components/bingo/OfflineSyncAlert";
 
@@ -98,6 +99,10 @@ export default function PortalAdmin() {
     await updateUser(userId, { sped_plan: plan });
   };
 
+  const handleDiagnosticPlan = async (userId, plan) => {
+    await updateUser(userId, { diagnostic_plan: plan });
+  };
+
   const handleDelete = async (userId) => {
     if (!confirm("Excluir este usuário permanentemente?")) return;
     try {
@@ -143,6 +148,7 @@ export default function PortalAdmin() {
   const erpUsers = users.filter((u) => u.can_access_finance || u.can_access_pdv);
   const chamadosUsers = users.filter((u) => u.can_access_chamados);
   const spedUsers = users.filter((u) => u.can_access_sped);
+  const diagnosticUsers = users.filter((u) => u.can_access_diagnostic);
 
   const TabBar = (
     <div className="flex gap-2 mb-6 border-b">
@@ -187,6 +193,9 @@ export default function PortalAdmin() {
         <div className="max-w-5xl mx-auto px-4 py-6">
           {TabBar}
           <PlanManagement />
+          <div className="mt-6">
+            <DiagnosticPlanManagement />
+          </div>
         </div>
       </div>
     );
@@ -280,6 +289,17 @@ export default function PortalAdmin() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                <Wrench className="w-5 h-5 text-cyan-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Diagnóstico</p>
+                <p className="text-lg font-bold">{diagnosticUsers.length}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {pendingReleases.length > 0 && (
@@ -332,6 +352,7 @@ export default function PortalAdmin() {
                     <th className="text-left p-3 font-medium">ERP - COMERCIAL</th>
                     <th className="text-left p-3 font-medium">Chamados</th>
                     <th className="text-left p-3 font-medium">SPED</th>
+                    <th className="text-left p-3 font-medium">Diagnóstico</th>
                     <th className="text-left p-3 font-medium">Acesso</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-right p-3 font-medium">Ações</th>
@@ -456,6 +477,34 @@ export default function PortalAdmin() {
                               {SPED_PLANS.map((p) => (
                                 <option key={p} value={p}>{p.toUpperCase()}</option>
                               ))}
+                            </select>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Diagnóstico permissions */}
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={u.can_access_diagnostic}
+                              disabled={u.is_admin}
+                              onChange={() => handleToggle(u.id, 'can_access_diagnostic', u.can_access_diagnostic)}
+                              className="w-3.5 h-3.5"
+                            />
+                            <span className={u.can_access_diagnostic ? 'text-foreground' : 'text-muted-foreground'}>
+                              {u.can_access_diagnostic ? 'Com acesso' : 'Sem acesso'}
+                            </span>
+                          </label>
+                          {u.can_access_diagnostic && !u.is_admin && (
+                            <select
+                              value={u.diagnostic_plan || 'free'}
+                              onChange={(e) => handleDiagnosticPlan(u.id, e.target.value)}
+                              className="h-7 rounded border border-input bg-transparent px-2 text-xs"
+                            >
+                              <option value="free">FREE (5 limites)</option>
+                              <option value="master">MASTER (ilimitado)</option>
                             </select>
                           )}
                         </div>

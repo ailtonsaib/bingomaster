@@ -50,42 +50,36 @@ export default function VehicleRegistrationModal({ open, onClose, userEmail, cpf
 
     setLoading(true);
     try {
-      let finalCpfCnpj = clientData.cpf_cnpj;
+      const cpfDigits = onlyDigits(clientData.cpf_cnpj);
+      if (isNewClient && (cpfDigits.length !== 11 && cpfDigits.length !== 14)) {
+        setError("CPF/CNPJ inválido.");
+        setLoading(false);
+        return;
+      }
 
-      // Create client if new
-      if (isNewClient) {
-        const digits = onlyDigits(clientData.cpf_cnpj);
-        if (digits.length !== 11 && digits.length !== 14) {
-          setError("CPF/CNPJ inválido.");
-          setLoading(false);
-          return;
-        }
-        const createdClient = await base44.entities.DiagnosticClient.create({
-          user_email: userEmail,
+      await base44.functions.invoke("manageDiagnostic", {
+        operation: "createClientAndVehicle",
+        is_new_client: isNewClient,
+        client_data: isNewClient ? {
           name: clientData.name,
-          cpf_cnpj: digits,
+          cpf_cnpj: cpfDigits,
           phone: clientData.phone,
           email: clientData.email,
           address: clientData.address,
-        });
-        finalCpfCnpj = digits;
-      }
-
-      // Create vehicle
-      const createdVehicle = await base44.entities.DiagnosticVehicle.create({
-        user_email: userEmail,
-        client_cpf_cnpj: finalCpfCnpj,
-        client_name: isNewClient ? clientData.name : existingClient.name,
-        plate: vehicleData.plate.toUpperCase(),
-        brand: vehicleData.brand,
-        model: vehicleData.model,
-        year: vehicleData.year,
-        engine: vehicleData.engine,
-        fuel: vehicleData.fuel,
-        mileage: vehicleData.mileage ? Number(vehicleData.mileage) : 0,
-        color: vehicleData.color,
-        vin: vehicleData.vin,
-        observations: vehicleData.observations,
+        } : undefined,
+        existing_client_name: existingClient?.name,
+        vehicle_data: {
+          plate: vehicleData.plate.toUpperCase(),
+          brand: vehicleData.brand,
+          model: vehicleData.model,
+          year: vehicleData.year,
+          engine: vehicleData.engine,
+          fuel: vehicleData.fuel,
+          mileage: vehicleData.mileage ? Number(vehicleData.mileage) : 0,
+          color: vehicleData.color,
+          vin: vehicleData.vin,
+          observations: vehicleData.observations,
+        },
       });
 
       onRegistered({

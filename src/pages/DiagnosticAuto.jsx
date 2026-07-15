@@ -40,6 +40,17 @@ export default function DiagnosticAuto() {
     enabled: !!user?.email,
   });
 
+  const { data: usage } = useQuery({
+    queryKey: ["diagnostic-usage", user?.email],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("manageDiagnostic", { operation: "getUsage" });
+      return res.data;
+    },
+    enabled: !!user?.email,
+  });
+
+  const canDelete = usage?.can_delete || user?.is_admin || false;
+
   const toggleSymptom = (symptom) => {
     setSymptoms((prev) =>
       prev.includes(symptom) ? prev.filter((s) => s !== symptom) : [...prev, symptom]
@@ -175,6 +186,11 @@ export default function DiagnosticAuto() {
             <div>
               <span className="font-bold text-[#1B1C21] text-sm">Diagnóstico Automotivo</span>
               {user && <span className="text-xs text-[#A1A1AA] ml-2">| {user.name}</span>}
+              {usage && (
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${usage.plan === 'master' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {usage.plan_name}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -225,6 +241,8 @@ export default function DiagnosticAuto() {
               userEmail={user?.email}
               onVehicleSelect={(v) => setVehicle(v)}
               onRegisterNew={handleRegisterNew}
+              usage={usage}
+              canDelete={canDelete}
             />
             {vehicle.brand && (
               <div className="rounded-lg bg-[#2563EB]/5 border border-[#2563EB]/20 p-3">
@@ -364,6 +382,7 @@ export default function DiagnosticAuto() {
           cpfCnpj={registrationCpf}
           existingClient={registrationClient}
           onRegistered={handleRegistered}
+          usage={usage}
         />
       )}
     </div>

@@ -47,6 +47,8 @@ Deno.serve(async (req) => {
           can_access_bingo: true,
           can_access_finance: true,
           can_access_sped: true,
+          can_access_diagnostic: true,
+          diagnostic_plan: 'master',
           bingo_plan: 'free',
           sped_plan: 'max',
           finance_transaction_limit: 10,
