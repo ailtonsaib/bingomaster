@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet, CalendarClock } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -19,6 +19,7 @@ import TaxReportPanel from "@/components/pdv/TaxReportPanel";
 import TaxAlertPanel from "@/components/pdv/TaxAlertPanel";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
 import FinancePanel from "@/components/pdv/FinancePanel";
+import ForecastReport from "@/components/pdv/ForecastReport";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -133,6 +134,7 @@ export default function PDV() {
     { id: "relatorio-trib", label: "Rel. Tributário", icon: FileBarChart },
     { id: "alertas", label: "Alertas Trib.", icon: Bell },
     { id: "financeiro", label: "Financeiro", icon: Wallet },
+    { id: "previsao", label: "Previsão", icon: CalendarClock },
     { id: "contatos", label: "Contatos", icon: Users },
   ];
 
@@ -218,6 +220,7 @@ export default function PDV() {
         {activeTab === "relatorio-trib" && <TaxReportPanel user={user} />}
         {activeTab === "alertas" && <TaxAlertPanel user={user} />}
         {activeTab === "financeiro" && <FinancePanel user={user} />}
+        {activeTab === "previsao" && <ForecastReport user={user} />}
       </div>
 
       {showCheckout && (

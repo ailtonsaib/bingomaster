@@ -148,6 +148,23 @@
       "type": "string",
       "description": "URL do arquivo XML importado"
     },
+    "payment_method": {
+      "type": "string",
+      "description": "Forma de pagamento (0=vista, 1=prazo)"
+    },
+    "due_date": {
+      "type": "string",
+      "description": "Data de vencimento (previs\u00e3o de pagamento) (ISO)"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "aberto",
+        "pago"
+      ],
+      "default": "aberto",
+      "description": "Status do pagamento: aberto (a pagar) ou pago"
+    },
     "status": {
       "type": "string",
       "enum": [
