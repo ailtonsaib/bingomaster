@@ -18,14 +18,20 @@ export default function HideBase44Widget() {
       // Não ocultar para o administrador do sistema
       if (isSystemAdmin()) return;
 
-      // O widget é um elemento fixed injetado como filho direto do body
-      const bodyChildren = document.body.children;
-      for (let i = 0; i < bodyChildren.length; i++) {
-        const el = bodyChildren[i];
-        if (el.id === "root") continue;
+      // Busca em todos os elementos do body (diretos e aninhados)
+      const allElements = document.body.querySelectorAll("*");
+      for (let i = 0; i < allElements.length; i++) {
+        const el = allElements[i];
         const text = el.textContent || "";
-        if (text.includes(WIDGET_TEXT)) {
-          el.style.setProperty("display", "none", "important");
+        if (text.includes(WIDGET_TEXT) && text.length < 200) {
+          // Sobe até o ancestral fixo/absolute para ocultar o container inteiro
+          let target = el;
+          for (let depth = 0; depth < 5 && target.parentElement; depth++) {
+            const style = window.getComputedStyle(target);
+            if (style.position === "fixed" || style.position === "absolute") break;
+            target = target.parentElement;
+          }
+          target.style.setProperty("display", "none", "important");
         }
       }
     };
@@ -33,10 +39,10 @@ export default function HideBase44Widget() {
     hideWidget();
 
     const observer = new MutationObserver(hideWidget);
-    observer.observe(document.body, { childList: true, subtree: false });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     // Fallback: o widget pode ser injetado com atraso
-    const interval = setInterval(hideWidget, 3000);
+    const interval = setInterval(hideWidget, 1500);
 
     return () => {
       observer.disconnect();
