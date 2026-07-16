@@ -3,8 +3,9 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Loader2, DollarSign, CheckCircle2, Receipt, Calendar } from "lucide-react";
+import { Search, Loader2, DollarSign, CheckCircle2, Receipt, Calendar, Printer } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import CommissionReceipt from "./CommissionReceipt";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (iso) => {
@@ -29,6 +30,7 @@ export default function CommissionPanel({ userEmail }) {
   const [orders, setOrders] = useState([]);
   const [payments, setPayments] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [receiptPayment, setReceiptPayment] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -138,6 +140,13 @@ export default function CommissionPanel({ userEmail }) {
       // Recarrega pagamentos
       const pays = await base44.entities.DiagnosticCommissionPayment.filter({ user_email: userEmail });
       setPayments(pays);
+      // Abre recibo automaticamente
+      setReceiptPayment({
+        ...row,
+        period_start: startDate + "T00:00:00",
+        period_end: endDate + "T23:59:59",
+        paid_date: new Date().toISOString(),
+      });
     } catch {
       toast({ title: "Erro", description: "Não foi possível registrar o pagamento.", variant: "destructive" });
     }
@@ -247,9 +256,28 @@ export default function CommissionPanel({ userEmail }) {
                   <td className="p-3 text-right font-bold text-green-600">{formatCurrency(row.commission_amount)}</td>
                   <td className="p-3 text-center">
                     {row.alreadyPaid ? (
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 font-medium">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Pago
-                      </span>
+                      <div className="flex items-center gap-2 justify-center">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Pago
+                        </span>
+                        {(() => {
+                          const pay = payments.find(p =>
+                            p.mechanic_id === row.mechanic_id &&
+                            p.period_start === startDate + "T00:00:00" &&
+                            p.period_end === endDate + "T23:59:59"
+                          );
+                          return pay ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 px-2"
+                              onClick={() => setReceiptPayment(pay)}
+                            >
+                              <Receipt className="w-3.5 h-3.5" />
+                            </Button>
+                          ) : null;
+                        })()}
+                      </div>
                     ) : (
                       <Button
                         onClick={() => handlePay(row)}
@@ -288,12 +316,30 @@ export default function CommissionPanel({ userEmail }) {
                     {p.order_count} OS • {p.commission_rate}% • Pago em {formatDate(p.paid_date)}
                   </p>
                 </div>
-                <span className="font-bold text-green-600">{formatCurrency(p.commission_amount)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-green-600">{formatCurrency(p.commission_amount)}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 h-8"
+                    onClick={() => setReceiptPayment(p)}
+                  >
+                    <Receipt className="w-3.5 h-3.5" /> Recibo
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Modal de Recibo */}
+      <CommissionReceipt
+        payment={receiptPayment}
+        orders={orders}
+        userEmail={userEmail}
+        onClose={() => setReceiptPayment(null)}
+      />
     </div>
   );
 }
