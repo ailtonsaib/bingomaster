@@ -145,7 +145,7 @@ export default function EntryManager({ userEmail }) {
   });
 
   // ===== XML IMPORT =====
-  const handleXmlFile = async (file) => {
+  const handleXmlFile = async (file, dueDate) => {
     try {
       const text = await file.text();
       const data = parseNfeXml(text);
@@ -227,6 +227,8 @@ export default function EntryManager({ userEmail }) {
         xmlUrl = file_url;
       } catch { /* non-critical */ }
 
+      const dueDateIso = dueDate ? new Date(dueDate + "T12:00:00").toISOString() : new Date(Date.now() + 30 * 86400000).toISOString();
+
       // Create entry operation
       await base44.entities.DiagnosticEntryOperation.create({
         user_email: userEmail,
@@ -250,14 +252,31 @@ export default function EntryManager({ userEmail }) {
         total_ipi: data.totals.total_ipi,
         total_nota: data.totals.total_nota,
         xml_file_url: xmlUrl,
+        due_date: dueDateIso,
         payment_status: "aberto",
         status: "registrada",
       });
 
+      // Gerar título a pagar no financeiro
+      try {
+        await base44.entities.PortalFinanceTransaction.create({
+          user_email: userEmail,
+          description: `NF-e ${data.nota.number} — ${supplierName}`.trim(),
+          amount: data.totals.total_nota,
+          type: "expense",
+          category: "Entrada de Mercadoria",
+          date: new Date().toISOString(),
+          launch_date: new Date().toISOString(),
+          due_date: dueDateIso,
+          contact_name: supplierName,
+          status: "pending",
+        });
+      } catch { /* non-critical */ }
+
       const partsMsg = newPartsCount > 0 || updatedPartsCount > 0
         ? ` • ${newPartsCount} peça(s) cadastrada(s), ${updatedPartsCount} atualizada(s)`
         : "";
-      toast({ title: "Entrada registrada", description: `NF ${data.nota.number} — ${formatCurrency(data.totals.total_nota)}${partsMsg}` });
+      toast({ title: "Entrada registrada", description: `NF ${data.nota.number} — ${formatCurrency(data.totals.total_nota)}${partsMsg} • Título financeiro gerado.` });
       setShowXmlImport(false);
       load();
     } catch (e) {
@@ -539,6 +558,14 @@ export default function EntryManager({ userEmail }) {
 // ===== XML Import Modal =====
 function XmlImportModal({ onClose, onFile, fileRef }) {
   const [dragging, setDragging] = useState(false);
+  const [dueDate, setDueDate] = useState("");
+
+  // Calcula vencimento padrão: 30 dias a partir de hoje (formato YYYY-MM-DD)
+  const defaultDue = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
+  const handleFileWithDue = (file) => {
+    onFile(file, dueDate || defaultDue);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -553,16 +580,28 @@ function XmlImportModal({ onClose, onFile, fileRef }) {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-start gap-2">
           <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-blue-700">
-            Ao importar o XML da NF-e, o sistema <b>cadastra automaticamente o fornecedor</b> se ele ainda não estiver registrado,
-            usando os dados extraídos do arquivo (razão social, CNPJ, endereço).
+            Ao importar o XML da NF-e, o sistema <b>cadastra automaticamente o fornecedor</b> e as <b>peças</b>,
+            e gera um <b>título a pagar no financeiro</b> com a data de vencimento informada.
           </p>
+        </div>
+
+        {/* Data de vencimento */}
+        <div className="mb-4">
+          <Label className="text-sm">Data de Vencimento (Financeiro)</Label>
+          <Input
+            type="date"
+            value={dueDate || defaultDue}
+            onChange={e => setDueDate(e.target.value)}
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-400 mt-1">O título a pagar será criado no módulo financeiro com este vencimento.</p>
         </div>
 
         <div
           onClick={() => fileRef.current?.click()}
           onDragOver={e => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
-          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) onFile(f); }}
+          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileWithDue(f); }}
           className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
             dragging ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-green-400 hover:bg-green-50/50"
           }`}
@@ -570,7 +609,7 @@ function XmlImportModal({ onClose, onFile, fileRef }) {
           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
           <p className="text-sm font-medium">Clique ou arraste o arquivo XML</p>
           <p className="text-xs text-gray-400 mt-1">Formato: .xml (NF-e modelo 55)</p>
-          <input ref={fileRef} type="file" accept=".xml" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+          <input ref={fileRef} type="file" accept=".xml" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileWithDue(f); }} />
         </div>
       </div>
     </div>

@@ -138,7 +138,11 @@ export default function NfseImporter({ userEmail, suppliers, onClose, onSaved })
   const [parsedData, setParsedData] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dueDate, setDueDate] = useState("");
   const fileRef = useRef(null);
+
+  // Vencimento padrão: 30 dias
+  const defaultDue = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
   const handleFile = async (file) => {
     setError("");
@@ -207,6 +211,10 @@ export default function NfseImporter({ userEmail, suppliers, onClose, onSaved })
         } catch { /* non-critical */ }
       }
 
+      const dueDateIso = dueDate
+        ? new Date(dueDate + "T12:00:00").toISOString()
+        : new Date(Date.now() + 30 * 86400000).toISOString();
+
       // Criar a entrada (tipo servico, origem xml)
       await base44.entities.DiagnosticEntryOperation.create({
         user_email: userEmail,
@@ -231,6 +239,7 @@ export default function NfseImporter({ userEmail, suppliers, onClose, onSaved })
         total_ipi: 0,
         total_nota: d.totals.valor_liquido || d.totals.valor_servicos,
         xml_file_url: xmlUrl,
+        due_date: dueDateIso,
         payment_status: "aberto",
         status: "registrada",
         notes: d.totals.iss_retido > 0
@@ -238,7 +247,23 @@ export default function NfseImporter({ userEmail, suppliers, onClose, onSaved })
           : `ISS: ${formatCurrency(d.totals.valor_iss)} | Alíquota: ${d.totals.aliquota}%`,
       });
 
-      toast({ title: "NFS-e importada", description: `${d.nota.number} — ${supplierName} — ${formatCurrency(d.totals.valor_liquido || d.totals.valor_servicos)}` });
+      // Gerar título a pagar no financeiro
+      try {
+        await base44.entities.PortalFinanceTransaction.create({
+          user_email: userEmail,
+          description: `NFS-e ${d.nota.number} — ${supplierName}`.trim(),
+          amount: d.totals.valor_liquido || d.totals.valor_servicos,
+          type: "expense",
+          category: "Serviço Terceirizado",
+          date: new Date().toISOString(),
+          launch_date: new Date().toISOString(),
+          due_date: dueDateIso,
+          contact_name: supplierName,
+          status: "pending",
+        });
+      } catch { /* non-critical */ }
+
+      toast({ title: "NFS-e importada", description: `${d.nota.number} — ${supplierName} — ${formatCurrency(d.totals.valor_liquido || d.totals.valor_servicos)} • Título financeiro gerado.` });
       onSaved?.();
       onClose();
     } catch (e) {
@@ -374,6 +399,18 @@ export default function NfseImporter({ userEmail, suppliers, onClose, onSaved })
                   <p className="text-gray-500">Valor Líquido da NFS-e</p>
                   <p className="font-bold text-purple-700 text-lg">{formatCurrency(parsedData.totals.valor_liquido || parsedData.totals.valor_servicos)}</p>
                 </div>
+              </div>
+
+              {/* Vencimento financeiro */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <label className="text-sm font-semibold text-amber-800">Data de Vencimento (Financeiro)</label>
+                <input
+                  type="date"
+                  value={dueDate || defaultDue}
+                  onChange={e => setDueDate(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-amber-300 bg-white px-3 mt-1 text-sm"
+                />
+                <p className="text-xs text-amber-600 mt-1">Será gerado um título a pagar no módulo financeiro com este vencimento.</p>
               </div>
             </div>
           )}
