@@ -1,0 +1,74 @@
+{
+  "name": "DiagnosticCompanyConfig",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio"
+    },
+    "razao_social": {
+      "type": "string",
+      "description": "Raz\u00e3o social da oficina"
+    },
+    "nome_fantasia": {
+      "type": "string",
+      "description": "Nome fantasia"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ (apenas n\u00fameros)"
+    },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL da logo da oficina"
+    },
+    "cep": {
+      "type": "string",
+      "description": "CEP"
+    },
+    "address": {
+      "type": "string",
+      "description": "Logradouro"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de contato"
+    },
+    "responsible_name": {
+      "type": "string",
+      "description": "Nome do respons\u00e1vel"
+    },
+    "responsible_cpf": {
+      "type": "string",
+      "description": "CPF do respons\u00e1vel (apenas n\u00fameros)"
+    }
+  },
+  "required": [
+    "user_email",
+    "razao_social"
+  ]
+}

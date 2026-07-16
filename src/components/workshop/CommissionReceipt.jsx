@@ -19,7 +19,7 @@ export default function CommissionReceipt({ payment, orders, userEmail, onClose 
     const load = async () => {
       try {
         const [companies, mechs] = await Promise.all([
-          base44.entities.PDVCompanyConfig.filter({ user_email: userEmail }),
+          base44.entities.DiagnosticCompanyConfig.filter({ user_email: userEmail }),
           payment?.mechanic_id
             ? base44.entities.DiagnosticMechanic.filter({ user_email: userEmail })
             : Promise.resolve([])

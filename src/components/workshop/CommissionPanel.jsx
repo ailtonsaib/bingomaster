@@ -3,9 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Loader2, DollarSign, CheckCircle2, Receipt, Calendar, Printer } from "lucide-react";
+import { Search, Loader2, DollarSign, CheckCircle2, Receipt, Calendar, Printer, Building2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import CommissionReceipt from "./CommissionReceipt";
+import CompanyConfigModal from "./CompanyConfigModal";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (iso) => {
@@ -31,6 +32,7 @@ export default function CommissionPanel({ userEmail }) {
   const [payments, setPayments] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState(null);
+  const [showCompanyConfig, setShowCompanyConfig] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -159,6 +161,18 @@ export default function CommissionPanel({ userEmail }) {
 
   return (
     <div className="space-y-5">
+      {/* Botão de cadastro de empresa */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setShowCompanyConfig(true)}
+        >
+          <Building2 className="w-4 h-4" /> Dados da Empresa
+        </Button>
+      </div>
+
       {/* Filtros de data */}
       <div className="flex flex-col sm:flex-row gap-3 items-end">
         <div className="flex-1">
@@ -339,6 +353,13 @@ export default function CommissionPanel({ userEmail }) {
         orders={orders}
         userEmail={userEmail}
         onClose={() => setReceiptPayment(null)}
+      />
+
+      {/* Modal de Cadastro de Empresa */}
+      <CompanyConfigModal
+        userEmail={userEmail}
+        open={showCompanyConfig}
+        onClose={() => setShowCompanyConfig(false)}
       />
     </div>
   );
