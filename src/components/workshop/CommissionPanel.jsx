@@ -22,6 +22,7 @@ export default function CommissionPanel({ userEmail }) {
 
   const [startDate, setStartDate] = useState(firstDayStr);
   const [endDate, setEndDate] = useState(today);
+  const [partsCommissionRate, setPartsCommissionRate] = useState("");
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(null);
   const [mechanics, setMechanics] = useState([]);
@@ -79,18 +80,24 @@ export default function CommissionPanel({ userEmail }) {
         commission_rate: mech?.commission_rate || 0,
         order_ids: [],
         total_labor: 0,
+        total_parts: 0,
         orders: [],
       };
     }
     byMechanic[mid].order_ids.push(o.id);
     byMechanic[mid].total_labor += o.labor_total || 0;
+    byMechanic[mid].total_parts += o.parts_total || 0;
     byMechanic[mid].orders.push(o);
   });
 
+  const partsRate = Number(partsCommissionRate) || 0;
+
   const rows = Object.values(byMechanic).map(r => {
-    const commission_amount = (r.total_labor * (r.commission_rate || 0)) / 100;
+    const laborCommission = (r.total_labor * (r.commission_rate || 0)) / 100;
+    const partsCommission = (r.total_parts * partsRate) / 100;
+    const commission_amount = laborCommission + partsCommission;
     const alreadyPaid = isMechanicPaid(r.mechanic_id);
-    return { ...r, commission_amount, alreadyPaid };
+    return { ...r, partsRate, commission_amount, alreadyPaid };
   });
 
   // Verifica se um mecânico já recebeu pagamento para o período exato
@@ -118,7 +125,9 @@ export default function CommissionPanel({ userEmail }) {
         period_start: startDate + "T00:00:00",
         period_end: endDate + "T23:59:59",
         total_labor: row.total_labor,
+        total_parts: row.total_parts,
         commission_rate: row.commission_rate,
+        parts_commission_rate: partsRate,
         commission_amount: row.commission_amount,
         order_count: row.order_ids.length,
         order_ids: row.order_ids,
@@ -136,6 +145,7 @@ export default function CommissionPanel({ userEmail }) {
   };
 
   const grandTotalLabor = rows.reduce((s, r) => s + r.total_labor, 0);
+  const grandTotalParts = rows.reduce((s, r) => s + r.total_parts, 0);
   const grandTotalCommission = rows.reduce((s, r) => s + r.commission_amount, 0);
 
   return (
@@ -154,6 +164,18 @@ export default function CommissionPanel({ userEmail }) {
           </Label>
           <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-10 mt-1" />
         </div>
+        <div className="w-full sm:w-32">
+          <Label className="text-sm font-semibold">% sobre Peças</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={partsCommissionRate}
+            onChange={e => setPartsCommissionRate(e.target.value)}
+            placeholder="Opcional"
+            className="h-10 mt-1"
+          />
+        </div>
         <Button onClick={handleSearch} disabled={loading} className="h-10 gap-1.5 text-white" style={{ backgroundColor: "#2563EB" }}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           Calcular Comissões
@@ -162,7 +184,7 @@ export default function CommissionPanel({ userEmail }) {
 
       {/* Resumo */}
       {hasSearched && !loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
             <p className="text-xs text-blue-600 font-medium">OS no Período</p>
             <p className="text-2xl font-bold text-blue-700 mt-1">{orders.length}</p>
@@ -170,6 +192,10 @@ export default function CommissionPanel({ userEmail }) {
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
             <p className="text-xs text-gray-500 font-medium">Total Mão de Obra</p>
             <p className="text-2xl font-bold text-gray-800 mt-1">{formatCurrency(grandTotalLabor)}</p>
+          </div>
+          <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
+            <p className="text-xs text-orange-600 font-medium">Total Peças</p>
+            <p className="text-2xl font-bold text-orange-700 mt-1">{formatCurrency(grandTotalParts)}</p>
           </div>
           <div className="rounded-xl border border-green-100 bg-green-50 p-4">
             <p className="text-xs text-green-600 font-medium">Total Comissões</p>
@@ -194,7 +220,9 @@ export default function CommissionPanel({ userEmail }) {
                 <th className="p-3 font-medium">Mecânico</th>
                 <th className="p-3 font-medium text-center">OS</th>
                 <th className="p-3 font-medium text-right">Mão de Obra</th>
-                <th className="p-3 font-medium text-center">Comissão %</th>
+                <th className="p-3 font-medium text-right">Peças</th>
+                <th className="p-3 font-medium text-center">M.O. %</th>
+                {partsRate > 0 && <th className="p-3 font-medium text-center">Peças %</th>}
                 <th className="p-3 font-medium text-right">Valor Comissão</th>
                 <th className="p-3 font-medium text-center">Status</th>
               </tr>
@@ -213,7 +241,9 @@ export default function CommissionPanel({ userEmail }) {
                   </td>
                   <td className="p-3 text-center">{row.order_ids.length}</td>
                   <td className="p-3 text-right font-medium">{formatCurrency(row.total_labor)}</td>
+                  <td className="p-3 text-right font-medium text-orange-600">{formatCurrency(row.total_parts)}</td>
                   <td className="p-3 text-center">{row.commission_rate}%</td>
+                  {partsRate > 0 && <td className="p-3 text-center">{partsRate}%</td>}
                   <td className="p-3 text-right font-bold text-green-600">{formatCurrency(row.commission_amount)}</td>
                   <td className="p-3 text-center">
                     {row.alreadyPaid ? (

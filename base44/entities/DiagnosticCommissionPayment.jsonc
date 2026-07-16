@@ -27,15 +27,25 @@
       "default": 0,
       "description": "Total de m\u00e3o de obra no per\u00edodo"
     },
+    "total_parts": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de pe\u00e7as no per\u00edodo"
+    },
     "commission_rate": {
       "type": "number",
       "default": 0,
-      "description": "Percentual de comiss\u00e3o aplicado (%)"
+      "description": "Percentual de comiss\u00e3o sobre m\u00e3o de obra (%)"
+    },
+    "parts_commission_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Percentual de comiss\u00e3o sobre pe\u00e7as (%) \u2014 opcional"
     },
     "commission_amount": {
       "type": "number",
       "default": 0,
-      "description": "Valor da comiss\u00e3o paga"
+      "description": "Valor total da comiss\u00e3o paga (m\u00e3o de obra + pe\u00e7as)"
     },
     "order_count": {
       "type": "number",
