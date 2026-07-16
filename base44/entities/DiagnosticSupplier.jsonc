@@ -1,0 +1,99 @@
+{
+  "name": "DiagnosticSupplier",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "name": {
+      "type": "string",
+      "description": "Raz\u00e3o social / Nome do fornecedor"
+    },
+    "trade_name": {
+      "type": "string",
+      "description": "Nome fantasia"
+    },
+    "cpf_cnpj": {
+      "type": "string",
+      "description": "CPF ou CNPJ (apenas n\u00fameros)"
+    },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "Pessoa de contato (vendedor/representante)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email"
+    },
+    "website": {
+      "type": "string",
+      "description": "Site"
+    },
+    "cep": {
+      "type": "string",
+      "description": "CEP"
+    },
+    "address": {
+      "type": "string",
+      "description": "Logradouro"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero"
+    },
+    "complement": {
+      "type": "string",
+      "description": "Complemento"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF (sigla do estado)"
+    },
+    "payment_terms": {
+      "type": "string",
+      "description": "Condi\u00e7\u00f5es de pagamento (ex: 30/60/90 dias, \u00e0 vista)"
+    },
+    "delivery_time": {
+      "type": "string",
+      "description": "Prazo de entrega padr\u00e3o (ex: 3 dias \u00fateis)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Categoria de produtos fornecidos (ex: Pe\u00e7as, \u00d3leos, Ferramentas)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o fornecedor est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ]
+}

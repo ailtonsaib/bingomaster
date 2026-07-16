@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2 } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
+import SupplierManager from "@/components/workshop/SupplierManager";
 import ClientVehicleManager from "@/components/workshop/ClientVehicleManager";
 import ServiceTypeManager from "@/components/workshop/ServiceTypeManager";
 import CommissionPanel from "@/components/workshop/CommissionPanel";
@@ -29,6 +30,7 @@ const TABS = [
   { id: "ranking", label: "Ranking", icon: Trophy },
   { id: "productivity", label: "Produtividade", icon: Activity },
   { id: "parts", label: "Peças", icon: Package },
+  { id: "suppliers", label: "Fornecedores", icon: Building2 },
 ];
 
 export default function Workshop() {
@@ -140,6 +142,7 @@ export default function Workshop() {
           {activeTab === "ranking" && <MechanicRankingPanel userEmail={user?.email} />}
           {activeTab === "productivity" && <MechanicProductivityPanel userEmail={user?.email} />}
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
+          {activeTab === "suppliers" && <SupplierManager userEmail={user?.email} />}
         </div>
       </div>
     </div>
