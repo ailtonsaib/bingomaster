@@ -1,0 +1,191 @@
+{
+  "name": "DiagnosticEntryOperation",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "entry_type": {
+      "type": "string",
+      "enum": [
+        "nota_fiscal",
+        "servico"
+      ],
+      "default": "nota_fiscal",
+      "description": "Tipo de entrada: nota_fiscal (importada de XML ou manual) ou servico (prestado por terceiro)"
+    },
+    "origin": {
+      "type": "string",
+      "enum": [
+        "xml",
+        "manual"
+      ],
+      "default": "manual",
+      "description": "Origem do registro: xml (importado de NF-e) ou manual"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor (DiagnosticSupplier)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor (cache)"
+    },
+    "supplier_cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor (cache)"
+    },
+    "supplier_uf": {
+      "type": "string",
+      "description": "UF do fornecedor (cache)"
+    },
+    "supplier_city": {
+      "type": "string",
+      "description": "Munic\u00edpio do fornecedor (cache)"
+    },
+    "nota_number": {
+      "type": "string",
+      "description": "N\u00famero da nota fiscal"
+    },
+    "nota_series": {
+      "type": "string",
+      "description": "S\u00e9rie da nota fiscal"
+    },
+    "nota_model": {
+      "type": "string",
+      "description": "Modelo da nota (55=NFe, 65=NFCe, 01=NF)"
+    },
+    "issue_date": {
+      "type": "string",
+      "description": "Data de emiss\u00e3o (ISO)"
+    },
+    "entry_date": {
+      "type": "string",
+      "description": "Data de entrada (ISO)"
+    },
+    "cfop": {
+      "type": "string",
+      "description": "CFOP principal da opera\u00e7\u00e3o"
+    },
+    "nature_operation": {
+      "type": "string",
+      "description": "Natureza da opera\u00e7\u00e3o"
+    },
+    "service_description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do servi\u00e7o (quando entry_type=servico)"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_code": {
+            "type": "string"
+          },
+          "barcode": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "ncm": {
+            "type": "string"
+          },
+          "cfop": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "icms_rate": {
+            "type": "number"
+          },
+          "icms_value": {
+            "type": "number"
+          },
+          "ipi_rate": {
+            "type": "number"
+          },
+          "ipi_value": {
+            "type": "number"
+          },
+          "cst_icms": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Itens da nota fiscal de entrada",
+      "default": []
+    },
+    "total_products": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de produtos/servi\u00e7os"
+    },
+    "total_icms": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de ICMS"
+    },
+    "total_ipi": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de IPI"
+    },
+    "total_nota": {
+      "type": "number",
+      "default": 0,
+      "description": "Total da nota/servi\u00e7o"
+    },
+    "xml_file_url": {
+      "type": "string",
+      "description": "URL do arquivo XML importado"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Forma de pagamento (0=vista, 1=prazo)"
+    },
+    "due_date": {
+      "type": "string",
+      "description": "Data de vencimento (previs\u00e3o de pagamento) (ISO)"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "aberto",
+        "pago"
+      ],
+      "default": "aberto",
+      "description": "Status do pagamento: aberto (a pagar) ou pago"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "registrada",
+        "cancelada"
+      ],
+      "default": "registrada",
+      "description": "Status da entrada"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "supplier_name",
+    "entry_type"
+  ]
+}
