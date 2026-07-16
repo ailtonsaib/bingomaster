@@ -7,13 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogOut, Search, History, Wrench, Loader2, Bluetooth, ClipboardList, Users, Package, Stethoscope } from "lucide-react";
-
-const DIAG_TABS = [
-  { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope },
-  { id: "orders", label: "Ordens de Serviço", icon: ClipboardList, link: "/diagnostico-oficina?tab=orders" },
-  { id: "mechanics", label: "Mecânicos", icon: Users, link: "/diagnostico-oficina?tab=mechanics" },
-  { id: "parts", label: "Peças", icon: Package, link: "/diagnostico-oficina?tab=parts" },
-];
 import ClientVehicleSelector from "@/components/diagnostic/ClientVehicleSelector";
 import VehicleRegistrationModal from "@/components/diagnostic/VehicleRegistrationModal";
 import SymptomSelector from "@/components/diagnostic/SymptomSelector";
@@ -22,6 +15,13 @@ import OBD2Scanner from "@/components/diagnostic/OBD2Scanner";
 import OBD2Results from "@/components/diagnostic/OBD2Results";
 import DiagnosticPrintView from "@/components/diagnostic/DiagnosticPrintView";
 import VehicleHistoryPanel from "@/components/diagnostic/VehicleHistoryPanel";
+
+const DIAG_TABS = [
+  { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope },
+  { id: "orders", label: "Ordens de Serviço", icon: ClipboardList, link: "/diagnostico-oficina?tab=orders" },
+  { id: "mechanics", label: "Mecânicos", icon: Users, link: "/diagnostico-oficina?tab=mechanics" },
+  { id: "parts", label: "Peças", icon: Package, link: "/diagnostico-oficina?tab=parts" },
+];
 
 export default function DiagnosticAuto() {
   const navigate = useNavigate();
