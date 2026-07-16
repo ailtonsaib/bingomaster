@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2 } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
@@ -12,6 +13,7 @@ import MaintenanceHistoryPanel from "@/components/workshop/MaintenanceHistoryPan
 import MonthlyReportPanel from "@/components/workshop/MonthlyReportPanel";
 import MechanicRankingPanel from "@/components/workshop/MechanicRankingPanel";
 import MechanicProductivityPanel from "@/components/workshop/MechanicProductivityPanel";
+import DiagnosticBlockedScreen from "@/components/workshop/DiagnosticBlockedScreen";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -32,6 +34,19 @@ export default function Workshop() {
   const [searchParams] = useSearchParams();
   const user = getPortalUser();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "orders");
+  const [subStatus, setSubStatus] = useState(null);
+  const [checkingSub, setCheckingSub] = useState(true);
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const res = await base44.functions.invoke("manageDiagnostic", { operation: "getUsage" });
+        if (res?.data) setSubStatus(res.data);
+      } catch { /* ignore */ }
+      setCheckingSub(false);
+    };
+    checkSubscription();
+  }, []);
 
   const handleLogout = () => {
     clearPortalUser();
@@ -45,6 +60,18 @@ export default function Workshop() {
       setActiveTab(tab.id);
     }
   };
+
+  if (checkingSub) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (subStatus?.subscription_status === "blocked") {
+    return <DiagnosticBlockedScreen message={subStatus.subscription_message} onLogout={handleLogout} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFB]">
@@ -68,6 +95,17 @@ export default function Workshop() {
       </header>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        {/* Grace period warning */}
+        {subStatus?.subscription_status === "grace_period" && (
+          <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-5 flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Atenção — Mensalidade em atraso</p>
+              <p className="text-sm text-amber-700 mt-1">{subStatus.subscription_message}</p>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="mb-6 flex gap-1 p-1 bg-gray-100 rounded-xl w-fit overflow-x-auto">
           {TABS.map((tab) => {

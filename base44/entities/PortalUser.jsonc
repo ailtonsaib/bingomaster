@@ -60,6 +60,46 @@
       "default": "free",
       "description": "Plano do Diagn\u00f3stico Automotivo: free (5 an\u00e1lises, 5 clientes, 5 ve\u00edculos, sem exclus\u00e3o), teste (10 OS, sem exclus\u00e3o), bronze (ilimitado, com exclus\u00e3o) ou master (ilimitado)"
     },
+    "diagnostic_acquisition_price": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor de aquisi\u00e7\u00e3o do plano Bronze (pago uma vez no cadastro)"
+    },
+    "diagnostic_monthly_price": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da mensalidade do plano Bronze"
+    },
+    "diagnostic_registration_date": {
+      "type": "string",
+      "description": "Data de cadastro da empresa no sistema (ISO) \u2014 definida pelo administrador"
+    },
+    "diagnostic_due_date": {
+      "type": "string",
+      "description": "Data de vencimento da pr\u00f3xima mensalidade (ISO)"
+    },
+    "diagnostic_grace_end_date": {
+      "type": "string",
+      "description": "Data limite do per\u00edodo de toler\u00e2ncia de 15 dias ap\u00f3s vencimento (ISO)"
+    },
+    "diagnostic_blocked_date": {
+      "type": "string",
+      "description": "Data em que o sistema foi bloqueado por inadimpl\u00eancia (ISO)"
+    },
+    "diagnostic_last_payment_date": {
+      "type": "string",
+      "description": "Data do \u00faltimo pagamento de mensalidade recebido (ISO)"
+    },
+    "diagnostic_payment_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "grace_period",
+        "blocked"
+      ],
+      "default": "active",
+      "description": "Status do pagamento da assinatura: active (em dia), grace_period (em toler\u00e2ncia), blocked (bloqueado)"
+    },
     "bingo_plan": {
       "type": "string",
       "default": "free",

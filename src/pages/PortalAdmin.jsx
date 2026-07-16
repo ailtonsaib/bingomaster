@@ -12,6 +12,7 @@ import PlanManagement from "@/components/portal/PlanManagement";
 import GameAdminPanel from "@/components/games/GameAdminPanel";
 import RevenueSummary from "@/components/portal/RevenueSummary";
 import DiagnosticPlanManagement from "@/components/portal/DiagnosticPlanManagement";
+import DiagnosticSubscriptionManager from "@/components/portal/DiagnosticSubscriptionManager";
 import { useToast } from "@/components/ui/use-toast";
 import OfflineSyncAlert from "@/components/bingo/OfflineSyncAlert";
 
@@ -195,6 +196,9 @@ export default function PortalAdmin() {
           <PlanManagement />
           <div className="mt-6">
             <DiagnosticPlanManagement />
+          </div>
+          <div className="mt-6">
+            <DiagnosticSubscriptionManager users={users} onRefresh={loadUsers} />
           </div>
         </div>
       </div>
@@ -504,6 +508,8 @@ export default function PortalAdmin() {
                               className="h-7 rounded border border-input bg-transparent px-2 text-xs"
                             >
                               <option value="free">FREE (5 limites)</option>
+                              <option value="teste">TESTE (10 OS)</option>
+                              <option value="bronze">BRONZE (assinatura)</option>
                               <option value="master">MASTER (ilimitado)</option>
                             </select>
                           )}
