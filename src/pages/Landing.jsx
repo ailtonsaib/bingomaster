@@ -215,10 +215,25 @@ function PlansModal({ app, onClose }) {
                     <h4 className="font-bold text-[#1B1C21]">{plan.name}</h4>
                     {plan.price === 0 && <Sparkles className="w-4 h-4 text-[#71717A]" />}
                   </div>
-                  <p className="text-2xl font-bold mb-3" style={{ color: app.accent }}>
-                    {currency(plan.price)}
-                    {plan.price !== 0 && <span className="text-xs font-normal text-[#71717A]">/mês</span>}
-                  </p>
+                  <div className="mb-3">
+                    {plan.acquisition_price > 0 ? (
+                      <div className="space-y-0.5">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs text-[#71717A]">Aquisição:</span>
+                          <span className="text-lg font-bold" style={{ color: app.accent }}>{currency(plan.acquisition_price)}</span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs text-[#71717A]">Mensal:</span>
+                          <span className="text-lg font-bold" style={{ color: app.accent }}>{currency(plan.price)}<span className="text-xs font-normal text-[#71717A]">/mês</span></span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-2xl font-bold" style={{ color: app.accent }}>
+                        {currency(plan.price)}
+                        {plan.price !== 0 && <span className="text-xs font-normal text-[#71717A]">/mês</span>}
+                      </p>
+                    )}
+                  </div>
                   {plan.description && <p className="text-xs text-[#71717A] mb-3">{plan.description}</p>}
                   <ul className="space-y-1.5">
                     {plan.max_cards && <li className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />{plan.max_cards} cartelas</li>}
