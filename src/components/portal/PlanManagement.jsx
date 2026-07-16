@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X, Save, Pencil, RotateCcw, Loader2, Grid3x3, FileText, Wallet, DollarSign, LifeBuoy } from "lucide-react";
+import { Check, X, Save, Pencil, RotateCcw, Loader2, Grid3x3, FileText, Wallet, DollarSign, LifeBuoy, Wrench } from "lucide-react";
 import SimplePlanManager from "@/components/portal/SimplePlanManager";
+import DiagnosticPlanManagement from "@/components/portal/DiagnosticPlanManagement";
+import DiagnosticSubscriptionManager from "@/components/portal/DiagnosticSubscriptionManager";
 
 const FINANCE_FEATURES = [
   { key: "unlimited_transactions", label: "Movimentações ilimitadas" },
@@ -88,7 +90,7 @@ const SPED_BADGE = {
   max: "bg-emerald-100 text-emerald-700",
 };
 
-export default function PlanManagement() {
+export default function PlanManagement({ users, onRefresh }) {
   const [section, setSection] = useState("bingo");
   const [bingoPlans, setBingoPlans] = useState([]);
   const [spedPlans, setSpedPlans] = useState(SPED_FALLBACK);
@@ -233,6 +235,12 @@ export default function PlanManagement() {
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${section === "chamados" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           <LifeBuoy className="w-4 h-4" /> Planos Chamados
+        </button>
+        <button
+          onClick={() => setSection("diagnostic")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${section === "diagnostic" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Wrench className="w-4 h-4" /> Sistema Automotivo
         </button>
       </div>
 
@@ -441,6 +449,14 @@ export default function PlanManagement() {
           title="Plano de Chamados"
           billingCycle="one_time"
         />
+      )}
+
+      {/* DIAGNOSTIC PLANS */}
+      {section === "diagnostic" && (
+        <div className="space-y-6">
+          <DiagnosticPlanManagement />
+          <DiagnosticSubscriptionManager users={users} onRefresh={onRefresh} />
+        </div>
       )}
     </div>
   );

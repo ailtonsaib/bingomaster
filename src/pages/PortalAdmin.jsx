@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, Gamepad2, Wrench } from "lucide-react";
+
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
 import PlanManagement from "@/components/portal/PlanManagement";
 import GameAdminPanel from "@/components/games/GameAdminPanel";
 import RevenueSummary from "@/components/portal/RevenueSummary";
-import DiagnosticPlanManagement from "@/components/portal/DiagnosticPlanManagement";
-import DiagnosticSubscriptionManager from "@/components/portal/DiagnosticSubscriptionManager";
+
 import { useToast } from "@/components/ui/use-toast";
 import OfflineSyncAlert from "@/components/bingo/OfflineSyncAlert";
 
@@ -193,13 +193,7 @@ export default function PortalAdmin() {
         {Header}
         <div className="max-w-5xl mx-auto px-4 py-6">
           {TabBar}
-          <PlanManagement />
-          <div className="mt-6">
-            <DiagnosticPlanManagement />
-          </div>
-          <div className="mt-6">
-            <DiagnosticSubscriptionManager users={users} onRefresh={loadUsers} />
-          </div>
+          <PlanManagement users={users} onRefresh={loadUsers} />
         </div>
       </div>
     );
