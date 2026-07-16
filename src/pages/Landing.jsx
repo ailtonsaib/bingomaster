@@ -16,6 +16,7 @@ const iconMap = {
   LifeBuoy: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>,
   Rocket: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91 0z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>,
   Bomb: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="13" r="9"/><path d="M17 7l1-1"/><path d="M14 4l1-1"/><path d="m21 3-3 3"/><path d="M16 8l1-1"/></svg>,
+  Wrench: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
 };
 
 function currency(v) {
@@ -255,13 +256,15 @@ export default function Landing({ category }) {
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1B1C21]">
-              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções para sua Empresa" : "Soluções digitais para você e sua empresa"}
+              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções para sua Empresa" : category === "servicos" ? "Sistema Automotivo" : "Soluções digitais para você e sua empresa"}
             </h1>
             <p className="mt-4 text-lg text-[#71717A] max-w-2xl mx-auto">
               {category === "jogos"
                 ? "Aplicativos profissionais para bingo, rifas e entretenimento. Comece grátis e faça upgrade quando precisar."
                 : category === "empresas"
                 ? "Aplicativos profissionais para frente de caixa, validação fiscal e controle de chamados. Comece grátis e faça upgrade quando precisar."
+                : category === "servicos"
+                ? "Sistema completo para oficinas: diagnóstico por IA, ordens de serviço, mecânicos, peças e estoque. Comece grátis e faça upgrade quando precisar."
                 : "Aplicativos profissionais para bingo, controle financeiro controle de chamados e validação fiscal. Comece grátis e faça upgrade quando precisar."}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
