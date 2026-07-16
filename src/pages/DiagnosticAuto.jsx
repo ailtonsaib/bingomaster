@@ -6,7 +6,14 @@ import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { LogOut, Search, History, Wrench, Loader2, Bluetooth, ClipboardList } from "lucide-react";
+import { LogOut, Search, History, Wrench, Loader2, Bluetooth, ClipboardList, Users, Package, Stethoscope } from "lucide-react";
+
+const DIAG_TABS = [
+  { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope },
+  { id: "orders", label: "Ordens de Serviço", icon: ClipboardList, link: "/diagnostico-oficina?tab=orders" },
+  { id: "mechanics", label: "Mecânicos", icon: Users, link: "/diagnostico-oficina?tab=mechanics" },
+  { id: "parts", label: "Peças", icon: Package, link: "/diagnostico-oficina?tab=parts" },
+];
 import ClientVehicleSelector from "@/components/diagnostic/ClientVehicleSelector";
 import VehicleRegistrationModal from "@/components/diagnostic/VehicleRegistrationModal";
 import SymptomSelector from "@/components/diagnostic/SymptomSelector";
@@ -202,9 +209,6 @@ export default function DiagnosticAuto() {
                 </span>
               )}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/diagnostico-oficina")} className="text-[#52525B]">
-              <Wrench className="w-4 h-4 mr-1" /> Oficina
-            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[#52525B]">
               <LogOut className="w-4 h-4" /> Sair
             </Button>
@@ -213,6 +217,25 @@ export default function DiagnosticAuto() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        {/* Tabs — Sistema Automotivo */}
+        <div className="mb-6 flex gap-1 p-1 bg-gray-100 rounded-xl w-fit overflow-x-auto">
+          {DIAG_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = tab.id === "diagnostic";
+            return (
+              <button
+                key={tab.id}
+                onClick={() => tab.link ? navigate(tab.link) : undefined}
+                className={`flex items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  isActive ? "bg-white text-[#2563EB] shadow-sm" : "text-[#71717A] hover:text-[#52525B]"
+                }`}
+              >
+                <Icon className="w-4 h-4" /> {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Mode selector */}
         <div className="mb-6 flex gap-2 p-1 bg-gray-100 rounded-xl">
           <button

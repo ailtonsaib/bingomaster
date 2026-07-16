@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
@@ -15,12 +15,21 @@ const TABS = [
 
 export default function Workshop() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const user = getPortalUser();
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "orders");
 
   const handleLogout = () => {
     clearPortalUser();
     navigate("/");
+  };
+
+  const handleTabClick = (tab) => {
+    if (tab.isLink) {
+      navigate("/diagnostico-auto");
+    } else {
+      setActiveTab(tab.id);
+    }
   };
 
   return (
@@ -37,12 +46,6 @@ export default function Workshop() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/diagnostico-auto")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors"
-            >
-              <Stethoscope className="w-4 h-4" /> Diagnóstico IA
-            </button>
             <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors">
               <LogOut className="w-4 h-4" /> Sair
             </button>
@@ -52,15 +55,16 @@ export default function Workshop() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         {/* Tabs */}
-        <div className="mb-6 flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+        <div className="mb-6 flex gap-1 p-1 bg-gray-100 rounded-xl w-fit overflow-x-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
+            const isActive = !tab.isLink && activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => tab.isLink ? navigate("/diagnostico-auto") : setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === tab.id ? "bg-white text-[#2563EB] shadow-sm" : "text-[#71717A] hover:text-[#52525B]"
+                onClick={() => handleTabClick(tab)}
+                className={`flex items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  isActive ? "bg-white text-[#2563EB] shadow-sm" : "text-[#71717A] hover:text-[#52525B]"
                 }`}
               >
                 <Icon className="w-4 h-4" /> {tab.label}
