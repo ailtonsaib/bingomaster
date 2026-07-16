@@ -26,6 +26,18 @@
       "type": "string",
       "description": "Categoria (ex: Motor, Freio, Suspens\u00e3o)"
     },
+    "vehicle_brand": {
+      "type": "string",
+      "description": "Montadora do ve\u00edculo (Fiat, Volkswagen, Chevrolet, Hyundai, Toyota, Honda, Renault, Universal)"
+    },
+    "vehicle_model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo (ex: Palio, Gol, Civic, Corolla, HB20)"
+    },
+    "vehicle_year": {
+      "type": "string",
+      "description": "Ano ou faixa de anos compat\u00edvel (ex: 2010-2018, Todos)"
+    },
     "unit": {
       "type": "string",
       "default": "UN",
