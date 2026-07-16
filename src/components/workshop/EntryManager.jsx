@@ -184,6 +184,42 @@ export default function EntryManager({ userEmail }) {
         }
       }
 
+      // Auto-cadastrar peças não existentes e atualizar estoque
+      let newPartsCount = 0;
+      let updatedPartsCount = 0;
+      for (const item of data.items) {
+        if (!item.product_name) continue;
+        const existingParts = await base44.entities.DiagnosticPart.filter({
+          user_email: userEmail,
+          code: item.product_code,
+        });
+        if (existingParts.length > 0) {
+          const part = existingParts[0];
+          await base44.entities.DiagnosticPart.update(part.id, {
+            stock: (part.stock || 0) + item.quantity,
+            cost_price: item.unit_price || part.cost_price,
+            supplier: supplierName,
+          });
+          updatedPartsCount++;
+        } else {
+          await base44.entities.DiagnosticPart.create({
+            user_email: userEmail,
+            name: item.product_name,
+            code: item.product_code || "",
+            barcode: item.barcode || "",
+            ncm: item.ncm || "",
+            unit: item.unit || "UN",
+            cost_price: item.unit_price || 0,
+            sale_price: (item.unit_price || 0) * 1.3,
+            stock: item.quantity || 0,
+            min_stock: 0,
+            supplier: supplierName,
+            is_active: true,
+          });
+          newPartsCount++;
+        }
+      }
+
       // Upload XML file
       let xmlUrl = "";
       try {
@@ -218,7 +254,10 @@ export default function EntryManager({ userEmail }) {
         status: "registrada",
       });
 
-      toast({ title: "Entrada registrada", description: `NF ${data.nota.number} — ${formatCurrency(data.totals.total_nota)}` });
+      const partsMsg = newPartsCount > 0 || updatedPartsCount > 0
+        ? ` • ${newPartsCount} peça(s) cadastrada(s), ${updatedPartsCount} atualizada(s)`
+        : "";
+      toast({ title: "Entrada registrada", description: `NF ${data.nota.number} — ${formatCurrency(data.totals.total_nota)}${partsMsg}` });
       setShowXmlImport(false);
       load();
     } catch (e) {
