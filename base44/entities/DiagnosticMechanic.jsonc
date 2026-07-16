@@ -1,0 +1,58 @@
+{
+  "name": "DiagnosticMechanic",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do mec\u00e2nico"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF (apenas n\u00fameros)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email"
+    },
+    "specialty": {
+      "type": "string",
+      "enum": [
+        "motor",
+        "eletrica",
+        "suspensao",
+        "freios",
+        "ar_condicionado",
+        "transmissao",
+        "geral"
+      ],
+      "default": "geral",
+      "description": "Especialidade do mec\u00e2nico"
+    },
+    "hire_date": {
+      "type": "string",
+      "description": "Data de admiss\u00e3o (ISO)"
+    },
+    "commission_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Percentual de comiss\u00e3o (%)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o mec\u00e2nico est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ]
+}

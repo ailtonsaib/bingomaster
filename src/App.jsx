@@ -58,6 +58,7 @@ import MineSweeper from '@/pages/MineSweeper';
 import InstallInstructions from '@/pages/InstallInstructions';
 import DiagnosticLogin from '@/pages/DiagnosticLogin';
 import DiagnosticAuto from '@/pages/DiagnosticAuto';
+import Workshop from '@/pages/Workshop';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -158,6 +159,7 @@ const AuthenticatedApp = () => {
       <Route element={<PortalGuard permission="can_access_diagnostic" />}>
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
           <Route path="/diagnostico-auto" element={<DiagnosticAuto />} />
+          <Route path="/diagnostico-oficina" element={<Workshop />} />
         </Route>
       </Route>
       {/* PDV — Frente de Caixa */}

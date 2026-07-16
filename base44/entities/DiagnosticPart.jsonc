@@ -1,0 +1,77 @@
+{
+  "name": "DiagnosticPart",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da pe\u00e7a"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo interno / SKU"
+    },
+    "barcode": {
+      "type": "string",
+      "description": "C\u00f3digo de barras (EAN)"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marca / Fabricante"
+    },
+    "category": {
+      "type": "string",
+      "description": "Categoria (ex: Motor, Freio, Suspens\u00e3o)"
+    },
+    "unit": {
+      "type": "string",
+      "default": "UN",
+      "description": "Unidade: UN, CX, KG, LT, MT"
+    },
+    "cost_price": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o de custo"
+    },
+    "sale_price": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o de venda"
+    },
+    "stock": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade em estoque"
+    },
+    "min_stock": {
+      "type": "number",
+      "default": 0,
+      "description": "Estoque m\u00ednimo para alerta"
+    },
+    "supplier": {
+      "type": "string",
+      "description": "Fornecedor principal"
+    },
+    "location": {
+      "type": "string",
+      "description": "Localiza\u00e7\u00e3o f\u00edsica (prateleira/binha)"
+    },
+    "ncm": {
+      "type": "string",
+      "description": "NCM"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a pe\u00e7a est\u00e1 ativa"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "sale_price"
+  ]
+}

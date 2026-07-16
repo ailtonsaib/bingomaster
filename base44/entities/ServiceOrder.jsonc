@@ -1,0 +1,191 @@
+{
+  "name": "ServiceOrder",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero da ordem de servi\u00e7o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aberta",
+        "em_andamento",
+        "aguardando_pecas",
+        "concluida",
+        "entregue",
+        "cancelada"
+      ],
+      "default": "aberta",
+      "description": "Status: aberta, em_andamento, aguardando_pecas, concluida, entregue, cancelada"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID do cliente"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nome do cliente (cache)"
+    },
+    "client_cpf_cnpj": {
+      "type": "string",
+      "description": "CPF/CNPJ do cliente (cache)"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefone do cliente (cache)"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID do ve\u00edculo"
+    },
+    "vehicle_plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (cache)"
+    },
+    "vehicle_brand": {
+      "type": "string",
+      "description": "Marca do ve\u00edculo (cache)"
+    },
+    "vehicle_model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo (cache)"
+    },
+    "vehicle_year": {
+      "type": "string",
+      "description": "Ano do ve\u00edculo (cache)"
+    },
+    "vehicle_mileage": {
+      "type": "number",
+      "default": 0,
+      "description": "Quilometragem na entrada do ve\u00edculo"
+    },
+    "mechanic_id": {
+      "type": "string",
+      "description": "ID do mec\u00e2nico respons\u00e1vel"
+    },
+    "mechanic_name": {
+      "type": "string",
+      "description": "Nome do mec\u00e2nico respons\u00e1vel (cache)"
+    },
+    "client_complaint": {
+      "type": "string",
+      "description": "Queixa / problema relatado pelo cliente"
+    },
+    "technical_diagnosis": {
+      "type": "string",
+      "description": "Diagn\u00f3stico t\u00e9cnico realizado pelo mec\u00e2nico"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "peca",
+              "servico"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 1
+          },
+          "unit_price": {
+            "type": "number",
+            "default": 0
+          },
+          "total": {
+            "type": "number",
+            "default": 0
+          },
+          "part_id": {
+            "type": "string"
+          },
+          "part_code": {
+            "type": "string"
+          },
+          "mechanic_id": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Itens da OS (pe\u00e7as e servi\u00e7os)",
+      "default": []
+    },
+    "parts_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de pe\u00e7as"
+    },
+    "labor_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de m\u00e3o de obra (servi\u00e7os)"
+    },
+    "discount": {
+      "type": "number",
+      "default": 0,
+      "description": "Desconto aplicado"
+    },
+    "total": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total da OS"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "description": "Data prevista de conclus\u00e3o (ISO)"
+    },
+    "start_date": {
+      "type": "string",
+      "description": "Data de in\u00edcio do servi\u00e7o (ISO)"
+    },
+    "completion_date": {
+      "type": "string",
+      "description": "Data de conclus\u00e3o (ISO)"
+    },
+    "delivery_date": {
+      "type": "string",
+      "description": "Data de entrega ao cliente (ISO)"
+    },
+    "warranty_months": {
+      "type": "number",
+      "default": 0,
+      "description": "Meses de garantia"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "pago",
+        "parcial"
+      ],
+      "default": "pendente",
+      "description": "Status do pagamento"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Forma de pagamento (dinheiro, pix, cartao, prazo)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es gerais"
+    }
+  },
+  "required": [
+    "user_email",
+    "order_number",
+    "client_name",
+    "vehicle_brand",
+    "vehicle_model"
+  ]
+}

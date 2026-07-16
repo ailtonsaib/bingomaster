@@ -202,6 +202,9 @@ export default function DiagnosticAuto() {
                 </span>
               )}
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/diagnostico-oficina")} className="text-[#52525B]">
+              <Wrench className="w-4 h-4 mr-1" /> Oficina
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[#52525B]">
               <LogOut className="w-4 h-4" /> Sair
             </Button>
