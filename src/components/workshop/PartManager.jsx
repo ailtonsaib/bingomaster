@@ -3,9 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Pencil, Loader2, Package, Search, AlertTriangle, Globe } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, Package, Search, AlertTriangle, Globe, Droplet } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import PartsCrossReferenceModal from "./PartsCrossReferenceModal";
+import OilChangeModal from "./OilChangeModal";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -18,6 +19,7 @@ export default function PartManager({ userEmail }) {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [showCrossRef, setShowCrossRef] = useState(false);
+  const [showOilChange, setShowOilChange] = useState(false);
   const [selMontadora, setSelMontadora] = useState("");
   const [selModelo, setSelModelo] = useState("");
   const [selAno, setSelAno] = useState("");
@@ -103,6 +105,9 @@ export default function PartManager({ userEmail }) {
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <h3 className="text-lg font-bold flex items-center gap-2"><Package className="w-5 h-5 text-blue-600" /> Peças ({parts.length})</h3>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowOilChange(true)} className="gap-1 border-green-200 text-green-600 hover:bg-green-50">
+            <Droplet className="w-4 h-4" /> Troca de Óleo
+          </Button>
           <Button variant="outline" onClick={() => setShowCrossRef(true)} className="gap-1 border-blue-200 text-blue-600 hover:bg-blue-50">
             <Globe className="w-4 h-4" /> Buscar Fabricantes
           </Button>
@@ -198,6 +203,7 @@ export default function PartManager({ userEmail }) {
       )}
 
       <PartsCrossReferenceModal open={showCrossRef} onClose={() => setShowCrossRef(false)} parts={parts} />
+      <OilChangeModal open={showOilChange} onClose={() => setShowOilChange(false)} userEmail={userEmail} parts={parts} />
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowForm(false)}>

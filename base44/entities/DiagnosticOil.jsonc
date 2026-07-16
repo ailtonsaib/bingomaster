@@ -1,0 +1,62 @@
+{
+  "name": "DiagnosticOil",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "vehicle_brand": {
+      "type": "string",
+      "description": "Montadora (ex: Fiat, Volkswagen)"
+    },
+    "vehicle_model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo (ex: Palio, Gol)"
+    },
+    "vehicle_engine": {
+      "type": "string",
+      "description": "Motoriza\u00e7\u00e3o (ex: 1.0, 1.6, 2.0)"
+    },
+    "vehicle_year": {
+      "type": "string",
+      "description": "Ano ou faixa de anos (ex: 2015, 2018-2022)"
+    },
+    "oil_viscosity": {
+      "type": "string",
+      "description": "Viscosidade SAE recomendada (ex: 5W30, 10W40, 0W20)"
+    },
+    "oil_type": {
+      "type": "string",
+      "enum": [
+        "mineral",
+        "semisintetico",
+        "sintetico"
+      ],
+      "description": "Tipo de \u00f3leo: mineral, semisintetico ou sintetico"
+    },
+    "quantity_liters": {
+      "type": "number",
+      "description": "Quantidade de litros necess\u00e1ria para a troca"
+    },
+    "filter_code": {
+      "type": "string",
+      "description": "C\u00f3digo do filtro de \u00f3leo recomendado"
+    },
+    "interval_km": {
+      "type": "number",
+      "description": "Intervalo de troca em km (ex: 10000)"
+    },
+    "observations": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre a troca de \u00f3leo"
+    }
+  },
+  "required": [
+    "user_email",
+    "vehicle_brand",
+    "vehicle_model",
+    "oil_viscosity",
+    "quantity_liters"
+  ]
+}
