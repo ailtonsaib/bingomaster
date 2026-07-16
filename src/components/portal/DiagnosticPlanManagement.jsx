@@ -41,6 +41,7 @@ export default function DiagnosticPlanManagement() {
         max_diagnostics: Number(config.max_diagnostics),
         max_clients: Number(config.max_clients),
         max_vehicles: Number(config.max_vehicles),
+        max_service_orders: Number(config.max_service_orders),
         can_delete: config.can_delete,
         is_active: config.is_active,
         id: config.id,
@@ -110,7 +111,7 @@ export default function DiagnosticPlanManagement() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <Label className="text-xs mb-1 block">Máx. Diagnósticos</Label>
                   <Input
@@ -137,6 +138,16 @@ export default function DiagnosticPlanManagement() {
                     type="number"
                     value={config.max_vehicles}
                     onChange={(e) => handleField(config.id, "max_vehicles", e.target.value)}
+                    className="h-9"
+                    placeholder="-1 = ilimitado"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">Máx. Ordens de Serviço</Label>
+                  <Input
+                    type="number"
+                    value={config.max_service_orders}
+                    onChange={(e) => handleField(config.id, "max_service_orders", e.target.value)}
                     className="h-9"
                     placeholder="-1 = ilimitado"
                   />
@@ -170,6 +181,8 @@ export default function DiagnosticPlanManagement() {
                 {config.max_clients < 0 ? "Clientes ilimitados" : `${config.max_clients} clientes`}
                 {" • "}
                 {config.max_vehicles < 0 ? "Veículos ilimitados" : `${config.max_vehicles} veículos`}
+                {" • "}
+                {config.max_service_orders < 0 ? "OS ilimitadas" : `${config.max_service_orders} OS`}
               </p>
             </CardContent>
           </Card>

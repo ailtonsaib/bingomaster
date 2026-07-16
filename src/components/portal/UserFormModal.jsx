@@ -27,6 +27,13 @@ const SPED_PLANS = [
   { key: "max", label: "MAX", desc: "Todos os módulos" },
 ];
 
+const DIAGNOSTIC_PLANS = [
+  { key: "free", label: "FREE", desc: "5 diagnósticos, 5 clientes, 5 veículos" },
+  { key: "teste", label: "TESTE", desc: "10 ordens de serviço, sem exclusão" },
+  { key: "bronze", label: "BRONZE", desc: "OS ilimitadas + exclusão" },
+  { key: "master", label: "MASTER", desc: "Ilimitado + exclusão" },
+];
+
 export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,6 +46,8 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [canAccessSped, setCanAccessSped] = useState(false);
   const [spedPlan, setSpedPlan] = useState("free");
   const [canAccessPdv, setCanAccessPdv] = useState(false);
+  const [canAccessDiagnostic, setCanAccessDiagnostic] = useState(false);
+  const [diagnosticPlan, setDiagnosticPlan] = useState("teste");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -51,6 +60,8 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
         can_access_chamados: canAccessChamados,
         can_access_sped: canAccessSped,
         can_access_pdv: canAccessPdv,
+        can_access_diagnostic: canAccessDiagnostic,
+        diagnostic_plan: canAccessDiagnostic ? diagnosticPlan : "free",
         bingo_plan: canAccessBingo ? bingoPlan : "free",
         sped_plan: canAccessSped ? spedPlan : "free",
         finance_full_access: canAccessFinance && financePlan === "full",
@@ -152,6 +163,25 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
                 className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
               >
                 {SPED_PLANS.map((p) => (
+                  <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Sistema Automotivo permissions */}
+          <div className="pt-2 border-t">
+            <label className="flex items-center gap-2 text-sm font-medium mb-2">
+              <input type="checkbox" checked={canAccessDiagnostic} onChange={(e) => setCanAccessDiagnostic(e.target.checked)} className="w-4 h-4" />
+              Sistema Automotivo
+            </label>
+            {canAccessDiagnostic && (
+              <select
+                value={diagnosticPlan}
+                onChange={(e) => setDiagnosticPlan(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                {DIAGNOSTIC_PLANS.map((p) => (
                   <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
                 ))}
               </select>

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Loader2, Search, ClipboardList, Car } from "lucide-react";
 import ServiceOrderForm from "./ServiceOrderForm";
 import ServiceOrderDetail from "./ServiceOrderDetail";
+import PlanUpgradePanel from "./PlanUpgradePanel";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -44,17 +45,26 @@ export default function ServiceOrderList({ userEmail }) {
   const [search, setSearch] = useState("");
   const [view, setView] = useState("list");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [planUsage, setPlanUsage] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await base44.entities.ServiceOrder.filter({ user_email: userEmail }, "-created_date");
+      const [data, usageRes] = await Promise.all([
+        base44.entities.ServiceOrder.filter({ user_email: userEmail }, "-created_date"),
+        base44.functions.invoke("manageDiagnostic", { operation: "getUsage" }).catch(() => null),
+      ]);
       setOrders(data);
+      if (usageRes?.data) setPlanUsage(usageRes.data);
     } catch { /* ignore */ }
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [userEmail]);
+
+  const osLimitReached = planUsage &&
+    planUsage.max_service_orders >= 0 &&
+    planUsage.used_service_orders >= planUsage.max_service_orders;
 
   const filtered = orders.filter(o => {
     const statusMatch = statusFilter === "all" || o.status === statusFilter;
@@ -98,10 +108,43 @@ export default function ServiceOrderList({ userEmail }) {
         <h3 className="text-lg font-bold flex items-center gap-2">
           <ClipboardList className="w-5 h-5 text-blue-600" /> Ordens de Serviço ({orders.length})
         </h3>
-        <Button onClick={() => setView("form")} className="gap-1 text-white" style={{ backgroundColor: "#2563EB" }}>
+        <Button
+          onClick={() => setView("form")}
+          disabled={osLimitReached}
+          className="gap-1 text-white"
+          style={{ backgroundColor: "#2563EB" }}
+        >
           <Plus className="w-4 h-4" /> Nova OS
         </Button>
       </div>
+
+      {/* Usage indicator */}
+      {planUsage && planUsage.max_service_orders >= 0 && !osLimitReached && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5">
+          <ClipboardList className="w-4 h-4 text-blue-500 flex-shrink-0" />
+          <p className="text-sm text-blue-700 whitespace-nowrap">
+            {planUsage.used_service_orders} de {planUsage.max_service_orders} OS criadas
+          </p>
+          <div className="flex-1 h-2 bg-blue-100 rounded-full overflow-hidden ml-2">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all"
+              style={{ width: `${Math.min(100, (planUsage.used_service_orders / planUsage.max_service_orders) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Limit reached — show upgrade panel */}
+      {osLimitReached && (
+        <div className="mb-6">
+          <PlanUpgradePanel
+            used={planUsage.used_service_orders}
+            max={planUsage.max_service_orders}
+            currentPlanName={planUsage.plan_name}
+            bronzePrice={19.9}
+          />
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-3">

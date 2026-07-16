@@ -227,6 +227,8 @@ export const APPS = [
     ],
     plans: [
       { name: "Free", price: 0, limit: "5 diagnósticos, 5 clientes, 5 veículos" },
+      { name: "Teste", price: 0, limit: "10 ordens de serviço, sem exclusão" },
+      { name: "Bronze", price: 19.9, limit: "OS ilimitadas + exclusão de registros" },
       { name: "Master", price: 29.9, limit: "Ilimitado + exclusão de registros" },
     ],
     accent: "#2563EB",
