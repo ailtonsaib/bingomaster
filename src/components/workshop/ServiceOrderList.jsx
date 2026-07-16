@@ -98,8 +98,28 @@ export default function ServiceOrderList({ userEmail }) {
     );
   }
 
+  if (view === "edit" && selectedOrder) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+        <h3 className="text-lg font-bold mb-4">Editar Ordem de Serviço — {selectedOrder.order_number}</h3>
+        <ServiceOrderForm
+          userEmail={userEmail}
+          editOrder={selectedOrder}
+          onSaved={() => { setView("detail"); load(); }}
+          onCancel={() => setView("detail")}
+        />
+      </div>
+    );
+  }
+
   if (view === "detail" && selectedOrder) {
-    return <ServiceOrderDetail order={selectedOrder} onBack={handleBack} />;
+    return (
+      <ServiceOrderDetail
+        order={selectedOrder}
+        onBack={handleBack}
+        onEdit={() => setView("edit")}
+      />
+    );
   }
 
   return (

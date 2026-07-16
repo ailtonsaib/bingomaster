@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield } from "lucide-react";
+import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -16,7 +16,7 @@ const STATUS_CONFIG = {
   cancelada: { label: "Cancelada", color: "bg-red-50 text-red-600" },
 };
 
-export default function ServiceOrderDetail({ order, onBack }) {
+export default function ServiceOrderDetail({ order, onBack, onEdit }) {
   const { toast } = useToast();
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [updating, setUpdating] = useState(false);
@@ -45,9 +45,16 @@ export default function ServiceOrderDetail({ order, onBack }) {
         <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-600">
           <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
         </Button>
-        <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1">
-          <Printer className="w-4 h-4" /> Imprimir
-        </Button>
+        <div className="flex items-center gap-2">
+          {onEdit && order.status !== "cancelada" && (
+            <Button variant="outline" size="sm" onClick={onEdit} className="gap-1">
+              <Pencil className="w-4 h-4" /> Editar OS
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1">
+            <Printer className="w-4 h-4" /> Imprimir
+          </Button>
+        </div>
       </div>
 
       <div id="print-area" className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-5">

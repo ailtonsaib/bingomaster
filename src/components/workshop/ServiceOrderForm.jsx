@@ -10,8 +10,9 @@ import { maskCpfCnpj, onlyDigits } from "@/lib/brMasks";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
+export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrder }) {
   const { toast } = useToast();
+  const isEditing = !!editOrder;
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [searching, setSearching] = useState(false);
   const [client, setClient] = useState(null);
@@ -50,9 +51,38 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
       setMechanics(mechs);
       setParts(prts);
       setServiceTypes(svcs);
+
+      // Pre-fill form when editing an existing order
+      if (editOrder) {
+        if (editOrder.client_cpf_cnpj) setCpfCnpj(editOrder.client_cpf_cnpj);
+        if (editOrder.client_name) {
+          setClient({ name: editOrder.client_name, cpf_cnpj: editOrder.client_cpf_cnpj, phone: editOrder.client_phone, id: editOrder.client_id });
+        }
+        if (editOrder.vehicle_id) {
+          setVehicles([{ id: editOrder.vehicle_id, brand: editOrder.vehicle_brand, model: editOrder.vehicle_model, plate: editOrder.vehicle_plate, year: editOrder.vehicle_year, mileage: editOrder.vehicle_mileage }]);
+          setSelectedVehicleId(editOrder.vehicle_id);
+        } else {
+          setManualVehicle({
+            brand: editOrder.vehicle_brand || "",
+            model: editOrder.vehicle_model || "",
+            plate: editOrder.vehicle_plate || "",
+            year: editOrder.vehicle_year || "",
+            mileage: editOrder.vehicle_mileage || "",
+          });
+        }
+        setSelectedServiceTypeId(editOrder.service_type_id || "");
+        setSelectedMechanicId(editOrder.mechanic_id || "");
+        setComplaint(editOrder.client_complaint || "");
+        setDiagnosis(editOrder.technical_diagnosis || "");
+        setScheduledDate(editOrder.scheduled_date ? editOrder.scheduled_date.split("T")[0] : "");
+        setWarrantyMonths(editOrder.warranty_months || 0);
+        setItems(editOrder.items || []);
+        setDiscount(editOrder.discount || 0);
+        setNotes(editOrder.notes || "");
+      }
     };
     load();
-  }, [userEmail]);
+  }, [userEmail, editOrder]);
 
   const handleClientSearch = async () => {
     const digits = onlyDigits(cpfCnpj);
@@ -179,20 +209,14 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
 
     setSaving(true);
     try {
-      const now = new Date();
-      const order_number = `OS-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-
       const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId);
 
-      await base44.entities.ServiceOrder.create({
-        user_email: userEmail,
-        order_number,
-        status: "aberta",
-        client_id: client?.id || "",
+      const orderData = {
+        client_id: client?.id || editOrder?.client_id || "",
         client_name: finalClientName,
         client_cpf_cnpj: finalClientCpf,
         client_phone: finalClientPhone || "",
-        vehicle_id: selectedVehicle?.id || "",
+        vehicle_id: selectedVehicle?.id || editOrder?.vehicle_id || "",
         vehicle_plate: finalVehicle.plate || "",
         vehicle_brand: finalVehicle.brand,
         vehicle_model: finalVehicle.model,
@@ -212,14 +236,27 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         total,
         scheduled_date: scheduledDate || "",
         warranty_months: Number(warrantyMonths) || 0,
-        payment_status: "pendente",
         notes,
-      });
+      };
 
-      toast({ title: "Ordem de Serviço criada", description: `OS ${order_number} criada com sucesso.` });
+      if (isEditing) {
+        await base44.entities.ServiceOrder.update(editOrder.id, orderData);
+        toast({ title: "OS atualizada", description: `Ordem de Serviço ${editOrder.order_number} atualizada com sucesso.` });
+      } else {
+        const now = new Date();
+        const order_number = `OS-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+        await base44.entities.ServiceOrder.create({
+          ...orderData,
+          user_email: userEmail,
+          order_number,
+          status: "aberta",
+          payment_status: "pendente",
+        });
+        toast({ title: "Ordem de Serviço criada", description: `OS ${order_number} criada com sucesso.` });
+      }
       onSaved();
     } catch (err) {
-      toast({ title: "Erro", description: "Não foi possível criar a OS.", variant: "destructive" });
+      toast({ title: "Erro", description: isEditing ? "Não foi possível atualizar a OS." : "Não foi possível criar a OS.", variant: "destructive" });
     }
     setSaving(false);
   };
@@ -542,7 +579,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button onClick={handleSave} disabled={saving} className="text-white gap-1" style={{ backgroundColor: "#2563EB" }}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Criar Ordem de Serviço
+          {isEditing ? "Salvar Alterações" : "Criar Ordem de Serviço"}
         </Button>
       </div>
     </div>
