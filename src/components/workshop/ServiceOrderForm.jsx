@@ -41,6 +41,12 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [allClients, setAllClients] = useState([]);
+  const [allVehicles, setAllVehicles] = useState([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [clientLoading, setClientLoading] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       const [mechs, prts, svcs] = await Promise.all([
@@ -51,6 +57,13 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
       setMechanics(mechs);
       setParts(prts);
       setServiceTypes(svcs);
+
+      const [clis, vehs] = await Promise.all([
+        base44.entities.DiagnosticClient.filter({ user_email: userEmail }),
+        base44.entities.DiagnosticVehicle.filter({ user_email: userEmail }),
+      ]);
+      setAllClients(clis);
+      setAllVehicles(vehs);
 
       // Pre-fill form when editing an existing order
       if (editOrder) {
@@ -135,6 +148,55 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
       })
       .slice(0, 10)
     : [];
+
+  const clientResults = clientSearch
+    ? allClients.filter(c => {
+        const q = clientSearch.toLowerCase();
+        const name = (c.name || "").toLowerCase();
+        const cpf = (c.cpf_cnpj || "").toLowerCase();
+        const digits = onlyDigits(clientSearch);
+        // busca também por placa de veículos vinculados
+        const hasVehicleMatch = allVehicles.some(v =>
+          v.client_cpf_cnpj === c.cpf_cnpj &&
+          (
+            (v.plate || "").toLowerCase().includes(q) ||
+            (v.brand || "").toLowerCase().includes(q) ||
+            (v.model || "").toLowerCase().includes(q)
+          )
+        );
+        return name.startsWith(q) ||
+          name.includes(q) ||
+          cpf.includes(q) ||
+          cpf.includes(digits) ||
+          (c.phone || "").includes(digits) ||
+          hasVehicleMatch;
+      })
+      .sort((a, b) => {
+        const q = clientSearch.toLowerCase();
+        const aName = (a.name || "").toLowerCase();
+        const bName = (b.name || "").toLowerCase();
+        const aStarts = aName.startsWith(q) ? 0 : 1;
+        const bStarts = bName.startsWith(q) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return aName.localeCompare(bName);
+      })
+      .slice(0, 8)
+    : [];
+
+  const handleSelectClient = async (c) => {
+    setCpfCnpj(maskCpfCnpj(c.cpf_cnpj));
+    setClient(c);
+    setClientNotFound(false);
+    setManualClient({ name: "", phone: "" });
+    const vehs = allVehicles.filter(v => v.client_cpf_cnpj === c.cpf_cnpj);
+    setVehicles(vehs);
+    setSelectedVehicleId("");
+    if (vehs.length === 0) {
+      setManualVehicle({ brand: "", model: "", plate: "", year: "", mileage: "" });
+    }
+    setClientSearch("");
+    setShowClientDropdown(false);
+  };
 
   const handleAddPart = (part) => {
     setItems(prev => [...prev, {
@@ -287,15 +349,58 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
       {/* Client search */}
       <div>
         <Label className="text-sm font-semibold">Cliente</Label>
-        <div className="flex gap-2 mt-1">
+        <div className="relative mt-1">
+          <Input
+            value={clientSearch}
+            onChange={e => { setClientSearch(e.target.value); setShowClientDropdown(true); }}
+            onFocus={() => setShowClientDropdown(true)}
+            onBlur={() => setTimeout(() => setShowClientDropdown(false), 200)}
+            onKeyDown={e => { if (e.key === "Enter" && clientResults.length > 0) handleSelectClient(clientResults[0]); }}
+            placeholder="Digite o nome, CPF/CNPJ ou placa do veículo..."
+            className="h-10 flex-1 pl-9"
+          />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          {showClientDropdown && clientSearch && clientResults.length > 0 && (
+            <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-64 overflow-y-auto">
+              {clientResults.map(c => {
+                const v = allVehicles.find(v => v.client_cpf_cnpj === c.cpf_cnpj);
+                return (
+                  <button
+                    type="button"
+                    key={c.id}
+                    onClick={() => handleSelectClient(c)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-800">{c.name}</span>
+                      <span className="text-xs text-gray-400">{maskCpfCnpj(c.cpf_cnpj)}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {c.phone && `${c.phone} • `}
+                      {v ? `Veículo: ${v.brand} ${v.model} ${v.plate ? `| ${v.plate}` : ""}` : "Sem veículo cadastrado"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {showClientDropdown && clientSearch && clientResults.length === 0 && !clientLoading && (
+            <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg px-3 py-2.5 text-sm text-gray-400">
+              Nenhum cliente encontrado para "{clientSearch}". Use a busca por CPF/CNPJ abaixo ou cadastre manualmente.
+            </div>
+          )}
+        </div>
+
+        {/* CPF/CNPJ direct search fallback */}
+        <div className="flex gap-2 mt-2">
           <Input
             value={cpfCnpj}
             onChange={e => setCpfCnpj(maskCpfCnpj(e.target.value))}
             onKeyDown={e => e.key === "Enter" && handleClientSearch()}
-            placeholder="CPF ou CNPJ do cliente"
-            className="h-10 flex-1"
+            placeholder="Ou digite o CPF/CNPJ se o cliente não apareceu acima"
+            className="h-9 flex-1 text-sm"
           />
-          <Button onClick={handleClientSearch} disabled={searching} className="h-10 text-white" style={{ backgroundColor: "#2563EB" }}>
+          <Button type="button" onClick={handleClientSearch} disabled={searching} className="h-9 text-white" style={{ backgroundColor: "#2563EB" }}>
             {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           </Button>
         </div>
