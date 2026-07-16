@@ -113,7 +113,7 @@ export default function Workshop() {
         )}
 
         {/* Tabs */}
-        <div className="mb-6 flex gap-1 p-1 bg-gray-100 rounded-xl w-fit overflow-x-auto">
+        <div className="mb-6 flex flex-wrap gap-1 p-1 bg-gray-100 rounded-xl max-w-full">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = !tab.isLink && activeTab === tab.id;
