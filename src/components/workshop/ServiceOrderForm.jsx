@@ -108,11 +108,32 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
   };
 
   const filteredParts = partSearch
-    ? parts.filter(p =>
-        p.name?.toLowerCase().includes(partSearch.toLowerCase()) ||
-        p.code?.toLowerCase().includes(partSearch.toLowerCase()) ||
-        p.barcode?.includes(partSearch)
-      ).slice(0, 8)
+    ? parts.filter(p => {
+        const q = partSearch.toLowerCase();
+        const name = (p.name || "").toLowerCase();
+        const code = (p.code || "").toLowerCase();
+        const brand = (p.brand || "").toLowerCase();
+        const category = (p.category || "").toLowerCase();
+        // busca por início de palavra (prioridade) ou contém em qualquer posição
+        return name.startsWith(q) ||
+          name.includes(q) ||
+          code.startsWith(q) ||
+          code.includes(q) ||
+          brand.includes(q) ||
+          category.includes(q) ||
+          (p.barcode || "").includes(partSearch);
+      })
+      .sort((a, b) => {
+        // ordena: começa com o termo primeiro, depois contém
+        const q = partSearch.toLowerCase();
+        const aName = (a.name || "").toLowerCase();
+        const bName = (b.name || "").toLowerCase();
+        const aStarts = aName.startsWith(q) ? 0 : 1;
+        const bStarts = bName.startsWith(q) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return aName.localeCompare(bName);
+      })
+      .slice(0, 10)
     : [];
 
   const handleAddPart = (part) => {
@@ -428,36 +449,40 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
               value={partSearch}
               onChange={e => { setPartSearch(e.target.value); setShowPartDropdown(true); }}
               onFocus={() => setShowPartDropdown(true)}
-              placeholder="Digite o nome ou código da peça para buscar..."
+              onBlur={() => setTimeout(() => setShowPartDropdown(false), 200)}
+              placeholder="Digite para buscar peças (ex: rolamento, filtro, pastilha...)"
               className="h-10 bg-white"
             />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             {showPartDropdown && partSearch && filteredParts.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
+              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-64 overflow-y-auto">
                 {filteredParts.map(part => (
                   <button
                     type="button"
                     key={part.id}
                     onClick={() => handleAddPart(part)}
-                    className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
                   >
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium">{part.name}</span>
-                      <span className="text-sm text-green-600 font-medium">{formatCurrency(part.sale_price)}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-800">{part.name}</span>
+                      <span className="text-sm text-green-600 font-semibold">{formatCurrency(part.sale_price)}</span>
                     </div>
-                    <div className="text-xs text-gray-400">
-                      {part.code && `Cód: ${part.code} • `}Estoque: {part.stock} {part.unit}
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {part.code && `Cód: ${part.code} • `}
+                      {part.brand && `${part.brand} • `}
+                      Estoque: {part.stock} {part.unit}
                     </div>
                   </button>
                 ))}
               </div>
             )}
             {showPartDropdown && partSearch && filteredParts.length === 0 && (
-              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg px-3 py-2 text-sm text-gray-400">
-                Nenhuma peça encontrada. Cadastre peças no menu "Estoque".
+              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg px-3 py-2.5 text-sm text-gray-400">
+                Nenhuma peça encontrada para "{partSearch}". Cadastre peças no menu "Estoque".
               </div>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-1">O preço de cadastro vem preenchido, mas pode ser alterado na tabela abaixo.</p>
+          <p className="text-xs text-gray-400 mt-1">Digite para buscar por nome, código, marca ou categoria. O preço vem do cadastro mas pode ser editado na tabela.</p>
         </div>
 
         {items.length === 0 ? (
