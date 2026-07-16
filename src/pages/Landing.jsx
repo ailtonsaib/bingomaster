@@ -6,8 +6,22 @@ import { getPortalUser } from "@/lib/portalSession";
 import { useDynamicPlans } from "@/hooks/useDynamicPlans";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft, MessageCircle, Mail, Phone, X, Check, Sparkles } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import AppPreview from "@/components/AppVideo";
 import BingoRankingBoard from "@/components/bingo/BingoRankingBoard";
+
+/** Gera lista de especificações legíveis a partir de um plano */
+function getPlanSpecs(plan) {
+  const specs = [];
+  if (plan.specs?.length) return plan.specs;
+  if (plan.max_cards) specs.push(`${Number(plan.max_cards).toLocaleString("pt-BR")} cartelas`);
+  if (plan.limit) specs.push(plan.limit);
+  if (plan.downloads !== undefined) specs.push(plan.downloads ? `${plan.downloads} downloads` : "Downloads ilimitados");
+  if (plan.apps?.length) specs.push(`Apps: ${plan.apps.join(", ")}`);
+  if (plan.types?.length) specs.push(`Módulos: ${plan.types.join(", ")}`);
+  if (plan.description) specs.push(plan.description);
+  return specs;
+}
 
 const iconMap = {
   Grid3x3: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>,
@@ -86,21 +100,49 @@ function AppCard({ app, onOpenPlans, loading }) {
 
       {/* Plans preview */}
       <div className="px-8 pb-4">
-        <div className="flex flex-wrap gap-1.5">
-          {loading ? (
-            <>
-              <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
-              <div className="h-6 w-24 rounded-full bg-gray-100 animate-pulse" />
-              <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
-            </>
-          ) : (
-            app.plans?.map((plan, i) => (
-              <span key={i} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: `${app.accent}15`, color: app.accent }}>
-                {plan.name}: {plan.price === 0 && plan.description ? plan.description : currency(plan.price)}
-              </span>
-            ))
-          )}
-        </div>
+        <TooltipProvider delayDuration={200}>
+          <div className="flex flex-wrap gap-1.5">
+            {loading ? (
+              <>
+                <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
+                <div className="h-6 w-24 rounded-full bg-gray-100 animate-pulse" />
+                <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
+              </>
+            ) : (
+              app.plans?.map((plan, i) => {
+                const specs = getPlanSpecs(plan);
+                const priceLabel = plan.price === 0 && plan.description ? plan.description : currency(plan.price);
+                return (
+                  <Tooltip key={i}>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-medium cursor-help transition-opacity hover:opacity-80"
+                        style={{ backgroundColor: `${app.accent}15`, color: app.accent }}
+                      >
+                        {plan.name}: {priceLabel}
+                      </span>
+                    </TooltipTrigger>
+                    {specs.length > 0 && (
+                      <TooltipContent side="bottom" className="max-w-[220px]">
+                        <div className="space-y-1">
+                          <p className="font-bold text-xs">{plan.name}</p>
+                          <ul className="space-y-0.5">
+                            {specs.map((spec, j) => (
+                              <li key={j} className="flex items-start gap-1.5 text-xs">
+                                <Check className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
+                                {spec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                );
+              })
+            )}
+          </div>
+        </TooltipProvider>
       </div>
 
       {/* Actions */}
@@ -184,6 +226,7 @@ function PlansModal({ app, onClose }) {
                     {plan.downloads !== undefined && <li className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />{plan.downloads ? `${plan.downloads} downloads` : "Downloads ilimitados"}</li>}
                     {plan.apps?.map((a, j) => <li key={j} className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />{a}</li>)}
                     {plan.types?.map((t, j) => <li key={j} className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />SPED {t}</li>)}
+                    {plan.specs?.map((s, j) => <li key={j} className="text-xs text-[#52525B] flex items-start gap-1.5"><Check className="w-3 h-3 text-green-500 mt-0.5" />{s}</li>)}
                   </ul>
                 </div>
               ))}
@@ -213,7 +256,7 @@ function PlansModal({ app, onClose }) {
 export default function Landing({ category }) {
   const navigate = useNavigate();
   const [plansApp, setPlansApp] = useState(null);
-  const { bingoPlans, spedPlans, financePlans, chamadosPlans, loading } = useDynamicPlans();
+  const { bingoPlans, spedPlans, financePlans, chamadosPlans, diagnosticPlans, loading } = useDynamicPlans();
 
   // Filtra apps pela categoria (se informada) e exclui admin
   const publicApps = APPS.filter((a) => !a.adminOnly && (!category || a.category === category)).map((app) => {
@@ -221,6 +264,7 @@ export default function Landing({ category }) {
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
     if (app.id === "pdv" && financePlans) return { ...app, plans: financePlans };
     if (app.id === "chamados" && chamadosPlans) return { ...app, plans: chamadosPlans };
+    if (app.id === "diagnostic" && diagnosticPlans) return { ...app, plans: diagnosticPlans };
     return app;
   });
 

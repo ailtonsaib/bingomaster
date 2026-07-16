@@ -9,15 +9,17 @@ export function useDynamicPlans() {
   const [bingoPlans, setBingoPlans] = useState([]);
   const [spedPlans, setSpedPlans] = useState([]);
   const [financePlans, setFinancePlans] = useState([]);
+  const [diagnosticPlans, setDiagnosticPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPlans() {
       try {
-        const [bingo, sped, appPlans] = await Promise.all([
+        const [bingo, sped, appPlans, diagPlans] = await Promise.all([
           base44.entities.PlanConfig.list(),
           base44.entities.SpedPlanConfig.list(),
           base44.entities.AppPlanConfig.list(),
+          base44.entities.DiagnosticPlanConfig.list(),
         ]);
 
         // Ordena bingo por max_cards crescente e SPED por order crescente
@@ -31,6 +33,7 @@ export function useDynamicPlans() {
         setBingoPlans(sortedBingo);
         setSpedPlans(sortedSped);
         setFinancePlans(appPlans || []);
+        setDiagnosticPlans(diagPlans || []);
       } catch (_) {
         // fallback: arrays vazios, Landing usa planos do appRegistry
       } finally {
@@ -109,11 +112,35 @@ export function useDynamicPlans() {
       description: p.description || "",
     }));
 
+  /** Converte planos do Diagnóstico Automotivo (DiagnosticPlanConfig) para o formato da Landing */
+  const mappedDiagnosticPlans = diagnosticPlans
+    .filter((p) => p.is_active !== false)
+    .map((p) => {
+      const specs = [];
+      if (p.max_diagnostics < 0) specs.push("Diagnósticos ilimitados");
+      else if (p.max_diagnostics > 0) specs.push(`${p.max_diagnostics} diagnósticos`);
+      if (p.max_clients < 0) specs.push("Clientes ilimitados");
+      else if (p.max_clients > 0) specs.push(`${p.max_clients} clientes`);
+      if (p.max_vehicles < 0) specs.push("Veículos ilimitados");
+      else if (p.max_vehicles > 0) specs.push(`${p.max_vehicles} veículos`);
+      if (p.max_service_orders < 0) specs.push("OS ilimitadas");
+      else if (p.max_service_orders > 0) specs.push(`${p.max_service_orders} ordens de serviço`);
+      if (p.can_delete) specs.push("Exclusão de registros");
+      if (p.acquisition_price > 0) specs.push(`Aquisição: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(p.acquisition_price)}`);
+      return {
+        name: p.plan_name || p.plan_id,
+        price: p.price ?? 0,
+        specs,
+        description: p.description || specs.join(", "),
+      };
+    });
+
   return {
     bingoPlans: mappedBingoPlans.length ? mappedBingoPlans : null,
     spedPlans: mappedSpedPlans.length ? mappedSpedPlans : null,
     financePlans: mappedFinancePlans.length ? mappedFinancePlans : null,
     chamadosPlans: mappedChamadosPlans.length ? mappedChamadosPlans : null,
+    diagnosticPlans: mappedDiagnosticPlans.length ? mappedDiagnosticPlans : null,
     loading,
   };
 }
