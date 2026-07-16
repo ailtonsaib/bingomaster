@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { maskCpfCnpj, maskPhone, maskCep } from "@/lib/brMasks";
+import NfseImporter from "@/components/workshop/NfseImporter";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -104,8 +105,11 @@ export default function EntryManager({ userEmail }) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // XML import modal
+  // XML import modal (NF-e)
   const [showXmlImport, setShowXmlImport] = useState(false);
+
+  // NFS-e import modal
+  const [showNfseImport, setShowNfseImport] = useState(false);
 
   // Manual entry modal
   const [showManualForm, setShowManualForm] = useState(false);
@@ -352,7 +356,10 @@ export default function EntryManager({ userEmail }) {
         </h3>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={() => setShowXmlImport(true)} className="gap-1 border-green-200 text-green-600 hover:bg-green-50">
-            <FileUp className="w-4 h-4" /> Importar XML
+            <FileUp className="w-4 h-4" /> Importar NF-e
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setShowNfseImport(true)} className="gap-1 border-purple-200 text-purple-600 hover:bg-purple-50">
+            <Wrench className="w-4 h-4" /> Importar NFS-e
           </Button>
           <Button type="button" onClick={() => setShowManualForm(true)} className="gap-1 text-white" style={{ backgroundColor: "#2563EB" }}>
             <Plus className="w-4 h-4" /> Nova Entrada
@@ -448,12 +455,22 @@ export default function EntryManager({ userEmail }) {
         </div>
       )}
 
-      {/* XML Import Modal */}
+      {/* XML Import Modal (NF-e) */}
       {showXmlImport && (
         <XmlImportModal
           onClose={() => setShowXmlImport(false)}
           onFile={handleXmlFile}
           fileRef={fileRef}
+        />
+      )}
+
+      {/* NFS-e Import Modal */}
+      {showNfseImport && (
+        <NfseImporter
+          userEmail={userEmail}
+          suppliers={suppliers}
+          onClose={() => setShowNfseImport(false)}
+          onSaved={load}
         />
       )}
 
