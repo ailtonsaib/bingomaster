@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, Loader2, Search, Package, Wrench, User } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Search, Package, Wrench, User, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { maskCpfCnpj, onlyDigits } from "@/lib/brMasks";
 
@@ -24,6 +24,8 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
   const [mechanics, setMechanics] = useState([]);
   const [selectedMechanicId, setSelectedMechanicId] = useState("");
   const [parts, setParts] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState("");
 
   const [complaint, setComplaint] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
@@ -39,12 +41,14 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
 
   useEffect(() => {
     const load = async () => {
-      const [mechs, prts] = await Promise.all([
+      const [mechs, prts, svcs] = await Promise.all([
         base44.entities.DiagnosticMechanic.filter({ user_email: userEmail, is_active: true }),
         base44.entities.DiagnosticPart.filter({ user_email: userEmail, is_active: true }),
+        base44.entities.DiagnosticServiceType.filter({ user_email: userEmail, is_active: true }),
       ]);
       setMechanics(mechs);
       setParts(prts);
+      setServiceTypes(svcs);
     };
     load();
   }, [userEmail]);
@@ -122,6 +126,17 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
   const total = partsTotal + laborTotal - (Number(discount) || 0);
 
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+  const selectedServiceType = serviceTypes.find(s => s.id === selectedServiceTypeId);
+
+  // Filtra mecânicos pela categoria do serviço: especialidade compatível OU geral
+  const filteredMechanics = selectedServiceType
+    ? mechanics.filter(m => m.specialty === selectedServiceType.category || m.specialty === "geral")
+    : mechanics;
+
+  const handleServiceTypeChange = (id) => {
+    setSelectedServiceTypeId(id);
+    setSelectedMechanicId("");
+  };
 
   const handleSave = async () => {
     let finalClientName = client?.name || manualClient.name;
@@ -165,6 +180,9 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         vehicle_model: finalVehicle.model,
         vehicle_year: finalVehicle.year || "",
         vehicle_mileage: Number(finalVehicle.mileage) || 0,
+        service_type_id: selectedServiceType?.id || "",
+        service_type_name: selectedServiceType?.name || "",
+        service_category: selectedServiceType?.category || "geral",
         mechanic_id: selectedMechanicId || "",
         mechanic_name: selectedMechanic?.name || "",
         client_complaint: complaint,
@@ -251,18 +269,50 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         </div>
       )}
 
-      {/* Mechanic + scheduling */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Service type + mechanic + scheduling */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <Label className="text-sm font-semibold">Mecânico Responsável</Label>
+          <Label className="text-sm font-semibold">Tipo de Serviço</Label>
+          <select
+            value={selectedServiceTypeId}
+            onChange={e => handleServiceTypeChange(e.target.value)}
+            className="w-full h-10 rounded-md border border-input bg-transparent px-3 mt-1 text-sm"
+          >
+            <option value="">Selecione...</option>
+            {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          {selectedServiceType && (
+            <p className="text-xs text-blue-600 mt-1">Categoria: {selectedServiceType.category}</p>
+          )}
+        </div>
+        <div>
+          <Label className="text-sm font-semibold">
+            Mecânico Responsável
+            {selectedServiceType && filteredMechanics.length > 0 && (
+              <span className="text-xs text-gray-400 font-normal ml-1">({filteredMechanics.length} disponível)</span>
+            )}
+          </Label>
           <select
             value={selectedMechanicId}
             onChange={e => setSelectedMechanicId(e.target.value)}
             className="w-full h-10 rounded-md border border-input bg-transparent px-3 mt-1 text-sm"
+            disabled={!selectedServiceTypeId && serviceTypes.length > 0}
           >
             <option value="">Selecione...</option>
-            {mechanics.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            {filteredMechanics.map(m => (
+              <option key={m.id} value={m.id}>
+                {m.name}{m.specialty === "geral" ? " (Geral)" : ` (${m.specialty})`}
+              </option>
+            ))}
           </select>
+          {selectedServiceType && filteredMechanics.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> Nenhum mecânico desta categoria. Cadastre um mecânico especializado ou "Geral".
+            </p>
+          )}
+          {!selectedServiceTypeId && serviceTypes.length > 0 && (
+            <p className="text-xs text-gray-400 mt-1">Selecione o tipo de serviço para filtrar mecânicos.</p>
+          )}
         </div>
         <div>
           <Label className="text-sm font-semibold">Previsão de Conclusão</Label>

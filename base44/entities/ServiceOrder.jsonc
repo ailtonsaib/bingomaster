@@ -64,6 +64,19 @@
       "default": 0,
       "description": "Quilometragem na entrada do ve\u00edculo"
     },
+    "service_type_id": {
+      "type": "string",
+      "description": "ID do tipo de servi\u00e7o selecionado"
+    },
+    "service_type_name": {
+      "type": "string",
+      "description": "Nome do tipo de servi\u00e7o (cache)"
+    },
+    "service_category": {
+      "type": "string",
+      "description": "Categoria do servi\u00e7o (motor, eletrica, suspensao, freios, ar_condicionado, transmissao, geral) \u2014 usada para filtrar mec\u00e2nicos compat\u00edveis",
+      "default": "geral"
+    },
     "mechanic_id": {
       "type": "string",
       "description": "ID do mec\u00e2nico respons\u00e1vel"

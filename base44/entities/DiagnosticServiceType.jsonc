@@ -1,0 +1,52 @@
+{
+  "name": "DiagnosticServiceType",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do tipo de servi\u00e7o (ex: Troca de Pastilha de Freio, Revis\u00e3o de Motor)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "motor",
+        "eletrica",
+        "suspensao",
+        "freios",
+        "ar_condicionado",
+        "transmissao",
+        "geral"
+      ],
+      "default": "geral",
+      "description": "Categoria/Especialidade do servi\u00e7o \u2014 usada para filtrar mec\u00e2nicos compat\u00edveis (mec\u00e2nicos 'geral' servem para qualquer categoria)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do servi\u00e7o"
+    },
+    "default_price": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o padr\u00e3o de m\u00e3o de obra sugerido"
+    },
+    "estimated_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Tempo estimado em horas"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o tipo de servi\u00e7o est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "category"
+  ]
+}
