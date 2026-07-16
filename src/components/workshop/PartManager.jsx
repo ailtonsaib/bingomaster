@@ -19,6 +19,7 @@ export default function PartManager({ userEmail }) {
   const [selMontadora, setSelMontadora] = useState("");
   const [selModelo, setSelModelo] = useState("");
   const [selAno, setSelAno] = useState("");
+  const [selFabricante, setSelFabricante] = useState("");
   const [form, setForm] = useState({ name: "", code: "", barcode: "", brand: "", category: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", unit: "UN", cost_price: 0, sale_price: 0, stock: 0, min_stock: 0, supplier: "", location: "", ncm: "", is_active: true });
 
   const load = async () => {
@@ -32,6 +33,7 @@ export default function PartManager({ userEmail }) {
   useEffect(() => { load(); }, []);
 
   const montadoras = [...new Set(parts.map(p => p.vehicle_brand).filter(Boolean))].sort();
+  const fabricantes = [...new Set(parts.map(p => p.brand).filter(Boolean))].sort();
   const modelos = [...new Set(parts.filter(p => !selMontadora || p.vehicle_brand === selMontadora).map(p => p.vehicle_model).filter(Boolean))].sort();
   const anos = [...new Set(parts.filter(p => (!selMontadora || p.vehicle_brand === selMontadora) && (!selModelo || p.vehicle_model === selModelo)).map(p => p.vehicle_year).filter(Boolean))].sort();
 
@@ -39,6 +41,7 @@ export default function PartManager({ userEmail }) {
     (!selMontadora || p.vehicle_brand === selMontadora) &&
     (!selModelo || p.vehicle_model === selModelo) &&
     (!selAno || p.vehicle_year === selAno) &&
+    (!selFabricante || p.brand === selFabricante) &&
     (!search ||
       p.name?.toLowerCase().includes(search.toLowerCase()) ||
       p.code?.toLowerCase().includes(search.toLowerCase()) ||
@@ -126,6 +129,13 @@ export default function PartManager({ userEmail }) {
           </select>
         </div>
         <div>
+          <Label className="text-xs text-gray-500">Fabricante da Peça</Label>
+          <select value={selFabricante} onChange={e => setSelFabricante(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 mt-1 text-sm">
+            <option value="">Todos</option>
+            {fabricantes.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </div>
+        <div className="sm:col-span-2 lg:col-span-2">
           <Label className="text-xs text-gray-500">Buscar peça</Label>
           <div className="relative mt-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -137,7 +147,7 @@ export default function PartManager({ userEmail }) {
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p>{(search || selMontadora || selModelo || selAno) ? "Nenhuma peça encontrada com os filtros selecionados." : "Nenhuma peça cadastrada."}</p>
+          <p>{(search || selMontadora || selModelo || selAno || selFabricante) ? "Nenhuma peça encontrada com os filtros selecionados." : "Nenhuma peça cadastrada."}</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-100">
