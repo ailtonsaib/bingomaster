@@ -191,6 +191,22 @@ export default function ServiceOrderDetail({ order, onBack }) {
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{order.notes}</p>
           </div>
         )}
+
+        {/* Assinaturas */}
+        <div className="grid grid-cols-2 gap-8 pt-10">
+          <div className="text-center">
+            <div className="border-t border-gray-400 pt-1">
+              <p className="text-xs text-gray-500">{order.client_name}</p>
+              <p className="text-[10px] text-gray-400">Assinatura do Cliente</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="border-t border-gray-400 pt-1">
+              <p className="text-xs text-gray-500">{order.mechanic_name || "Mecânico Responsável"}</p>
+              <p className="text-[10px] text-gray-400">Assinatura do Mecânico</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

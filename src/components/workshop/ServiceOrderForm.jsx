@@ -468,6 +468,22 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         </div>
       </div>
 
+      {/* Assinatura do cliente */}
+      <div className="grid grid-cols-2 gap-8 pt-8 border-t border-gray-100">
+        <div className="text-center">
+          <div className="border-t border-gray-400 pt-1">
+            <p className="text-xs text-gray-500">{client?.name || manualClient.name || "Cliente"}</p>
+            <p className="text-[10px] text-gray-400">Assinatura do Cliente</p>
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="border-t border-gray-400 pt-1">
+            <p className="text-xs text-gray-500">{mechanics.find(m => m.id === selectedMechanicId)?.name || "Mecânico Responsável"}</p>
+            <p className="text-[10px] text-gray-400">Assinatura do Mecânico</p>
+          </div>
+        </div>
+      </div>
+
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
