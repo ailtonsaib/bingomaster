@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search, X, Droplet, Save, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Search, X, Droplet, Save, CheckCircle, AlertTriangle, Car } from "lucide-react";
 
 const VEHICLE_BRANDS = [
   "Fiat", "Volkswagen", "Chevrolet", "Hyundai", "Toyota", "Honda", "Renault",
@@ -18,13 +18,80 @@ export default function OilChangeModal({ open, onClose, userEmail, parts = [] })
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleEngine, setVehicleEngine] = useState("");
   const [vehicleYear, setVehicleYear] = useState("");
+  const [currentKm, setCurrentKm] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [registeredOilChange, setRegisteredOilChange] = useState(false);
+  const [registering, setRegistering] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      base44.entities.DiagnosticVehicle.filter({ user_email: userEmail }, "-created_date")
+        .then(setVehicles)
+        .catch(() => {});
+    }
+  }, [open, userEmail]);
 
   if (!open) return null;
+
+  const handleSelectVehicle = (id) => {
+    setSelectedVehicleId(id);
+    setRegisteredOilChange(false);
+    const v = vehicles.find(v => v.id === id);
+    if (v) {
+      setVehicleBrand(v.brand || "");
+      setVehicleModel(v.model || "");
+      setVehicleEngine(v.engine || "");
+      setVehicleYear(v.year || "");
+      setCurrentKm(v.mileage ? String(v.mileage) : "");
+    }
+  };
+
+  const handleRegisterOilChange = async () => {
+    if (!selectedVehicleId) {
+      setError("Selecione um veículo cadastrado para registrar a troca.");
+      return;
+    }
+    if (!result) {
+      setError("Busque a recomendação de óleo primeiro.");
+      return;
+    }
+    const km = Number(currentKm) || 0;
+    if (km <= 0) {
+      setError("Informe o KM atual do veículo.");
+      return;
+    }
+    setRegistering(true);
+    setError("");
+    try {
+      const interval = Number(result.interval_km) || 10000;
+      const nextKm = km + interval;
+      await base44.entities.DiagnosticVehicle.update(selectedVehicleId, {
+        mileage: km,
+        last_service_km: km,
+        next_oil_change_km: nextKm,
+        last_oil_change_date: new Date().toISOString(),
+        oil_viscosity: result.oil_viscosity || "",
+        oil_filter_code: result.filter_code && result.filter_code !== "N/D" ? result.filter_code : ""
+      });
+      setRegisteredOilChange(true);
+      // Atualiza lista local
+      setVehicles(prev => prev.map(v => v.id === selectedVehicleId ? {
+        ...v, mileage: km, last_service_km: km, next_oil_change_km: nextKm,
+        last_oil_change_date: new Date().toISOString(),
+        oil_viscosity: result.oil_viscosity || "",
+        oil_filter_code: result.filter_code && result.filter_code !== "N/D" ? result.filter_code : ""
+      } : v));
+    } catch (err) {
+      setError("Erro ao registrar troca de óleo.");
+    }
+    setRegistering(false);
+  };
 
   const handleSearch = async () => {
     setError("");
@@ -174,9 +241,28 @@ Retorne em formato JSON com esta estrutura:
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Seleção de veículo cadastrado */}
+          {vehicles.length > 0 && (
+            <div className="p-3 rounded-lg bg-blue-50/50 border border-blue-100">
+              <Label className="text-sm font-medium flex items-center gap-1"><Car className="w-3.5 h-3.5 text-blue-600" /> Veículo Cadastrado</Label>
+              <select
+                value={selectedVehicleId}
+                onChange={e => handleSelectVehicle(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 mt-1 text-sm"
+              >
+                <option value="">Buscar por placa ou digitar abaixo...</option>
+                {vehicles.map(v => (
+                  <option key={v.id} value={v.id}>
+                    {v.plate ? `${v.plate.toUpperCase()} — ` : ""}{v.brand} {v.model} {v.engine ? `(${v.engine})` : ""} {v.client_name ? `| ${v.client_name}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Seleção do veículo */}
           <div>
-            <Label className="text-sm font-medium">Veículo</Label>
+            <Label className="text-sm font-medium">Veículo {vehicles.length > 0 && <span className="text-xs text-gray-400">(ou preencha manualmente)</span>}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-1">
               <select
                 value={vehicleBrand}
@@ -202,6 +288,13 @@ Retorne em formato JSON com esta estrutura:
                 value={vehicleYear}
                 onChange={e => setVehicleYear(e.target.value)}
                 placeholder="Ano (ex: 2015)"
+                className="flex-1"
+              />
+              <Input
+                type="number"
+                value={currentKm}
+                onChange={e => setCurrentKm(e.target.value)}
+                placeholder="KM Atual (ex: 45000)"
                 className="flex-1"
               />
             </div>
@@ -294,6 +387,37 @@ Retorne em formato JSON com esta estrutura:
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Próxima troca calculada */}
+              {selectedVehicleId && currentKm && result?.interval_km > 0 && (
+                <div className="rounded-xl border-2 border-green-200 bg-green-50/40 p-4 text-center">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Próxima Troca</p>
+                  <p className="text-2xl font-black text-green-700">
+                    {(Number(currentKm) + Number(result.interval_km)).toLocaleString("pt-BR")} km
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    KM atual: {Number(currentKm).toLocaleString("pt-BR")} + intervalo: {Number(result.interval_km).toLocaleString("pt-BR")} km
+                  </p>
+                </div>
+              )}
+
+              {/* Botão registrar troca no veículo */}
+              {selectedVehicleId && (
+                <Button
+                  onClick={handleRegisterOilChange}
+                  disabled={registering || registeredOilChange}
+                  className="w-full gap-2 text-white"
+                  style={{ backgroundColor: "#16A34A" }}
+                >
+                  {registering ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Registrando troca...</>
+                  ) : registeredOilChange ? (
+                    <><CheckCircle className="w-4 h-4" /> Troca Registrada no Veículo!</>
+                  ) : (
+                    <><Droplet className="w-4 h-4" /> Registrar Troca no Veículo</>
+                  )}
+                </Button>
               )}
 
               {/* Botão salvar no catálogo */}

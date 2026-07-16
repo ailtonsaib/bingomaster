@@ -50,7 +50,29 @@
     "mileage": {
       "type": "number",
       "default": 0,
-      "description": "Quilometragem atual"
+      "description": "Quilometragem atual do ve\u00edculo"
+    },
+    "last_service_km": {
+      "type": "number",
+      "default": 0,
+      "description": "KM na \u00faltima troca de \u00f3leo"
+    },
+    "next_oil_change_km": {
+      "type": "number",
+      "default": 0,
+      "description": "KM previsto para a pr\u00f3xima troca de \u00f3leo (last_service_km + interval_km)"
+    },
+    "last_oil_change_date": {
+      "type": "string",
+      "description": "Data da \u00faltima troca de \u00f3leo (ISO)"
+    },
+    "oil_viscosity": {
+      "type": "string",
+      "description": "Viscosidade do \u00f3leo usado na \u00faltima troca (ex: 5W30)"
+    },
+    "oil_filter_code": {
+      "type": "string",
+      "description": "C\u00f3digo do filtro de \u00f3leo usado na \u00faltima troca"
     },
     "color": {
       "type": "string",

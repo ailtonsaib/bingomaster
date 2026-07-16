@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
+import ClientVehicleManager from "@/components/workshop/ClientVehicleManager";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
+  { id: "clients", label: "Clientes e Veículos", icon: Car },
   { id: "orders", label: "Ordens de Serviço", icon: ClipboardList },
   { id: "mechanics", label: "Mecânicos", icon: Users },
   { id: "parts", label: "Peças", icon: Package },
@@ -75,6 +77,7 @@ export default function Workshop() {
 
         {/* Content */}
         <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+          {activeTab === "clients" && <ClientVehicleManager userEmail={user?.email} />}
           {activeTab === "orders" && <ServiceOrderList userEmail={user?.email} />}
           {activeTab === "mechanics" && <MechanicManager userEmail={user?.email} />}
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
