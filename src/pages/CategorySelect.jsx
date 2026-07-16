@@ -36,9 +36,9 @@ export default function CategorySelect() {
     },
     {
       id: "servicos",
-      title: "Serviços Automotivos",
-      subtitle: "Diagnóstico inteligente",
-      description: "Identifique possíveis causas de falhas no seu veículo com análise por inteligência artificial.",
+      title: "Sistema Automotivo",
+      subtitle: "Diagnóstico IA + Oficina Mecânica",
+      description: "Sistema completo para oficinas: diagnóstico por IA, ordens de serviço, cadastro de mecânicos, controle de peças e estoque.",
       icon: Wrench,
       accent: "#2563EB",
       iconBg: "bg-[#DBEAFE]",
