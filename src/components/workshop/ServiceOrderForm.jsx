@@ -349,13 +349,19 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
 
       {/* Items */}
       <div>
-        <div className="flex flex-col gap-2 mb-3">
-          <Label className="text-sm font-semibold">Itens da OS (Peças e Serviços)</Label>
+        <Label className="text-sm font-semibold mb-2 block">Itens da OS (Peças e Serviços)</Label>
+
+        {/* Services section */}
+        <div className="rounded-lg border border-purple-100 bg-purple-50/30 p-3 mb-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Wrench className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-semibold text-purple-700">Serviços</span>
+          </div>
           <div className="flex gap-2">
             <select
               value={selectedAddServiceTypeId}
               onChange={e => setSelectedAddServiceTypeId(e.target.value)}
-              className="flex-1 h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              className="flex-1 h-10 rounded-md border border-input bg-white px-3 text-sm"
             >
               <option value="">Selecionar serviço cadastrado...</option>
               {serviceTypes.map(s => (
@@ -364,39 +370,53 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
                 </option>
               ))}
             </select>
-            <Button onClick={handleAddService} variant="outline" size="sm" className="gap-1 h-10">
-              <Plus className="w-3.5 h-3.5" /> Adicionar Serviço
+            <Button onClick={handleAddService} variant="outline" size="sm" className="gap-1 h-10 border-purple-300 text-purple-700 hover:bg-purple-100">
+              <Plus className="w-3.5 h-3.5" /> Adicionar
             </Button>
           </div>
+          <p className="text-xs text-gray-400 mt-1">Selecione um serviço ou deixe em branco e clique em "Adicionar" para inserir manualmente.</p>
         </div>
 
-        <div className="relative mb-3">
-          <Input
-            value={partSearch}
-            onChange={e => { setPartSearch(e.target.value); setShowPartDropdown(true); }}
-            onFocus={() => setShowPartDropdown(true)}
-            placeholder="Buscar peça para adicionar..."
-            className="h-10"
-          />
-          {showPartDropdown && partSearch && filteredParts.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
-              {filteredParts.map(part => (
-                <button
-                  key={part.id}
-                  onClick={() => handleAddPart(part)}
-                  className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0"
-                >
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">{part.name}</span>
-                    <span className="text-sm text-green-600 font-medium">{formatCurrency(part.sale_price)}</span>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {part.code && `Cód: ${part.code} • `}Estoque: {part.stock} {part.unit}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Parts section */}
+        <div className="rounded-lg border border-blue-100 bg-blue-50/30 p-3 mb-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Package className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-semibold text-blue-700">Peças</span>
+          </div>
+          <div className="relative">
+            <Input
+              value={partSearch}
+              onChange={e => { setPartSearch(e.target.value); setShowPartDropdown(true); }}
+              onFocus={() => setShowPartDropdown(true)}
+              placeholder="Digite o nome ou código da peça para buscar..."
+              className="h-10 bg-white"
+            />
+            {showPartDropdown && partSearch && filteredParts.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
+                {filteredParts.map(part => (
+                  <button
+                    key={part.id}
+                    onClick={() => handleAddPart(part)}
+                    className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                  >
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">{part.name}</span>
+                      <span className="text-sm text-green-600 font-medium">{formatCurrency(part.sale_price)}</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {part.code && `Cód: ${part.code} • `}Estoque: {part.stock} {part.unit}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showPartDropdown && partSearch && filteredParts.length === 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg px-3 py-2 text-sm text-gray-400">
+                Nenhuma peça encontrada. Cadastre peças no menu "Estoque".
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">O preço de cadastro vem preenchido, mas pode ser alterado na tabela abaixo.</p>
         </div>
 
         {items.length === 0 ? (
