@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3 } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
@@ -10,6 +10,7 @@ import ServiceTypeManager from "@/components/workshop/ServiceTypeManager";
 import CommissionPanel from "@/components/workshop/CommissionPanel";
 import MaintenanceHistoryPanel from "@/components/workshop/MaintenanceHistoryPanel";
 import MonthlyReportPanel from "@/components/workshop/MonthlyReportPanel";
+import MechanicRankingPanel from "@/components/workshop/MechanicRankingPanel";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -20,6 +21,7 @@ const TABS = [
   { id: "service_types", label: "Tipos de Serviço", icon: Settings },
   { id: "mechanics", label: "Mecânicos", icon: Users },
   { id: "commissions", label: "Comissões", icon: DollarSign },
+  { id: "ranking", label: "Ranking", icon: Trophy },
   { id: "parts", label: "Peças", icon: Package },
 ];
 
@@ -92,6 +94,7 @@ export default function Workshop() {
           {activeTab === "commissions" && <CommissionPanel userEmail={user?.email} />}
           {activeTab === "history" && <MaintenanceHistoryPanel userEmail={user?.email} />}
           {activeTab === "report" && <MonthlyReportPanel userEmail={user?.email} />}
+          {activeTab === "ranking" && <MechanicRankingPanel userEmail={user?.email} />}
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
         </div>
       </div>
