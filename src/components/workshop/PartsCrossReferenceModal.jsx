@@ -17,6 +17,7 @@ export default function PartsCrossReferenceModal({ open, onClose, parts = [] }) 
   const [vehicleBrand, setVehicleBrand] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleYear, setVehicleYear] = useState("");
+  const [vehicleEngine, setVehicleEngine] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState("");
@@ -45,7 +46,7 @@ export default function PartsCrossReferenceModal({ open, onClose, parts = [] }) 
 
     setLoading(true);
     try {
-      const prompt = `Você é um especialista em peças automotivas. Liste TODOS os fabricantes conhecidos que produzem a peça "${finalPartName}" para o veículo ${vehicleBrand} ${vehicleModel} ${vehicleYear ? `ano ${vehicleYear}` : "(todos os anos)"}.
+      const prompt = `Você é um especialista em peças automotivas. Liste TODOS os fabricantes conhecidos que produzem a peça "${finalPartName}" para o veículo ${vehicleBrand} ${vehicleModel} ${vehicleEngine ? `motorização ${vehicleEngine}` : ""} ${vehicleYear ? `ano ${vehicleYear}` : "(todos os anos)"}.
 
 Para cada fabricante, forneça:
 - Nome do fabricante
@@ -155,7 +156,7 @@ Retorne em formato JSON com esta estrutura exata:
           {/* Seleção do veículo */}
           <div>
             <Label className="text-sm font-medium">Veículo</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-1">
               <div>
                 <select
                   value={vehicleBrand}
@@ -176,6 +177,12 @@ Retorne em formato JSON com esta estrutura exata:
                 value={vehicleYear}
                 onChange={e => setVehicleYear(e.target.value)}
                 placeholder="Ano (ex: 2015)"
+                className="flex-1"
+              />
+              <Input
+                value={vehicleEngine}
+                onChange={e => setVehicleEngine(e.target.value)}
+                placeholder="Motorização (ex: 1.0, 1.6)"
                 className="flex-1"
               />
             </div>
