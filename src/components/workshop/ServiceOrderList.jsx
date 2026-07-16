@@ -109,6 +109,7 @@ export default function ServiceOrderList({ userEmail }) {
           <ClipboardList className="w-5 h-5 text-blue-600" /> Ordens de Serviço ({orders.length})
         </h3>
         <Button
+          type="button"
           onClick={() => setView("form")}
           disabled={osLimitReached}
           className="gap-1 text-white"

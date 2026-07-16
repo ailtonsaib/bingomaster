@@ -97,6 +97,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
     }]);
     setPartSearch("");
     setShowPartDropdown(false);
+    toast({ title: "Peça adicionada", description: `${part.name} — ${formatCurrency(part.sale_price || 0)}` });
   };
 
   const handleAddService = () => {
@@ -112,6 +113,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         service_category: svc.category,
       }]);
       setSelectedAddServiceTypeId("");
+      toast({ title: "Serviço adicionado", description: `${svc.name} — ${formatCurrency(svc.default_price || 0)}` });
     } else {
       setItems(prev => [...prev, {
         type: "servico",
@@ -120,6 +122,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
         unit_price: 0,
         total: 0,
       }]);
+      toast({ title: "Serviço adicionado", description: "Serviço em branco — preencha a descrição e valor." });
     }
   };
 
@@ -370,9 +373,9 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
                 </option>
               ))}
             </select>
-            <Button onClick={handleAddService} variant="outline" size="sm" className="gap-1 h-10 border-purple-300 text-purple-700 hover:bg-purple-100">
+            <button type="button" onClick={handleAddService} className="flex items-center gap-1 h-10 px-4 rounded-md border border-purple-300 text-purple-700 hover:bg-purple-100 text-sm font-medium transition-colors">
               <Plus className="w-3.5 h-3.5" /> Adicionar
-            </Button>
+            </button>
           </div>
           <p className="text-xs text-gray-400 mt-1">Selecione um serviço ou deixe em branco e clique em "Adicionar" para inserir manualmente.</p>
         </div>
@@ -395,6 +398,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
               <div className="absolute z-20 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
                 {filteredParts.map(part => (
                   <button
+                    type="button"
                     key={part.id}
                     onClick={() => handleAddPart(part)}
                     className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0"
