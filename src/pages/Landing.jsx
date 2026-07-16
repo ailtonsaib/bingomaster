@@ -256,15 +256,13 @@ export default function Landing({ category }) {
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-[#1B1C21]">
-              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções para sua Empresa" : category === "servicos" ? "Sistema Automotivo" : "Soluções digitais para você e sua empresa"}
+              {category === "jogos" ? "Jogos & Entretenimento" : category === "empresas" ? "Soluções para sua Empresa" : "Soluções digitais para você e sua empresa"}
             </h1>
             <p className="mt-4 text-lg text-[#71717A] max-w-2xl mx-auto">
               {category === "jogos"
                 ? "Aplicativos profissionais para bingo, rifas e entretenimento. Comece grátis e faça upgrade quando precisar."
                 : category === "empresas"
-                ? "Aplicativos profissionais para frente de caixa, validação fiscal e controle de chamados. Comece grátis e faça upgrade quando precisar."
-                : category === "servicos"
-                ? "Sistema completo para oficinas: diagnóstico por IA, ordens de serviço, mecânicos, peças e estoque. Comece grátis e faça upgrade quando precisar."
+                ? "Aplicativos profissionais para frente de caixa, validação fiscal, controle de chamados e sistema automotivo para oficinas. Comece grátis e faça upgrade quando precisar."
                 : "Aplicativos profissionais para bingo, controle financeiro controle de chamados e validação fiscal. Comece grátis e faça upgrade quando precisar."}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">

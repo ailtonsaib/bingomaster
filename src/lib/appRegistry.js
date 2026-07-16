@@ -202,7 +202,7 @@ export const APPS = [
   },
   {
     id: "diagnostic",
-    category: "servicos",
+    category: "empresas",
     name: "Sistema Automotivo",
     icon: "Wrench",
     iconBg: "bg-[#DBEAFE]",

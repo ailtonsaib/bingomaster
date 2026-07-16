@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Gamepad2, Building2, Wrench, MessageCircle, ArrowRight, Mail, Phone } from "lucide-react";
+import { Gamepad2, Building2, MessageCircle, ArrowRight, Mail, Phone } from "lucide-react";
 import { CONTACT } from "@/lib/appRegistry";
 
 export default function CategorySelect() {
@@ -24,28 +24,15 @@ export default function CategorySelect() {
     {
       id: "empresas",
       title: "Soluções para sua Empresa",
-      subtitle: "ERP, fiscal e suporte",
-      description: "Ponto de venda, validação fiscal SPED/DIME-SC e central de chamados.",
+      subtitle: "ERP, fiscal, suporte e automotivo",
+      description: "Ponto de venda, validação fiscal SPED/DIME-SC, central de chamados e sistema completo para oficinas mecânicas com diagnóstico por IA.",
       icon: Building2,
       accent: "#EA580C",
       iconBg: "bg-[#FFEDD5]",
       iconColor: "text-[#EA580C]",
       image: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&auto=format&fit=crop&q=80",
       route: "/empresas",
-      appCount: 3,
-    },
-    {
-      id: "servicos",
-      title: "Sistema Automotivo",
-      subtitle: "Diagnóstico IA + Oficina Mecânica",
-      description: "Sistema completo para oficinas: diagnóstico por IA, ordens de serviço, cadastro de mecânicos, controle de peças e estoque.",
-      icon: Wrench,
-      accent: "#2563EB",
-      iconBg: "bg-[#DBEAFE]",
-      iconColor: "text-[#2563EB]",
-      image: "https://images.unsplash.com/photo-1632823469850-2f77dd9c7f93?w=800&auto=format&fit=crop&q=80",
-      route: "/servicos",
-      appCount: 1,
+      appCount: 4,
     },
   ];
 

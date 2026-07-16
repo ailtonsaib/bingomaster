@@ -108,7 +108,6 @@ const AuthenticatedApp = () => {
       {/* Landing filtrada por categoria */}
       <Route path="/jogos" element={<Landing category="jogos" />} />
       <Route path="/empresas" element={<Landing category="empresas" />} />
-      <Route path="/servicos" element={<Landing category="servicos" />} />
       {/* Entrada de cada app — login específico por aplicativo */}
       <Route path="/bingo" element={<BingoLogin />} />
       <Route path="/financ" element={<Navigate to="/pdv" replace />} />
