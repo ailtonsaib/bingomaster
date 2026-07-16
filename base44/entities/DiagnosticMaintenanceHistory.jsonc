@@ -1,0 +1,97 @@
+{
+  "name": "DiagnosticMaintenanceHistory",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID do ve\u00edculo (DiagnosticVehicle)"
+    },
+    "client_cpf_cnpj": {
+      "type": "string",
+      "description": "CPF/CNPJ do cliente propriet\u00e1rio (cache)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nome do cliente (cache)"
+    },
+    "plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (cache)"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marca do ve\u00edculo (cache)"
+    },
+    "model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo (cache)"
+    },
+    "year": {
+      "type": "string",
+      "description": "Ano do ve\u00edculo (cache)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "troca_oleo",
+        "servico",
+        "revisao",
+        "outro"
+      ],
+      "default": "servico",
+      "description": "Tipo de manuten\u00e7\u00e3o: troca_oleo, servico, revisao, outro"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do servi\u00e7o/manuten\u00e7\u00e3o realizada"
+    },
+    "date": {
+      "type": "string",
+      "description": "Data da manuten\u00e7\u00e3o (ISO)"
+    },
+    "mileage": {
+      "type": "number",
+      "default": 0,
+      "description": "Quilometragem do ve\u00edculo na data da manuten\u00e7\u00e3o"
+    },
+    "oil_viscosity": {
+      "type": "string",
+      "description": "Viscosidade do \u00f3leo (ex: 5W30) \u2014 apenas para troca_oleo"
+    },
+    "oil_filter_code": {
+      "type": "string",
+      "description": "C\u00f3digo do filtro de \u00f3leo \u2014 apenas para troca_oleo"
+    },
+    "next_oil_change_km": {
+      "type": "number",
+      "default": 0,
+      "description": "KM previsto para pr\u00f3xima troca de \u00f3leo"
+    },
+    "service_order_id": {
+      "type": "string",
+      "description": "ID da OS vinculada (se originada de uma ordem de servi\u00e7o)"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero da OS vinculada (cache)"
+    },
+    "cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo da manuten\u00e7\u00e3o"
+    },
+    "mechanic_name": {
+      "type": "string",
+      "description": "Nome do mec\u00e2nico respons\u00e1vel (cache)"
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "date"
+  ]
+}
