@@ -7,6 +7,7 @@ import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
 
 const TABS = [
+  { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
   { id: "orders", label: "Ordens de Serviço", icon: ClipboardList },
   { id: "mechanics", label: "Mecânicos", icon: Users },
   { id: "parts", label: "Peças", icon: Package },
@@ -31,7 +32,7 @@ export default function Workshop() {
               <Wrench className="w-5 h-5 text-[#2563EB]" />
             </div>
             <div>
-              <span className="font-bold text-[#1B1C21] text-sm">Oficina Mecânica</span>
+              <span className="font-bold text-[#1B1C21] text-sm">Sistema Automotivo</span>
               {user && <span className="text-xs text-[#A1A1AA] ml-2">| {user.name}</span>}
             </div>
           </div>
@@ -57,7 +58,7 @@ export default function Workshop() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => tab.isLink ? navigate("/diagnostico-auto") : setActiveTab(tab.id)}
                 className={`flex items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.id ? "bg-white text-[#2563EB] shadow-sm" : "text-[#71717A] hover:text-[#52525B]"
                 }`}
