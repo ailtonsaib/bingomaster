@@ -38,10 +38,14 @@ export default function PartsCrossReferenceModal({ open, onClose, parts = [] }) 
       setError("Selecione a montadora do veículo.");
       return;
     }
+    if (!vehicleModel.trim()) {
+      setError("Informe o modelo do veículo.");
+      return;
+    }
 
     setLoading(true);
     try {
-      const prompt = `Você é um especialista em peças automotivas. Liste TODOS os fabricantes conhecidos que produzem a peça "${finalPartName}" para o veículo ${vehicleBrand} ${vehicleModel || "(todos os modelos)"} ${vehicleYear ? `ano ${vehicleYear}` : "(todos os anos)"}.
+      const prompt = `Você é um especialista em peças automotivas. Liste TODOS os fabricantes conhecidos que produzem a peça "${finalPartName}" para o veículo ${vehicleBrand} ${vehicleModel} ${vehicleYear ? `ano ${vehicleYear}` : "(todos os anos)"}.
 
 Para cada fabricante, forneça:
 - Nome do fabricante
@@ -165,7 +169,7 @@ Retorne em formato JSON com esta estrutura exata:
               <Input
                 value={vehicleModel}
                 onChange={e => setVehicleModel(e.target.value)}
-                placeholder="Modelo (ex: Palio)"
+                placeholder="Modelo * (ex: Palio)"
                 className="flex-1"
               />
               <Input
