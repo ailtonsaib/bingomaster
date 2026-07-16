@@ -16,7 +16,10 @@ export default function PartManager({ userEmail }) {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState({ name: "", code: "", barcode: "", brand: "", category: "", unit: "UN", cost_price: 0, sale_price: 0, stock: 0, min_stock: 0, supplier: "", location: "", ncm: "", is_active: true });
+  const [selMontadora, setSelMontadora] = useState("");
+  const [selModelo, setSelModelo] = useState("");
+  const [selAno, setSelAno] = useState("");
+  const [form, setForm] = useState({ name: "", code: "", barcode: "", brand: "", category: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", unit: "UN", cost_price: 0, sale_price: 0, stock: 0, min_stock: 0, supplier: "", location: "", ncm: "", is_active: true });
 
   const load = async () => {
     try {
@@ -28,23 +31,30 @@ export default function PartManager({ userEmail }) {
 
   useEffect(() => { load(); }, []);
 
+  const montadoras = [...new Set(parts.map(p => p.vehicle_brand).filter(Boolean))].sort();
+  const modelos = [...new Set(parts.filter(p => !selMontadora || p.vehicle_brand === selMontadora).map(p => p.vehicle_model).filter(Boolean))].sort();
+  const anos = [...new Set(parts.filter(p => (!selMontadora || p.vehicle_brand === selMontadora) && (!selModelo || p.vehicle_model === selModelo)).map(p => p.vehicle_year).filter(Boolean))].sort();
+
   const filtered = parts.filter(p =>
-    !search ||
-    p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.code?.toLowerCase().includes(search.toLowerCase()) ||
-    p.barcode?.includes(search) ||
-    p.brand?.toLowerCase().includes(search.toLowerCase())
+    (!selMontadora || p.vehicle_brand === selMontadora) &&
+    (!selModelo || p.vehicle_model === selModelo) &&
+    (!selAno || p.vehicle_year === selAno) &&
+    (!search ||
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.code?.toLowerCase().includes(search.toLowerCase()) ||
+      p.barcode?.includes(search) ||
+      p.brand?.toLowerCase().includes(search.toLowerCase()))
   );
 
   const handleEdit = (p) => {
     setEditing(p);
-    setForm({ name: p.name, code: p.code || "", barcode: p.barcode || "", brand: p.brand || "", category: p.category || "", unit: p.unit || "UN", cost_price: p.cost_price || 0, sale_price: p.sale_price || 0, stock: p.stock || 0, min_stock: p.min_stock || 0, supplier: p.supplier || "", location: p.location || "", ncm: p.ncm || "", is_active: p.is_active !== false });
+    setForm({ name: p.name, code: p.code || "", barcode: p.barcode || "", brand: p.brand || "", category: p.category || "", vehicle_brand: p.vehicle_brand || "", vehicle_model: p.vehicle_model || "", vehicle_year: p.vehicle_year || "", unit: p.unit || "UN", cost_price: p.cost_price || 0, sale_price: p.sale_price || 0, stock: p.stock || 0, min_stock: p.min_stock || 0, supplier: p.supplier || "", location: p.location || "", ncm: p.ncm || "", is_active: p.is_active !== false });
     setShowForm(true);
   };
 
   const handleNew = () => {
     setEditing(null);
-    setForm({ name: "", code: "", barcode: "", brand: "", category: "", unit: "UN", cost_price: 0, sale_price: 0, stock: 0, min_stock: 0, supplier: "", location: "", ncm: "", is_active: true });
+    setForm({ name: "", code: "", barcode: "", brand: "", category: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", unit: "UN", cost_price: 0, sale_price: 0, stock: 0, min_stock: 0, supplier: "", location: "", ncm: "", is_active: true });
     setShowForm(true);
   };
 
@@ -87,21 +97,47 @@ export default function PartManager({ userEmail }) {
     <div>
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <h3 className="text-lg font-bold flex items-center gap-2"><Package className="w-5 h-5 text-blue-600" /> Peças ({parts.length})</h3>
-        <div className="flex gap-2">
-          <div className="relative">
+        <Button onClick={handleNew} className="gap-1 text-white" style={{ backgroundColor: "#2563EB" }}>
+          <Plus className="w-4 h-4" /> Nova Peça
+        </Button>
+      </div>
+
+      {/* Filtros em cascata: Montadora → Modelo → Ano + Busca por nome */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div>
+          <Label className="text-xs text-gray-500">Montadora</Label>
+          <select value={selMontadora} onChange={e => { setSelMontadora(e.target.value); setSelModelo(""); setSelAno(""); }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 mt-1 text-sm">
+            <option value="">Todas</option>
+            {montadoras.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Modelo</Label>
+          <select value={selModelo} onChange={e => { setSelModelo(e.target.value); setSelAno(""); }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 mt-1 text-sm" disabled={!selMontadora}>
+            <option value="">Todos</option>
+            {modelos.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Ano</Label>
+          <select value={selAno} onChange={e => setSelAno(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 mt-1 text-sm" disabled={!selModelo}>
+            <option value="">Todos</option>
+            {anos.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Buscar peça</Label>
+          <div className="relative mt-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar peça..." className="pl-9 w-56" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Digite o nome da peça..." className="pl-9 w-full" />
           </div>
-          <Button onClick={handleNew} className="gap-1 text-white" style={{ backgroundColor: "#2563EB" }}>
-            <Plus className="w-4 h-4" /> Nova Peça
-          </Button>
         </div>
       </div>
 
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p>{search ? "Nenhuma peça encontrada." : "Nenhuma peça cadastrada."}</p>
+          <p>{(search || selMontadora || selModelo || selAno) ? "Nenhuma peça encontrada com os filtros selecionados." : "Nenhuma peça cadastrada."}</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -174,6 +210,18 @@ export default function PartManager({ userEmail }) {
               <div>
                 <Label className="text-sm">Categoria</Label>
                 <Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-sm">Montadora</Label>
+                <Input value={form.vehicle_brand} onChange={e => setForm({ ...form, vehicle_brand: e.target.value })} placeholder="Ex: Fiat, Volkswagen..." className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-sm">Modelo do Veículo</Label>
+                <Input value={form.vehicle_model} onChange={e => setForm({ ...form, vehicle_model: e.target.value })} placeholder="Ex: Palio, Gol..." className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-sm">Ano Compatível</Label>
+                <Input value={form.vehicle_year} onChange={e => setForm({ ...form, vehicle_year: e.target.value })} placeholder="Ex: 2010-2018, Todos" className="mt-1" />
               </div>
               <div>
                 <Label className="text-sm">NCM</Label>
