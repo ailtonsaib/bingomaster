@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, Search, ClipboardList, Car } from "lucide-react";
+import { Plus, Loader2, Search, ClipboardList, Car, ChevronDown } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import ServiceOrderForm from "./ServiceOrderForm";
 import ServiceOrderDetail from "./ServiceOrderDetail";
 import PlanUpgradePanel from "./PlanUpgradePanel";
@@ -39,6 +40,7 @@ const STATUS_LABELS = {
 };
 
 export default function ServiceOrderList({ userEmail }) {
+  const { toast } = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -46,6 +48,75 @@ export default function ServiceOrderList({ userEmail }) {
   const [view, setView] = useState("list");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [planUsage, setPlanUsage] = useState(null);
+  const [statusMenuId, setStatusMenuId] = useState(null);
+
+  const STATUS_CHANGE_OPTIONS = [
+    "aberta",
+    "em_andamento",
+    "aguardando_pecas",
+    "concluida",
+    "entregue",
+    "cancelada",
+  ];
+
+  const handleStatusChange = async (order, newStatus) => {
+    setStatusMenuId(null);
+    if (order.status === newStatus) return;
+
+    const wasConcluida = order.status === "concluida" || order.status === "entregue";
+    const willBeConcluida = newStatus === "concluida";
+
+    try {
+      await base44.entities.ServiceOrder.update(order.id, {
+        status: newStatus,
+        ...(newStatus === "concluida" && !order.completion_date ? { completion_date: new Date().toISOString() } : {}),
+        ...(newStatus === "entregue" && !order.delivery_date ? { delivery_date: new Date().toISOString() } : {}),
+      });
+
+      // Ao concluir a OS, cria automaticamente um título a receber no financeiro
+      if (willBeConcluida && !wasConcluida) {
+        const existing = await base44.entities.PortalFinanceTransaction.filter({
+          user_email: userEmail,
+          transaction_id: order.id,
+        });
+        if (existing.length === 0) {
+          await base44.entities.PortalFinanceTransaction.create({
+            user_email: userEmail,
+            description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
+            amount: order.total || 0,
+            type: "income",
+            category: "Ordem de Serviço",
+            date: new Date().toISOString(),
+            launch_date: new Date().toISOString(),
+            due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+            contact_name: order.client_name || "",
+            status: "pending",
+            transaction_id: order.id,
+          });
+          toast({ title: "OS concluída", description: `Título de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total || 0)} gerado no financeiro.` });
+        } else {
+          toast({ title: "OS concluída", description: "Status atualizado. Título financeiro já existia." });
+        }
+      } else if (newStatus === "cancelada" && wasConcluida) {
+        // Se cancelar uma OS que estava concluída, remove o título pendente
+        const txs = await base44.entities.PortalFinanceTransaction.filter({
+          user_email: userEmail,
+          transaction_id: order.id,
+          status: "pending",
+        });
+        for (const tx of txs) {
+          await base44.entities.PortalFinanceTransaction.delete(tx.id);
+        }
+        toast({ title: "OS cancelada", description: "Título financeiro pendente removido." });
+      } else {
+        toast({ title: "Status atualizado", description: `${order.order_number} → ${STATUS_LABELS[newStatus]}` });
+      }
+
+      load();
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível alterar o status.", variant: "destructive" });
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -212,6 +283,7 @@ export default function ServiceOrderList({ userEmail }) {
                 <th className="p-3 font-medium">Status</th>
                 <th className="p-3 font-medium text-right">Total</th>
                 <th className="p-3 font-medium">Data</th>
+                <th className="p-3 font-medium text-center" style={{ width: 50 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -234,6 +306,29 @@ export default function ServiceOrderList({ userEmail }) {
                   </td>
                   <td className="p-3 text-right font-medium text-green-600">{formatCurrency(o.total)}</td>
                   <td className="p-3 text-gray-400 text-xs">{formatDate(o.created_date)}</td>
+                  <td className="p-3 text-center relative" onClick={e => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setStatusMenuId(statusMenuId === o.id ? null : o.id)}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-400"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    {statusMenuId === o.id && (
+                      <div className="absolute right-0 z-30 mt-1 w-44 bg-white rounded-lg border border-gray-200 shadow-lg py-1 text-left">
+                        {STATUS_CHANGE_OPTIONS.map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => handleStatusChange(o, s)}
+                            className={`w-full px-3 py-1.5 text-xs hover:bg-blue-50 ${o.status === s ? "font-bold text-blue-600" : "text-gray-600"}`}
+                          >
+                            {STATUS_LABELS[s]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
