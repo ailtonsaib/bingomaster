@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Pencil, Loader2, Car, User, Droplet, Link2, Search, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { maskCpfCnpj, maskPhone } from "@/lib/brMasks";
 
 const FUEL_OPTIONS = [
   { value: "flex", label: "Flex" },
@@ -72,7 +73,7 @@ export default function ClientVehicleManager({ userEmail }) {
 
   const handleEditClient = (c) => {
     setEditing(c);
-    setClientForm({ name: c.name, cpf_cnpj: c.cpf_cnpj || "", phone: c.phone || "", email: c.email || "", address: c.address || "" });
+    setClientForm({ name: c.name, cpf_cnpj: maskCpfCnpj(c.cpf_cnpj || ""), phone: maskPhone(c.phone || ""), email: c.email || "", address: c.address || "" });
     setShowClientForm(true);
   };
 
@@ -287,7 +288,7 @@ export default function ClientVehicleManager({ userEmail }) {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
                       <span className="font-bold text-gray-900">{c.name}</span>
-                      <p className="text-xs text-gray-500 mt-0.5">{c.cpf_cnpj ? `CPF/CNPJ: ${c.cpf_cnpj}` : ""}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{c.cpf_cnpj ? `CPF/CNPJ: ${maskCpfCnpj(c.cpf_cnpj)}` : ""}</p>
                     </div>
                     <div className="flex gap-1">
                       <button onClick={() => handleEditClient(c)} className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50"><Pencil className="w-3.5 h-3.5" /></button>
@@ -331,11 +332,11 @@ export default function ClientVehicleManager({ userEmail }) {
               </div>
               <div>
                 <Label className="text-sm">CPF / CNPJ *</Label>
-                <Input value={clientForm.cpf_cnpj} onChange={e => setClientForm({ ...clientForm, cpf_cnpj: e.target.value })} placeholder="Apenas números" className="mt-1" />
+                <Input value={maskCpfCnpj(clientForm.cpf_cnpj)} onChange={e => setClientForm({ ...clientForm, cpf_cnpj: e.target.value })} placeholder="000.000.000-00 ou 00.000.000/0000-00" className="mt-1" />
               </div>
               <div>
                 <Label className="text-sm">Telefone</Label>
-                <Input value={clientForm.phone} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} className="mt-1" />
+                <Input value={maskPhone(clientForm.phone)} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} placeholder="(00) 00000-0000" className="mt-1" />
               </div>
               <div>
                 <Label className="text-sm">Email</Label>
