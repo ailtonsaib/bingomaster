@@ -34,6 +34,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
 
   const [partSearch, setPartSearch] = useState("");
   const [showPartDropdown, setShowPartDropdown] = useState(false);
+  const [selectedAddServiceTypeId, setSelectedAddServiceTypeId] = useState("");
   const [items, setItems] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState("");
@@ -99,13 +100,27 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
   };
 
   const handleAddService = () => {
-    setItems(prev => [...prev, {
-      type: "servico",
-      description: "",
-      quantity: 1,
-      unit_price: 0,
-      total: 0,
-    }]);
+    const svc = serviceTypes.find(s => s.id === selectedAddServiceTypeId);
+    if (svc) {
+      setItems(prev => [...prev, {
+        type: "servico",
+        description: svc.name,
+        quantity: 1,
+        unit_price: svc.default_price || 0,
+        total: svc.default_price || 0,
+        service_type_id: svc.id,
+        service_category: svc.category,
+      }]);
+      setSelectedAddServiceTypeId("");
+    } else {
+      setItems(prev => [...prev, {
+        type: "servico",
+        description: "",
+        quantity: 1,
+        unit_price: 0,
+        total: 0,
+      }]);
+    }
   };
 
   const handleItemChange = (idx, field, value) => {
@@ -334,11 +349,25 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel }) {
 
       {/* Items */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col gap-2 mb-3">
           <Label className="text-sm font-semibold">Itens da OS (Peças e Serviços)</Label>
-          <Button onClick={handleAddService} variant="outline" size="sm" className="gap-1">
-            <Plus className="w-3.5 h-3.5" /> Adicionar Serviço
-          </Button>
+          <div className="flex gap-2">
+            <select
+              value={selectedAddServiceTypeId}
+              onChange={e => setSelectedAddServiceTypeId(e.target.value)}
+              className="flex-1 h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+            >
+              <option value="">Selecionar serviço cadastrado...</option>
+              {serviceTypes.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} {s.default_price > 0 && `— ${formatCurrency(s.default_price)}`}
+                </option>
+              ))}
+            </select>
+            <Button onClick={handleAddService} variant="outline" size="sm" className="gap-1 h-10">
+              <Plus className="w-3.5 h-3.5" /> Adicionar Serviço
+            </Button>
+          </div>
         </div>
 
         <div className="relative mb-3">
