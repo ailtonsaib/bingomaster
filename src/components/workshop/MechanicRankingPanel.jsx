@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Loader2, Trophy, Wrench, Package, DollarSign, TrendingUp, Medal, Crown, Award, Calendar } from "lucide-react";
 
-const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 const SPECIALTY_LABELS = {
   motor: "Motor",
   eletrica: "Elétrica",
@@ -102,19 +100,18 @@ export default function MechanicRankingPanel({ userEmail }) {
       }
     }
 
-    return Object.values(map).sort((a, b) => b.grand_total - a.grand_total);
+    return Object.values(map).sort((a, b) => b.completed_count - a.completed_count);
   }, [orders, mechanics, periodStart]);
 
   const topStats = useMemo(() => {
     if (ranking.length === 0) return null;
     const top = ranking[0];
     const totalOrders = ranking.reduce((s, m) => s + m.order_count, 0);
-    const totalRevenue = ranking.reduce((s, m) => s + m.grand_total, 0);
-    const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-    return { top, totalOrders, totalRevenue, avgTicket, mechanicCount: ranking.length };
+    const totalCompleted = ranking.reduce((s, m) => s + m.completed_count, 0);
+    return { top, totalOrders, totalCompleted, mechanicCount: ranking.length };
   }, [ranking]);
 
-  const maxTotal = ranking.length > 0 ? ranking[0].grand_total : 1;
+  const maxTotal = ranking.length > 0 ? ranking[0].completed_count : 1;
 
   if (loading) {
     return (
@@ -132,7 +129,7 @@ export default function MechanicRankingPanel({ userEmail }) {
           <h2 className="text-lg font-bold text-[#1B1C21] flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" /> Ranking de Mecânicos
           </h2>
-          <p className="text-sm text-[#71717A]">Desempenho por receita gerada em ordens de serviço</p>
+          <p className="text-sm text-[#71717A]">Desempenho por serviços finalizados</p>
         </div>
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
           {PERIODS.map(p => (
@@ -167,7 +164,7 @@ export default function MechanicRankingPanel({ userEmail }) {
                   <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wide">Líder</span>
                 </div>
                 <p className="text-sm font-bold text-[#1B1C21] truncate">{topStats.top.mechanic_name}</p>
-                <p className="text-xs text-green-600 font-medium">{formatCurrency(topStats.top.grand_total)}</p>
+                <p className="text-xs text-green-600 font-medium">{topStats.top.completed_count} serviços concluídos</p>
               </div>
               <div className="rounded-xl border border-gray-100 bg-white p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -181,20 +178,20 @@ export default function MechanicRankingPanel({ userEmail }) {
               <div className="rounded-xl border border-gray-100 bg-white p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                    <DollarSign className="w-4 h-4 text-green-600" />
+                    <Wrench className="w-4 h-4 text-green-600" />
                   </div>
-                  <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wide">Receita</span>
+                  <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wide">Concluídas</span>
                 </div>
-                <p className="text-lg font-bold text-green-600">{formatCurrency(topStats.totalRevenue)}</p>
+                <p className="text-lg font-bold text-green-600">{topStats.totalCompleted}</p>
               </div>
               <div className="rounded-xl border border-gray-100 bg-white p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
                     <Calendar className="w-4 h-4 text-purple-600" />
                   </div>
-                  <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wide">Ticket Médio</span>
+                  <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wide">Mecânicos</span>
                 </div>
-                <p className="text-lg font-bold text-[#1B1C21]">{formatCurrency(topStats.avgTicket)}</p>
+                <p className="text-lg font-bold text-[#1B1C21]">{topStats.mechanicCount}</p>
               </div>
             </div>
           )}
@@ -222,8 +219,8 @@ export default function MechanicRankingPanel({ userEmail }) {
                         </span>
                       )}
                       <div className="mt-3 pt-3 border-t border-gray-50">
-                        <p className="text-lg font-bold text-green-600">{formatCurrency(m.grand_total)}</p>
-                        <p className="text-xs text-[#71717A]">{m.order_count} OS • {m.completed_count} concluídas</p>
+                        <p className="text-lg font-bold text-green-600">{m.completed_count}</p>
+                        <p className="text-xs text-[#71717A]">serviços concluídos</p>
                       </div>
                     </div>
                   </div>
@@ -244,11 +241,9 @@ export default function MechanicRankingPanel({ userEmail }) {
                     <th className="p-3 font-medium text-center w-12">#</th>
                     <th className="p-3 font-medium">Mecânico</th>
                     <th className="p-3 font-medium text-center">Especialidade</th>
-                    <th className="p-3 font-medium text-center">OS</th>
+                    <th className="p-3 font-medium text-center">OS Total</th>
                     <th className="p-3 font-medium text-center">Concluídas</th>
-                    <th className="p-3 font-medium text-right">Peças</th>
-                    <th className="p-3 font-medium text-right">Serviços</th>
-                    <th className="p-3 font-medium text-right">Total</th>
+                    <th className="p-3 font-medium text-center">Em Andamento</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -279,11 +274,9 @@ export default function MechanicRankingPanel({ userEmail }) {
                       </td>
                       <td className="p-3 text-center font-medium">{m.order_count}</td>
                       <td className="p-3 text-center">
-                        <span className="text-green-600 font-medium">{m.completed_count}</span>
+                        <span className="text-green-600 font-bold">{m.completed_count}</span>
                       </td>
-                      <td className="p-3 text-right text-blue-600">{formatCurrency(m.parts_total)}</td>
-                      <td className="p-3 text-right text-purple-600">{formatCurrency(m.labor_total)}</td>
-                      <td className="p-3 text-right font-bold text-green-600">{formatCurrency(m.grand_total)}</td>
+                      <td className="p-3 text-center text-amber-600">{m.order_count - m.completed_count}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -291,18 +284,18 @@ export default function MechanicRankingPanel({ userEmail }) {
             </div>
           </div>
 
-          {/* Revenue bars */}
+          {/* Completed services bars */}
           <div className="rounded-xl border border-gray-100 bg-white p-5">
-            <h3 className="font-bold text-sm text-[#1B1C21] mb-4">Comparativo de Receita</h3>
+            <h3 className="font-bold text-sm text-[#1B1C21] mb-4">Comparativo de Serviços Concluídos</h3>
             <div className="space-y-3">
               {ranking.map((m, i) => {
-                const pct = maxTotal > 0 ? (m.grand_total / maxTotal) * 100 : 0;
+                const pct = maxTotal > 0 ? (m.completed_count / maxTotal) * 100 : 0;
                 const barColor = i === 0 ? "bg-amber-400" : i === 1 ? "bg-slate-400" : i === 2 ? "bg-orange-400" : "bg-blue-400";
                 return (
                   <div key={m.mechanic_id}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-[#1B1C21] truncate">{m.mechanic_name}</span>
-                      <span className="text-xs font-bold text-green-600">{formatCurrency(m.grand_total)}</span>
+                      <span className="text-xs font-bold text-green-600">{m.completed_count} concluídas</span>
                     </div>
                     <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
