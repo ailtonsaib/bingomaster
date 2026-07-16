@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
@@ -11,6 +11,7 @@ import CommissionPanel from "@/components/workshop/CommissionPanel";
 import MaintenanceHistoryPanel from "@/components/workshop/MaintenanceHistoryPanel";
 import MonthlyReportPanel from "@/components/workshop/MonthlyReportPanel";
 import MechanicRankingPanel from "@/components/workshop/MechanicRankingPanel";
+import MechanicProductivityPanel from "@/components/workshop/MechanicProductivityPanel";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -22,6 +23,7 @@ const TABS = [
   { id: "mechanics", label: "Mecânicos", icon: Users },
   { id: "commissions", label: "Comissões", icon: DollarSign },
   { id: "ranking", label: "Ranking", icon: Trophy },
+  { id: "productivity", label: "Produtividade", icon: Activity },
   { id: "parts", label: "Peças", icon: Package },
 ];
 
@@ -95,6 +97,7 @@ export default function Workshop() {
           {activeTab === "history" && <MaintenanceHistoryPanel userEmail={user?.email} />}
           {activeTab === "report" && <MonthlyReportPanel userEmail={user?.email} />}
           {activeTab === "ranking" && <MechanicRankingPanel userEmail={user?.email} />}
+          {activeTab === "productivity" && <MechanicProductivityPanel userEmail={user?.email} />}
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
         </div>
       </div>
