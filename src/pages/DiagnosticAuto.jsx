@@ -184,7 +184,7 @@ export default function DiagnosticAuto() {
               <Wrench className="w-5 h-5 text-[#2563EB]" />
             </div>
             <div>
-              <span className="font-bold text-[#1B1C21] text-sm">Diagnóstico Automotivo</span>
+              <span className="font-bold text-[#1B1C21] text-sm">Sistema Automotivo</span>
               {user && <span className="text-xs text-[#A1A1AA] ml-2">| {user.name}</span>}
               {usage && (
                 <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${usage.plan === 'master' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
