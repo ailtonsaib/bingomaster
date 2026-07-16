@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
 import ClientVehicleManager from "@/components/workshop/ClientVehicleManager";
 import ServiceTypeManager from "@/components/workshop/ServiceTypeManager";
+import CommissionPanel from "@/components/workshop/CommissionPanel";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -14,6 +15,7 @@ const TABS = [
   { id: "orders", label: "Ordens de Serviço", icon: ClipboardList },
   { id: "service_types", label: "Tipos de Serviço", icon: Settings },
   { id: "mechanics", label: "Mecânicos", icon: Users },
+  { id: "commissions", label: "Comissões", icon: DollarSign },
   { id: "parts", label: "Peças", icon: Package },
 ];
 
@@ -83,6 +85,7 @@ export default function Workshop() {
           {activeTab === "orders" && <ServiceOrderList userEmail={user?.email} />}
           {activeTab === "service_types" && <ServiceTypeManager userEmail={user?.email} />}
           {activeTab === "mechanics" && <MechanicManager userEmail={user?.email} />}
+          {activeTab === "commissions" && <CommissionPanel userEmail={user?.email} />}
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
         </div>
       </div>

@@ -1,0 +1,75 @@
+{
+  "name": "DiagnosticCommissionPayment",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "mechanic_id": {
+      "type": "string",
+      "description": "ID do mec\u00e2nico pago"
+    },
+    "mechanic_name": {
+      "type": "string",
+      "description": "Nome do mec\u00e2nico (cache)"
+    },
+    "period_start": {
+      "type": "string",
+      "description": "Data inicial do per\u00edodo (ISO)"
+    },
+    "period_end": {
+      "type": "string",
+      "description": "Data final do per\u00edodo (ISO)"
+    },
+    "total_labor": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de m\u00e3o de obra no per\u00edodo"
+    },
+    "commission_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Percentual de comiss\u00e3o aplicado (%)"
+    },
+    "commission_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da comiss\u00e3o paga"
+    },
+    "order_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de OS inclu\u00eddas no pagamento"
+    },
+    "order_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs das ordens de servi\u00e7o inclu\u00eddas",
+      "default": []
+    },
+    "paid_date": {
+      "type": "string",
+      "description": "Data/hora do pagamento (ISO)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pago"
+      ],
+      "default": "pago",
+      "description": "Status do pagamento"
+    }
+  },
+  "required": [
+    "user_email",
+    "mechanic_id",
+    "mechanic_name",
+    "period_start",
+    "period_end",
+    "commission_amount",
+    "paid_date"
+  ]
+}
