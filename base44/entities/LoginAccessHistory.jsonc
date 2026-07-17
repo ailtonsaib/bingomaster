@@ -1,0 +1,49 @@
+{
+  "name": "LoginAccessHistory",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email utilizado na tentativa de login"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio (se encontrado)"
+    },
+    "success": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a tentativa de login foi bem-sucedida"
+    },
+    "failure_reason": {
+      "type": "string",
+      "description": "Motivo da falha (user_not_found, invalid_password, inactive, workshop_user, etc.)"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP do cliente"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User-Agent do navegador/dispositivo"
+    },
+    "attempt_time": {
+      "type": "string",
+      "description": "Data/hora da tentativa (ISO)"
+    },
+    "user_type": {
+      "type": "string",
+      "enum": [
+        "portal",
+        "workshop",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Tipo de usu\u00e1rio que tentou logar"
+    }
+  },
+  "required": [
+    "email",
+    "attempt_time"
+  ]
+}

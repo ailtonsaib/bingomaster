@@ -96,7 +96,28 @@ Deno.serve(async (req) => {
     // ─── LOGIN ───
     if (operation === 'login') {
       const { email, password } = body;
+      const clientIp = getClientIp(req);
+      const userAgent = req.headers.get('user-agent') || '';
+      const now = new Date().toISOString();
+
+      // Helper para registrar tentativa de acesso (não-bloqueante)
+      const recordAttempt = async (attemptEmail, opts) => {
+        try {
+          await base44.asServiceRole.entities.LoginAccessHistory.create({
+            email: attemptEmail || '—',
+            user_name: opts.userName || '',
+            success: !!opts.success,
+            failure_reason: opts.failureReason || undefined,
+            ip_address: clientIp,
+            user_agent: userAgent,
+            attempt_time: now,
+            user_type: opts.userType || 'unknown',
+          });
+        } catch (_) {}
+      };
+
       if (!email || !password) {
+        await recordAttempt(email, { success: false, failureReason: 'missing_credentials', userType: 'unknown' });
         return Response.json({ error: 'Email e senha obrigatórios' }, { status: 400 });
       }
       const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
@@ -104,10 +125,12 @@ Deno.serve(async (req) => {
         // Fallback: verificar WorkshopUser (usuários de empresa)
         const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
         if (wsUsers.length === 0) {
+          await recordAttempt(email, { success: false, failureReason: 'user_not_found', userType: 'unknown' });
           return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
         }
         const wsUser = wsUsers[0];
         if (!wsUser.is_active) {
+          await recordAttempt(email, { success: false, failureReason: 'inactive', userName: wsUser.name, userType: 'workshop' });
           return Response.json({ error: 'Usuário inativo. Contate o administrador.' }, { status: 403 });
         }
         // Verifica senha — suporta bcrypt (novo) e texto plano (legado)
@@ -123,6 +146,7 @@ Deno.serve(async (req) => {
           }
         }
         if (!valid) {
+          await recordAttempt(email, { success: false, failureReason: 'invalid_password', userName: wsUser.name, userType: 'workshop' });
           return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
         }
         // Migra senha de texto plano para bcrypt
@@ -131,6 +155,7 @@ Deno.serve(async (req) => {
           const hash = await bcrypt.hash(password, salt);
           await base44.asServiceRole.entities.WorkshopUser.update(wsUser.id, { password_hash: hash });
         }
+        await recordAttempt(email, { success: true, userName: wsUser.name, userType: 'workshop' });
         // Herda plano do proprietário (owner_email)
         const owners = await base44.asServiceRole.entities.PortalUser.filter({ email: wsUser.owner_email });
         const owner = owners.length > 0 ? owners[0] : null;
@@ -155,21 +180,23 @@ Deno.serve(async (req) => {
       }
       const user = users[0];
       if (!user.is_active) {
+        await recordAttempt(email, { success: false, failureReason: 'inactive', userName: user.name, userType: 'portal' });
         return Response.json({ error: 'Usuário inativo. Contate o administrador.' }, { status: 403 });
       }
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) {
+        await recordAttempt(email, { success: false, failureReason: 'invalid_password', userName: user.name, userType: 'portal' });
         return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
       }
       // Registra IP da máquina e data/hora do login
-      const clientIp = getClientIp(req);
-      const now = new Date().toISOString();
+      const now2 = new Date().toISOString();
       await base44.asServiceRole.entities.PortalUser.update(user.id, {
         device_ip: clientIp,
-        last_login_at: now,
+        last_login_at: now2,
         current_app: 'portal',
       });
-      const updated = { ...user, device_ip: clientIp, last_login_at: now, current_app: 'portal' };
+      await recordAttempt(email, { success: true, userName: user.name, userType: 'portal' });
+      const updated = { ...user, device_ip: clientIp, last_login_at: now2, current_app: 'portal' };
       return Response.json({ user: stripPassword(updated) });
     }
 
@@ -821,6 +848,28 @@ Deno.serve(async (req) => {
         default_password: defaultPassword,
         message: `Administrador criado. Senha inicial: ${defaultPassword}`,
       });
+    }
+
+    // ─── ADMIN: histórico de tentativas de login ───
+    if (operation === 'getLoginHistory') {
+      const { admin_email, filter_email, filter_success } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+      // Traz os últimos 200 registros, mais recentes primeiro
+      const records = await base44.asServiceRole.entities.LoginAccessHistory.list('-attempt_time', 200);
+      let filtered = records;
+      if (filter_email) {
+        const term = String(filter_email).toLowerCase();
+        filtered = filtered.filter(r => r.email.toLowerCase().includes(term) || (r.user_name || '').toLowerCase().includes(term));
+      }
+      if (filter_success === true) {
+        filtered = filtered.filter(r => r.success);
+      } else if (filter_success === false) {
+        filtered = filtered.filter(r => !r.success);
+      }
+      return Response.json({ history: filtered });
     }
 
     // ─── WORKSHOP: salvar usuário (criar/atualizar com senha bcrypt) ───
