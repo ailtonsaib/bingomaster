@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,8 +14,35 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
   const [signedPhotoUrl, setSignedPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [existingId, setExistingId] = useState(null);
+  const [saved, setSaved] = useState(false);
 
   const today = new Date().toLocaleDateString("pt-BR");
+
+  useEffect(() => {
+    const loadExisting = async () => {
+      if (!order.id) return;
+      try {
+        const list = await base44.entities.DiagnosticMaintenanceHistory.filter({
+          user_email: userEmail,
+          service_order_id: order.id,
+          type: "termo_responsabilidade",
+        });
+        if (list.length > 0) {
+          const existing = list[0];
+          setExistingId(existing.id);
+          setDeclinedProblem(existing.declined_problem || "");
+          setRecommendation(existing.declined_recommendation || "");
+          setSignedPhotoUrl(existing.signed_document_url || "");
+          setSignedPhoto(existing.signed_document_url || null);
+          setSaved(true);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadExisting();
+  }, [order.id]);
 
   const handlePrintOS = () => {
     window.print();
@@ -55,7 +82,7 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
     }
     setSaving(true);
     try {
-      await base44.entities.DiagnosticMaintenanceHistory.create({
+      const data = {
         user_email: userEmail,
         vehicle_id: order.vehicle_id || "",
         client_cpf_cnpj: order.client_cpf_cnpj || "",
@@ -76,9 +103,16 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
         service_order_id: order.id || "",
         order_number: order.order_number || "",
         cost: 0,
-      });
-      toast({ title: "Termo salvo", description: "Documento vinculado ao histórico do veículo." });
-      onClose();
+      };
+      if (existingId) {
+        await base44.entities.DiagnosticMaintenanceHistory.update(existingId, data);
+        toast({ title: "Termo atualizado", description: "Documento atualizado com sucesso." });
+      } else {
+        const created = await base44.entities.DiagnosticMaintenanceHistory.create(data);
+        setExistingId(created.id);
+        toast({ title: "Termo salvo", description: "Documento vinculado ao histórico do veículo." });
+      }
+      setSaved(true);
     } catch {
       toast({ title: "Erro", description: "Não foi possível salvar o termo.", variant: "destructive" });
     }
@@ -86,10 +120,10 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 no-print">
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 no-print">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-amber-600" />
             <h3 className="font-bold text-gray-800">Termo de Responsabilidade</h3>
@@ -266,6 +300,10 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Salvando...
+                </>
+              ) : saved ? (
+                <>
+                  <FileText className="w-4 h-4" /> Atualizar Termo
                 </>
               ) : (
                 <>
