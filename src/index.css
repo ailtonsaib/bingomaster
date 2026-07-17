@@ -121,12 +121,27 @@
   body.printing-term #print-term-area { position: absolute; left: 0; top: 0; width: 100%; }
 }
 
-/* Print: OS + Termo juntos — mostra ambos em páginas separadas */
+/* Print: OS + Termo juntos — OS na primeira folha, Termo na segunda */
 @media print {
   body.printing-both #print-area,
   body.printing-both #print-area *,
   body.printing-both #print-term-area,
   body.printing-both #print-term-area * { visibility: visible !important; }
-  body.printing-both #print-area { position: absolute; left: 0; top: 0; width: 100%; }
-  body.printing-both #print-term-area { position: absolute; left: 0; top: 0; width: 100%; page-break-before: always; }
+  body.printing-both #print-area { position: static !important; width: 100% !important; }
+  body.printing-both .termo-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: white !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  body.printing-both .termo-modal-inner {
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  body.printing-both #print-term-area { page-break-before: always; }
 }
