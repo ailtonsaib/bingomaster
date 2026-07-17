@@ -682,6 +682,97 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // ─── COMPANY ADMIN: create/update sub-admin for diagnostic ───
+    if (operation === 'createCompanyAdmin') {
+      const { owner_email, admin_email, admin_name } = body;
+      if (!owner_email || !admin_email || !admin_name) {
+        return Response.json({ error: 'owner_email, admin_email e admin_name são obrigatórios' }, { status: 400 });
+      }
+      // Verifica se o owner tem acesso ao diagnóstico
+      const owners = await base44.asServiceRole.entities.PortalUser.filter({ email: owner_email });
+      if (owners.length === 0) {
+        return Response.json({ error: 'Proprietário não encontrado' }, { status: 404 });
+      }
+      const owner = owners[0];
+      if (!owner.is_admin && !owner.can_access_diagnostic) {
+        return Response.json({ error: 'Sem permissão para criar administrador' }, { status: 403 });
+      }
+      // Herda o plano do owner
+      const plan = owner.diagnostic_plan || 'free';
+
+      const existingPortal = await base44.asServiceRole.entities.PortalUser.filter({ email: admin_email });
+      const defaultPassword = 'Premier@123';
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(defaultPassword, salt);
+
+      if (existingPortal.length > 0) {
+        // Atualiza o PortalUser existente
+        await base44.asServiceRole.entities.PortalUser.update(existingPortal[0].id, {
+          name: admin_name,
+          can_access_diagnostic: true,
+          diagnostic_plan: plan,
+          is_active: true,
+          must_change_password: true,
+          password_hash: hash,
+        });
+      } else {
+        // Cria novo PortalUser
+        await base44.asServiceRole.entities.PortalUser.create({
+          email: admin_email,
+          password_hash: hash,
+          name: admin_name,
+          is_admin: false,
+          can_access_bingo: false,
+          can_access_finance: false,
+          can_access_sped: false,
+          can_access_pdv: false,
+          can_access_diagnostic: true,
+          diagnostic_plan: plan,
+          bingo_plan: 'free',
+          sped_plan: 'free',
+          finance_transaction_limit: 10,
+          finance_transactions_used: 0,
+          finance_full_access: false,
+          finance_release_requested: false,
+          finance_plan_price: 49.90,
+          must_change_password: true,
+          is_active: true,
+        });
+      }
+
+      // Também cria/atualiza o WorkshopUser para gestão interna
+      const existingWorkshop = await base44.asServiceRole.entities.WorkshopUser.filter({
+        owner_email: owner_email,
+        email: admin_email,
+      });
+      if (existingWorkshop.length > 0) {
+        await base44.asServiceRole.entities.WorkshopUser.update(existingWorkshop[0].id, {
+          name: admin_name,
+          role: 'admin',
+          is_active: true,
+          must_change_password: true,
+          password_hash: hash,
+        });
+      } else {
+        await base44.asServiceRole.entities.WorkshopUser.create({
+          owner_email: owner_email,
+          name: admin_name,
+          email: admin_email,
+          password_hash: hash,
+          role: 'admin',
+          allowed_panels: [],
+          is_active: true,
+          must_change_password: true,
+        });
+      }
+
+      return Response.json({
+        success: true,
+        default_password: defaultPassword,
+        message: `Administrador criado. Senha inicial: ${defaultPassword}`,
+      });
+    }
+
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

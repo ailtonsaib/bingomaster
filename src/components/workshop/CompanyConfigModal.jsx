@@ -205,42 +205,22 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
     }
     setGranting(true);
     try {
-      // Verifica se já existe um usuário com este email vinculado à empresa
-      const existing = await base44.entities.WorkshopUser.filter({
+      const res = await base44.functions.invoke("portalAuth", {
+        operation: "createCompanyAdmin",
         owner_email: userEmail,
-        email: config.admin_email,
+        admin_email: config.admin_email,
+        admin_name: config.admin_name,
       });
-      if (existing.length > 0) {
-        // Atualiza para admin se já existir
-        await base44.entities.WorkshopUser.update(existing[0].id, {
-          name: config.admin_name,
-          role: "admin",
-          is_active: true,
-          must_change_password: true,
-        });
-      } else {
-        // Cria o usuário administrador da empresa
-        const tempPassword = Math.random().toString(36).slice(2, 10);
-        await base44.entities.WorkshopUser.create({
-          owner_email: userEmail,
-          name: config.admin_name,
-          email: config.admin_email,
-          password_hash: tempPassword,
-          role: "admin",
-          allowed_panels: [],
-          is_active: true,
-          must_change_password: true,
-        });
-      }
+      const result = res?.data ?? res;
       // Marca o acesso como liberado na empresa
       await base44.entities.DiagnosticCompanyConfig.update(configId, { access_granted: true });
       setConfig(prev => ({ ...prev, access_granted: true }));
       toast({
         title: "Acesso liberado",
-        description: `O administrador ${config.admin_name} (${config.admin_email}) agora tem acesso ao sistema como administrador da empresa.`,
+        description: `Senha inicial: ${result?.default_password || "Premier@123"} — o administrador deverá trocá-la no primeiro acesso.`,
       });
     } catch (e) {
-      toast({ title: "Erro", description: e?.message || "Não foi possível liberar o acesso.", variant: "destructive" });
+      toast({ title: "Erro", description: e?.response?.data?.error || e?.message || "Não foi possível liberar o acesso.", variant: "destructive" });
     }
     setGranting(false);
   };
@@ -465,6 +445,11 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
               <p className="text-xs text-blue-600">
                 Informe o nome e email da pessoa que administrará a empresa. Ao liberar o acesso, ela terá entrada no sistema como administrador.
               </p>
+              {config.access_granted && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <strong>Senha inicial:</strong> Premier@123 — o administrador será obrigado a trocá-la no primeiro acesso.
+                </p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-sm font-medium">Nome do Administrador</Label>
