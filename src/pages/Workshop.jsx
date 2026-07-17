@@ -44,6 +44,11 @@ export default function Workshop() {
   const [searchParams] = useSearchParams();
   const user = getPortalUser();
   const isSuperAdmin = !!user?.is_admin;
+  // Usuários de oficina usam owner_email para acessar dados da empresa
+  const effectiveEmail = user?.owner_email || user?.email;
+  const isWorkshopUser = !!user?.owner_email;
+  const userRole = user?.workshop_role || (isSuperAdmin ? "admin" : "admin");
+  const allowedPanels = user?.allowed_panels || [];
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "orders");
   const [subStatus, setSubStatus] = useState(null);
   const [checkingSub, setCheckingSub] = useState(true);
@@ -56,13 +61,13 @@ export default function Workshop() {
   useEffect(() => {
     const checkSubscription = async () => {
       try {
-        const res = await base44.functions.invoke("manageDiagnostic", { operation: "getUsage" });
+        const res = await base44.functions.invoke("manageDiagnostic", { operation: "getUsage", email: effectiveEmail });
         if (res?.data) setSubStatus(res.data);
       } catch { /* ignore */ }
       setCheckingSub(false);
     };
     checkSubscription();
-  }, []);
+  }, [effectiveEmail]);
 
   // Carrega empresas vinculadas ao admin de empresa (busca por admin_email)
   useEffect(() => {

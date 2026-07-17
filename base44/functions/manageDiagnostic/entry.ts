@@ -9,13 +9,13 @@ const DEFAULT_LIMITS = {
 
 const GRACE_PERIOD_DAYS = 15;
 
-async function getUserPlan(base44, email) {
+async function getUserPlan(base44, email, isWorkshopUser = false) {
   const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
   if (users.length === 0) return null;
   const portalUser = users[0];
 
-  // Admins have unlimited access
-  if (portalUser.is_admin) {
+  // Admins have unlimited access (workshop users nunca são admin)
+  if (portalUser.is_admin && !isWorkshopUser) {
     return { plan: 'master', ...DEFAULT_LIMITS.master, is_admin: true, subscription_status: 'active', portal_user_id: portalUser.id };
   }
 
@@ -131,22 +131,31 @@ async function computeSubscriptionStatus(base44, planInfo) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
     const body = await req.json();
-    const { operation } = body;
+    const { operation, email: rawEmail } = body;
+
+    // Resolve email efetivo — usuários de oficina usam owner_email
+    let userEmail = rawEmail;
+    let isWorkshopUser = false;
+    if (rawEmail) {
+      const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email: rawEmail });
+      if (wsUsers.length > 0) {
+        isWorkshopUser = true;
+        userEmail = wsUsers[0].owner_email;
+      }
+    }
+    if (!userEmail) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     // ─── GET USAGE ───
     if (operation === 'getUsage') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo) return Response.json({ error: 'Usuário não encontrado no portal' }, { status: 404 });
 
       const [clients, vehicles, diagnostics, serviceOrders] = await Promise.all([
-        base44.asServiceRole.entities.DiagnosticClient.filter({ user_email: user.email }),
-        base44.asServiceRole.entities.DiagnosticVehicle.filter({ user_email: user.email }),
-        base44.asServiceRole.entities.DiagnosticRecord.filter({ user_email: user.email }),
-        base44.asServiceRole.entities.ServiceOrder.filter({ user_email: user.email }),
+        base44.asServiceRole.entities.DiagnosticClient.filter({ user_email: userEmail }),
+        base44.asServiceRole.entities.DiagnosticVehicle.filter({ user_email: userEmail }),
+        base44.asServiceRole.entities.DiagnosticRecord.filter({ user_email: userEmail }),
+        base44.asServiceRole.entities.ServiceOrder.filter({ user_email: userEmail }),
       ]);
 
       const subStatus = await computeSubscriptionStatus(base44, planInfo);
@@ -163,7 +172,7 @@ Deno.serve(async (req) => {
 
     // ─── CHECK SERVICE ORDER LIMIT ───
     if (operation === 'checkServiceOrderLimit') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo) return Response.json({ error: 'Usuário não encontrado no portal' }, { status: 404 });
 
       const subStatus = await computeSubscriptionStatus(base44, planInfo);
@@ -171,7 +180,7 @@ Deno.serve(async (req) => {
         return Response.json({ allowed: false, blocked: true, message: subStatus.subscription_message });
       }
 
-      const serviceOrders = await base44.asServiceRole.entities.ServiceOrder.filter({ user_email: user.email });
+      const serviceOrders = await base44.asServiceRole.entities.ServiceOrder.filter({ user_email: userEmail });
       const used = serviceOrders.length;
       const max = planInfo.max_service_orders;
 
@@ -196,19 +205,19 @@ Deno.serve(async (req) => {
 
     // ─── CREATE CLIENT AND VEHICLE ───
     if (operation === 'createClientAndVehicle') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo) return Response.json({ error: 'Usuário não encontrado no portal' }, { status: 404 });
 
       const { client_data, vehicle_data, is_new_client, existing_client_name } = body;
 
       if (is_new_client) {
-        const clients = await base44.asServiceRole.entities.DiagnosticClient.filter({ user_email: user.email });
+        const clients = await base44.asServiceRole.entities.DiagnosticClient.filter({ user_email: userEmail });
         if (planInfo.max_clients >= 0 && clients.length >= planInfo.max_clients) {
           return Response.json({ error: `Limite de ${planInfo.max_clients} clientes atingido no plano ${planInfo.plan_name}. Faça upgrade para o plano Master.` }, { status: 403 });
         }
       }
 
-      const vehicles = await base44.asServiceRole.entities.DiagnosticVehicle.filter({ user_email: user.email });
+      const vehicles = await base44.asServiceRole.entities.DiagnosticVehicle.filter({ user_email: userEmail });
       if (planInfo.max_vehicles >= 0 && vehicles.length >= planInfo.max_vehicles) {
         return Response.json({ error: `Limite de ${planInfo.max_vehicles} veículos atingido no plano ${planInfo.plan_name}. Faça upgrade para o plano Master.` }, { status: 403 });
       }
@@ -217,7 +226,7 @@ Deno.serve(async (req) => {
 
       if (is_new_client && client_data) {
         await base44.entities.DiagnosticClient.create({
-          user_email: user.email,
+          user_email: userEmail,
           name: client_data.name,
           cpf_cnpj: client_data.cpf_cnpj,
           phone: client_data.phone || undefined,
@@ -228,7 +237,7 @@ Deno.serve(async (req) => {
       }
 
       const createdVehicle = await base44.entities.DiagnosticVehicle.create({
-        user_email: user.email,
+        user_email: userEmail,
         client_cpf_cnpj: finalCpfCnpj,
         client_name: is_new_client ? client_data.name : existing_client_name,
         plate: vehicle_data.plate || '',
@@ -248,7 +257,7 @@ Deno.serve(async (req) => {
 
     // ─── DELETE CLIENT (bronze/master only) ───
     if (operation === 'deleteClient') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo) return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
       if (!planInfo.can_delete) {
         return Response.json({ error: 'Exclusão não permitida no seu plano. Faça upgrade para o plano Bronze ou Master.' }, { status: 403 });
@@ -259,7 +268,7 @@ Deno.serve(async (req) => {
 
     // ─── DELETE VEHICLE (bronze/master only) ───
     if (operation === 'deleteVehicle') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo) return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
       if (!planInfo.can_delete) {
         return Response.json({ error: 'Exclusão não permitida no seu plano. Faça upgrade para o plano Bronze ou Master.' }, { status: 403 });
@@ -270,7 +279,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: GET PLAN CONFIGS ───
     if (operation === 'getPlanConfigs') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo?.is_admin) return Response.json({ error: 'Acesso negado' }, { status: 403 });
 
       let configs = await base44.asServiceRole.entities.DiagnosticPlanConfig.list();
@@ -288,7 +297,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: SAVE PLAN CONFIG ───
     if (operation === 'savePlanConfig') {
-      const planInfo = await getUserPlan(base44, user.email);
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!planInfo?.is_admin) return Response.json({ error: 'Acesso negado' }, { status: 403 });
 
       const { plan_id, plan_name, price, acquisition_price, max_diagnostics, max_clients, max_vehicles, max_service_orders, can_delete, is_active, id } = body;
@@ -320,7 +329,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: REGISTER COMPANY (set subscription start) ───
     if (operation === 'adminRegisterCompany') {
-      const adminPlan = await getUserPlan(base44, user.email);
+      const adminPlan = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!adminPlan?.is_admin) return Response.json({ error: 'Acesso negado' }, { status: 403 });
 
       const { user_email, acquisition_price, monthly_price, registration_date } = body;
@@ -349,7 +358,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: MARK PAYMENT (extend due date by 1 month) ───
     if (operation === 'adminMarkPayment') {
-      const adminPlan = await getUserPlan(base44, user.email);
+      const adminPlan = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!adminPlan?.is_admin) return Response.json({ error: 'Acesso negado' }, { status: 403 });
 
       const { user_email } = body;
@@ -374,7 +383,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: UNBLOCK ───
     if (operation === 'adminUnblock') {
-      const adminPlan = await getUserPlan(base44, user.email);
+      const adminPlan = await getUserPlan(base44, userEmail, isWorkshopUser);
       if (!adminPlan?.is_admin) return Response.json({ error: 'Acesso negado' }, { status: 403 });
 
       const { user_email, extend_days } = body;

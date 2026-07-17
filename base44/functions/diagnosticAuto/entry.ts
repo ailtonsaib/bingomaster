@@ -3,15 +3,22 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
     const body = await req.json();
     const {
       vehicle_brand, vehicle_model, vehicle_year, vehicle_engine,
       vehicle_plate, vehicle_mileage, vehicle_fuel, symptoms, description,
-      obd2_data
+      obd2_data, email: rawEmail
     } = body;
+
+    // Resolve email efetivo — usuários de oficina usam owner_email
+    let userEmail = rawEmail;
+    if (rawEmail) {
+      const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email: rawEmail });
+      if (wsUsers.length > 0) {
+        userEmail = wsUsers[0].owner_email;
+      }
+    }
+    if (!userEmail) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     // If OBD2 data is provided, we can skip the symptoms requirement
     const hasObd2 = obd2_data && obd2_data.dtcs && obd2_data.dtcs.length > 0;
@@ -26,7 +33,7 @@ Deno.serve(async (req) => {
     }
 
     // ─── Plan limit check ───
-    const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: user.email });
+    const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: userEmail });
     if (portalUsers.length === 0) {
       return Response.json({ error: 'Usuário não encontrado no portal. Contate o administrador.' }, { status: 403 });
     }
@@ -36,7 +43,7 @@ Deno.serve(async (req) => {
       const configs = await base44.asServiceRole.entities.DiagnosticPlanConfig.filter({ plan_id: planId, is_active: true });
       const maxDiag = configs.length > 0 ? configs[0].max_diagnostics : (planId === 'master' ? -1 : 5);
       if (maxDiag >= 0) {
-        const records = await base44.asServiceRole.entities.DiagnosticRecord.filter({ user_email: user.email });
+        const records = await base44.asServiceRole.entities.DiagnosticRecord.filter({ user_email: userEmail });
         if (records.length >= maxDiag) {
           return Response.json({ error: `Limite de ${maxDiag} diagnósticos atingido no plano ${planId.toUpperCase()}. Faça upgrade para o plano Master.` }, { status: 403 });
         }
@@ -119,7 +126,7 @@ Para cada causa, explique brevemente o porquê e dê uma recomendação prática
 
     // Save diagnostic record
     const record = await base44.entities.DiagnosticRecord.create({
-      user_email: user.email,
+      user_email: userEmail,
       vehicle_brand,
       vehicle_model,
       vehicle_year: vehicle_year || '',

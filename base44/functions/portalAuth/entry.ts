@@ -101,7 +101,57 @@ Deno.serve(async (req) => {
       }
       const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
       if (users.length === 0) {
-        return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+        // Fallback: verificar WorkshopUser (usuários de empresa)
+        const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
+        if (wsUsers.length === 0) {
+          return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+        }
+        const wsUser = wsUsers[0];
+        if (!wsUser.is_active) {
+          return Response.json({ error: 'Usuário inativo. Contate o administrador.' }, { status: 403 });
+        }
+        // Verifica senha — suporta bcrypt (novo) e texto plano (legado)
+        let valid = false;
+        let needsRehash = false;
+        if (wsUser.password_hash) {
+          try {
+            valid = await bcrypt.compare(password, wsUser.password_hash);
+          } catch (_) {
+            // Senha em texto plano (legado) — comparação direta
+            valid = wsUser.password_hash === password;
+            needsRehash = valid;
+          }
+        }
+        if (!valid) {
+          return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+        }
+        // Migra senha de texto plano para bcrypt
+        if (needsRehash) {
+          const salt = await bcrypt.genSalt(10);
+          const hash = await bcrypt.hash(password, salt);
+          await base44.asServiceRole.entities.WorkshopUser.update(wsUser.id, { password_hash: hash });
+        }
+        // Herda plano do proprietário (owner_email)
+        const owners = await base44.asServiceRole.entities.PortalUser.filter({ email: wsUser.owner_email });
+        const owner = owners.length > 0 ? owners[0] : null;
+        const constructedUser = {
+          email: wsUser.email,
+          name: wsUser.name,
+          phone: wsUser.phone,
+          is_admin: false,
+          can_access_bingo: false,
+          can_access_finance: false,
+          can_access_sped: false,
+          can_access_pdv: false,
+          can_access_diagnostic: true,
+          diagnostic_plan: owner?.diagnostic_plan || 'free',
+          workshop_role: wsUser.role,
+          allowed_panels: wsUser.allowed_panels || [],
+          owner_email: wsUser.owner_email,
+          must_change_password: wsUser.must_change_password,
+          is_active: wsUser.is_active,
+        };
+        return Response.json({ user: constructedUser });
       }
       const user = users[0];
       if (!user.is_active) {
@@ -771,6 +821,52 @@ Deno.serve(async (req) => {
         default_password: defaultPassword,
         message: `Administrador criado. Senha inicial: ${defaultPassword}`,
       });
+    }
+
+    // ─── WORKSHOP: salvar usuário (criar/atualizar com senha bcrypt) ───
+    if (operation === 'saveWorkshopUser') {
+      const { owner_email, id, name, email: wsEmail, phone, password, role, allowed_panels, is_active, must_change_password } = body;
+      if (!owner_email || !name || !wsEmail) {
+        return Response.json({ error: 'owner_email, name e email são obrigatórios' }, { status: 400 });
+      }
+      if (id) {
+        const updateData = {
+          name,
+          phone: phone || undefined,
+          role: role || 'operador',
+          allowed_panels: allowed_panels || [],
+          is_active: is_active !== false,
+          must_change_password: must_change_password !== false,
+        };
+        if (password) {
+          const salt = await bcrypt.genSalt(10);
+          updateData.password_hash = await bcrypt.hash(password, salt);
+        }
+        await base44.asServiceRole.entities.WorkshopUser.update(id, updateData);
+        return Response.json({ success: true });
+      } else {
+        if (!password) {
+          return Response.json({ error: 'Senha é obrigatória para novo usuário' }, { status: 400 });
+        }
+        const existing = await base44.asServiceRole.entities.WorkshopUser.filter({ owner_email, email: wsEmail });
+        if (existing.length > 0) {
+          return Response.json({ error: 'Email já cadastrado' }, { status: 409 });
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+        await base44.asServiceRole.entities.WorkshopUser.create({
+          owner_email,
+          name,
+          email: wsEmail,
+          phone: phone || undefined,
+          password_hash: hash,
+          role: role || 'operador',
+          allowed_panels: allowed_panels || [],
+          is_active: is_active !== false,
+          must_change_password: must_change_password !== false,
+        });
+        return Response.json({ success: true });
+      }
     }
 
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });

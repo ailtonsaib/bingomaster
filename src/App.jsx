@@ -156,10 +156,8 @@ const AuthenticatedApp = () => {
       {/* Diagnóstico Automotivo */}
       <Route path="/diagnostico" element={<DiagnosticLogin />} />
       <Route element={<PortalGuard permission="can_access_diagnostic" />}>
-        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-          <Route path="/diagnostico-auto" element={<DiagnosticAuto />} />
-          <Route path="/diagnostico-oficina" element={<Workshop />} />
-        </Route>
+        <Route path="/diagnostico-auto" element={<DiagnosticAuto />} />
+        <Route path="/diagnostico-oficina" element={<Workshop />} />
       </Route>
       {/* PDV — Frente de Caixa */}
       <Route path="/pdv" element={<PDVLogin />} />
