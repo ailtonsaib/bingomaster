@@ -240,13 +240,14 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
         </div>
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between p-4 border-t bg-gray-50 no-print">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between p-4 border-t bg-gray-50 no-print sticky bottom-0 z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500 hidden sm:block">Imprimir:</span>
             <Button variant="outline" size="sm" onClick={handlePrintOS} className="gap-1">
-              <Printer className="w-3.5 h-3.5" /> OS
+              <Printer className="w-3.5 h-3.5" /> Só OS
             </Button>
-            <Button variant="outline" size="sm" onClick={handlePrintTerm} className="gap-1">
-              <FileText className="w-3.5 h-3.5" /> Termo
+            <Button variant="outline" size="sm" onClick={handlePrintTerm} className="gap-1 border-amber-200 text-amber-600 hover:bg-amber-50">
+              <FileText className="w-3.5 h-3.5" /> Só Termo
             </Button>
             <Button variant="outline" size="sm" onClick={handlePrintBoth} className="gap-1">
               <Printer className="w-3.5 h-3.5" /> OS + Termo
