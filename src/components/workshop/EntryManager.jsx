@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Plus, Trash2, Loader2, FileText, Search, ArrowDownToLine,
-  Upload, CheckCircle2, AlertTriangle, X, Wrench, FileUp, ChevronDown
+  Upload, CheckCircle2, AlertTriangle, X, Wrench, FileUp, ChevronDown, Undo2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { maskCpfCnpj, maskPhone, maskCep } from "@/lib/brMasks";
@@ -468,6 +468,35 @@ export default function EntryManager({ userEmail }) {
     }
   };
 
+  // Reabrir entrada registrada → exclui o título financeiro gerado e reverte para "pendente"
+  const handleReopenEntry = async (entry) => {
+    if (!confirm(`Reabrir NF ${entry.nota_number || entry.service_description?.slice(0, 30)}? O título financeiro será excluído e a entrada voltará para pendente.`)) return;
+    try {
+      // Busca e exclui o título financeiro vinculado a esta entrada
+      const financeDesc = `NF-e ${entry.nota_number} — ${entry.supplier_name}`.trim();
+      const financeTx = await base44.entities.PortalFinanceTransaction.filter({
+        user_email: userEmail,
+        source_module: "workshop",
+      });
+      const linked = financeTx.filter(t =>
+        t.description === financeDesc ||
+        (entry.nota_number && t.description?.includes(`NF-e ${entry.nota_number}`) && t.contact_name === entry.supplier_name)
+      );
+      for (const tx of linked) {
+        await base44.entities.PortalFinanceTransaction.delete(tx.id);
+      }
+      // Reverte o status da entrada para "pendente"
+      await base44.entities.DiagnosticEntryOperation.update(entry.id, {
+        status: "pendente",
+        payment_status: "aberto",
+      });
+      toast({ title: "Entrada reaberta", description: `Título financeiro excluído (${linked.length}). NF voltou para pendente.` });
+      load();
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível reabrir a entrada.", variant: "destructive" });
+    }
+  };
+
   // Cancelar entrada pendente → marca como "cancelada", sem gerar estoque ou financeiro
   const handleCancelEntry = async (entry) => {
     if (!confirm(`Cancelar a entrada NF ${entry.nota_number || entry.service_description?.slice(0, 30)}? Nenhum financeiro ou estoque será gerado.`)) return;
@@ -592,15 +621,25 @@ export default function EntryManager({ userEmail }) {
                     ) : e.status === "cancelada" ? (
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">Cancelada</span>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => togglePaymentStatus(e)}
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          e.payment_status === "pago" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"
-                        }`}
-                      >
-                        {e.payment_status === "pago" ? "Pago" : "Registrada"}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => togglePaymentStatus(e)}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            e.payment_status === "pago" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"
+                          }`}
+                        >
+                          {e.payment_status === "pago" ? "Pago" : "Registrada"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReopenEntry(e)}
+                          className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-600 hover:bg-amber-100"
+                          title="Reabrir (excluir título financeiro e voltar para pendente)"
+                        >
+                          <Undo2 className="w-3 h-3 inline" />
+                        </button>
+                      </>
                     )}
                   </td>
                   <td className="p-3 text-center">
