@@ -16,6 +16,7 @@ import EditGameModal from "@/components/bingo/EditGameModal";
 import DistributeCardsModal from "@/components/bingo/DistributeCardsModal";
 import LiveStatsPanel from "@/components/bingo/LiveStatsPanel";
 import GameManagementModal from "@/components/bingo/GameManagementModal";
+import BingoInvitationCard from "@/components/bingo/BingoInvitationCard";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useBrandName } from "@/hooks/useBrandName";
 import { BRAND_OPTIONS } from "@/lib/brandConfig";
@@ -418,6 +419,21 @@ export default function Home() {
       </div>
       {showDistribute && (
         <DistributeCardsModal onClose={() => setShowDistribute(false)} />
+      )}
+
+      {/* Invitation Cards */}
+      {games.length > 0 && (
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Mail className="w-5 h-5 text-pink-600" />
+            <h2 className="font-heading font-bold text-lg">Convites dos Eventos</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {games.map((game) => (
+              <BingoInvitationCard key={game.id} game={game} />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Game picker modal for Sorteio */}
