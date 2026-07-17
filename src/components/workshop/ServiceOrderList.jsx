@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import ServiceOrderForm from "./ServiceOrderForm";
 import ServiceOrderDetail from "./ServiceOrderDetail";
 import PlanUpgradePanel from "./PlanUpgradePanel";
+import WorkshopPaymentModal from "./WorkshopPaymentModal";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -49,6 +50,7 @@ export default function ServiceOrderList({ userEmail }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [planUsage, setPlanUsage] = useState(null);
   const [statusMenuId, setStatusMenuId] = useState(null);
+  const [paymentModalOrder, setPaymentModalOrder] = useState(null);
 
   const STATUS_CHANGE_OPTIONS = [
     "aberta",
@@ -65,6 +67,12 @@ export default function ServiceOrderList({ userEmail }) {
 
     const wasConcluida = order.status === "concluida" || order.status === "entregue";
     const willBeConcluida = newStatus === "concluida";
+
+    // Ao concluir a OS, abre o modal de pagamento em vez de concluir direto
+    if (willBeConcluida && !wasConcluida) {
+      setPaymentModalOrder(order);
+      return;
+    }
 
     try {
       await base44.entities.ServiceOrder.update(order.id, {
@@ -336,6 +344,18 @@ export default function ServiceOrderList({ userEmail }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {paymentModalOrder && (
+        <WorkshopPaymentModal
+          order={paymentModalOrder}
+          userEmail={userEmail}
+          onClose={() => setPaymentModalOrder(null)}
+          onConfirmed={() => {
+            setPaymentModalOrder(null);
+            load();
+          }}
+        />
       )}
     </div>
   );

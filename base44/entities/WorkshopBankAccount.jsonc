@@ -1,0 +1,49 @@
+{
+  "name": "WorkshopBankAccount",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "bank_name": {
+      "type": "string",
+      "description": "Nome do banco (ex: Caixa Econ\u00f4mica Federal)"
+    },
+    "bank_code": {
+      "type": "string",
+      "description": "C\u00f3digo do banco (ex: 104)"
+    },
+    "agency": {
+      "type": "string",
+      "description": "Ag\u00eancia"
+    },
+    "account": {
+      "type": "string",
+      "description": "N\u00famero da conta"
+    },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "conta_corrente",
+        "conta_poupanca"
+      ],
+      "default": "conta_corrente",
+      "description": "Tipo de conta"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 a conta padr\u00e3o"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a conta est\u00e1 ativa"
+    }
+  },
+  "required": [
+    "user_email",
+    "bank_name"
+  ]
+}
