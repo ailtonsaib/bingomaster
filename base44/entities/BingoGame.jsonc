@@ -78,6 +78,14 @@
       "type": "string",
       "description": "Valor da cartela/evento"
     },
+    "event_treats": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Guloseimas e comes e bebes dispon\u00edveis no evento"
+    },
     "card_image_url": {
       "type": "string",
       "description": "URL da imagem que aparece nas cartelas impressas (logo/\u00edcone)"

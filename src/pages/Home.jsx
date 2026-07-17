@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText, Mail } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useUserScope } from "@/hooks/useUserScope";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
@@ -344,6 +344,11 @@ export default function Home() {
               <Link to="/validador-sped">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-sky-300 text-sky-700 hover:bg-sky-50">
                   <FileText className="w-5 h-5" /> Validador SPED
+                </Button>
+              </Link>
+              <Link to="/convite">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
+                  <Mail className="w-5 h-5" /> Convite do Bingo
                 </Button>
               </Link>
               <Link to="/info-planos">

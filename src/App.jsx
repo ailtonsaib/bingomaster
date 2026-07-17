@@ -40,6 +40,7 @@ import FinalReport from '@/pages/FinalReport';
 import FinancialReport from '@/pages/FinancialReport';
 import SalesDashboard from '@/pages/SalesDashboard';
 import GameMonitor from '@/pages/GameMonitor';
+import BingoInvitation from '@/pages/BingoInvitation';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -150,6 +151,7 @@ const AuthenticatedApp = () => {
           <Route path="/financial-report" element={<FinancialReport />} />
           <Route path="/sales-dashboard" element={<SalesDashboard />} />
           <Route path="/monitor" element={<GameMonitor />} />
+          <Route path="/convite" element={<BingoInvitation />} />
           <Route path="/admin-financial" element={<AdminFinancialPanel />} />
         </Route>
       </Route>
