@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, CreditCard, QrCode, Receipt, Banknote, Landmark, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import BoletoGenerator from "./BoletoGenerator";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -26,33 +27,83 @@ const CARD_BRANDS = [
   { value: "outros", label: "Outros" },
 ];
 
+function isCaixa(bank) {
+  const code = String(bank.bank_code || "").replace(/\D/g, "");
+  const name = (bank.bank_name || "").toLowerCase();
+  return code === "104" || name.includes("caixa");
+}
+
 export default function WorkshopPaymentModal({ order, userEmail, onClose, onConfirmed }) {
   const { toast } = useToast();
   const [banks, setBanks] = useState([]);
+  const [companyConfig, setCompanyConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [cardBrand, setCardBrand] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
-  const [bankName, setBankName] = useState("");
+  const [boletoDueDate, setBoletoDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().slice(0, 10);
+  });
+  const [generatedBoleto, setGeneratedBoleto] = useState(null);
 
   useEffect(() => {
-    const loadBanks = async () => {
+    const loadData = async () => {
       try {
-        const data = await base44.entities.WorkshopBankAccount.filter({ user_email: userEmail, is_active: true });
-        setBanks(data);
-        const def = data.find(b => b.is_default);
+        const [bankData, companyList] = await Promise.all([
+          base44.entities.WorkshopBankAccount.filter({ user_email: userEmail, is_active: true }),
+          base44.entities.DiagnosticCompanyConfig.filter({ user_email: userEmail }),
+        ]);
+        let banksList = bankData;
+
+        // Se não existe conta Caixa, cria automaticamente
+        let caixa = banksList.find(isCaixa);
+        if (!caixa) {
+          caixa = await base44.entities.WorkshopBankAccount.create({
+            user_email: userEmail,
+            bank_name: "Caixa Econômica Federal",
+            bank_code: "104",
+            agency: "0001",
+            account: "000001",
+            account_type: "conta_corrente",
+            is_default: true,
+            is_active: true,
+          });
+          banksList = [caixa, ...banksList];
+        }
+
+        setBanks(banksList);
+        setCompanyConfig(companyList[0] || {});
+
+        const def = banksList.find(b => b.is_default) || caixa;
         if (def) {
           setBankAccountId(def.id);
-          setBankName(`${def.bank_code} — ${def.bank_name}`);
         }
       } catch { /* ignore */ }
       setLoading(false);
     };
-    loadBanks();
+    loadData();
   }, [userEmail]);
 
   const isCard = paymentMethod === "cartao_credito" || paymentMethod === "cartao_debito";
+  const isBoleto = paymentMethod === "boleto";
+  const isDinheiro = paymentMethod === "dinheiro";
+
+  // Quando muda a forma de pagamento, ajusta o banco
+  const handleMethodChange = (method) => {
+    setPaymentMethod(method);
+    if (!isCard) setCardBrand("");
+
+    if (method === "dinheiro") {
+      // Cai direto na Caixa
+      const caixa = banks.find(isCaixa);
+      if (caixa) setBankAccountId(caixa.id);
+    }
+  };
+
+  const selectedBank = banks.find(b => b.id === bankAccountId);
 
   const handleConfirm = async () => {
     if (!paymentMethod) {
@@ -63,11 +114,18 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
       toast({ title: "Atenção", description: "Selecione a bandeira do cartão.", variant: "destructive" });
       return;
     }
+    if (isBoleto && !bankAccountId) {
+      toast({ title: "Atenção", description: "Selecione o banco emissor do boleto.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       // 1. Atualiza a OS para concluída
-      const updateData = { status: "concluida" };
+      const updateData = { status: "concluida", payment_method: paymentMethod };
       if (!order.completion_date) updateData.completion_date = new Date().toISOString();
+      if (isBoleto) updateData.payment_status = "pendente";
+      if (isDinheiro) updateData.payment_status = "pago";
+      if (isCard || paymentMethod === "pix") updateData.payment_status = "pago";
       await base44.entities.ServiceOrder.update(order.id, updateData);
 
       // 2. Verifica se já existe título
@@ -77,8 +135,11 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
       }).then(list => list.filter(t => t.description && t.description.includes(order.order_number)));
 
       if (existing.length === 0) {
-        // 3. Cria o título financeiro com os dados de pagamento
-        const selectedBank = banks.find(b => b.id === bankAccountId);
+        // 3. Cria o título financeiro
+        const dueDate = isBoleto
+          ? new Date(boletoDueDate + "T00:00:00").toISOString()
+          : new Date(Date.now() + 30 * 86400000).toISOString();
+
         const txData = {
           user_email: userEmail,
           description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
@@ -88,11 +149,16 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           category: "Ordem de Serviço",
           date: new Date().toISOString(),
           launch_date: new Date().toISOString(),
-          due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+          due_date: dueDate,
           contact_name: order.client_name || "",
-          status: "pending",
           payment_method: paymentMethod,
+          // Dinheiro = baixado imediatamente; boleto/cartão/pix = pendente até baixa
+          status: isDinheiro ? "settled" : "pending",
         };
+        if (isDinheiro) {
+          txData.settled_date = new Date().toISOString();
+          txData.settled_amount = order.total || 0;
+        }
         if (isCard) txData.card_brand = cardBrand;
         if (selectedBank) {
           txData.bank_account_id = selectedBank.id;
@@ -101,13 +167,35 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
         await base44.entities.PortalFinanceTransaction.create(txData);
       }
 
-      toast({ title: "OS concluída", description: `Título de ${fmtMoney(order.total)} gerado no financeiro.` });
-      onConfirmed?.();
+      // 4. Se for boleto, gera e exibe o boleto
+      if (isBoleto && selectedBank) {
+        setGeneratedBoleto({
+          bank: selectedBank,
+          dueDate: new Date(boletoDueDate + "T00:00:00").toISOString(),
+        });
+        toast({ title: "Boleto gerado", description: `OS concluída e boleto de ${fmtMoney(order.total)} emitido.` });
+      } else {
+        toast({ title: "OS concluída", description: `Título de ${fmtMoney(order.total)} gerado no financeiro.` });
+        onConfirmed?.();
+      }
     } catch {
       toast({ title: "Erro", description: "Não foi possível concluir.", variant: "destructive" });
     }
     setSaving(false);
   };
+
+  // Exibe o boleto gerado
+  if (generatedBoleto) {
+    return (
+      <BoletoGenerator
+        bank={generatedBoleto.bank}
+        order={order}
+        companyConfig={companyConfig || {}}
+        dueDate={generatedBoleto.dueDate}
+        onClose={() => { onConfirmed?.(); }}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -141,7 +229,7 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
                   <button
                     key={method.value}
                     type="button"
-                    onClick={() => { setPaymentMethod(method.value); if (!isCard) setCardBrand(""); }}
+                    onClick={() => handleMethodChange(method.value)}
                     className={`flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-all ${
                       selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
                     }`}
@@ -176,31 +264,50 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
             </div>
           )}
 
-          <div>
-            <Label className="text-sm font-medium mb-2 block flex items-center gap-1">
-              <Landmark className="w-4 h-4" /> Conta Bancária
-            </Label>
-            <select
-              value={bankAccountId}
-              onChange={(e) => {
-                const sel = banks.find(b => b.id === e.target.value);
-                setBankAccountId(e.target.value);
-                setBankName(sel ? `${sel.bank_code} — ${sel.bank_name}` : "");
-              }}
-              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-            >
-              <option value="">Selecione...</option>
-              {banks.map(b => (
-                <option key={b.id} value={b.id}>
-                  {b.bank_code} — {b.bank_name} {b.agency ? `(Ag: ${b.agency})` : ""} {b.is_default ? "★" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isBoleto && (
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Data de Vencimento do Boleto</Label>
+              <Input
+                type="date"
+                value={boletoDueDate}
+                onChange={(e) => setBoletoDueDate(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Banco: oculto para dinheiro (sempre Caixa); visível para demais métodos */}
+          {!isDinheiro && (
+            <div>
+              <Label className="text-sm font-medium mb-2 block flex items-center gap-1">
+                <Landmark className="w-4 h-4" />
+                {isBoleto ? "Banco Emissor do Boleto" : "Conta Bancária"}
+              </Label>
+              <select
+                value={bankAccountId}
+                onChange={(e) => setBankAccountId(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="">Selecione...</option>
+                {banks.map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.bank_code} — {b.bank_name} {b.agency ? `(Ag: ${b.agency})` : ""} {b.is_default ? "★" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Indicador da Caixa para dinheiro */}
+          {isDinheiro && selectedBank && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
+              <Landmark className="w-4 h-4" />
+              <span>Entrada automática na conta: <strong>{selectedBank.bank_code} — {selectedBank.bank_name}</strong></span>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button onClick={handleConfirm} disabled={saving} className="flex-1">
-              {saving ? "Encerrando..." : "Encerrar OS e Gerar Título"}
+              {saving ? "Encerrando..." : isBoleto ? "Encerrar OS e Gerar Boleto" : "Encerrar OS e Gerar Título"}
             </Button>
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
           </div>
