@@ -264,6 +264,7 @@ export default function EntryManager({ userEmail }) {
           description: `NF-e ${data.nota.number} — ${supplierName}`.trim(),
           amount: data.totals.total_nota,
           type: "expense",
+          source_module: "workshop",
           category: "Entrada de Mercadoria",
           date: new Date().toISOString(),
           launch_date: new Date().toISOString(),

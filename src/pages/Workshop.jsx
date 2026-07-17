@@ -16,7 +16,7 @@ import MonthlyReportPanel from "@/components/workshop/MonthlyReportPanel";
 import MechanicRankingPanel from "@/components/workshop/MechanicRankingPanel";
 import MechanicProductivityPanel from "@/components/workshop/MechanicProductivityPanel";
 import DiagnosticBlockedScreen from "@/components/workshop/DiagnosticBlockedScreen";
-import CashPanel from "@/components/finance/CashPanel";
+import WorkshopFinancePanel from "@/components/workshop/WorkshopFinancePanel";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -135,7 +135,7 @@ export default function Workshop() {
         <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
           {activeTab === "clients" && <ClientVehicleManager userEmail={user?.email} />}
           {activeTab === "orders" && <ServiceOrderList userEmail={user?.email} />}
-          {activeTab === "finance" && <CashPanel userEmail={user?.email} />}
+          {activeTab === "finance" && <WorkshopFinancePanel userEmail={user?.email} />}
           {activeTab === "service_types" && <ServiceTypeManager userEmail={user?.email} />}
           {activeTab === "mechanics" && <MechanicManager userEmail={user?.email} />}
           {activeTab === "commissions" && <CommissionPanel userEmail={user?.email} />}

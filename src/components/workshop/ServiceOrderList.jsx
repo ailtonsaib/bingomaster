@@ -85,6 +85,7 @@ export default function ServiceOrderList({ userEmail }) {
             description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
             amount: order.total || 0,
             type: "income",
+            source_module: "workshop",
             category: "Ordem de Serviço",
             date: new Date().toISOString(),
             launch_date: new Date().toISOString(),

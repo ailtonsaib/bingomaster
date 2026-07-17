@@ -254,6 +254,7 @@ export default function NfseImporter({ userEmail, suppliers, onClose, onSaved })
           description: `NFS-e ${d.nota.number} — ${supplierName}`.trim(),
           amount: d.totals.valor_liquido || d.totals.valor_servicos,
           type: "expense",
+          source_module: "workshop",
           category: "Serviço Terceirizado",
           date: new Date().toISOString(),
           launch_date: new Date().toISOString(),
