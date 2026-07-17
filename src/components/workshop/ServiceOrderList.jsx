@@ -188,6 +188,7 @@ export default function ServiceOrderList({ userEmail }) {
     return (
       <ServiceOrderDetail
         order={selectedOrder}
+        userEmail={userEmail}
         onBack={handleBack}
         onEdit={() => setView("edit")}
       />

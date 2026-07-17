@@ -16,21 +16,62 @@ const STATUS_CONFIG = {
   cancelada: { label: "Cancelada", color: "bg-red-50 text-red-600" },
 };
 
-export default function ServiceOrderDetail({ order, onBack, onEdit }) {
+export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit }) {
   const { toast } = useToast();
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [updating, setUpdating] = useState(false);
 
   const handleStatusChange = async (newStatus) => {
+    if (newStatus === currentStatus) return;
     setUpdating(true);
     try {
+      const wasConcluida = order.status === "concluida" || order.status === "entregue";
+      const willBeConcluida = newStatus === "concluida";
+
       const updateData = { status: newStatus };
       if (newStatus === "concluida" && !order.completion_date) updateData.completion_date = new Date().toISOString();
       if (newStatus === "entregue" && !order.delivery_date) updateData.delivery_date = new Date().toISOString();
       await base44.entities.ServiceOrder.update(order.id, updateData);
+
+      // Ao concluir a OS, cria automaticamente um título a receber no financeiro da oficina
+      if (willBeConcluida && !wasConcluida) {
+        const existing = await base44.entities.PortalFinanceTransaction.filter({
+          user_email: userEmail,
+          source_module: "workshop",
+        }).then(list => list.filter(t => t.description && t.description.includes(order.order_number)));
+        if (existing.length === 0) {
+          await base44.entities.PortalFinanceTransaction.create({
+            user_email: userEmail,
+            description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
+            amount: order.total || 0,
+            type: "income",
+            source_module: "workshop",
+            category: "Ordem de Serviço",
+            date: new Date().toISOString(),
+            launch_date: new Date().toISOString(),
+            due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+            contact_name: order.client_name || "",
+            status: "pending",
+          });
+          toast({ title: "OS concluída", description: `Título de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total || 0)} gerado no financeiro.` });
+        } else {
+          toast({ title: "OS concluída", description: "Status atualizado. Título financeiro já existia." });
+        }
+      } else if (newStatus === "cancelada" && wasConcluida) {
+        const txs = await base44.entities.PortalFinanceTransaction.filter({
+          user_email: userEmail,
+          source_module: "workshop",
+        }).then(list => list.filter(t => t.description && t.description.includes(order.order_number) && t.status === "pending"));
+        for (const tx of txs) {
+          await base44.entities.PortalFinanceTransaction.delete(tx.id);
+        }
+        toast({ title: "OS cancelada", description: "Título financeiro pendente removido." });
+      } else {
+        toast({ title: "Status atualizado", description: `OS marcada como ${STATUS_CONFIG[newStatus].label}.` });
+      }
+
       setCurrentStatus(newStatus);
       order.status = newStatus;
-      toast({ title: "Status atualizado", description: `OS marcada como ${STATUS_CONFIG[newStatus].label}.` });
     } catch {
       toast({ title: "Erro", description: "Não foi possível atualizar.", variant: "destructive" });
     }
