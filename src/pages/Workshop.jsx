@@ -17,6 +17,7 @@ import MechanicRankingPanel from "@/components/workshop/MechanicRankingPanel";
 import MechanicProductivityPanel from "@/components/workshop/MechanicProductivityPanel";
 import DiagnosticBlockedScreen from "@/components/workshop/DiagnosticBlockedScreen";
 import WorkshopFinancePanel from "@/components/workshop/WorkshopFinancePanel";
+import CompanyConfigModal from "@/components/workshop/CompanyConfigModal";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -42,6 +43,7 @@ export default function Workshop() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "orders");
   const [subStatus, setSubStatus] = useState(null);
   const [checkingSub, setCheckingSub] = useState(true);
+  const [companyModalOpen, setCompanyModalOpen] = useState(false);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -93,6 +95,9 @@ export default function Workshop() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setCompanyModalOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors">
+              <Building2 className="w-4 h-4" /> Empresa
+            </button>
             <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors">
               <LogOut className="w-4 h-4" /> Sair
             </button>
@@ -148,6 +153,12 @@ export default function Workshop() {
           {activeTab === "entries" && <EntryManager userEmail={user?.email} />}
         </div>
       </div>
+
+      <CompanyConfigModal
+        userEmail={user?.email}
+        open={companyModalOpen}
+        onClose={() => setCompanyModalOpen(false)}
+      />
     </div>
   );
 }
