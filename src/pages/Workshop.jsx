@@ -19,6 +19,7 @@ import MechanicProductivityPanel from "@/components/workshop/MechanicProductivit
 import DiagnosticBlockedScreen from "@/components/workshop/DiagnosticBlockedScreen";
 import WorkshopFinancePanel from "@/components/workshop/WorkshopFinancePanel";
 import CompanyConfigModal from "@/components/workshop/CompanyConfigModal";
+import CompanySelectorModal from "@/components/workshop/CompanySelectorModal";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -42,10 +43,15 @@ export default function Workshop() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const user = getPortalUser();
+  const isSuperAdmin = !!user?.is_admin;
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "orders");
   const [subStatus, setSubStatus] = useState(null);
   const [checkingSub, setCheckingSub] = useState(true);
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [showSelector, setShowSelector] = useState(false);
+  const [loadingCompanies, setLoadingCompanies] = useState(!isSuperAdmin);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -57,6 +63,24 @@ export default function Workshop() {
     };
     checkSubscription();
   }, []);
+
+  // Carrega empresas vinculadas ao admin de empresa (busca por admin_email)
+  useEffect(() => {
+    if (isSuperAdmin || !user?.email) return;
+    const loadCompanies = async () => {
+      try {
+        const list = await base44.entities.DiagnosticCompanyConfig.filter({ admin_email: user.email });
+        setCompanies(list);
+        if (list.length === 1) {
+          setSelectedCompany(list[0]);
+        } else if (list.length > 1) {
+          setShowSelector(true);
+        }
+      } catch { /* ignore */ }
+      setLoadingCompanies(false);
+    };
+    loadCompanies();
+  }, [user?.email, isSuperAdmin]);
 
   const handleLogout = () => {
     clearPortalUser();
@@ -71,7 +95,7 @@ export default function Workshop() {
     }
   };
 
-  if (checkingSub) {
+  if (checkingSub || (!isSuperAdmin && loadingCompanies)) {
     return (
       <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -83,21 +107,49 @@ export default function Workshop() {
     return <DiagnosticBlockedScreen message={subStatus.subscription_message} onLogout={handleLogout} />;
   }
 
+  // Admin de empresa sem empresa vinculada
+  if (!isSuperAdmin && companies.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFB] flex items-center justify-center p-6">
+        <div className="max-w-md text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Nenhuma empresa vinculada</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Seu email não está vinculado a nenhuma empresa. Entre em contato com o administrador do sistema para liberar seu acesso.
+          </p>
+          <button onClick={handleLogout} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 mx-auto">
+            <LogOut className="w-4 h-4" /> Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAFAFB]">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[#DBEAFE] flex items-center justify-center">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#DBEAFE] flex items-center justify-center flex-shrink-0">
               <Wrench className="w-5 h-5 text-[#2563EB]" />
             </div>
-            <div>
-              <span className="font-bold text-[#1B1C21] text-sm">Sistema Automotivo</span>
-              {user && <span className="text-xs text-[#A1A1AA] ml-2">| {user.name}</span>}
+            <div className="min-w-0">
+              <span className="font-bold text-[#1B1C21] text-sm truncate block">
+                {selectedCompany?.razao_social || (isSuperAdmin ? "Sistema Automotivo" : "Sistema Automotivo")}
+              </span>
+              {user && <span className="text-xs text-[#A1A1AA]">| {user.name}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setCompanyModalOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors">
+            <button
+              onClick={() => {
+                if (!isSuperAdmin && companies.length > 1) setShowSelector(true);
+                else setCompanyModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors"
+            >
               <Building2 className="w-4 h-4" /> Empresa
             </button>
             <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors">
@@ -159,9 +211,34 @@ export default function Workshop() {
 
       <CompanyConfigModal
         userEmail={user?.email}
+        companyId={selectedCompany?.id}
+        canCreateNew={isSuperAdmin}
         open={companyModalOpen}
         onClose={() => setCompanyModalOpen(false)}
+        onSaved={() => {
+          // Recarrega a empresa selecionada após salvar
+          if (!isSuperAdmin && user?.email) {
+            base44.entities.DiagnosticCompanyConfig.filter({ admin_email: user.email }).then(list => {
+              if (list.length > 0) {
+                setCompanies(list);
+                setSelectedCompany(list.find(c => c.id === selectedCompany?.id) || list[0]);
+              }
+            }).catch(() => {});
+          }
+        }}
       />
+
+      {showSelector && companies.length > 1 && (
+        <CompanySelectorModal
+          companies={companies}
+          open={showSelector}
+          onClose={() => setShowSelector(false)}
+          onSelect={(company) => {
+            setSelectedCompany(company);
+            setShowSelector(false);
+          }}
+        />
+      )}
     </div>
   );
 }

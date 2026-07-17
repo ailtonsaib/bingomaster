@@ -47,7 +47,7 @@ const empty = {
   responsible_cpf: "",
 };
 
-export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }) {
+export default function CompanyConfigModal({ userEmail, companyId, canCreateNew = true, open, onClose, onSaved }) {
   const { toast } = useToast();
   const [config, setConfig] = useState(empty);
   const [loading, setLoading] = useState(false);
@@ -58,13 +58,20 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
   const [lookingUpCNPJ, setLookingUpCNPJ] = useState(false);
 
   useEffect(() => {
-    if (!open || !userEmail) return;
+    if (!open) return;
+    // Se companyId foi fornecido, carrega por ID (admin de empresa editando sua própria empresa)
+    if (!open || (!userEmail && !companyId)) return;
     setLoading(true);
     const load = async () => {
       try {
-        const list = await base44.entities.DiagnosticCompanyConfig.filter({ user_email: userEmail });
-        if (list.length > 0) {
-          const d = list[0];
+        let d = null;
+        if (companyId) {
+          d = await base44.entities.DiagnosticCompanyConfig.get(companyId);
+        } else {
+          const list = await base44.entities.DiagnosticCompanyConfig.filter({ user_email: userEmail });
+          if (list.length > 0) d = list[0];
+        }
+        if (d) {
           setConfig({
             ...empty,
             ...d,
@@ -84,7 +91,7 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
       setLoading(false);
     };
     load();
-  }, [open, userEmail]);
+  }, [open, userEmail, companyId]);
 
   const handleChange = (field, value) => {
     setConfig(prev => ({ ...prev, [field]: value }));
@@ -165,6 +172,10 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
       toast({ title: "Campo obrigatório", description: "Informe a razão social.", variant: "destructive" });
       return;
     }
+    if (!canCreateNew && !configId) {
+      toast({ title: "Sem permissão", description: "Você não pode cadastrar novas empresas. Apenas o administrador do sistema pode.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -230,7 +241,7 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-blue-700">
-            <Building2 className="w-5 h-5" /> Cadastro da Empresa
+            <Building2 className="w-5 h-5" /> {configId ? "Dados da Empresa" : "Cadastro da Empresa"}
           </DialogTitle>
         </DialogHeader>
 
