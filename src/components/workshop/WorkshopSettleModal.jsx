@@ -1,20 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, TrendingDown, CheckCircle2, X } from "lucide-react";
+import { TrendingUp, TrendingDown, CheckCircle2, X, Landmark, Loader2 } from "lucide-react";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—");
 
-export default function WorkshopSettleModal({ tx, fmtMoney, fmtDate, onClose, onConfirm }) {
+export default function WorkshopSettleModal({ tx, fmtMoney, fmtDate, onClose, onConfirm, userEmail }) {
   const [settleMode, setSettleMode] = useState("total");
   const [interestAmount, setInterestAmount] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [partialAmount, setPartialAmount] = useState(0);
+  const [bankAccountId, setBankAccountId] = useState("");
   const [bankName, setBankName] = useState("");
+  const [banks, setBanks] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!userEmail) { setLoadingBanks(false); return; }
+    base44.entities.WorkshopBankAccount.filter({ user_email: userEmail, is_active: true })
+      .then(data => {
+        setBanks(data);
+        const def = data.find(b => b.is_default);
+        if (def) {
+          setBankAccountId(def.id);
+          setBankName(`${def.bank_code} — ${def.bank_name}`);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingBanks(false));
+  }, [userEmail]);
+
+  const handleBankChange = (id) => {
+    setBankAccountId(id);
+    const sel = banks.find(b => b.id === id);
+    setBankName(sel ? `${sel.bank_code} — ${sel.bank_name}` : "");
+  };
 
   const originalAmount = parseFloat(tx.remaining_amount) > 0 ? parseFloat(tx.remaining_amount) : parseFloat(tx.amount) || 0;
   const interest = parseFloat(interestAmount) || 0;
@@ -33,6 +58,10 @@ export default function WorkshopSettleModal({ tx, fmtMoney, fmtDate, onClose, on
       alert("O valor parcial não pode ser maior que o total ajustado");
       return;
     }
+    if (!bankName) {
+      alert("Selecione o banco utilizado no pagamento");
+      return;
+    }
     setSaving(true);
     await onConfirm(tx.id, {
       is_partial: settleMode === "partial",
@@ -40,7 +69,8 @@ export default function WorkshopSettleModal({ tx, fmtMoney, fmtDate, onClose, on
       remaining_amount: settleMode === "partial" ? remaining : 0,
       interest_amount: interest,
       discount_amount: discount,
-      bank_name: bankName || undefined,
+      bank_name: bankName,
+      bank_account_id: bankAccountId || undefined,
     });
     setSaving(false);
   };
@@ -125,8 +155,25 @@ export default function WorkshopSettleModal({ tx, fmtMoney, fmtDate, onClose, on
             )}
 
             <div>
-              <Label className="text-xs">Banco (opcional)</Label>
-              <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Ex: Banco do Brasil" />
+              <Label className="text-xs flex items-center gap-1"><Landmark className="w-3 h-3" /> Banco utilizado no pagamento *</Label>
+              {loadingBanks ? (
+                <div className="flex items-center gap-2 h-9"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /><span className="text-xs text-gray-400">Carregando contas...</span></div>
+              ) : banks.length === 0 ? (
+                <p className="text-xs text-amber-600 mt-1">Nenhuma conta bancária cadastrada. Cadastre uma conta no módulo financeiro.</p>
+              ) : (
+                <select
+                  value={bankAccountId}
+                  onChange={(e) => handleBankChange(e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                >
+                  <option value="">Selecione o banco...</option>
+                  {banks.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.bank_code} — {b.bank_name} {b.agency ? `(Ag: ${b.agency})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="flex gap-2 pt-2">

@@ -375,6 +375,7 @@ export default function WorkshopFinancePanel({ userEmail }) {
           tx={settleTarget}
           fmtMoney={fmtMoney}
           fmtDate={fmtDate}
+          userEmail={userEmail}
           onClose={() => setSettleTarget(null)}
           onConfirm={handleSettle}
         />
