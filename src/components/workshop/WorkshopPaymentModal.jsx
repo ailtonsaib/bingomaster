@@ -120,51 +120,39 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
     }
     setSaving(true);
     try {
-      // 1. Atualiza a OS para concluída
-      const updateData = { status: "concluida", payment_method: paymentMethod };
-      if (!order.completion_date) updateData.completion_date = new Date().toISOString();
-      if (isBoleto) updateData.payment_status = "pendente";
-      if (isDinheiro) updateData.payment_status = "pago";
-      if (isCard || paymentMethod === "pix") updateData.payment_status = "pago";
-      await base44.entities.ServiceOrder.update(order.id, updateData);
+      // 1. Atualiza apenas o pagamento da OS (status já é "concluida")
+      await base44.entities.ServiceOrder.update(order.id, {
+        payment_method: paymentMethod,
+        payment_status: isBoleto ? "pendente" : "pago",
+      });
 
-      // 2. Verifica se já existe título
-      const existing = await base44.entities.PortalFinanceTransaction.filter({
+      // 2. Busca o título financeiro já criado quando a OS foi concluída
+      const allTx = await base44.entities.PortalFinanceTransaction.filter({
         user_email: userEmail,
         source_module: "workshop",
-      }).then(list => list.filter(t => t.description && t.description.includes(order.order_number)));
+      });
+      const tx = allTx.find(t => t.description && t.description.includes(order.order_number));
 
-      if (existing.length === 0) {
-        // 3. Cria o título financeiro
-        const dueDate = isBoleto
-          ? new Date(boletoDueDate + "T00:00:00").toISOString()
-          : new Date(Date.now() + 30 * 86400000).toISOString();
-
-        const txData = {
-          user_email: userEmail,
-          description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
-          amount: order.total || 0,
-          type: "income",
-          source_module: "workshop",
-          category: "Ordem de Serviço",
-          date: new Date().toISOString(),
-          launch_date: new Date().toISOString(),
-          due_date: dueDate,
-          contact_name: order.client_name || "",
+      if (tx) {
+        // 3. Atualiza o título com a forma de pagamento e baixa
+        const updateData = {
           payment_method: paymentMethod,
-          // Dinheiro = baixado imediatamente; boleto/cartão/pix = pendente até baixa
-          status: isDinheiro ? "settled" : "pending",
         };
-        if (isDinheiro) {
-          txData.settled_date = new Date().toISOString();
-          txData.settled_amount = order.total || 0;
-        }
-        if (isCard) txData.card_brand = cardBrand;
         if (selectedBank) {
-          txData.bank_account_id = selectedBank.id;
-          txData.bank_name = `${selectedBank.bank_code} — ${selectedBank.bank_name}`;
+          updateData.bank_account_id = selectedBank.id;
+          updateData.bank_name = `${selectedBank.bank_code} — ${selectedBank.bank_name}`;
         }
-        await base44.entities.PortalFinanceTransaction.create(txData);
+        if (isCard) updateData.card_brand = cardBrand;
+        if (isBoleto) {
+          updateData.due_date = new Date(boletoDueDate + "T00:00:00").toISOString();
+          updateData.status = "pending";
+        } else {
+          // Dinheiro, PIX e Cartão = baixados imediatamente
+          updateData.status = "settled";
+          updateData.settled_date = new Date().toISOString();
+          updateData.settled_amount = tx.amount;
+        }
+        await base44.entities.PortalFinanceTransaction.update(tx.id, updateData);
       }
 
       // 4. Se for boleto, gera e exibe o boleto
@@ -173,13 +161,13 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           bank: selectedBank,
           dueDate: new Date(boletoDueDate + "T00:00:00").toISOString(),
         });
-        toast({ title: "Boleto gerado", description: `OS concluída e boleto de ${fmtMoney(order.total)} emitido.` });
+        toast({ title: "Boleto gerado", description: `Pagamento de ${fmtMoney(order.total)} registrado via boleto.` });
       } else {
-        toast({ title: "OS concluída", description: `Título de ${fmtMoney(order.total)} gerado no financeiro.` });
+        toast({ title: "Pagamento registrado", description: `OS baixada no caixa — ${fmtMoney(order.total)} via ${paymentMethod}.` });
         onConfirmed?.();
       }
     } catch {
-      toast({ title: "Erro", description: "Não foi possível concluir.", variant: "destructive" });
+      toast({ title: "Erro", description: "Não foi possível registrar o pagamento.", variant: "destructive" });
     }
     setSaving(false);
   };
@@ -209,7 +197,7 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Encerrar OS — Pagamento</CardTitle>
+          <CardTitle className="text-base">Caixa — Informar Pagamento</CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="w-4 h-4" /></Button>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -307,7 +295,7 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
 
           <div className="flex gap-2 pt-2">
             <Button onClick={handleConfirm} disabled={saving} className="flex-1">
-              {saving ? "Encerrando..." : isBoleto ? "Encerrar OS e Gerar Boleto" : "Encerrar OS e Gerar Título"}
+              {saving ? "Registrando..." : isBoleto ? "Registrar Pagamento e Gerar Boleto" : "Registrar Pagamento"}
             </Button>
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
           </div>

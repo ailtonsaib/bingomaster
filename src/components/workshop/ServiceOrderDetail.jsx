@@ -3,7 +3,6 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import WorkshopPaymentModal from "./WorkshopPaymentModal";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -21,17 +20,9 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
   const { toast } = useToast();
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [updating, setUpdating] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const handleStatusChange = async (newStatus) => {
     if (newStatus === currentStatus) return;
-
-    // Ao concluir a OS, abre o modal de pagamento em vez de concluir direto
-    if (newStatus === "concluida" && currentStatus !== "concluida" && currentStatus !== "entregue") {
-      setShowPaymentModal(true);
-      setCurrentStatus(order.status); // mantém o status atual no select
-      return;
-    }
 
     setUpdating(true);
     try {
@@ -267,19 +258,6 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
         </div>
       </div>
 
-      {showPaymentModal && (
-        <WorkshopPaymentModal
-          order={order}
-          userEmail={userEmail}
-          onClose={() => { setShowPaymentModal(false); setCurrentStatus(order.status); }}
-          onConfirmed={() => {
-            setShowPaymentModal(false);
-            order.status = "concluida";
-            setCurrentStatus("concluida");
-            if (onBack) onBack();
-          }}
-        />
-      )}
     </div>
   );
 }

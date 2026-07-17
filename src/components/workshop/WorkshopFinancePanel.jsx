@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Wallet, CheckCircle2, Undo2, ArrowDownCircle,
 import MonthlyForecastChart from "@/components/finance/MonthlyForecastChart";
 import WorkshopSettleModal from "@/components/workshop/WorkshopSettleModal";
 import WorkshopBankManager from "@/components/workshop/WorkshopBankManager";
+import WorkshopCaixaPanel from "@/components/workshop/WorkshopCaixaPanel";
 import { useToast } from "@/components/ui/use-toast";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -193,6 +194,9 @@ export default function WorkshopFinancePanel({ userEmail }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Caixa — OS Concluídas aguardando pagamento */}
+      <WorkshopCaixaPanel userEmail={userEmail} />
 
       {/* Cadastro de Contas Bancárias */}
       <WorkshopBankManager userEmail={userEmail} />
