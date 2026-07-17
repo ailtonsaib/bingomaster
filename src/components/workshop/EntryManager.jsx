@@ -161,6 +161,24 @@ export default function EntryManager({ userEmail }) {
       const text = await file.text();
       const data = parseNfeXml(text);
 
+      // Validação: bloqueia duplicidade de documento x fornecedor (mesma nota + CNPJ, não cancelada)
+      if (data.nota.number && data.supplier.cpf_cnpj) {
+        const existing = await base44.entities.DiagnosticEntryOperation.filter({
+          user_email: userEmail,
+          nota_number: data.nota.number,
+          supplier_cnpj: data.supplier.cpf_cnpj,
+        });
+        const duplicate = existing.find(e => e.status !== "cancelada");
+        if (duplicate) {
+          toast({
+            title: "Documento já cadastrado",
+            description: `NF ${data.nota.number} já foi lançada para ${duplicate.supplier_name} em ${formatDate(duplicate.entry_date)}. Duplicidade bloqueada.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Find or create supplier
       let supplierId = null;
       let supplierName = data.supplier.name;
@@ -363,6 +381,25 @@ export default function EntryManager({ userEmail }) {
   // Atualizar entrada pendente → processa estoque + gera financeiro + marca como "registrada"
   const handleUpdateEntry = async (entry) => {
     try {
+      // Validação: bloqueia se já existe título financeiro para este documento x fornecedor
+      const financeDesc = `NF-e ${entry.nota_number} — ${entry.supplier_name}`.trim();
+      const existingFinance = await base44.entities.PortalFinanceTransaction.filter({
+        user_email: userEmail,
+        source_module: "workshop",
+      });
+      const duplicateFinance = existingFinance.find(t =>
+        t.description === financeDesc ||
+        (entry.nota_number && t.description?.includes(`NF-e ${entry.nota_number}`) && t.contact_name === entry.supplier_name)
+      );
+      if (duplicateFinance) {
+        toast({
+          title: "Documento já lançado no financeiro",
+          description: `NF-e ${entry.nota_number} — ${entry.supplier_name} já possui título financeiro. Atualização bloqueada.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Processa estoque (cadastra/atualiza peças)
       let newPartsCount = 0;
       let updatedPartsCount = 0;
