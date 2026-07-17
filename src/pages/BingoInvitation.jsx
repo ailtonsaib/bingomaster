@@ -69,7 +69,10 @@ export default function BingoInvitation() {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(32);
-    doc.text("CONVITE ESPECIAL", pageW / 2, 24, { align: "center" });
+    doc.setFontSize(11);
+    doc.text("Vocês estão convidados a participar da", pageW / 2, 20, { align: "center" });
+    doc.setFontSize(26);
+    doc.text(selectedGame.name || "Evento Especial", pageW / 2, 32, { align: "center" });
     doc.setFontSize(13);
     doc.setFont("helvetica", "normal");
     doc.text(selectedGame.name || "Convite Especial", pageW / 2, 36, { align: "center" });
@@ -280,9 +283,8 @@ export default function BingoInvitation() {
               <div className="absolute top-4 left-4 text-4xl opacity-30">🎯</div>
               <div className="absolute top-4 right-4 text-4xl opacity-30">🎪</div>
               <div className="relative">
-                <p className="text-sm font-medium uppercase tracking-widest opacity-90">Você está convidado!</p>
-                <h1 className="text-4xl md:text-5xl font-bold font-heading mt-2">Convite Especial</h1>
-                <p className="text-lg mt-1 opacity-95">{selectedGame.name}</p>
+                <p className="text-base font-medium uppercase tracking-widest opacity-90">Vocês estão convidados a participar da</p>
+                <h1 className="text-3xl md:text-4xl font-bold font-heading mt-2">{selectedGame.name}</h1>
               </div>
             </div>
 

@@ -21,9 +21,8 @@ export default function BingoInvitationCard({ game }) {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/85 via-primary/80 to-purple-900/85" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
         <div className="relative">
-          <p className="text-[10px] font-medium uppercase tracking-widest opacity-90">Você está convidado!</p>
-          <h3 className="text-2xl font-bold font-heading mt-1">Convite Especial</h3>
-          <p className="text-sm mt-0.5 opacity-95">{game.name}</p>
+          <p className="text-[10px] font-medium uppercase tracking-widest opacity-90">Vocês estão convidados a participar da</p>
+          <h3 className="text-xl font-bold font-heading mt-1">{game.name}</h3>
         </div>
       </div>
 
