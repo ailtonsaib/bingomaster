@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Wallet, CheckCircle2, Undo2, ArrowDownCircle, ArrowUpCircle, CalendarRange, DollarSign, Loader2, Receipt, Clock } from "lucide-react";
 import MonthlyForecastChart from "@/components/finance/MonthlyForecastChart";
+import WorkshopCashFlowPanel from "@/components/workshop/WorkshopCashFlowPanel";
 import WorkshopSettleModal from "@/components/workshop/WorkshopSettleModal";
 import WorkshopBankManager from "@/components/workshop/WorkshopBankManager";
 import WorkshopCaixaPanel from "@/components/workshop/WorkshopCaixaPanel";
@@ -200,6 +201,9 @@ export default function WorkshopFinancePanel({ userEmail }) {
 
       {/* Cadastro de Contas Bancárias */}
       <WorkshopBankManager userEmail={userEmail} />
+
+      {/* Fluxo de Caixa Consolidado — gráfico mensal, saldo por banco, previsão */}
+      <WorkshopCashFlowPanel transactions={transactions} userEmail={userEmail} />
 
       {/* Previsão de Recebimentos e Pagamentos */}
       <MonthlyForecastChart transactions={transactions} />
