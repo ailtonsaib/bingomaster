@@ -71,10 +71,10 @@ export default function Workshop() {
 
   // Carrega empresas vinculadas ao admin de empresa (busca por admin_email)
   useEffect(() => {
-    if (isSuperAdmin || !user?.email) return;
+    if (isSuperAdmin || !effectiveEmail) return;
     const loadCompanies = async () => {
       try {
-        const list = await base44.entities.DiagnosticCompanyConfig.filter({ admin_email: user.email });
+        const list = await base44.entities.DiagnosticCompanyConfig.filter({ admin_email: effectiveEmail });
         setCompanies(list);
         if (list.length === 1) {
           setSelectedCompany(list[0]);
@@ -85,7 +85,7 @@ export default function Workshop() {
       setLoadingCompanies(false);
     };
     loadCompanies();
-  }, [user?.email, isSuperAdmin]);
+  }, [effectiveEmail, isSuperAdmin]);
 
   const handleLogout = () => {
     clearPortalUser();
@@ -203,33 +203,33 @@ export default function Workshop() {
 
         {/* Content */}
         <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-          {activeTab === "clients" && <ClientVehicleManager userEmail={user?.email} />}
-          {activeTab === "orders" && <ServiceOrderList userEmail={user?.email} />}
-          {activeTab === "finance" && <WorkshopFinancePanel userEmail={user?.email} />}
-          {activeTab === "service_types" && <ServiceTypeManager userEmail={user?.email} />}
-          {activeTab === "mechanics" && <MechanicManager userEmail={user?.email} />}
-          {activeTab === "commissions" && <CommissionPanel userEmail={user?.email} />}
-          {activeTab === "history" && <MaintenanceHistoryPanel userEmail={user?.email} />}
-          {activeTab === "report" && <MonthlyReportPanel userEmail={user?.email} />}
-          {activeTab === "ranking" && <MechanicRankingPanel userEmail={user?.email} />}
-          {activeTab === "productivity" && <MechanicProductivityPanel userEmail={user?.email} />}
-          {activeTab === "parts" && <PartManager userEmail={user?.email} />}
-          {activeTab === "suppliers" && <SupplierManager userEmail={user?.email} />}
-          {activeTab === "entries" && <EntryManager userEmail={user?.email} />}
+          {activeTab === "clients" && <ClientVehicleManager userEmail={effectiveEmail} />}
+          {activeTab === "orders" && <ServiceOrderList userEmail={effectiveEmail} />}
+          {activeTab === "finance" && <WorkshopFinancePanel userEmail={effectiveEmail} />}
+          {activeTab === "service_types" && <ServiceTypeManager userEmail={effectiveEmail} />}
+          {activeTab === "mechanics" && <MechanicManager userEmail={effectiveEmail} />}
+          {activeTab === "commissions" && <CommissionPanel userEmail={effectiveEmail} />}
+          {activeTab === "history" && <MaintenanceHistoryPanel userEmail={effectiveEmail} />}
+          {activeTab === "report" && <MonthlyReportPanel userEmail={effectiveEmail} />}
+          {activeTab === "ranking" && <MechanicRankingPanel userEmail={effectiveEmail} />}
+          {activeTab === "productivity" && <MechanicProductivityPanel userEmail={effectiveEmail} />}
+          {activeTab === "parts" && <PartManager userEmail={effectiveEmail} />}
+          {activeTab === "suppliers" && <SupplierManager userEmail={effectiveEmail} />}
+          {activeTab === "entries" && <EntryManager userEmail={effectiveEmail} />}
           {activeTab === "users" && userRole === "admin" && <UserManager userEmail={effectiveEmail} />}
         </div>
       </div>
 
       <CompanyConfigModal
-        userEmail={user?.email}
+        userEmail={effectiveEmail}
         companyId={selectedCompany?.id}
         canCreateNew={isSuperAdmin}
         open={companyModalOpen}
         onClose={() => setCompanyModalOpen(false)}
         onSaved={() => {
           // Recarrega a empresa selecionada após salvar
-          if (!isSuperAdmin && user?.email) {
-            base44.entities.DiagnosticCompanyConfig.filter({ admin_email: user.email }).then(list => {
+          if (!isSuperAdmin && effectiveEmail) {
+            base44.entities.DiagnosticCompanyConfig.filter({ admin_email: effectiveEmail }).then(list => {
               if (list.length > 0) {
                 setCompanies(list);
                 setSelectedCompany(list.find(c => c.id === selectedCompany?.id) || list[0]);

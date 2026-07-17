@@ -26,6 +26,8 @@ const DIAG_TABS = [
 export default function DiagnosticAuto() {
   const navigate = useNavigate();
   const user = getPortalUser();
+  // Usuários de oficina usam owner_email para acessar dados da empresa
+  const effectiveEmail = user?.owner_email || user?.email;
 
   const [vehicle, setVehicle] = useState({ brand: "", model: "", year: "", engine: "", mileage: "", fuel: "flex" });
   const [symptoms, setSymptoms] = useState([]);
@@ -42,18 +44,18 @@ export default function DiagnosticAuto() {
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
 
   const { data: history = [] } = useQuery({
-    queryKey: ["diagnostic-history", user?.email],
-    queryFn: () => base44.entities.DiagnosticRecord.filter({ user_email: user?.email }, "-created_date", 100),
-    enabled: !!user?.email,
+    queryKey: ["diagnostic-history", effectiveEmail],
+    queryFn: () => base44.entities.DiagnosticRecord.filter({ user_email: effectiveEmail }, "-created_date", 100),
+    enabled: !!effectiveEmail,
   });
 
   const { data: usage } = useQuery({
-    queryKey: ["diagnostic-usage", user?.email],
+    queryKey: ["diagnostic-usage", effectiveEmail],
     queryFn: async () => {
-      const res = await base44.functions.invoke("manageDiagnostic", { operation: "getUsage" });
+      const res = await base44.functions.invoke("manageDiagnostic", { operation: "getUsage", email: effectiveEmail });
       return res.data;
     },
-    enabled: !!user?.email,
+    enabled: !!effectiveEmail,
   });
 
   const canDelete = usage?.can_delete || user?.is_admin || false;
@@ -78,6 +80,7 @@ export default function DiagnosticAuto() {
     setResult(null);
     try {
       const payload = {
+        email: effectiveEmail,
         vehicle_brand: vehicle.brand,
         vehicle_model: vehicle.model,
         vehicle_year: vehicle.year,
@@ -264,7 +267,7 @@ export default function DiagnosticAuto() {
             className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-6"
           >
             <ClientVehicleSelector
-              userEmail={user?.email}
+              userEmail={effectiveEmail}
               onVehicleSelect={(v) => setVehicle(v)}
               onRegisterNew={handleRegisterNew}
               usage={usage}
@@ -404,7 +407,7 @@ export default function DiagnosticAuto() {
         <VehicleRegistrationModal
           open={showRegistration}
           onClose={() => setShowRegistration(false)}
-          userEmail={user?.email}
+          userEmail={effectiveEmail}
           cpfCnpj={registrationCpf}
           existingClient={registrationClient}
           onRegistered={handleRegistered}
