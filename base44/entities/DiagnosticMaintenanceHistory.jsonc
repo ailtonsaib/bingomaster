@@ -40,10 +40,11 @@
         "troca_oleo",
         "servico",
         "revisao",
-        "outro"
+        "outro",
+        "termo_responsabilidade"
       ],
       "default": "servico",
-      "description": "Tipo de manuten\u00e7\u00e3o: troca_oleo, servico, revisao, outro"
+      "description": "Tipo de manuten\u00e7\u00e3o: troca_oleo, servico, revisao, outro ou termo_responsabilidade"
     },
     "description": {
       "type": "string",
@@ -87,6 +88,22 @@
     "mechanic_name": {
       "type": "string",
       "description": "Nome do mec\u00e2nico respons\u00e1vel (cache)"
+    },
+    "declined_problem": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do problema que o cliente foi avisado e n\u00e3o quis executar (usado em termo_responsabilidade)"
+    },
+    "declined_recommendation": {
+      "type": "string",
+      "description": "Recomenda\u00e7\u00e3o t\u00e9cnica sobre o problema recusado e poss\u00edveis consequ\u00eancias (usado em termo_responsabilidade)"
+    },
+    "signed_document_url": {
+      "type": "string",
+      "description": "URL da foto do termo de responsabilidade assinado pelo cliente e mec\u00e2nico"
+    },
+    "term_date": {
+      "type": "string",
+      "description": "Data em que o termo de responsabilidade foi emitido (ISO)"
     }
   },
   "required": [

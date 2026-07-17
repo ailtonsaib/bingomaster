@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil } from "lucide-react";
+import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import ResponsibilityTermModal from "@/components/workshop/ResponsibilityTermModal";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -20,6 +21,7 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
   const { toast } = useToast();
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [updating, setUpdating] = useState(false);
+  const [showResponsibilityTerm, setShowResponsibilityTerm] = useState(false);
 
   const handleStatusChange = async (newStatus) => {
     if (newStatus === currentStatus) return;
@@ -93,6 +95,9 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
               <Pencil className="w-4 h-4" /> Editar OS
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={() => setShowResponsibilityTerm(true)} className="gap-1 border-amber-200 text-amber-600 hover:bg-amber-50">
+            <FileText className="w-4 h-4" /> Termo
+          </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1">
             <Printer className="w-4 h-4" /> Imprimir
           </Button>
@@ -258,6 +263,13 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
         </div>
       </div>
 
+      {showResponsibilityTerm && (
+        <ResponsibilityTermModal
+          order={order}
+          userEmail={userEmail}
+          onClose={() => setShowResponsibilityTerm(false)}
+        />
+      )}
     </div>
   );
 }
