@@ -58,6 +58,19 @@
       "type": "string",
       "description": "Email de contato"
     },
+    "admin_email": {
+      "type": "string",
+      "description": "Email do administrador da empresa que ter\u00e1 acesso ao sistema"
+    },
+    "admin_name": {
+      "type": "string",
+      "description": "Nome do administrador da empresa"
+    },
+    "access_granted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o acesso ao sistema foi liberado para o administrador da empresa"
+    },
     "responsible_name": {
       "type": "string",
       "description": "Nome do respons\u00e1vel"

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, Building2 } from "lucide-react";
+import { Loader2, Upload, Building2, ShieldCheck, UserCog } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -40,6 +40,9 @@ const empty = {
   uf: "",
   phone: "",
   email: "",
+  admin_name: "",
+  admin_email: "",
+  access_granted: false,
   responsible_name: "",
   responsible_cpf: "",
 };
@@ -51,6 +54,7 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [configId, setConfigId] = useState(null);
+  const [granting, setGranting] = useState(false);
 
   useEffect(() => {
     if (!open || !userEmail) return;
@@ -138,6 +142,62 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
       toast({ title: "Erro", description: "Não foi possível salvar os dados.", variant: "destructive" });
     }
     setSaving(false);
+  };
+
+  const handleGrantAccess = async () => {
+    if (!config.admin_email?.trim()) {
+      toast({ title: "Email obrigatório", description: "Informe o email do administrador da empresa.", variant: "destructive" });
+      return;
+    }
+    if (!config.admin_name?.trim()) {
+      toast({ title: "Nome obrigatório", description: "Informe o nome do administrador.", variant: "destructive" });
+      return;
+    }
+    // Garante que os dados da empresa estão salvos antes de liberar
+    if (!configId) {
+      toast({ title: "Salve primeiro", description: "Salve os dados da empresa antes de liberar o acesso.", variant: "destructive" });
+      return;
+    }
+    setGranting(true);
+    try {
+      // Verifica se já existe um usuário com este email vinculado à empresa
+      const existing = await base44.entities.WorkshopUser.filter({
+        owner_email: userEmail,
+        email: config.admin_email,
+      });
+      if (existing.length > 0) {
+        // Atualiza para admin se já existir
+        await base44.entities.WorkshopUser.update(existing[0].id, {
+          name: config.admin_name,
+          role: "admin",
+          is_active: true,
+          must_change_password: true,
+        });
+      } else {
+        // Cria o usuário administrador da empresa
+        const tempPassword = Math.random().toString(36).slice(2, 10);
+        await base44.entities.WorkshopUser.create({
+          owner_email: userEmail,
+          name: config.admin_name,
+          email: config.admin_email,
+          password_hash: tempPassword,
+          role: "admin",
+          allowed_panels: [],
+          is_active: true,
+          must_change_password: true,
+        });
+      }
+      // Marca o acesso como liberado na empresa
+      await base44.entities.DiagnosticCompanyConfig.update(configId, { access_granted: true });
+      setConfig(prev => ({ ...prev, access_granted: true }));
+      toast({
+        title: "Acesso liberado",
+        description: `O administrador ${config.admin_name} (${config.admin_email}) agora tem acesso ao sistema como administrador da empresa.`,
+      });
+    } catch (e) {
+      toast({ title: "Erro", description: e?.message || "Não foi possível liberar o acesso.", variant: "destructive" });
+    }
+    setGranting(false);
   };
 
   return (
@@ -329,6 +389,52 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
                   className="mt-1"
                 />
               </div>
+            </div>
+
+            {/* Administrador da Empresa — Liberação de Acesso */}
+            <div className="rounded-xl border-2 border-blue-100 bg-blue-50/50 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserCog className="w-5 h-5 text-blue-600" />
+                <span className="font-semibold text-blue-800 text-sm">Administrador da Empresa</span>
+                {config.access_granted && (
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 ml-auto">
+                    <ShieldCheck className="w-3 h-3" /> Acesso liberado
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-blue-600">
+                Informe o nome e email da pessoa que administrará a empresa. Ao liberar o acesso, ela terá entrada no sistema como administrador.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium">Nome do Administrador</Label>
+                  <Input
+                    value={config.admin_name || ""}
+                    onChange={e => handleChange("admin_name", e.target.value)}
+                    placeholder="Nome do administrador"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Email do Administrador *</Label>
+                  <Input
+                    type="email"
+                    value={config.admin_email || ""}
+                    onChange={e => handleChange("admin_email", e.target.value)}
+                    placeholder="admin@empresa.com"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handleGrantAccess}
+                disabled={granting}
+                className="w-full gap-1.5"
+                variant={config.access_granted ? "outline" : "default"}
+              >
+                {granting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                {config.access_granted ? "Acesso já liberado — Atualizar" : "Liberar Acesso ao Sistema"}
+              </Button>
             </div>
 
             <div className="flex gap-2 pt-2">
