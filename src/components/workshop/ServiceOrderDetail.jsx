@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import ResponsibilityTermModal from "@/components/workshop/ResponsibilityTermModal";
+import { printElements } from "@/lib/printUtils";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -98,7 +99,7 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
           <Button variant="outline" size="sm" onClick={() => setShowResponsibilityTerm(true)} className="gap-1 border-amber-200 text-amber-600 hover:bg-amber-50">
             <FileText className="w-4 h-4" /> Termo
           </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1">
+          <Button variant="outline" size="sm" onClick={() => printElements(["print-area"])} className="gap-1">
             <Printer className="w-4 h-4" /> Imprimir
           </Button>
         </div>

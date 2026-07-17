@@ -110,6 +110,16 @@
     border-radius: 0 !important;
     box-shadow: none !important;
   }
+  /* JS print container — sempre visível, no topo */
+  #js-print-root, #js-print-root * { visibility: visible !important; }
+  #js-print-root {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
   .print-page {
     width: 210mm;
     min-height: 297mm;

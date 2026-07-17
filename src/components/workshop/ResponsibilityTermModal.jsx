@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { X, FileText, Camera, Printer, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { printElements } from "@/lib/printUtils";
 
 export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
   const { toast } = useToast();
@@ -45,19 +46,15 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
   }, [order.id]);
 
   const handlePrintOS = () => {
-    window.print();
+    printElements(["print-area"]);
   };
 
   const handlePrintTerm = () => {
-    document.body.classList.add("printing-term");
-    window.print();
-    setTimeout(() => document.body.classList.remove("printing-term"), 500);
+    printElements(["print-term-area"]);
   };
 
   const handlePrintBoth = () => {
-    document.body.classList.add("printing-both");
-    window.print();
-    setTimeout(() => document.body.classList.remove("printing-both"), 500);
+    printElements(["print-area", "print-term-area"]);
   };
 
   const handlePhotoChange = async (e) => {
