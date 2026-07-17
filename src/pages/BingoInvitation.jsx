@@ -268,8 +268,15 @@ export default function BingoInvitation() {
           {/* ── Invitation Preview ── */}
           <div id="print-area" className="bg-white rounded-3xl shadow-xl overflow-hidden border-2 border-primary/10">
             {/* Header */}
-            <div className="relative bg-gradient-to-br from-primary via-primary to-purple-700 px-8 py-10 text-center text-white overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+            <div className="relative px-8 py-10 text-center text-white overflow-hidden">
+              <img
+                src="https://images.unsplash.com/photo-1530023367847-a683933f4172?w=800&q=80"
+                alt="Bingo"
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/85 via-primary/80 to-purple-900/85" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
               <div className="absolute top-4 left-4 text-4xl opacity-30">🎯</div>
               <div className="absolute top-4 right-4 text-4xl opacity-30">🎪</div>
               <div className="relative">

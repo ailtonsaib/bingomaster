@@ -11,8 +11,15 @@ export default function BingoInvitationCard({ game }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-primary/10 flex flex-col">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary via-primary to-purple-700 px-5 py-6 text-center text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+      <div className="relative px-5 py-6 text-center text-white overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1530023367847-a683933f4172?w=800&q=80"
+          alt="Bingo"
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/85 via-primary/80 to-purple-900/85" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
         <div className="relative">
           <p className="text-[10px] font-medium uppercase tracking-widest opacity-90">Você está convidado!</p>
           <h3 className="text-2xl font-bold font-heading mt-1">BINGO</h3>
