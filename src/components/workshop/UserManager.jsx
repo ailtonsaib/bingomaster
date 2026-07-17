@@ -83,26 +83,21 @@ export default function UserManager({ userEmail }) {
     }
     setSaving(true);
     try {
-      if (editing.id) {
-        const { password, ...rest } = editing;
-        const updateData = { ...rest };
-        if (password) updateData.password_hash = password;
-        await base44.entities.WorkshopUser.update(editing.id, updateData);
-        toast({ title: "Usuário atualizado", description: "Dados salvos com sucesso." });
-      } else {
-        await base44.entities.WorkshopUser.create({
-          owner_email: userEmail,
-          name: editing.name,
-          email: editing.email,
-          phone: editing.phone,
-          password_hash: editing.password,
-          role: editing.role,
-          allowed_panels: editing.allowed_panels,
-          is_active: editing.is_active,
-          must_change_password: editing.must_change_password,
-        });
-        toast({ title: "Usuário criado", description: "Usuário vinculado à sua empresa." });
-      }
+      const res = await base44.functions.invoke("portalAuth", {
+        operation: "saveWorkshopUser",
+        owner_email: userEmail,
+        id: editing.id || undefined,
+        name: editing.name,
+        email: editing.email,
+        phone: editing.phone || undefined,
+        password: editing.password || undefined,
+        role: editing.role,
+        allowed_panels: editing.allowed_panels,
+        is_active: editing.is_active,
+        must_change_password: editing.must_change_password,
+      });
+      if (res?.data?.error) throw new Error(res.data.error);
+      toast({ title: editing.id ? "Usuário atualizado" : "Usuário criado", description: "Usuário vinculado à sua empresa." });
       setModalOpen(false);
       load();
     } catch (e) {

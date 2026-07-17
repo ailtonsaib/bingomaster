@@ -178,7 +178,13 @@ export default function Workshop() {
 
         {/* Tabs */}
         <div className="mb-6 flex flex-wrap gap-1 p-1 bg-gray-100 rounded-xl max-w-full">
-          {TABS.map((tab) => {
+          {TABS.filter(tab => {
+            // Aba "users" só aparece para admin da empresa ou super admin
+            if (tab.id === "users" && userRole !== "admin") return false;
+            // Sub-usuários só veem abas permitidas (exceto admin que vê tudo)
+            if (userRole !== "admin" && !tab.isLink && !allowedPanels.includes(tab.id)) return false;
+            return true;
+          }).map((tab) => {
             const Icon = tab.icon;
             const isActive = !tab.isLink && activeTab === tab.id;
             return (
@@ -210,7 +216,7 @@ export default function Workshop() {
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
           {activeTab === "suppliers" && <SupplierManager userEmail={user?.email} />}
           {activeTab === "entries" && <EntryManager userEmail={user?.email} />}
-          {activeTab === "users" && <UserManager userEmail={user?.email} />}
+          {activeTab === "users" && userRole === "admin" && <UserManager userEmail={effectiveEmail} />}
         </div>
       </div>
 
