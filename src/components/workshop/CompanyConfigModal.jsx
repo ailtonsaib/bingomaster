@@ -130,8 +130,9 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
     setLookingUpCNPJ(true);
     try {
       const res = await base44.functions.invoke("consultaCnpj", { cnpj: digits });
-      if (res?.success && res?.dados) {
-        const d = res.dados;
+      const result = res?.data ?? res;
+      if (result?.success && result?.dados) {
+        const d = result.dados;
         const logradouro = d.descricao_tipo_de_logradouro
           ? `${d.descricao_tipo_de_logradouro} ${d.logradouro}`.trim()
           : d.logradouro;
@@ -151,7 +152,7 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
         }));
         toast({ title: "Dados preenchidos", description: "Os dados foram obtidos da Receita Federal automaticamente." });
       } else {
-        toast({ title: "CNPJ não encontrado", description: res?.error || "Não foi possível obter os dados.", variant: "destructive" });
+        toast({ title: "CNPJ não encontrado", description: result?.error || "Não foi possível obter os dados.", variant: "destructive" });
       }
     } catch (e) {
       toast({ title: "Erro na consulta", description: "Não foi possível consultar o CNPJ.", variant: "destructive" });
