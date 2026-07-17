@@ -70,12 +70,8 @@ export default function AppLogin({ appId }) {
         window.location.href = app.url;
       }
     } catch (err) {
-      const msg = err.response?.data?.error || "Email ou senha inválidos";
-      if (msg.includes("inválido")) {
-        setError("Usuário não cadastrado. Entre em contato com o suporte para adquirir sua licença.");
-      } else {
-        setError(msg);
-      }
+      const msg = err.response?.data?.error || err.data?.error || err.message || "Email ou senha inválidos";
+      setError(msg);
     }
     setLoading(false);
   };
