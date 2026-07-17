@@ -3,14 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { X, FileText, Camera, Printer, Upload, ChevronDown } from "lucide-react";
+import { X, FileText, Camera, Printer, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 
 export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
   const { toast } = useToast();
@@ -247,25 +241,17 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
 
         {/* Footer actions */}
         <div className="flex items-center justify-between p-4 border-t bg-gray-50 no-print">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1">
-                <Printer className="w-4 h-4" /> Imprimir
-                <ChevronDown className="w-3 h-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={handlePrintOS} className="gap-2">
-                <Printer className="w-3.5 h-3.5" /> Imprimir OS
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePrintTerm} className="gap-2">
-                <FileText className="w-3.5 h-3.5" /> Imprimir Termo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePrintBoth} className="gap-2">
-                <Printer className="w-3.5 h-3.5" /> Imprimir OS + Termo
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrintOS} className="gap-1">
+              <Printer className="w-3.5 h-3.5" /> OS
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrintTerm} className="gap-1">
+              <FileText className="w-3.5 h-3.5" /> Termo
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrintBoth} className="gap-1">
+              <Printer className="w-3.5 h-3.5" /> OS + Termo
+            </Button>
+          </div>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
             <Button
