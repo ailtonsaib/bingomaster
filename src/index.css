@@ -112,3 +112,11 @@
   size: A4;
   margin: 0;
 }
+
+/* Print: Termo de Responsabilidade (modal) — esconde a OS e mostra apenas o termo */
+@media print {
+  body.printing-term #print-area { visibility: hidden !important; display: none !important; }
+  body.printing-term #print-term-area,
+  body.printing-term #print-term-area * { visibility: visible !important; }
+  body.printing-term #print-term-area { position: absolute; left: 0; top: 0; width: 100%; }
+}

@@ -17,6 +17,12 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
 
   const today = new Date().toLocaleDateString("pt-BR");
 
+  const handlePrint = () => {
+    document.body.classList.add("printing-term");
+    window.print();
+    setTimeout(() => document.body.classList.remove("printing-term"), 500);
+  };
+
   const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -84,7 +90,7 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
         </div>
 
         {/* Print area */}
-        <div id="print-area" className="p-6 space-y-4">
+        <div id="print-term-area" className="p-6 space-y-4">
           {/* Header do termo */}
           <div className="text-center border-b pb-4">
             <h2 className="text-lg font-bold uppercase">Termo de Responsabilidade do Cliente</h2>
@@ -225,7 +231,7 @@ export default function ResponsibilityTermModal({ order, userEmail, onClose }) {
 
         {/* Footer actions */}
         <div className="flex items-center justify-between p-4 border-t bg-gray-50 no-print">
-          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1">
             <Printer className="w-4 h-4" /> Imprimir
           </Button>
           <div className="flex gap-2">
