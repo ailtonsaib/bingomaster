@@ -120,3 +120,13 @@
   body.printing-term #print-term-area * { visibility: visible !important; }
   body.printing-term #print-term-area { position: absolute; left: 0; top: 0; width: 100%; }
 }
+
+/* Print: OS + Termo juntos — mostra ambos em páginas separadas */
+@media print {
+  body.printing-both #print-area,
+  body.printing-both #print-area *,
+  body.printing-both #print-term-area,
+  body.printing-both #print-term-area * { visibility: visible !important; }
+  body.printing-both #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  body.printing-both #print-term-area { position: absolute; left: 0; top: 0; width: 100%; page-break-before: always; }
+}
