@@ -39,6 +39,15 @@ function parseNfeXml(xmlText) {
 
   const detNodes = infNFe.getElementsByTagName("det");
 
+  // Extrai duplicatas (cobrança) para obter vencimento do XML
+  const cobr = infNFe.getElementsByTagName("cobr")[0] || infNFe.getElementsByTagName("*:cobr")[0];
+  const dupNodes = cobr ? cobr.getElementsByTagName("dup") : [];
+  const dueDates = [];
+  for (let i = 0; i < dupNodes.length; i++) {
+    const dVenc = getText(dupNodes[i], "dVenc");
+    if (dVenc) dueDates.push(dVenc);
+  }
+
   const items = [];
   for (let i = 0; i < detNodes.length; i++) {
     const det = detNodes[i];
@@ -93,6 +102,7 @@ function parseNfeXml(xmlText) {
       total_ipi: parseFloat(getText(icmsTot, "vIPI").replace(",", ".")) || 0,
       total_nota: parseFloat(getText(icmsTot, "vNF").replace(",", ".")) || 0,
     },
+    due_dates: dueDates,
     items,
   };
 }
@@ -613,18 +623,50 @@ export default function EntryManager({ userEmail }) {
 // ===== XML Import Modal =====
 function XmlImportModal({ onClose, onFile, fileRef }) {
   const [dragging, setDragging] = useState(false);
+  const [parsed, setParsed] = useState(null);
+  const [parseError, setParseError] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [fileObj, setFileObj] = useState(null);
   const [dueDate, setDueDate] = useState("");
 
   // Calcula vencimento padrão: 30 dias a partir de hoje (formato YYYY-MM-DD)
   const defaultDue = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
-  const handleFileWithDue = (file) => {
-    onFile(file, dueDate || defaultDue);
+  const handleFile = async (file) => {
+    setParsing(true);
+    setParseError("");
+    setFileObj(file);
+    try {
+      const text = await file.text();
+      const data = parseNfeXml(text);
+      setParsed(data);
+      // Se o XML tiver duplicatas, usa a primeira como vencimento padrão
+      if (data.due_dates && data.due_dates.length > 0) {
+        setDueDate(data.due_dates[0].slice(0, 10));
+      } else {
+        setDueDate(defaultDue);
+      }
+    } catch (e) {
+      setParseError(e.message || "Não foi possível processar o arquivo.");
+      setParsed(null);
+    }
+    setParsing(false);
+  };
+
+  const handleConfirm = () => {
+    onFile(fileObj, dueDate || defaultDue);
+  };
+
+  const handleReset = () => {
+    setParsed(null);
+    setFileObj(null);
+    setParseError("");
+    setDueDate("");
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold flex items-center gap-2">
             <FileUp className="w-5 h-5 text-green-600" /> Importar Nota Fiscal (XML)
@@ -640,32 +682,102 @@ function XmlImportModal({ onClose, onFile, fileRef }) {
           </p>
         </div>
 
-        {/* Data de vencimento */}
-        <div className="mb-4">
-          <Label className="text-sm">Data de Vencimento (Financeiro)</Label>
-          <Input
-            type="date"
-            value={dueDate || defaultDue}
-            onChange={e => setDueDate(e.target.value)}
-            className="mt-1"
-          />
-          <p className="text-xs text-gray-400 mt-1">O título a pagar será criado no módulo financeiro com este vencimento.</p>
-        </div>
+        {!parsed && (
+          <div
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              dragging ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-green-400 hover:bg-green-50/50"
+            }`}
+          >
+            {parsing ? (
+              <>
+                <Loader2 className="w-10 h-10 text-green-500 mx-auto mb-2 animate-spin" />
+                <p className="text-sm font-medium">Lendo XML...</p>
+              </>
+            ) : (
+              <>
+                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm font-medium">Clique ou arraste o arquivo XML</p>
+                <p className="text-xs text-gray-400 mt-1">Formato: .xml (NF-e modelo 55)</p>
+              </>
+            )}
+            <input ref={fileRef} type="file" accept=".xml" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          </div>
+        )}
 
-        <div
-          onClick={() => fileRef.current?.click()}
-          onDragOver={e => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFileWithDue(f); }}
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-            dragging ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-green-400 hover:bg-green-50/50"
-          }`}
-        >
-          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm font-medium">Clique ou arraste o arquivo XML</p>
-          <p className="text-xs text-gray-400 mt-1">Formato: .xml (NF-e modelo 55)</p>
-          <input ref={fileRef} type="file" accept=".xml" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileWithDue(f); }} />
-        </div>
+        {parseError && (
+          <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-700">Erro ao processar XML</p>
+              <p className="text-xs text-red-600 mt-0.5">{parseError}</p>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="ml-auto">Tentar novamente</Button>
+          </div>
+        )}
+
+        {parsed && (
+          <div className="space-y-4">
+            {/* Prévia dos dados do XML */}
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+                <p className="text-xs font-medium text-gray-500">Prévia do XML</p>
+              </div>
+              <div className="p-3 space-y-1.5 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-500">Fornecedor:</span>
+                  <span className="font-medium text-right">{parsed.supplier.name}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-500">CNPJ:</span>
+                  <span className="font-mono text-xs">{maskCpfCnpj(parsed.supplier.cpf_cnpj) || "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-500">Nota / Série:</span>
+                  <span className="font-mono text-xs">{parsed.nota.number} / {parsed.nota.series}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-500">Emissão:</span>
+                  <span className="text-xs">{parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toLocaleDateString("pt-BR") : "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-500">Itens:</span>
+                  <span className="text-xs">{parsed.items.length} produto(s)</span>
+                </div>
+                <div className="flex justify-between gap-2 pt-1 border-t border-gray-100">
+                  <span className="text-gray-500">Total:</span>
+                  <span className="font-bold text-red-600">{formatCurrency(parsed.totals.total_nota)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Data de vencimento */}
+            <div>
+              <Label className="text-sm">Data de Vencimento (Financeiro) *</Label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {parsed.due_dates && parsed.due_dates.length > 0
+                  ? `Vencimento extraído do XML (${parsed.due_dates.length} duplicata(s)). Ajuste se necessário.`
+                  : "XML sem duplicatas — informe o vencimento manualmente. O título a pagar será criado no financeiro."}
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleReset}>Trocar arquivo</Button>
+              <Button type="button" onClick={handleConfirm} className="gap-1 text-white" style={{ backgroundColor: "#2563EB" }}>
+                <CheckCircle2 className="w-4 h-4" /> Confirmar Entrada
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
