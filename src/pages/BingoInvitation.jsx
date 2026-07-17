@@ -5,9 +5,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Printer, Plus, Trash2, Gift, MapPin, Calendar, Clock, Sparkles, Candy, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, Plus, Trash2, Gift, MapPin, Calendar, Clock, Sparkles, Candy, Loader2, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import jsPDF from "jspdf";
 
 export default function BingoInvitation() {
   const navigate = useNavigate();
@@ -52,6 +53,164 @@ export default function BingoInvitation() {
     window.print();
   };
 
+  const handleDownloadPDF = () => {
+    if (!selectedGame) return;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = 210;
+    const margin = 18;
+    let y = 0;
+
+    // ── Header banner ──
+    doc.setFillColor(124, 58, 237); // primary purple
+    doc.rect(0, 0, pageW, 50, "F");
+    doc.setFillColor(91, 33, 182);
+    doc.rect(0, 44, pageW, 6, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(32);
+    doc.text("BINGO", pageW / 2, 24, { align: "center" });
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "normal");
+    doc.text(selectedGame.name || "Convite Especial", pageW / 2, 36, { align: "center" });
+    y = 64;
+
+    // ── Section helper ──
+    const sectionTitle = (icon, title, color) => {
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.roundedRect(margin, y - 5, 5, 5, 1, 1, "F");
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(title, margin + 8, y);
+      doc.setTextColor(30, 30, 30);
+      y += 8;
+    };
+
+    // ── Date & Time ──
+    sectionTitle("", "DATA E HORARIO", [124, 58, 237]);
+    if (eventDate) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(
+        format(eventDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
+        margin,
+        y
+      );
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(90, 90, 90);
+      doc.text(`Horario: ${format(eventDate, "HH:mm", { locale: ptBR })}h`, margin, y);
+      y += 8;
+    } else {
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "italic");
+      doc.text("Data a definir", margin, y);
+      y += 8;
+    }
+    y += 4;
+
+    // ── Location ──
+    sectionTitle("", "LOCAL DO EVENTO", [37, 99, 235]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(selectedGame.event_location || "A definir", margin, y);
+    y += 6;
+    if (selectedGame.event_address) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(90, 90, 90);
+      const addrLines = doc.splitTextToSize(selectedGame.event_address, pageW - margin * 2);
+      doc.text(addrLines, margin, y);
+      y += addrLines.length * 5 + 2;
+    } else {
+      y += 2;
+    }
+    y += 6;
+
+    // ── Prizes ──
+    sectionTitle("", "PREMIOS DO SORTEIO", [217, 119, 6]);
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(margin - 2, y - 4, pageW - margin * 2 + 4, 8 + (selectedGame.prizes?.length || 1) * 9, 2, 2, "F");
+    if (selectedGame.prizes && selectedGame.prizes.length > 0) {
+      selectedGame.prizes.forEach((prize, i) => {
+        doc.setFillColor(245, 158, 11);
+        doc.circle(margin + 2, y - 1, 2, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(String(i + 1), margin + 2, y, { align: "center" });
+
+        doc.setTextColor(120, 53, 15);
+        doc.setFontSize(11);
+        doc.text(prize.name || `Premio ${i + 1}`, margin + 8, y);
+        y += 5;
+        if (prize.description) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.setTextColor(161, 98, 7);
+          const descLines = doc.splitTextToSize(prize.description, pageW - margin * 2 - 10);
+          doc.text(descLines, margin + 8, y);
+          y += descLines.length * 4 + 1;
+        }
+        y += 3;
+      });
+    } else {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(10);
+      doc.setTextColor(161, 98, 7);
+      doc.text("Premios a definir", margin, y + 2);
+      y += 8;
+    }
+    y += 6;
+
+    // ── Treats ──
+    if (selectedGame.event_treats && selectedGame.event_treats.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      sectionTitle("", "GULOSEIMAS", [219, 39, 119]);
+      doc.setFillColor(253, 242, 248);
+      doc.roundedRect(margin - 2, y - 4, pageW - margin * 2 + 4, 14, 2, 2, "F");
+      doc.setTextColor(157, 47, 96);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const treatsText = selectedGame.event_treats.join("  -  ");
+      const treatLines = doc.splitTextToSize(treatsText, pageW - margin * 2 - 4);
+      doc.text(treatLines, margin, y + 2);
+      y += treatLines.length * 5 + 8;
+    }
+
+    // ── Price ──
+    if (selectedGame.event_price) {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFillColor(243, 232, 255);
+      doc.roundedRect(margin - 2, y - 4, pageW - margin * 2 + 4, 14, 2, 2, "F");
+      doc.setTextColor(124, 58, 237);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("VALOR DA CARTELA", margin, y + 2);
+      doc.setFontSize(14);
+      doc.text(selectedGame.event_price, pageW - margin, y + 2, { align: "right" });
+      y += 16;
+    }
+
+    // ── Footer ──
+    const pageH = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageH - 18, pageW - margin, pageH - 18);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Venha se divertir e concorrer aos premios!", pageW / 2, pageH - 11, { align: "center" });
+    doc.setFontSize(8);
+    doc.setTextColor(160, 160, 160);
+    doc.text("BingoPremier - Convite gerado em " + format(new Date(), "dd/MM/yyyy 'as' HH:mm"), pageW / 2, pageH - 6, { align: "center" });
+
+    const fileName = `convite-bingo-${(selectedGame.name || "evento").toLowerCase().replace(/[^a-z0-9]/g, "-")}.pdf`;
+    doc.save(fileName);
+  };
+
   const eventDate = selectedGame?.event_date ? new Date(selectedGame.event_date) : null;
 
   return (
@@ -78,6 +237,9 @@ export default function BingoInvitation() {
                 ))}
               </select>
             )}
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadPDF} disabled={!selectedGame}>
+              <FileDown className="w-4 h-4" /> PDF
+            </Button>
             <Button size="sm" className="gap-2" onClick={handlePrint} disabled={!selectedGame}>
               <Printer className="w-4 h-4" /> Imprimir
             </Button>
