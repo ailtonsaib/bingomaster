@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, Building2, ShieldCheck, UserCog } from "lucide-react";
+import { Loader2, Upload, Building2, ShieldCheck, UserCog, Search } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -55,6 +55,7 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [configId, setConfigId] = useState(null);
   const [granting, setGranting] = useState(false);
+  const [lookingUpCNPJ, setLookingUpCNPJ] = useState(false);
 
   useEffect(() => {
     if (!open || !userEmail) return;
@@ -63,8 +64,16 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
       try {
         const list = await base44.entities.DiagnosticCompanyConfig.filter({ user_email: userEmail });
         if (list.length > 0) {
-          setConfig({ ...empty, ...list[0] });
-          setConfigId(list[0].id);
+          const d = list[0];
+          setConfig({
+            ...empty,
+            ...d,
+            cnpj: d.cnpj ? maskCNPJ(d.cnpj) : "",
+            cep: d.cep ? maskCEP(d.cep) : "",
+            phone: d.phone ? maskPhone(d.phone) : "",
+            responsible_cpf: d.responsible_cpf ? maskCPF(d.responsible_cpf) : "",
+          });
+          setConfigId(d.id);
         } else {
           setConfig(empty);
           setConfigId(null);
@@ -113,6 +122,41 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
     } catch {
       /* ignore */
     }
+  };
+
+  const handleCNPJLookup = async (cnpjValue) => {
+    const digits = onlyDigits(cnpjValue);
+    if (digits.length !== 14) return;
+    setLookingUpCNPJ(true);
+    try {
+      const res = await base44.functions.invoke("consultaCnpj", { cnpj: digits });
+      if (res?.success && res?.dados) {
+        const d = res.dados;
+        const logradouro = d.descricao_tipo_de_logradouro
+          ? `${d.descricao_tipo_de_logradouro} ${d.logradouro}`.trim()
+          : d.logradouro;
+        const telefoneLimpo = onlyDigits((d.telefone || "").split("/")[0].trim());
+        setConfig(prev => ({
+          ...prev,
+          razao_social: d.razao_social || prev.razao_social,
+          nome_fantasia: d.nome_fantasia || prev.nome_fantasia,
+          cep: d.cep ? maskCEP(d.cep) : prev.cep,
+          address: logradouro || prev.address,
+          number: d.numero || prev.number,
+          district: d.bairro || prev.district,
+          city: d.municipio || prev.city,
+          uf: d.uf || prev.uf,
+          phone: telefoneLimpo ? maskPhone(telefoneLimpo) : prev.phone,
+          email: d.email || prev.email,
+        }));
+        toast({ title: "Dados preenchidos", description: "Os dados foram obtidos da Receita Federal automaticamente." });
+      } else {
+        toast({ title: "CNPJ não encontrado", description: res?.error || "Não foi possível obter os dados.", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro na consulta", description: "Não foi possível consultar o CNPJ.", variant: "destructive" });
+    }
+    setLookingUpCNPJ(false);
   };
 
   const handleSave = async () => {
@@ -270,12 +314,27 @@ export default function CompanyConfigModal({ userEmail, open, onClose, onSaved }
               </div>
               <div>
                 <Label className="text-sm font-medium">CNPJ</Label>
-                <Input
-                  value={config.cnpj}
-                  onChange={e => handleChange("cnpj", maskCNPJ(e.target.value))}
-                  placeholder="00.000.000/0000-00"
-                  className="mt-1"
-                />
+                <div className="flex gap-1 mt-1">
+                  <Input
+                    value={config.cnpj}
+                    onChange={e => handleChange("cnpj", maskCNPJ(e.target.value))}
+                    onBlur={e => {
+                      const digits = onlyDigits(e.target.value);
+                      if (digits.length === 14) handleCNPJLookup(e.target.value);
+                    }}
+                    placeholder="00.000.000/0000-00"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={lookingUpCNPJ || onlyDigits(config.cnpj).length !== 14}
+                    onClick={() => handleCNPJLookup(config.cnpj)}
+                    title="Buscar dados na Receita"
+                  >
+                    {lookingUpCNPJ ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  </Button>
+                </div>
               </div>
               <div>
                 <Label className="text-sm font-medium">Inscrição Estadual</Label>
