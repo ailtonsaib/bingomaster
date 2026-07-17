@@ -8,6 +8,7 @@ import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
 import SupplierManager from "@/components/workshop/SupplierManager";
 import EntryManager from "@/components/workshop/EntryManager";
+import UserManager from "@/components/workshop/UserManager";
 import ClientVehicleManager from "@/components/workshop/ClientVehicleManager";
 import ServiceTypeManager from "@/components/workshop/ServiceTypeManager";
 import CommissionPanel from "@/components/workshop/CommissionPanel";
@@ -34,6 +35,7 @@ const TABS = [
   { id: "parts", label: "Peças", icon: Package },
   { id: "suppliers", label: "Fornecedores", icon: Building2 },
   { id: "entries", label: "Entradas", icon: ArrowDownToLine },
+  { id: "users", label: "Usuários", icon: Users },
 ];
 
 export default function Workshop() {
@@ -151,6 +153,7 @@ export default function Workshop() {
           {activeTab === "parts" && <PartManager userEmail={user?.email} />}
           {activeTab === "suppliers" && <SupplierManager userEmail={user?.email} />}
           {activeTab === "entries" && <EntryManager userEmail={user?.email} />}
+          {activeTab === "users" && <UserManager userEmail={user?.email} />}
         </div>
       </div>
 

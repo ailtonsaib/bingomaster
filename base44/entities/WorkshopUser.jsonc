@@ -1,0 +1,59 @@
+{
+  "name": "WorkshopUser",
+  "type": "object",
+  "properties": {
+    "owner_email": {
+      "type": "string",
+      "description": "Email do administrador da empresa (dono da conta)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome completo do usu\u00e1rio"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de login do usu\u00e1rio"
+    },
+    "password_hash": {
+      "type": "string",
+      "description": "Hash bcrypt da senha"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "operador",
+        "visualizador"
+      ],
+      "default": "operador",
+      "description": "Papel: admin (acesso total), operador, visualizador"
+    },
+    "allowed_panels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "IDs das abas/pain\u00e9is que o usu\u00e1rio pode acessar (ex: orders, clients, finance)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o usu\u00e1rio est\u00e1 ativo"
+    },
+    "must_change_password": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se deve trocar a senha no primeiro acesso"
+    }
+  },
+  "required": [
+    "owner_email",
+    "name",
+    "email"
+  ]
+}
