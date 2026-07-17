@@ -104,6 +104,7 @@ export default function EntryManager({ userEmail }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [statusMenuId, setStatusMenuId] = useState(null);
 
   // XML import modal (NF-e)
   const [showXmlImport, setShowXmlImport] = useState(false);
@@ -184,42 +185,6 @@ export default function EntryManager({ userEmail }) {
         }
       }
 
-      // Auto-cadastrar peças não existentes e atualizar estoque
-      let newPartsCount = 0;
-      let updatedPartsCount = 0;
-      for (const item of data.items) {
-        if (!item.product_name) continue;
-        const existingParts = await base44.entities.DiagnosticPart.filter({
-          user_email: userEmail,
-          code: item.product_code,
-        });
-        if (existingParts.length > 0) {
-          const part = existingParts[0];
-          await base44.entities.DiagnosticPart.update(part.id, {
-            stock: (part.stock || 0) + item.quantity,
-            cost_price: item.unit_price || part.cost_price,
-            supplier: supplierName,
-          });
-          updatedPartsCount++;
-        } else {
-          await base44.entities.DiagnosticPart.create({
-            user_email: userEmail,
-            name: item.product_name,
-            code: item.product_code || "",
-            barcode: item.barcode || "",
-            ncm: item.ncm || "",
-            unit: item.unit || "UN",
-            cost_price: item.unit_price || 0,
-            sale_price: (item.unit_price || 0) * 1.3,
-            stock: item.quantity || 0,
-            min_stock: 0,
-            supplier: supplierName,
-            is_active: true,
-          });
-          newPartsCount++;
-        }
-      }
-
       // Upload XML file
       let xmlUrl = "";
       try {
@@ -229,7 +194,7 @@ export default function EntryManager({ userEmail }) {
 
       const dueDateIso = dueDate ? new Date(dueDate + "T12:00:00").toISOString() : new Date(Date.now() + 30 * 86400000).toISOString();
 
-      // Create entry operation
+      // Create entry operation as "pendente" — stock and finance are generated when the operator clicks "Atualizar"
       await base44.entities.DiagnosticEntryOperation.create({
         user_email: userEmail,
         entry_type: "nota_fiscal",
@@ -254,30 +219,10 @@ export default function EntryManager({ userEmail }) {
         xml_file_url: xmlUrl,
         due_date: dueDateIso,
         payment_status: "aberto",
-        status: "registrada",
+        status: "pendente",
       });
 
-      // Gerar título a pagar no financeiro
-      try {
-        await base44.entities.PortalFinanceTransaction.create({
-          user_email: userEmail,
-          description: `NF-e ${data.nota.number} — ${supplierName}`.trim(),
-          amount: data.totals.total_nota,
-          type: "expense",
-          source_module: "workshop",
-          category: "Entrada de Mercadoria",
-          date: new Date().toISOString(),
-          launch_date: new Date().toISOString(),
-          due_date: dueDateIso,
-          contact_name: supplierName,
-          status: "pending",
-        });
-      } catch { /* non-critical */ }
-
-      const partsMsg = newPartsCount > 0 || updatedPartsCount > 0
-        ? ` • ${newPartsCount} peça(s) cadastrada(s), ${updatedPartsCount} atualizada(s)`
-        : "";
-      toast({ title: "Entrada registrada", description: `NF ${data.nota.number} — ${formatCurrency(data.totals.total_nota)}${partsMsg} • Título financeiro gerado.` });
+      toast({ title: "Entrada importada", description: `NF ${data.nota.number} — ${formatCurrency(data.totals.total_nota)}. Pendente: clique na situação para gerar estoque e financeiro.` });
       setShowXmlImport(false);
       load();
     } catch (e) {
@@ -405,6 +350,91 @@ export default function EntryManager({ userEmail }) {
     }
   };
 
+  // Atualizar entrada pendente → processa estoque + gera financeiro + marca como "registrada"
+  const handleUpdateEntry = async (entry) => {
+    try {
+      // Processa estoque (cadastra/atualiza peças)
+      let newPartsCount = 0;
+      let updatedPartsCount = 0;
+      if (entry.items && entry.items.length > 0) {
+        for (const item of entry.items) {
+          if (!item.product_name) continue;
+          const existingParts = await base44.entities.DiagnosticPart.filter({
+            user_email: userEmail,
+            code: item.product_code,
+          });
+          if (existingParts.length > 0) {
+            const part = existingParts[0];
+            await base44.entities.DiagnosticPart.update(part.id, {
+              stock: (part.stock || 0) + item.quantity,
+              cost_price: item.unit_price || part.cost_price,
+              supplier: entry.supplier_name,
+            });
+            updatedPartsCount++;
+          } else {
+            await base44.entities.DiagnosticPart.create({
+              user_email: userEmail,
+              name: item.product_name,
+              code: item.product_code || "",
+              barcode: item.barcode || "",
+              ncm: item.ncm || "",
+              unit: item.unit || "UN",
+              cost_price: item.unit_price || 0,
+              sale_price: (item.unit_price || 0) * 1.3,
+              stock: item.quantity || 0,
+              min_stock: 0,
+              supplier: entry.supplier_name,
+              is_active: true,
+            });
+            newPartsCount++;
+          }
+        }
+      }
+
+      // Gera título a pagar no financeiro
+      await base44.entities.PortalFinanceTransaction.create({
+        user_email: userEmail,
+        description: `NF-e ${entry.nota_number} — ${entry.supplier_name}`.trim(),
+        amount: entry.total_nota,
+        type: "expense",
+        source_module: "workshop",
+        category: "Entrada de Mercadoria",
+        date: new Date().toISOString(),
+        launch_date: new Date().toISOString(),
+        due_date: entry.due_date || new Date(Date.now() + 30 * 86400000).toISOString(),
+        contact_name: entry.supplier_name,
+        status: "pending",
+      });
+
+      // Atualiza status da entrada para "registrada"
+      await base44.entities.DiagnosticEntryOperation.update(entry.id, {
+        status: "registrada",
+      });
+
+      const partsMsg = newPartsCount > 0 || updatedPartsCount > 0
+        ? ` • ${newPartsCount} peça(s) cadastrada(s), ${updatedPartsCount} atualizada(s)`
+        : "";
+      toast({ title: "Entrada atualizada", description: `NF ${entry.nota_number} — ${formatCurrency(entry.total_nota)}${partsMsg} • Título financeiro gerado.` });
+      load();
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível atualizar a entrada.", variant: "destructive" });
+    }
+  };
+
+  // Cancelar entrada pendente → marca como "cancelada", sem gerar estoque ou financeiro
+  const handleCancelEntry = async (entry) => {
+    if (!confirm(`Cancelar a entrada NF ${entry.nota_number || entry.service_description?.slice(0, 30)}? Nenhum financeiro ou estoque será gerado.`)) return;
+    try {
+      await base44.entities.DiagnosticEntryOperation.update(entry.id, {
+        status: "cancelada",
+      });
+      toast({ title: "Entrada cancelada", description: "A nota foi marcada como cancelada." });
+      load();
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível cancelar.", variant: "destructive" });
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>;
 
   return (
@@ -467,7 +497,7 @@ export default function EntryManager({ userEmail }) {
                 <th className="p-3 font-medium">Nota/Serviço</th>
                 <th className="p-3 font-medium">Emissão</th>
                 <th className="p-3 font-medium text-right">Total</th>
-                <th className="p-3 font-medium">Pagamento</th>
+                <th className="p-3 font-medium">Situação</th>
                 <th className="p-3 font-medium text-center">Ações</th>
               </tr>
             </thead>
@@ -491,16 +521,40 @@ export default function EntryManager({ userEmail }) {
                   </td>
                   <td className="p-3 text-gray-400 text-xs">{formatDate(e.issue_date)}</td>
                   <td className="p-3 text-right font-medium text-red-600">{formatCurrency(e.total_nota)}</td>
-                  <td className="p-3">
-                    <button
-                      type="button"
-                      onClick={() => togglePaymentStatus(e)}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        e.payment_status === "pago" ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
-                      }`}
-                    >
-                      {e.payment_status === "pago" ? "Pago" : "Em aberto"}
-                    </button>
+                  <td className="p-3 relative">
+                    {(!e.status || e.status === "pendente") ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setStatusMenuId(statusMenuId === e.id ? null : e.id)}
+                          className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 inline-flex items-center gap-0.5"
+                        >
+                          Pendente <ChevronDown className="w-3 h-3" />
+                        </button>
+                        {statusMenuId === e.id && (
+                          <div className="absolute z-30 mt-1 right-0 w-44 bg-white rounded-lg border border-gray-200 shadow-lg py-1 text-left">
+                            <button type="button" onClick={() => { setStatusMenuId(null); handleUpdateEntry(e); }} className="w-full px-3 py-1.5 text-xs hover:bg-green-50 text-green-600 font-medium flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Atualizar (gerar)
+                            </button>
+                            <button type="button" onClick={() => { setStatusMenuId(null); handleCancelEntry(e); }} className="w-full px-3 py-1.5 text-xs hover:bg-red-50 text-red-600 font-medium flex items-center gap-1.5">
+                              <X className="w-3.5 h-3.5" /> Cancelar documento
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ) : e.status === "cancelada" ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">Cancelada</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => togglePaymentStatus(e)}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          e.payment_status === "pago" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"
+                        }`}
+                      >
+                        {e.payment_status === "pago" ? "Pago" : "Registrada"}
+                      </button>
+                    )}
                   </td>
                   <td className="p-3 text-center">
                     <button type="button" onClick={() => handleDelete(e)} className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">
@@ -581,8 +635,8 @@ function XmlImportModal({ onClose, onFile, fileRef }) {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-start gap-2">
           <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-blue-700">
-            Ao importar o XML da NF-e, o sistema <b>cadastra automaticamente o fornecedor</b> e as <b>peças</b>,
-            e gera um <b>título a pagar no financeiro</b> com a data de vencimento informada.
+            Ao importar o XML da NF-e, o sistema <b>cadastra automaticamente o fornecedor</b> e armazena a entrada como <b>pendente</b>.
+            O estoque e o título financeiro só serão gerados quando você clicar em <b>Atualizar</b> na situação da nota.
           </p>
         </div>
 

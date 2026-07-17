@@ -172,11 +172,12 @@
     "status": {
       "type": "string",
       "enum": [
+        "pendente",
         "registrada",
         "cancelada"
       ],
-      "default": "registrada",
-      "description": "Status da entrada"
+      "default": "pendente",
+      "description": "Status da entrada: pendente (aguardando confirma\u00e7\u00e3o \u2014 sem estoque/financeiro), registrada (estoque e financeiro gerados) ou cancelada"
     },
     "notes": {
       "type": "string",
