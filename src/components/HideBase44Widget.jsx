@@ -57,6 +57,11 @@ export default function HideBase44Widget() {
         const tag = el.tagName;
         if (["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT"].includes(tag)) continue;
 
+        // Não esconder modais/popovers do Radix UI (Dialog, DropdownMenu, Select, etc.)
+        const role = el.getAttribute("role");
+        if (role === "dialog" || role === "presentation" || role === "menu" || role === "listbox" || role === "tooltip" || role === "popover") continue;
+        if (el.hasAttribute("data-radix-popper-content-wrapper") || el.hasAttribute("data-radix-portal")) continue;
+
         let isFixed = false;
         try {
           const style = window.getComputedStyle(el);
