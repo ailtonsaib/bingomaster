@@ -69,7 +69,7 @@ export default function BingoInvitation() {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(32);
-    doc.text("BINGO", pageW / 2, 24, { align: "center" });
+    doc.text("CONVITE ESPECIAL", pageW / 2, 24, { align: "center" });
     doc.setFontSize(13);
     doc.setFont("helvetica", "normal");
     doc.text(selectedGame.name || "Convite Especial", pageW / 2, 36, { align: "center" });
@@ -205,7 +205,7 @@ export default function BingoInvitation() {
     doc.text("Venha se divertir e concorrer aos premios!", pageW / 2, pageH - 11, { align: "center" });
     doc.setFontSize(8);
     doc.setTextColor(160, 160, 160);
-    doc.text("BingoPremier - Convite gerado em " + format(new Date(), "dd/MM/yyyy 'as' HH:mm"), pageW / 2, pageH - 6, { align: "center" });
+    doc.text("Convite gerado em " + format(new Date(), "dd/MM/yyyy 'as' HH:mm"), pageW / 2, pageH - 6, { align: "center" });
 
     const fileName = `convite-bingo-${(selectedGame.name || "evento").toLowerCase().replace(/[^a-z0-9]/g, "-")}.pdf`;
     doc.save(fileName);
@@ -222,7 +222,7 @@ export default function BingoInvitation() {
             <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate("/app")}>
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Button>
-            <span className="font-heading font-bold text-sm">Convite do Bingo</span>
+            <span className="font-heading font-bold text-sm">Convite do Evento</span>
             {saving && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
           </div>
           <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export default function BingoInvitation() {
       {!isLoading && !selectedGame && (
         <div className="max-w-md mx-auto text-center py-20 px-4">
           <Gift className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">Nenhum jogo de bingo cadastrado ainda. Crie um jogo primeiro.</p>
+          <p className="text-muted-foreground">Nenhum evento cadastrado ainda. Crie um jogo primeiro.</p>
           <Link to="/app">
             <Button className="mt-4">Ir para o painel</Button>
           </Link>
@@ -281,7 +281,7 @@ export default function BingoInvitation() {
               <div className="absolute top-4 right-4 text-4xl opacity-30">🎪</div>
               <div className="relative">
                 <p className="text-sm font-medium uppercase tracking-widest opacity-90">Você está convidado!</p>
-                <h1 className="text-4xl md:text-5xl font-bold font-heading mt-2">BINGO</h1>
+                <h1 className="text-4xl md:text-5xl font-bold font-heading mt-2">Convite Especial</h1>
                 <p className="text-lg mt-1 opacity-95">{selectedGame.name}</p>
               </div>
             </div>
