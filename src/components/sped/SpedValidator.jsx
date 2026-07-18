@@ -47,6 +47,8 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
   const [erro, setErro] = useState('');
   const [foiCorrigido, setFoiCorrigido] = useState(false);
   const [showAjusteDialog, setShowAjusteDialog] = useState(false);
+  const [limiteErros, setLimiteErros] = useState(50);
+  const [limiteAvisos, setLimiteAvisos] = useState(50);
   const [resultadoOriginal, setResultadoOriginal] = useState(null);
   const [resultadoCorrigido, setResultadoCorrigido] = useState(null);
   const [revalidando, setRevalidando] = useState(false);
@@ -138,6 +140,8 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
 
       if (dados.success) {
         setResultado(dados);
+        setLimiteErros(50);
+        setLimiteAvisos(50);
         setConteudo(conteudoParaValidar);
         setResultadoOriginal(dados);
         setResultadoCorrigido(null);
@@ -238,6 +242,8 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
     setModoEdicao(false);
     setFoiCorrigido(false);
     setShowAjusteDialog(false);
+    setLimiteErros(50);
+    setLimiteAvisos(50);
     setResultadoOriginal(null);
     setResultadoCorrigido(null);
     setRevalidando(false);
@@ -638,7 +644,7 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {resultado.erros.map((e, idx) => (
+                  {resultado.erros.slice(0, limiteErros).map((e, idx) => (
                     <div key={idx} className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
                       <XCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -650,6 +656,13 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
                     </div>
                   ))}
                 </div>
+                {resultado.erros.length > limiteErros && (
+                  <div className="mt-3 text-center">
+                    <Button variant="outline" size="sm" onClick={() => setLimiteErros(l => l + 50)}>
+                      Ver mais ({resultado.erros.length - limiteErros} restantes)
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -665,7 +678,7 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {resultado.avisos.map((a, idx) => (
+                  {resultado.avisos.slice(0, limiteAvisos).map((a, idx) => (
                     <div key={idx} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                       <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -677,6 +690,13 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
                     </div>
                   ))}
                 </div>
+                {resultado.avisos.length > limiteAvisos && (
+                  <div className="mt-3 text-center">
+                    <Button variant="outline" size="sm" onClick={() => setLimiteAvisos(l => l + 50)}>
+                      Ver mais ({resultado.avisos.length - limiteAvisos} restantes)
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
