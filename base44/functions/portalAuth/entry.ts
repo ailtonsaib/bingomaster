@@ -585,21 +585,63 @@ Deno.serve(async (req) => {
       if (email === 'teste@softpremier.com.br') {
         return Response.json({ error: 'A senha do usuário de teste não pode ser alterada' }, { status: 403 });
       }
-      const users = await base44.asServiceRole.entities.PortalUser.filter({ email });
-      if (users.length === 0) {
+      // Busca primeiro em PortalUser
+      const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email });
+      if (portalUsers.length > 0) {
+        const user = portalUsers[0];
+        const valid = await bcrypt.compare(current_password, user.password_hash);
+        if (!valid) {
+          return Response.json({ error: 'Senha atual incorreta' }, { status: 401 });
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(new_password, salt);
+        await base44.asServiceRole.entities.PortalUser.update(user.id, {
+          password_hash: hash,
+          must_change_password: false,
+        });
+        // Atualiza também em WorkshopUser se existir (mesmo email)
+        const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
+        if (wsUsers.length > 0) {
+          await base44.asServiceRole.entities.WorkshopUser.update(wsUsers[0].id, {
+            password_hash: hash,
+            must_change_password: false,
+          });
+        }
+        return Response.json({ success: true });
+      }
+      // Fallback: WorkshopUser (usuários de empresa que só existem na oficina)
+      const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
+      if (wsUsers.length === 0) {
         return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
       }
-      const user = users[0];
-      const valid = await bcrypt.compare(current_password, user.password_hash);
+      const wsUser = wsUsers[0];
+      // Suporta bcrypt (novo) e texto plano (legado)
+      let valid = false;
+      let needsRehash = false;
+      if (wsUser.password_hash) {
+        try {
+          valid = await bcrypt.compare(current_password, wsUser.password_hash);
+        } catch (_) {
+          valid = wsUser.password_hash === current_password;
+          needsRehash = valid;
+        }
+      }
       if (!valid) {
         return Response.json({ error: 'Senha atual incorreta' }, { status: 401 });
       }
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(new_password, salt);
-      await base44.asServiceRole.entities.PortalUser.update(user.id, {
+      await base44.asServiceRole.entities.WorkshopUser.update(wsUser.id, {
         password_hash: hash,
         must_change_password: false,
       });
+      // Sincroniza também em PortalUser se existir
+      if (portalUsers.length > 0) {
+        await base44.asServiceRole.entities.PortalUser.update(portalUsers[0].id, {
+          password_hash: hash,
+          must_change_password: false,
+        });
+      }
       return Response.json({ success: true });
     }
 
