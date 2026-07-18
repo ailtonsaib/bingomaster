@@ -89,7 +89,7 @@ export default function Workshop() {
 
   const handleLogout = () => {
     clearPortalUser();
-    navigate("/");
+    navigate("/diagnostico");
   };
 
   const handleTabClick = (tab) => {
