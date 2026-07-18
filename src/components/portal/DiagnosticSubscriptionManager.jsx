@@ -7,12 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Calendar, Check, Unlock, UserPlus, DollarSign, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getPortalUser } from "@/lib/portalSession";
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function DiagnosticSubscriptionManager({ users, onRefresh }) {
   const { toast } = useToast();
+  const adminUser = getPortalUser();
+  const adminEmail = adminUser?.email || users?.[0]?.email || "";
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState([]);
   const [registerModal, setRegisterModal] = useState(null);
@@ -21,7 +24,7 @@ export default function DiagnosticSubscriptionManager({ users, onRefresh }) {
     try {
       const res = await base44.functions.invoke("portalAuth", {
         operation: "getUsers",
-        admin_email: users?.[0]?.email || "",
+        admin_email: adminEmail,
       });
       const allUsers = res.data.users || [];
       const diagnosticUsers = allUsers.filter((u) => u.can_access_diagnostic && !u.is_admin);
@@ -41,6 +44,7 @@ export default function DiagnosticSubscriptionManager({ users, onRefresh }) {
     try {
       await base44.functions.invoke("manageDiagnostic", {
         operation: "adminRegisterCompany",
+        email: adminEmail,
         user_email: userEmail,
         acquisition_price: acquisitionPrice,
         monthly_price: monthlyPrice,
@@ -60,6 +64,7 @@ export default function DiagnosticSubscriptionManager({ users, onRefresh }) {
     try {
       await base44.functions.invoke("manageDiagnostic", {
         operation: "adminMarkPayment",
+        email: adminEmail,
         user_email: userEmail,
       });
       toast({ title: "Pagamento registrado", description: "Mensalidade estendida por 30 dias." });
@@ -75,6 +80,7 @@ export default function DiagnosticSubscriptionManager({ users, onRefresh }) {
     try {
       await base44.functions.invoke("manageDiagnostic", {
         operation: "adminUnblock",
+        email: adminEmail,
         user_email: userEmail,
         extend_days: Number(days),
       });
