@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export default function DivergenceReport({ resultado }) {
+function DivergenceReport({ resultado }) {
   const [expandedBlocks, setExpandedBlocks] = useState({});
 
   const divergences = useMemo(() => {
@@ -252,3 +252,5 @@ export default function DivergenceReport({ resultado }) {
     </Card>
   );
 }
+
+export default memo(DivergenceReport);

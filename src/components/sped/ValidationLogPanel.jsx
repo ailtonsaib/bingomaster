@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useDeferredValue } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -153,6 +153,7 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
   const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [limite, setLimite] = useState(30);
+  const buscaDeferida = useDeferredValue(busca);
 
   const linhasArquivo = useMemo(() => {
     if (!conteudo) return [];
@@ -173,8 +174,8 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
     else if (filtroTipo === 'avisos') lista = lista.filter(e => e.severidade === 'aviso');
     else if (filtroTipo === 'estrutura') lista = lista.filter(e => e.linha === 0 || !e.linha);
 
-    if (busca.trim()) {
-      const termo = busca.toLowerCase().trim();
+    if (buscaDeferida.trim()) {
+      const termo = buscaDeferida.toLowerCase().trim();
       lista = lista.filter(e =>
         e.mensagem.toLowerCase().includes(termo) ||
         (e.registro || '').toLowerCase().includes(termo) ||
@@ -183,12 +184,12 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
     }
 
     return lista;
-  }, [todasEntradas, busca, filtroTipo]);
+  }, [todasEntradas, buscaDeferida, filtroTipo]);
 
   // Reset paginação quando filtros mudam
   React.useEffect(() => {
     setLimite(30);
-  }, [busca, filtroTipo]);
+  }, [buscaDeferida, filtroTipo]);
 
   if (!resultado) return null;
 
