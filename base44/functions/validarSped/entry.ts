@@ -2202,16 +2202,8 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        if (cJ930[3]) {
-          const cpf = cJ930[3].replace(/\D/g, '');
-          if (cpf.length !== 11) {
-            erros.push({
-              linha: linhaAtual, registro: 'J930',
-              mensagem: `CPF inválido no registro J930: "${cJ930[3]}" (esperado 11 dígitos).`,
-              severidade: 'erro'
-            });
-          }
-        }
+        // PVA não valida formato de CPF no J930 — apenas COD_ASSIN e QUALIF
+        // (a validação de CPF é feita pelo sistema de assinatura digital, não pelo PVA)
         // COD_ASSIN (posição 6): deve estar entre 1 e 9
         if (cJ930[6] && !['1','2','3','4','5','6','7','8','9'].includes(cJ930[6])) {
           erros.push({
@@ -2233,16 +2225,7 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        if (cJ932[3]) {
-          const cpf = cJ932[3].replace(/\D/g, '');
-          if (cpf.length !== 11) {
-            erros.push({
-              linha: linhaAtual, registro: 'J932',
-              mensagem: `CPF inválido no registro J932: "${cJ932[3]}" (esperado 11 dígitos).`,
-              severidade: 'erro'
-            });
-          }
-        }
+        // PVA não valida formato de CPF no J932 — apenas COD_ASSIN e QUALIF
       }
 
       if (registro === 'J935' && tipoDetectado === 'ECD') {
