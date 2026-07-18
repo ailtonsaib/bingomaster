@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useDeferredValue, startTransition } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
   const [resultadoCorrigido, setResultadoCorrigido] = useState(null);
   const [revalidando, setRevalidando] = useState(false);
   const inputRef = useRef(null);
+
+  // Valor deferido: partes leves (banner, stats) usam resultado; partes pesadas usam deferredResultado
+  const deferredResultado = useDeferredValue(resultado);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -139,7 +142,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
       const dados = await callValidarSped(conteudoParaValidar, nome);
 
       if (dados.success) {
-        setResultado(dados);
+        startTransition(() => {
+          setResultado(dados);
+        });
         setLimiteErros(50);
         setLimiteAvisos(50);
         setConteudo(conteudoParaValidar);
@@ -209,7 +214,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         URL.revokeObjectURL(url);
         setConteudoEditado(dados.conteudo_corrigido);
         setFoiCorrigido(true);
-        setResultado(dados);
+        startTransition(() => {
+          setResultado(dados);
+        });
         setResultadoOriginal(resultado); // snapshot do estado antes da correção
         await salvarValidacao(dados, arquivo?.name || 'arquivo_sped.txt', dados.conteudo_corrigido, true);
 
@@ -219,7 +226,9 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
           const reDados = await callValidarSped(dados.conteudo_corrigido, arquivo?.name || 'arquivo_sped.txt');
           if (reDados?.success) {
             setResultadoCorrigido(reDados);
-            setResultado(reDados);
+            startTransition(() => {
+              setResultado(reDados);
+            });
           }
         } catch (_) {}
         setRevalidando(false);
@@ -629,22 +638,22 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
           )}
 
           {/* Resumo de Erros por Bloco */}
-          {resultado.erros.length > 0 && (
-            <BlockErrorSummary resultado={resultado} />
+          {deferredResultado?.erros?.length > 0 && (
+            <BlockErrorSummary resultado={deferredResultado} />
           )}
 
           {/* Lista de Erros */}
-          {resultado.erros.length > 0 && (
+          {deferredResultado?.erros?.length > 0 && (
             <Card className="border-red-200">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2 text-red-700">
                   <XCircle className="w-5 h-5" />
-                  Erros Críticos ({resultado.erros.length})
+                  Erros Críticos ({deferredResultado.erros.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {resultado.erros.slice(0, limiteErros).map((e, idx) => (
+                  {deferredResultado.erros.slice(0, limiteErros).map((e, idx) => (
                     <div key={idx} className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
                       <XCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -656,10 +665,10 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
                     </div>
                   ))}
                 </div>
-                {resultado.erros.length > limiteErros && (
+                {deferredResultado.erros.length > limiteErros && (
                   <div className="mt-3 text-center">
                     <Button variant="outline" size="sm" onClick={() => setLimiteErros(l => l + 50)}>
-                      Ver mais ({resultado.erros.length - limiteErros} restantes)
+                      Ver mais ({deferredResultado.erros.length - limiteErros} restantes)
                     </Button>
                   </div>
                 )}
@@ -668,17 +677,17 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
           )}
 
           {/* Lista de Avisos */}
-          {resultado.avisos.length > 0 && (
+          {deferredResultado.avisos.length > 0 && (
             <Card className="border-amber-200">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2 text-amber-700">
                   <AlertTriangle className="w-5 h-5" />
-                  Avisos ({resultado.avisos.length})
+                  Avisos ({deferredResultado.avisos.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {resultado.avisos.slice(0, limiteAvisos).map((a, idx) => (
+                  {deferredResultado.avisos.slice(0, limiteAvisos).map((a, idx) => (
                     <div key={idx} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                       <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -690,10 +699,10 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
                     </div>
                   ))}
                 </div>
-                {resultado.avisos.length > limiteAvisos && (
+                {deferredResultado.avisos.length > limiteAvisos && (
                   <div className="mt-3 text-center">
                     <Button variant="outline" size="sm" onClick={() => setLimiteAvisos(l => l + 50)}>
-                      Ver mais ({resultado.avisos.length - limiteAvisos} restantes)
+                      Ver mais ({deferredResultado.avisos.length - limiteAvisos} restantes)
                     </Button>
                   </div>
                 )}
@@ -702,10 +711,14 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
           )}
 
           {/* Painel de Logs Detalhado — Linha, Campo, Regra PVA */}
-          <ValidationLogPanel resultado={resultado} conteudo={conteudoEditado || conteudo} />
+          {deferredResultado && (
+            <ValidationLogPanel resultado={deferredResultado} conteudo={conteudoEditado || conteudo} />
+          )}
 
           {/* Relatório Resumido de Divergências */}
-          <DivergenceReport resultado={resultado} />
+          {deferredResultado && (
+            <DivergenceReport resultado={deferredResultado} />
+          )}
 
           {/* Editor / Correção */}
           {modoEdicao && (
