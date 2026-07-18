@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Loader2, Search, ClipboardList, Car, ChevronDown, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getPortalUser } from "@/lib/portalSession";
 import ServiceOrderForm from "./ServiceOrderForm";
 import ServiceOrderDetail from "./ServiceOrderDetail";
 import PlanUpgradePanel from "./PlanUpgradePanel";
@@ -67,8 +68,11 @@ export default function ServiceOrderList({ userEmail }) {
     const willBeConcluida = newStatus === "concluida";
 
     try {
+      const sessionUser = getPortalUser();
       await base44.entities.ServiceOrder.update(order.id, {
         status: newStatus,
+        last_edited_by_email: sessionUser?.email || "",
+        last_edited_by_name: sessionUser?.name || "",
         ...(newStatus === "concluida" && !order.completion_date ? { completion_date: new Date().toISOString() } : {}),
         ...(newStatus === "entregue" && !order.delivery_date ? { delivery_date: new Date().toISOString() } : {}),
       });

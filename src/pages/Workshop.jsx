@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2, ArrowDownToLine, Monitor } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2, ArrowDownToLine, Monitor, ShieldCheck } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
@@ -20,6 +20,7 @@ import DiagnosticBlockedScreen from "@/components/workshop/DiagnosticBlockedScre
 import WorkshopFinancePanel from "@/components/workshop/WorkshopFinancePanel";
 import CompanyConfigModal from "@/components/workshop/CompanyConfigModal";
 import CompanySelectorModal from "@/components/workshop/CompanySelectorModal";
+import ServiceOrderAuditPanel from "@/components/workshop/ServiceOrderAuditPanel";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -37,6 +38,7 @@ const TABS = [
   { id: "suppliers", label: "Fornecedores", icon: Building2 },
   { id: "entries", label: "Entradas", icon: ArrowDownToLine },
   { id: "users", label: "Usuários", icon: Users },
+  { id: "audit", label: "Auditoria OS", icon: ShieldCheck },
 ];
 
 export default function Workshop() {
@@ -224,6 +226,7 @@ export default function Workshop() {
           {activeTab === "suppliers" && <SupplierManager userEmail={effectiveEmail} />}
           {activeTab === "entries" && <EntryManager userEmail={effectiveEmail} />}
           {activeTab === "users" && userRole === "admin" && <UserManager userEmail={effectiveEmail} />}
+          {activeTab === "audit" && userRole === "admin" && <ServiceOrderAuditPanel userEmail={effectiveEmail} />}
         </div>
       </div>
 

@@ -249,6 +249,14 @@
       },
       "description": "Itens herdados da OS original (refer\u00eancia \u2014 n\u00e3o geram financeiro)",
       "default": []
+    },
+    "last_edited_by_email": {
+      "type": "string",
+      "description": "Email do \u00faltimo usu\u00e1rio que editou a OS (para auditoria)"
+    },
+    "last_edited_by_name": {
+      "type": "string",
+      "description": "Nome do \u00faltimo usu\u00e1rio que editou a OS (para auditoria)"
     }
   },
   "required": [

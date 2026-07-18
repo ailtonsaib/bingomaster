@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, CreditCard, QrCode, Receipt, Banknote, Landmark, Loader2, BadgePercent, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getPortalUser } from "@/lib/portalSession";
 import BoletoGenerator from "./BoletoGenerator";
 import DiscountAuthModal from "./DiscountAuthModal";
 
@@ -145,6 +146,9 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
         osUpdateData.discount = discountValue;
         osUpdateData.total = finalTotal;
       }
+      const sessionUser = getPortalUser();
+      osUpdateData.last_edited_by_email = sessionUser?.email || "";
+      osUpdateData.last_edited_by_name = sessionUser?.name || "";
       await base44.entities.ServiceOrder.update(order.id, osUpdateData);
 
       // 2. Busca o título financeiro já criado quando a OS foi concluída

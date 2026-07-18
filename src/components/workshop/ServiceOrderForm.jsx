@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Save, Loader2, Search, Package, Wrench, User, AlertCircle, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { maskCpfCnpj, onlyDigits } from "@/lib/brMasks";
+import { getPortalUser } from "@/lib/portalSession";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -384,8 +385,13 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         original_items: originalOrder?.items || [],
       };
 
+      const sessionUser = getPortalUser();
       if (isEditing) {
-        await base44.entities.ServiceOrder.update(editOrder.id, orderData);
+        await base44.entities.ServiceOrder.update(editOrder.id, {
+          ...orderData,
+          last_edited_by_email: sessionUser?.email || "",
+          last_edited_by_name: sessionUser?.name || "",
+        });
         toast({ title: "OS atualizada", description: `Ordem de Serviço ${editOrder.order_number} atualizada com sucesso.` });
       } else {
         const now = new Date();
