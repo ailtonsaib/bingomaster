@@ -916,7 +916,7 @@ Deno.serve(async (req) => {
 
     // ─── WORKSHOP: salvar usuário (criar/atualizar com senha bcrypt) ───
     if (operation === 'saveWorkshopUser') {
-      const { owner_email, id, name, email: wsEmail, phone, password, role, allowed_panels, is_active, must_change_password } = body;
+      const { owner_email, id, name, email: wsEmail, phone, password, role, allowed_panels, is_active, must_change_password, can_grant_discount, discount_password } = body;
       if (!owner_email || !name || !wsEmail) {
         return Response.json({ error: 'owner_email, name e email são obrigatórios' }, { status: 400 });
       }
@@ -928,10 +928,18 @@ Deno.serve(async (req) => {
           allowed_panels: allowed_panels || [],
           is_active: is_active !== false,
           must_change_password: must_change_password !== false,
+          can_grant_discount: can_grant_discount === true,
         };
         if (password) {
           const salt = await bcrypt.genSalt(10);
           updateData.password_hash = await bcrypt.hash(password, salt);
+        }
+        if (can_grant_discount === true && discount_password) {
+          const salt = await bcrypt.genSalt(10);
+          updateData.discount_password_hash = await bcrypt.hash(discount_password, salt);
+        }
+        if (can_grant_discount !== true) {
+          updateData.discount_password_hash = undefined;
         }
         await base44.asServiceRole.entities.WorkshopUser.update(id, updateData);
         return Response.json({ success: true });
@@ -945,7 +953,7 @@ Deno.serve(async (req) => {
         }
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(password, salt);
-        await base44.asServiceRole.entities.WorkshopUser.create({
+        const createData = {
           owner_email,
           name,
           email: wsEmail,
@@ -955,9 +963,42 @@ Deno.serve(async (req) => {
           allowed_panels: allowed_panels || [],
           is_active: is_active !== false,
           must_change_password: must_change_password !== false,
-        });
+          can_grant_discount: can_grant_discount === true,
+        };
+        if (can_grant_discount === true && discount_password) {
+          const dSalt = await bcrypt.genSalt(10);
+          createData.discount_password_hash = await bcrypt.hash(discount_password, dSalt);
+        }
+        await base44.asServiceRole.entities.WorkshopUser.create(createData);
         return Response.json({ success: true });
       }
+    }
+
+    // ─── WORKSHOP: validar senha de autorização de desconto ───
+    if (operation === 'validateDiscountAuth') {
+      const { owner_email, password } = body;
+      if (!owner_email || !password) {
+        return Response.json({ error: 'owner_email e password são obrigatórios' }, { status: 400 });
+      }
+      const authorized = await base44.asServiceRole.entities.WorkshopUser.filter({
+        owner_email,
+        can_grant_discount: true,
+        is_active: true,
+      });
+      for (const u of authorized) {
+        if (u.discount_password_hash) {
+          let valid = false;
+          try {
+            valid = await bcrypt.compare(password, u.discount_password_hash);
+          } catch (_) {
+            valid = u.discount_password_hash === password;
+          }
+          if (valid) {
+            return Response.json({ authorized: true, authorized_by: u.name });
+          }
+        }
+      }
+      return Response.json({ authorized: false, error: 'Senha de autorização inválida ou usuário sem permissão' }, { status: 401 });
     }
 
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });

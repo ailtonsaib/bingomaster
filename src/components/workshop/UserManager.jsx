@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, Pencil, Trash2, X, Shield, Eye, Wrench, Loader2, Search, Users } from "lucide-react";
+import { UserPlus, Pencil, Trash2, X, Shield, Eye, Wrench, Loader2, Search, Users, BadgePercent } from "lucide-react";
 
 // Painéis disponíveis (mesmos IDs do TABS do Workshop)
 const AVAILABLE_PANELS = [
@@ -53,12 +53,12 @@ export default function UserManager({ userEmail }) {
   useEffect(() => { load(); }, []);
 
   const openNew = () => {
-    setEditing({ name: "", email: "", phone: "", password: "", role: "operador", allowed_panels: [], is_active: true, must_change_password: true });
+    setEditing({ name: "", email: "", phone: "", password: "", role: "operador", allowed_panels: [], is_active: true, must_change_password: true, can_grant_discount: false, discount_password: "" });
     setModalOpen(true);
   };
 
   const openEdit = (u) => {
-    setEditing({ ...u, password: "" });
+    setEditing({ ...u, password: "", discount_password: "", can_grant_discount: u.can_grant_discount || false });
     setModalOpen(true);
   };
 
@@ -83,6 +83,11 @@ export default function UserManager({ userEmail }) {
     }
     setSaving(true);
     try {
+      if (editing.can_grant_discount && !editing.discount_password && !editing.id) {
+        toast({ title: "Senha obrigatória", description: "Defina a senha de autorização de desconto.", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
       const res = await base44.functions.invoke("portalAuth", {
         operation: "saveWorkshopUser",
         owner_email: userEmail,
@@ -95,6 +100,8 @@ export default function UserManager({ userEmail }) {
         allowed_panels: editing.allowed_panels,
         is_active: editing.is_active,
         must_change_password: editing.must_change_password,
+        can_grant_discount: editing.can_grant_discount,
+        discount_password: editing.discount_password || undefined,
       });
       if (res?.data?.error) throw new Error(res.data.error);
       toast({ title: editing.id ? "Usuário atualizado" : "Usuário criado", description: "Usuário vinculado à sua empresa." });
@@ -177,6 +184,11 @@ export default function UserManager({ userEmail }) {
                         {ROLES.find(r => r.id === u.role)?.label || u.role}
                       </span>
                       {!u.is_active && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">Inativo</span>}
+                      {u.can_grant_discount && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
+                          <BadgePercent className="w-3 h-3" /> Desconto
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-[#71717A]">{u.email}{u.phone ? ` · ${u.phone}` : ""}</p>
                     <p className="text-xs text-[#A1A1AA] mt-0.5">
@@ -306,6 +318,31 @@ function UserFormModal({ editing, setEditing, onSave, onClose, saving, togglePan
               onCheckedChange={v => setEditing({ ...editing, is_active: v })}
             />
             <Label className="text-sm font-normal cursor-pointer">Usuário ativo</Label>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={editing.can_grant_discount}
+                onCheckedChange={v => setEditing({ ...editing, can_grant_discount: v })}
+              />
+              <Label className="text-sm font-normal cursor-pointer flex items-center gap-1">
+                <BadgePercent className="w-4 h-4 text-amber-600" />
+                Autorizado a conceder descontos
+              </Label>
+            </div>
+            {editing.can_grant_discount && (
+              <div>
+                <Label>Senha de Autorização de Desconto {editing.id ? "(deixe em branco para manter)" : "*"}</Label>
+                <Input
+                  type="password"
+                  value={editing.discount_password || ""}
+                  onChange={e => setEditing({ ...editing, discount_password: e.target.value })}
+                  placeholder="••••••••"
+                />
+                <p className="text-xs text-amber-700 mt-1">Senha separada usada ao aplicar descontos no caixa.</p>
+              </div>
+            )}
           </div>
         </div>
 

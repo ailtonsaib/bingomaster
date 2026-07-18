@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, CreditCard, QrCode, Receipt, Banknote, Landmark, Loader2 } from "lucide-react";
+import { X, CreditCard, QrCode, Receipt, Banknote, Landmark, Loader2, BadgePercent } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import BoletoGenerator from "./BoletoGenerator";
+import DiscountAuthModal from "./DiscountAuthModal";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -48,6 +49,9 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
     return d.toISOString().slice(0, 10);
   });
   const [generatedBoleto, setGeneratedBoleto] = useState(null);
+  const [discount, setDiscount] = useState("");
+  const [showDiscountAuth, setShowDiscountAuth] = useState(false);
+  const [discountAuthorized, setDiscountAuthorized] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -105,6 +109,10 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
 
   const selectedBank = banks.find(b => b.id === bankAccountId);
 
+  const discountValue = parseFloat(discount.replace(",", ".")) || 0;
+  const finalTotal = Math.max(0, (order.total || 0) - discountValue);
+  const hasDiscount = discountValue > 0;
+
   const handleConfirm = async () => {
     if (!paymentMethod) {
       toast({ title: "Atenção", description: "Selecione a forma de pagamento.", variant: "destructive" });
@@ -118,13 +126,26 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
       toast({ title: "Atenção", description: "Selecione o banco emissor do boleto.", variant: "destructive" });
       return;
     }
+    if (discountValue > (order.total || 0)) {
+      toast({ title: "Atenção", description: "Desconto não pode ser maior que o valor total.", variant: "destructive" });
+      return;
+    }
+    if (hasDiscount && !discountAuthorized) {
+      setShowDiscountAuth(true);
+      return;
+    }
     setSaving(true);
     try {
-      // 1. Atualiza apenas o pagamento da OS (status já é "concluida")
-      await base44.entities.ServiceOrder.update(order.id, {
+      // 1. Atualiza a OS com pagamento e desconto
+      const osUpdateData = {
         payment_method: paymentMethod,
         payment_status: isBoleto ? "pendente" : "pago",
-      });
+      };
+      if (hasDiscount) {
+        osUpdateData.discount = discountValue;
+        osUpdateData.total = finalTotal;
+      }
+      await base44.entities.ServiceOrder.update(order.id, osUpdateData);
 
       // 2. Busca o título financeiro já criado quando a OS foi concluída
       const allTx = await base44.entities.PortalFinanceTransaction.filter({
@@ -143,6 +164,10 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           updateData.bank_name = `${selectedBank.bank_code} — ${selectedBank.bank_name}`;
         }
         if (isCard) updateData.card_brand = cardBrand;
+        if (hasDiscount) {
+          updateData.discount_amount = discountValue;
+          updateData.amount = finalTotal;
+        }
         if (isBoleto) {
           updateData.due_date = new Date(boletoDueDate + "T00:00:00").toISOString();
           updateData.status = "pending";
@@ -150,7 +175,7 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           // Dinheiro, PIX e Cartão = baixados imediatamente
           updateData.status = "settled";
           updateData.settled_date = new Date().toISOString();
-          updateData.settled_amount = tx.amount;
+          updateData.settled_amount = finalTotal;
         }
         await base44.entities.PortalFinanceTransaction.update(tx.id, updateData);
       }
@@ -161,9 +186,12 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           bank: selectedBank,
           dueDate: new Date(boletoDueDate + "T00:00:00").toISOString(),
         });
-        toast({ title: "Boleto gerado", description: `Pagamento de ${fmtMoney(order.total)} registrado via boleto.` });
+        toast({ title: "Boleto gerado", description: `Pagamento de ${fmtMoney(finalTotal)} registrado via boleto.` });
       } else {
-        toast({ title: "Pagamento registrado", description: `OS baixada no caixa — ${fmtMoney(order.total)} via ${paymentMethod}.` });
+        toast({
+          title: "Pagamento registrado",
+          description: `OS baixada no caixa — ${fmtMoney(finalTotal)} via ${paymentMethod}${hasDiscount ? ` (desc. ${fmtMoney(discountValue)} autorizado por ${discountAuthorized})` : ""}.`
+        });
         onConfirmed?.();
       }
     } catch {
@@ -205,6 +233,11 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
             <p className="text-sm font-medium">{order.order_number}</p>
             <p className="text-xs text-muted-foreground">{order.client_name} • {order.vehicle_brand} {order.vehicle_model}</p>
             <p className="text-lg font-bold text-blue-600">{fmtMoney(order.total)}</p>
+            {hasDiscount && (
+              <p className="text-sm text-amber-600 font-medium">
+                Desconto: −{fmtMoney(discountValue)} → <span className="text-blue-600">{fmtMoney(finalTotal)}</span>
+              </p>
+            )}
           </div>
 
           <div>
@@ -230,6 +263,30 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
                 );
               })}
             </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium mb-2 block flex items-center gap-1">
+              <BadgePercent className="w-4 h-4" />
+              Desconto (R$)
+            </Label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={discount}
+              onChange={e => { setDiscount(e.target.value); setDiscountAuthorized(null); }}
+              placeholder="0,00"
+            />
+            {discountAuthorized && (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <BadgePercent className="w-3 h-3" /> Desconto autorizado por {discountAuthorized}
+              </p>
+            )}
+            {hasDiscount && !discountAuthorized && (
+              <p className="text-xs text-amber-600 mt-1">
+                Será necessária autorização ao registrar o pagamento.
+              </p>
+            )}
           </div>
 
           {isCard && (
@@ -301,6 +358,19 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           </div>
         </CardContent>
       </Card>
+
+      {showDiscountAuth && (
+        <DiscountAuthModal
+          ownerEmail={userEmail}
+          discountAmount={discountValue}
+          onClose={() => setShowDiscountAuth(false)}
+          onAuthorized={(name) => {
+            setDiscountAuthorized(name);
+            setShowDiscountAuth(false);
+            toast({ title: "Desconto autorizado", description: `Autorizado por ${name}. Clique novamente em Registrar Pagamento.` });
+          }}
+        />
+      )}
     </div>
   );
 }
