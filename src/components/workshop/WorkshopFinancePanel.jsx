@@ -11,6 +11,7 @@ import WorkshopBankManager from "@/components/workshop/WorkshopBankManager";
 import WorkshopCaixaPanel from "@/components/workshop/WorkshopCaixaPanel";
 import WorkshopCaixaFechamento from "@/components/workshop/WorkshopCaixaFechamento";
 import WorkshopRelatorioFinanceiro from "@/components/workshop/WorkshopRelatorioFinanceiro";
+import WorkshopDashboardDiario from "@/components/workshop/WorkshopDashboardDiario";
 import { useToast } from "@/components/ui/use-toast";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -197,6 +198,9 @@ export default function WorkshopFinancePanel({ userEmail }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dashboard Diário — acompanhamento do dia */}
+      <WorkshopDashboardDiario transactions={transactions} />
 
       {/* Caixa — OS Concluídas aguardando pagamento */}
       <WorkshopCaixaPanel userEmail={userEmail} />
