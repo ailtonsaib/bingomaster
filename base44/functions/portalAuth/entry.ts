@@ -125,8 +125,30 @@ Deno.serve(async (req) => {
         // Fallback: verificar WorkshopUser (usuários de empresa)
         const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
         if (wsUsers.length === 0) {
-          await recordAttempt(email, { success: false, failureReason: 'user_not_found', userType: 'unknown' });
-          return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+          // Fallback: verificar DiagnosticMechanic (mecânicos com acesso ao painel)
+          const mechanics = await base44.asServiceRole.entities.DiagnosticMechanic.filter({ email });
+          if (mechanics.length === 0) {
+            await recordAttempt(email, { success: false, failureReason: 'user_not_found', userType: 'unknown' });
+            return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+          }
+          const mech = mechanics.find(m => m.is_active !== false) || mechanics[0];
+          if (!mech.password || mech.password !== password) {
+            await recordAttempt(email, { success: false, failureReason: 'invalid_password', userName: mech.name, userType: 'unknown' });
+            return Response.json({ error: 'Email ou senha inválidos' }, { status: 401 });
+          }
+          await recordAttempt(email, { success: true, userName: mech.name, userType: 'unknown' });
+          return Response.json({
+            user: {
+              email: mech.email,
+              name: mech.name,
+              is_admin: false,
+              can_access_diagnostic: true,
+              is_mechanic: true,
+              mechanic_id: mech.id,
+              mechanic_user_email: mech.user_email,
+              mechanic_specialty: mech.specialty,
+            }
+          });
         }
         const wsUser = wsUsers[0];
         if (!wsUser.is_active) {

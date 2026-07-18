@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { APPS, CONTACT } from "@/lib/appRegistry";
 import { setPortalUser, getPortalUser } from "@/lib/portalSession";
+import { setMechanicSession } from "@/lib/mechanicSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,12 +48,25 @@ export default function AppLogin({ appId }) {
       });
       if (res.data.user) {
         const user = res.data.user;
-        if (!user.is_admin && !user[app.permission]) {
+        if (!user.is_admin && !user.is_mechanic && !user[app.permission]) {
           setError(`Sua licença não inclui acesso ao ${app.name}. Contate o suporte para adquirir.`);
           setLoading(false);
           return;
         }
         setPortalUser(user);
+        // Mecânico → redireciona para o painel do mecânico
+        if (user.is_mechanic) {
+          const mechSession = {
+            id: user.mechanic_id,
+            name: user.name,
+            email: user.email,
+            user_email: user.mechanic_user_email,
+            specialty: user.mechanic_specialty,
+          };
+          setMechanicSession(mechSession);
+          window.location.href = "/mecanico-painel";
+          return;
+        }
         if (user.must_change_password) {
           setLoggedInEmail(user.email);
           setMustChangePassword(true);
