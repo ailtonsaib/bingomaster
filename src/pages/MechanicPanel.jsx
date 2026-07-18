@@ -36,8 +36,8 @@ export default function MechanicPanel() {
     if (!mechanic) return;
     try {
       const all = await base44.entities.ServiceOrder.filter({ user_email: mechanic.user_email });
-      // Só OS direcionadas a este mecânico e não canceladas
-      const mine = all.filter(o => o.mechanic_id === mechanic.id && o.status !== "cancelada");
+      // Só OS direcionadas a este mecânico, não canceladas e não entregues
+      const mine = all.filter(o => o.mechanic_id === mechanic.id && o.status !== "cancelada" && o.status !== "entregue");
       setOrders(mine);
     } catch { /* ignore */ }
     setLoading(false);
@@ -158,8 +158,8 @@ export default function MechanicPanel() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         {/* Resumo de status */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-          {["aberta", "em_andamento", "aguardando_pecas", "concluida", "entregue"].map(st => (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {["aberta", "em_andamento", "aguardando_pecas", "concluida"].map(st => (
             <button
               key={st}
               onClick={() => setStatusFilter(statusFilter === st ? "all" : st)}
