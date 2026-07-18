@@ -1826,25 +1826,26 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'I030' && tipoDetectado === 'ECD') {
-        // Termo de abertura: |I030|NUM_ORD|NAT_LIVRO|TIPO_ESCRIT|DATA_INI|DATA_FIN|NOME|CNPJ|...
-        if (campos.length < 12) {
+        // Layout real Leiaute 8: |I030|TERMO_DE_ABERTURA|NUM_ORD|NAT_LIVRO|QTD_LINHAS|NOME|ASSINANTE|CNPJ|CPF|IE|MUNICIPIO|DT_FIN|
+        const cI030 = linha.split('|');
+        if (cI030.length < 13) {
           avisos.push({
             linha: linhaAtual, registro: 'I030',
-            mensagem: `Registro I030 (termo de abertura) incompleto: esperado mínimo de 12 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I030 (termo de abertura) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(campos[4], 'I030', linhaAtual, erros);
-        validarData8(campos[5], 'I030', linhaAtual, erros);
-        validarCpfCnpj(campos[7], 'I030', linhaAtual, erros, 'CPF/CNPJ');
+        if (cI030[8]) validarCpfCnpj(cI030[8].trim(), 'I030', linhaAtual, erros, 'CNPJ');
+        if (cI030[12]) validarData8(cI030[12].trim(), 'I030', linhaAtual, erros);
       }
 
       if (registro === 'I050' && tipoDetectado === 'ECD') {
         // |I050|DT_ALT|COD_NAT|IND_CTA|NIVEL|COD_CTA|COD_CTA_SUP|CTA|
-        if (campos.length < 8) {
+        // COD_CTA_SUP pode ser vazio (contas raiz), então mínimo com filtro = 7
+        if (campos.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: 'I050',
-            mensagem: `Registro I050 (plano de contas) incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I050 (plano de contas) incompleto.`,
             severidade: 'aviso'
           });
         }
@@ -1905,57 +1906,52 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'I155' && tipoDetectado === 'ECD') {
-        // Layout I155 (split sem filtro): |I155|COD_CTA|COD_CCUS|DT_INI|DT_FIN|VL_SLD_INI|IND_DC_INI|VL_DEB|VL_CRED|VL_SLD_FIN|IND_DC_FIN|
-        // Usa split raw para índices corretos (campos opcionais preservados)
+        // Layout real Leiaute 8: |I155|COD_CTA|COD_CCUS|VL_SLD_INI|IND_DC_INI|VL_DEB|VL_CRED|VL_SLD_FIN|IND_DC_FIN|
         const cI155 = linha.split('|');
-        // cI155[0]='' cI155[1]=I155 cI155[2]=COD_CTA cI155[3]=COD_CCUS cI155[4]=DT_INI cI155[5]=DT_FIN
-        // cI155[6]=VL_SLD_INI cI155[7]=IND_DC_INI cI155[8]=VL_DEB cI155[9]=VL_CRED cI155[10]=VL_SLD_FIN cI155[11]=IND_DC_FIN
-        if (cI155.length < 9) {
+        // cI155[2]=COD_CTA [3]=COD_CCUS [4]=VL_SLD_INI [5]=IND_DC_INI [6]=VL_DEB [7]=VL_CRED [8]=VL_SLD_FIN [9]=IND_DC_FIN
+        if (cI155.length < 10) {
           avisos.push({
             linha: linhaAtual, registro: 'I155',
-            mensagem: `Registro I155 (detalhes de saldos) incompleto: esperado mínimo de 9 campos, encontrado ${cI155.length - 2}.`,
+            mensagem: `Registro I155 (detalhes de saldos) incompleto.`,
             severidade: 'aviso'
           });
         }
-        // IND_DC_INI (posição 7) e IND_DC_FIN (posição 11)
-        if (cI155[7] && cI155[7].trim() && !['D','C'].includes(cI155[7].trim())) {
+        if (cI155[5] && cI155[5].trim() && !['D','C'].includes(cI155[5].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I155',
-            mensagem: `IND_DC_INI inválido: "${cI155[7]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC_INI inválido: "${cI155[5]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        if (cI155[11] && cI155[11].trim() && !['D','C'].includes(cI155[11].trim())) {
+        if (cI155[9] && cI155[9].trim() && !['D','C'].includes(cI155[9].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I155',
-            mensagem: `IND_DC_FIN inválido: "${cI155[11]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC_FIN inválido: "${cI155[9]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
       }
 
       if (registro === 'I200' && tipoDetectado === 'ECD') {
-        // Layout I200 (split raw): |I200|NUM_LCTO|DT_LCTO|IND_LCTO|VL_LCTO|IND_DC|HIST|
-        // cI200[1]=I200 [2]=NUM_LCTO [3]=DT_LCTO [4]=IND_LCTO [5]=VL_LCTO [6]=IND_DC [7]=HIST
+        // Layout real Leiaute 8: |I200|NUM_LCTO|DT_LCTO|VL_LCTO|IND_LCTO|HIST|COD_PART|
+        // cI200[2]=NUM_LCTO [3]=DT_LCTO [4]=VL_LCTO [5]=IND_LCTO [6]=HIST [7]=COD_PART
         const cI200 = linha.split('|');
-        if (cI200.length < 7) {
+        if (cI200.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'I200',
-            mensagem: `Registro I200 (lançamento contábil) incompleto: esperado mínimo de 6 campos, encontrado ${cI200.length - 2}.`,
+            mensagem: `Registro I200 (lançamento contábil) incompleto.`,
             severidade: 'aviso'
           });
         }
-        // DT_LCTO (posição 3)
         if (cI200[3]) validarData8(cI200[3].trim(), 'I200', linhaAtual, erros);
-        // IND_LCTO (posição 4): N=Normal, E=Extemporal, R=Reclassificação
-        if (cI200[4] && cI200[4].trim() && !['N','E','R'].includes(cI200[4].trim())) {
+        // IND_LCTO (posição 5): N=Normal, E=Extemporal, R=Reclassificação
+        if (cI200[5] && cI200[5].trim() && !['N','E','R'].includes(cI200[5].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I200',
-            mensagem: `IND_LCTO inválido: "${cI200[4]}" (deve ser N=Normal, E=Extemporal ou R=Reclassificação).`,
+            mensagem: `IND_LCTO inválido: "${cI200[5]}" (deve ser N=Normal, E=Extemporal ou R=Reclassificação).`,
             severidade: 'erro'
           });
         }
-        // IND_DC (posição 6): D ou C — não validar VL_LCTO numericamente pois tem formato BR
       }
 
       if (registro === 'I250' && tipoDetectado === 'ECD') {
@@ -2030,27 +2026,26 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'I355' && tipoDetectado === 'ECD') {
-        // |I355|COD_CTA|VL_CTA|IND_DC|
-        // Split SEM filtro para preservar índices
+        // Layout real: |I355|COD_CTA|COD_CCUS|VL_CTA|IND_DC|
         const cI355 = linha.split('|');
-        if (cI355.length < 5) {
+        if (cI355.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'I355',
             mensagem: `Registro I355 (detalhes dos saldos de resultado) incompleto.`,
             severidade: 'aviso'
           });
         }
-        if (cI355[4] && cI355[4].trim() && !['D','C'].includes(cI355[4].trim())) {
+        if (cI355[5] && cI355[5].trim() && !['D','C'].includes(cI355[5].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I355',
-            mensagem: `IND_DC inválido: "${cI355[4]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC inválido: "${cI355[5]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        if (cI355[3] && cI355[3].trim()) {
-          const v = cI355[3].trim().replace(',', '.');
+        if (cI355[4] && cI355[4].trim()) {
+          const v = cI355[4].trim().replace(',', '.');
           if (isNaN(parseFloat(v))) {
-            erros.push({ linha: linhaAtual, registro: 'I355', mensagem: `VL_CTA inválido: "${cI355[3]}".`, severidade: 'erro' });
+            erros.push({ linha: linhaAtual, registro: 'I355', mensagem: `VL_CTA inválido: "${cI355[4]}".`, severidade: 'erro' });
           }
         }
       }
@@ -2079,36 +2074,35 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'J100' && tipoDetectado === 'ECD') {
-        // |J100|DT_INI|DT_FIN|COD_CTA|COD_CTA_RES|VL_SLD_FIN|IND_DC|...
-        // Split SEM filtro para preservar índices (COD_CTA_RES pode ser vazio)
+        // Layout real Leiaute 8: |J100|COD_AGL|IND_GRP|NIVEL|COD_NAT|IND_CTA|DESC_COD_AGL|VL_SLD_INI|IND_DC_INI|VL_SLD_FIN|IND_DC_FIN|
         const cJ100 = linha.split('|');
-        if (cJ100.length < 8) {
+        if (cJ100.length < 9) {
           avisos.push({
             linha: linhaAtual, registro: 'J100',
             mensagem: `Registro J100 (balanço patrimonial) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(cJ100[2], 'J100', linhaAtual, erros);
-        validarData8(cJ100[3], 'J100', linhaAtual, erros);
-        if (cJ100[7] && cJ100[7].trim() && !['D','C'].includes(cJ100[7].trim())) {
-          erros.push({
-            linha: linhaAtual, registro: 'J100',
-            mensagem: `IND_DC inválido: "${cJ100[7]}" (deve ser D=Devedor ou C=Credor).`,
-            severidade: 'erro'
-          });
+        // IND_DC_INI (posição 9) e IND_DC_FIN (posição 11)
+        if (cJ100[9] && cJ100[9].trim() && !['D','C'].includes(cJ100[9].trim())) {
+          erros.push({ linha: linhaAtual, registro: 'J100', mensagem: `IND_DC_INI inválido: "${cJ100[9]}" (deve ser D=Devedor ou C=Credor).`, severidade: 'erro' });
         }
-        if (cJ100[6] && cJ100[6].trim()) {
-          const v = cJ100[6].trim().replace(',', '.');
-          if (isNaN(parseFloat(v))) {
-            erros.push({ linha: linhaAtual, registro: 'J100', mensagem: `VL_SLD_FIN inválido: "${cJ100[6]}".`, severidade: 'erro' });
+        if (cJ100[11] && cJ100[11].trim() && !['D','C'].includes(cJ100[11].trim())) {
+          erros.push({ linha: linhaAtual, registro: 'J100', mensagem: `IND_DC_FIN inválido: "${cJ100[11]}" (deve ser D=Devedor ou C=Credor).`, severidade: 'erro' });
+        }
+        // VL_SLD_INI (posição 8) e VL_SLD_FIN (posição 10) — validação numérica
+        for (const ji of [8, 10]) {
+          if (cJ100[ji] && cJ100[ji].trim()) {
+            const v = cJ100[ji].trim().replace(',', '.');
+            if (isNaN(parseFloat(v))) {
+              erros.push({ linha: linhaAtual, registro: 'J100', mensagem: `Valor numérico inválido no campo ${ji}: "${cJ100[ji]}".`, severidade: 'erro' });
+            }
           }
         }
       }
 
       if (registro === 'J150' && tipoDetectado === 'ECD') {
-        // |J150|DT_INI|DT_FIN|COD_CTA|COD_CTA_RES|VL_DEB|VL_CRED|IND_VL|...
-        // Split SEM filtro para preservar índices (COD_CTA_RES pode ser vazio)
+        // Layout real Leiaute 8: |J150|COD_AGL|COD_AGL_RES|IND_GRP|NIVEL|COD_NAT|DESC_COD_AGL|VL_DEB|IND_DC|VL_CRED|IND_DC_FIN|IND_VL|
         const cJ150 = linha.split('|');
         if (cJ150.length < 9) {
           avisos.push({
@@ -2117,16 +2111,15 @@ Deno.serve(async (req) => {
             severidade: 'aviso'
           });
         }
-        validarData8(cJ150[2], 'J150', linhaAtual, erros);
-        validarData8(cJ150[3], 'J150', linhaAtual, erros);
-        if (cJ150[8] && cJ150[8].trim() && !['D','C'].includes(cJ150[8].trim())) {
-          erros.push({
-            linha: linhaAtual, registro: 'J150',
-            mensagem: `IND_VL inválido: "${cJ150[8]}" (deve ser D=Despesa ou C=Receita).`,
-            severidade: 'erro'
-          });
+        // IND_DC (posição 9), IND_DC_FIN (posição 11), IND_VL (posição 12: D/C/R)
+        if (cJ150[9] && cJ150[9].trim() && !['D','C'].includes(cJ150[9].trim())) {
+          erros.push({ linha: linhaAtual, registro: 'J150', mensagem: `IND_DC inválido: "${cJ150[9]}" (deve ser D=Devedor ou C=Credor).`, severidade: 'erro' });
         }
-        for (let ji = 6; ji <= 7; ji++) {
+        if (cJ150[11] && cJ150[11].trim() && !['D','C'].includes(cJ150[11].trim())) {
+          erros.push({ linha: linhaAtual, registro: 'J150', mensagem: `IND_DC_FIN inválido: "${cJ150[11]}" (deve ser D=Devedor ou C=Credor).`, severidade: 'erro' });
+        }
+        // VL_DEB (posição 8) e VL_CRED (posição 10) — validação numérica
+        for (const ji of [8, 10]) {
           if (cJ150[ji] && cJ150[ji].trim()) {
             const v = cJ150[ji].trim().replace(',', '.');
             if (isNaN(parseFloat(v))) {
@@ -2185,19 +2178,17 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'J900' && tipoDetectado === 'ECD') {
-        // |J900|NUM_ORD|NAT_LIVR|DT_INI|DT_FIN|NOME|CNPJ|...
-        // Split SEM filtro para preservar índices (NAT_LIVR pode ser vazio)
+        // Layout real Leiaute 8: |J900|TERMO_DE_ENCERRAMENTO|NUM_ORD|NAT_LIVRO|NOME|QTD_LINHAS|DT_INI|DT_FIN|
         const cJ900 = linha.split('|');
-        if (cJ900.length < 8) {
+        if (cJ900.length < 9) {
           avisos.push({
             linha: linhaAtual, registro: 'J900',
             mensagem: `Registro J900 (termo de encerramento) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(cJ900[4], 'J900', linhaAtual, erros);
-        validarData8(cJ900[5], 'J900', linhaAtual, erros);
-        validarCpfCnpj(cJ900[7], 'J900', linhaAtual, erros, 'CNPJ');
+        validarData8(cJ900[7], 'J900', linhaAtual, erros);
+        validarData8(cJ900[8], 'J900', linhaAtual, erros);
       }
 
       if (registro === 'J930' && tipoDetectado === 'ECD') {

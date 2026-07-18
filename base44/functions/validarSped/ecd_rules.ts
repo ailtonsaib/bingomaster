@@ -190,9 +190,9 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
       for (let i = 0; i < linhas.length; i++) {
         const c = linhas[i].split('|');
         if (c[1] !== 'J900') continue;
-        // Layout J900: |J900|NUM_ORD|NAT_LIVR|DT_INI|DT_FIN|NOME|CNPJ|...
-        const dtIniJ900 = c[4] || '';
-        const dtFinJ900 = c[5] || '';
+        // Layout real: |J900|TERMO_DE_ENCERRAMENTO|NUM_ORD|NAT_LIVRO|NOME|QTD_LINHAS|DT_INI|DT_FIN|
+        const dtIniJ900 = c[7] || '';
+        const dtFinJ900 = c[8] || '';
         if (dtIniJ900 && dtIniEsc && dtIniJ900 !== dtIniEsc) {
           avisos.push({
             linha: i + 1,
@@ -219,11 +219,12 @@ export function corrigirECD(linhas) {
   for (let i = 0; i < linhas.length; i++) {
     const c = linhas[i].split('|');
     if (c[1] !== 'I155') continue;
-    const vlSldIni = parseNum(c[6]);
-    const indDcIni = (c[7] || '').toUpperCase().trim();
-    const vlDeb = parseNum(c[8]) || 0;
-    const vlCred = parseNum(c[9]) || 0;
-    const vlSldFin = parseNum(c[10]);
+    // Layout real: |I155|COD_CTA|COD_CCUS|VL_SLD_INI|IND_DC_INI|VL_DEB|VL_CRED|VL_SLD_FIN|IND_DC_FIN|
+    const vlSldIni = parseNum(c[4]);
+    const indDcIni = (c[5] || '').toUpperCase().trim();
+    const vlDeb = parseNum(c[6]) || 0;
+    const vlCred = parseNum(c[7]) || 0;
+    const vlSldFin = parseNum(c[8]);
     if (isNaN(vlSldIni) || isNaN(vlSldFin)) continue;
 
     let sldCalc;
@@ -236,9 +237,9 @@ export function corrigirECD(linhas) {
     const sldFinEsperado = Math.abs(sldCalc);
 
     if (Math.abs(sldFinEsperado - vlSldFin) > 0.02) {
-      c[10] = sldFinEsperado.toFixed(2).replace('.', ',');
+      c[8] = sldFinEsperado.toFixed(2).replace('.', ',');
     }
-    c[11] = indDcFinEsperado;
+    c[9] = indDcFinEsperado;
     linhas[i] = c.join('|');
   }
   return linhas;
