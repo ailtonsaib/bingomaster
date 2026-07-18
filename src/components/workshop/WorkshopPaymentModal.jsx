@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getPortalUser } from "@/lib/portalSession";
 import BoletoGenerator from "./BoletoGenerator";
 import DiscountAuthModal from "./DiscountAuthModal";
+import WorkshopReceiptPDF from "./WorkshopReceiptPDF";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -53,6 +54,7 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
   const [discount, setDiscount] = useState("");
   const [showDiscountAuth, setShowDiscountAuth] = useState(false);
   const [discountAuthorized, setDiscountAuthorized] = useState(null);
+  const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -196,7 +198,7 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
           title: "Pagamento registrado",
           description: `OS baixada no caixa — ${fmtMoney(finalTotal)} via ${paymentMethod}${hasDiscount ? ` (desc. ${fmtMoney(discountValue)} autorizado por ${discountAuthorized})` : ""}.`
         });
-        onConfirmed?.();
+        setReceiptData({ paymentMethod, discountValue, finalTotal });
       }
     } catch {
       toast({ title: "Erro", description: "Não foi possível registrar o pagamento.", variant: "destructive" });
@@ -212,6 +214,20 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
         order={order}
         companyConfig={companyConfig || {}}
         dueDate={generatedBoleto.dueDate}
+        onClose={() => { onConfirmed?.(); }}
+      />
+    );
+  }
+
+  // Exibe o recibo após pagamento confirmado (não boleto)
+  if (receiptData) {
+    return (
+      <WorkshopReceiptPDF
+        order={order}
+        companyConfig={companyConfig || {}}
+        paymentMethod={receiptData.paymentMethod}
+        discountValue={receiptData.discountValue}
+        finalTotal={receiptData.finalTotal}
         onClose={() => { onConfirmed?.(); }}
       />
     );
