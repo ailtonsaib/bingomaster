@@ -61,6 +61,8 @@ import DiagnosticLogin from '@/pages/DiagnosticLogin';
 import DiagnosticAuto from '@/pages/DiagnosticAuto';
 import Workshop from '@/pages/Workshop';
 import OficinaTelao from '@/pages/OficinaTelao';
+import MechanicLogin from '@/pages/MechanicLogin';
+import MechanicPanel from '@/pages/MechanicPanel';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -162,6 +164,9 @@ const AuthenticatedApp = () => {
         <Route path="/diagnostico-auto" element={<DiagnosticAuto />} />
         <Route path="/diagnostico-oficina" element={<Workshop />} />
         <Route path="/oficina-telao" element={<OficinaTelao />} />
+      {/* Painel do Mecânico — login próprio com senha */}
+      <Route path="/mecanico" element={<MechanicLogin />} />
+      <Route path="/mecanico-painel" element={<MechanicPanel />} />
       </Route>
       {/* PDV — Frente de Caixa */}
       <Route path="/pdv" element={<PDVLogin />} />

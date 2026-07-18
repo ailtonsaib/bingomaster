@@ -20,7 +20,11 @@
     },
     "email": {
       "type": "string",
-      "description": "Email"
+      "description": "Email de login do mec\u00e2nico"
+    },
+    "password": {
+      "type": "string",
+      "description": "Senha de acesso do mec\u00e2nico ao painel"
     },
     "specialty": {
       "type": "string",

@@ -24,7 +24,7 @@ export default function MechanicManager({ userEmail }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", cpf: "", phone: "", email: "", specialty: "geral", hire_date: "", commission_rate: 0, is_active: true });
+  const [form, setForm] = useState({ name: "", cpf: "", phone: "", email: "", password: "", specialty: "geral", hire_date: "", commission_rate: 0, is_active: true });
 
   const load = async () => {
     try {
@@ -38,13 +38,13 @@ export default function MechanicManager({ userEmail }) {
 
   const handleEdit = (m) => {
     setEditing(m);
-    setForm({ name: m.name, cpf: m.cpf || "", phone: m.phone || "", email: m.email || "", specialty: m.specialty || "geral", hire_date: m.hire_date || "", commission_rate: m.commission_rate || 0, is_active: m.is_active !== false });
+    setForm({ name: m.name, cpf: m.cpf || "", phone: m.phone || "", email: m.email || "", password: m.password || "", specialty: m.specialty || "geral", hire_date: m.hire_date || "", commission_rate: m.commission_rate || 0, is_active: m.is_active !== false });
     setShowForm(true);
   };
 
   const handleNew = () => {
     setEditing(null);
-    setForm({ name: "", cpf: "", phone: "", email: "", specialty: "geral", hire_date: "", commission_rate: 0, is_active: true });
+    setForm({ name: "", cpf: "", phone: "", email: "", password: "", specialty: "geral", hire_date: "", commission_rate: 0, is_active: true });
     setShowForm(true);
   };
 
@@ -140,9 +140,13 @@ export default function MechanicManager({ userEmail }) {
                 <Label className="text-sm">Telefone</Label>
                 <Input value={form.phone} onChange={e => setForm({ ...form, phone: maskPhone(e.target.value) })} className="mt-1" />
               </div>
-              <div className="col-span-2">
-                <Label className="text-sm">Email</Label>
+              <div>
+                <Label className="text-sm">Email (Login)</Label>
                 <Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-sm">Senha de Acesso</Label>
+                <Input type="text" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Senha do painel" className="mt-1" />
               </div>
               <div>
                 <Label className="text-sm">Especialidade</Label>
