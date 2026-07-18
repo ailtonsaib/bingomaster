@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo, useDeferredValue, useCallback } from 'react';
+import React, { useState, useMemo, memo, useDeferredValue, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -152,8 +152,17 @@ const LogEntry = memo(function LogEntry({ entry, linhaConteudo, idx }) {
 function ValidationLogPanel({ resultado, conteudo }) {
   const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
-  const [limite, setLimite] = useState(30);
+  const [limite, setLimite] = useState(50);
   const buscaDeferida = useDeferredValue(busca);
+  const scrollRef = useRef(null);
+  const sentinelRef = useRef(null);
+  const carregandoMais = useRef(false);
+
+  // Carregamento infinito via IntersectionObserver — detecta quando o usuário
+  // rola perto do final e incrementa o limite sem travar a UI
+  const carregarMais = useCallback(() => {
+    setLimite((prev) => prev + 50);
+  }, []);
 
   // Busca preguiçosa de linha: em vez de dividir o arquivo inteiro (628KB → 11.818 strings),
   // localiza apenas a linha solicitada usando indexOf — O(linhaNum) mas só para itens visíveis
@@ -196,15 +205,38 @@ function ValidationLogPanel({ resultado, conteudo }) {
   }, [todasEntradas, buscaDeferida, filtroTipo]);
 
   // Reset paginação quando filtros mudam
-  React.useEffect(() => {
-    setLimite(30);
+  useEffect(() => {
+    setLimite(50);
   }, [buscaDeferida, filtroTipo]);
+
+  // IntersectionObserver — carrega mais itens quando o sentinel fica visível
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const scrollContainer = scrollRef.current;
+    if (!sentinel || !scrollContainer) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !carregandoMais.current) {
+          carregandoMais.current = true;
+          carregarMais();
+          setTimeout(() => { carregandoMais.current = false; }, 150);
+        }
+      },
+      { root: scrollContainer, rootMargin: '100px', threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [carregarMais, entradasFiltradas.length]);
 
   if (!resultado) return null;
 
   const totalErros = resultado.erros?.length || 0;
   const totalAvisos = resultado.avisos?.length || 0;
   const visiveis = entradasFiltradas.slice(0, limite);
+  const temMais = entradasFiltradas.length > limite;
 
 
   return (
@@ -277,7 +309,7 @@ function ValidationLogPanel({ resultado, conteudo }) {
           </div>
         ) : (
           <>
-            <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
+            <div ref={scrollRef} className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1 scroll-smooth">
               {visiveis.map((entry, idx) => (
                 <LogEntry
                   key={entry._origIdx}
@@ -286,11 +318,27 @@ function ValidationLogPanel({ resultado, conteudo }) {
                   idx={idx}
                 />
               ))}
+              {/* Sentinel para carregamento infinito — dispara quando visível */}
+              {temMais && (
+                <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
+                  <div className="w-5 h-5 border-2 border-slate-300 border-t-primary rounded-full animate-spin" />
+                  <span className="text-xs">Carregando mais {Math.min(50, entradasFiltradas.length - limite)} de {entradasFiltradas.length - limite}...</span>
+                </div>
+              )}
+              {!temMais && entradasFiltradas.length > 50 && (
+                <div className="text-center py-3 text-xs text-muted-foreground border-t border-slate-200">
+                  Fim da lista — {entradasFiltradas.length} ocorrência(s) carregada(s)
+                </div>
+              )}
             </div>
-            {entradasFiltradas.length > limite && (
-              <div className="text-center">
-                <Button variant="outline" size="sm" onClick={() => setLimite(l => l + 30)}>
-                  Ver mais ({entradasFiltradas.length - limite} restantes)
+            {/* Botão de fallback para carregamento manual */}
+            {temMais && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {visiveis.length} de {entradasFiltradas.length} exibidos
+                </span>
+                <Button variant="outline" size="sm" onClick={carregarMais}>
+                  Carregar mais 50
                 </Button>
               </div>
             )}
