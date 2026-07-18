@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2, ArrowDownToLine, Monitor, ShieldCheck } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2, ArrowDownToLine, Monitor, ShieldCheck, Receipt } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
@@ -21,6 +21,7 @@ import WorkshopFinancePanel from "@/components/workshop/WorkshopFinancePanel";
 import CompanyConfigModal from "@/components/workshop/CompanyConfigModal";
 import CompanySelectorModal from "@/components/workshop/CompanySelectorModal";
 import ServiceOrderAuditPanel from "@/components/workshop/ServiceOrderAuditPanel";
+import WorkshopCaixaModal from "@/components/workshop/WorkshopCaixaModal";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -59,6 +60,7 @@ export default function Workshop() {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [showSelector, setShowSelector] = useState(false);
   const [loadingCompanies, setLoadingCompanies] = useState(!isSuperAdmin);
+  const [caixaOpen, setCaixaOpen] = useState(false);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -158,6 +160,13 @@ export default function Workshop() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors"
             >
               <Building2 className="w-4 h-4" /> Empresa
+            </button>
+            <button
+              onClick={() => setCaixaOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors"
+              title="Abrir caixa para recebimento de clientes"
+            >
+              <Receipt className="w-4 h-4" /> Caixa
             </button>
             <button
               onClick={() => window.open("/oficina-telao", "_blank")}
@@ -260,6 +269,16 @@ export default function Workshop() {
           }}
         />
       )}
+
+      <WorkshopCaixaModal
+        userEmail={effectiveEmail}
+        open={caixaOpen}
+        onClose={() => setCaixaOpen(false)}
+        onGoToFinance={() => {
+          setCaixaOpen(false);
+          setActiveTab("finance");
+        }}
+      />
     </div>
   );
 }
