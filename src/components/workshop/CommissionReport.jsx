@@ -46,10 +46,12 @@ export default function CommissionReport({ userEmail }) {
       const end = new Date(endDate + "T23:59:59");
 
       const filtered = allOrders.filter(o => {
+        // Só OS encerradas (concluída ou entregue)
         const statusOk = o.status === "concluida" || o.status === "entregue";
         if (!statusOk) return false;
         if (mechanicFilter !== "all" && o.mechanic_id !== mechanicFilter) return false;
-        const ref = o.completion_date || o.delivery_date || o.start_date;
+        // Usa exclusivamente a data de conclusão ou entrega — OS não encerrada no período não entra
+        const ref = o.completion_date || o.delivery_date;
         if (!ref) return false;
         const d = new Date(ref);
         return d >= start && d <= end;
