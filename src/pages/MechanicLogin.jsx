@@ -23,10 +23,10 @@ export default function MechanicLogin() {
     setLoading(true);
     setError("");
     try {
-      const mechanics = await base44.entities.DiagnosticMechanic.filter({ email: email.trim(), is_active: true });
-      const mech = mechanics.find(m => m.password === password.trim());
+      const mechanics = await base44.entities.DiagnosticMechanic.filter({ email: email.trim() });
+      const mech = mechanics.find(m => m.is_active !== false && m.password === password.trim());
       if (!mech) {
-        setError("Email ou senha incorretos.");
+        setError("Email ou senha incorretos. Verifique com o administrador.");
         setLoading(false);
         return;
       }
