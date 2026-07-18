@@ -38,7 +38,7 @@ export default function DiagnosticPrintView({ data }) {
               <Wrench className="w-7 h-7 text-[#2563EB]" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Relatório de Diagnóstico Automotivo</h1>
+              <h1 className="text-xl font-bold">Relatório — Oficina Premium</h1>
               <p className="text-sm text-gray-500">SoftPremier — Diagnóstico OBD2</p>
             </div>
           </div>

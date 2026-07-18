@@ -203,7 +203,7 @@ export const APPS = [
   {
     id: "diagnostic",
     category: "empresas",
-    name: "Sistema Automotivo",
+    name: "Oficina Premium",
     icon: "Wrench",
     iconBg: "bg-[#DBEAFE]",
     iconColor: "text-[#2563EB]",
@@ -211,7 +211,7 @@ export const APPS = [
     entryRoute: "/diagnostico",
     permission: "can_access_diagnostic",
     external: false,
-    tagline: "Diagnóstico IA + Oficina Mecânica",
+    tagline: "Gestão Completa para Oficinas",
     image: "https://images.unsplash.com/photo-1632823469850-2f77dd9c7f93?w=800&auto=format&fit=crop&q=80",
     description:
       "Sistema completo para oficinas mecânicas: diagnóstico automotivo por IA, ordens de serviço, cadastro de mecânicos, controle de peças e estoque, histórico de veículos e clientes. Tudo integrado em um só lugar.",

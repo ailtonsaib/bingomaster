@@ -309,7 +309,7 @@ export default function PortalAdmin() {
                 <Wrench className="w-5 h-5 text-cyan-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Diagnóstico</p>
+                <p className="text-xs text-muted-foreground">Oficina Premium</p>
                 <p className="text-lg font-bold">{diagnosticUsers.length}</p>
               </div>
             </CardContent>
@@ -366,7 +366,7 @@ export default function PortalAdmin() {
                     <th className="text-left p-3 font-medium">ERP - COMERCIAL</th>
                     <th className="text-left p-3 font-medium">Chamados</th>
                     <th className="text-left p-3 font-medium">SPED</th>
-                    <th className="text-left p-3 font-medium">Diagnóstico</th>
+                    <th className="text-left p-3 font-medium">Oficina Premium</th>
                     <th className="text-left p-3 font-medium">Acesso</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-right p-3 font-medium">Ações</th>
