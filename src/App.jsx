@@ -63,6 +63,7 @@ import Workshop from '@/pages/Workshop';
 import OficinaTelao from '@/pages/OficinaTelao';
 import MechanicLogin from '@/pages/MechanicLogin';
 import MechanicPanel from '@/pages/MechanicPanel';
+import CaixaPanel from '@/pages/CaixaPanel';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -167,6 +168,8 @@ const AuthenticatedApp = () => {
       {/* Painel do Mecânico — login próprio com senha */}
       <Route path="/mecanico" element={<MechanicLogin />} />
       <Route path="/mecanico-painel" element={<MechanicPanel />} />
+      {/* Painel do Caixa — usuário com role "caixa" redireciona após login */}
+      <Route path="/caixa-painel" element={<CaixaPanel />} />
       </Route>
       {/* PDV — Frente de Caixa */}
       <Route path="/pdv" element={<PDVLogin />} />

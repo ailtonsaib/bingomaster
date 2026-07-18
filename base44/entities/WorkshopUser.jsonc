@@ -27,10 +27,11 @@
       "enum": [
         "admin",
         "operador",
-        "visualizador"
+        "visualizador",
+        "caixa"
       ],
       "default": "operador",
-      "description": "Papel: admin (acesso total), operador, visualizador"
+      "description": "Papel: admin (acesso total), operador, visualizador, caixa (apenas painel de caixa)"
     },
     "allowed_panels": {
       "type": "array",

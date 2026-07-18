@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, Pencil, Trash2, X, Shield, Eye, Wrench, Loader2, Search, Users, BadgePercent } from "lucide-react";
+import { UserPlus, Pencil, Trash2, X, Shield, Eye, Wrench, Loader2, Search, Users, BadgePercent, Receipt } from "lucide-react";
 import { maskPhone } from "@/lib/brMasks";
 
 // Painéis disponíveis (mesmos IDs do TABS do Workshop)
@@ -29,6 +29,7 @@ const ROLES = [
   { id: "admin", label: "Administrador", icon: Shield, desc: "Acesso total a todos os painéis" },
   { id: "operador", label: "Operador", icon: Wrench, desc: "Acesso aos painéis selecionados" },
   { id: "visualizador", label: "Visualizador", icon: Eye, desc: "Apenas visualização" },
+  { id: "caixa", label: "Caixa", icon: Receipt, desc: "Acesso apenas ao painel de Caixa (recebimentos)" },
 ];
 
 export default function UserManager({ userEmail }) {

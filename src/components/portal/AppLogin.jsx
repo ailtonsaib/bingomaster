@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { APPS, CONTACT } from "@/lib/appRegistry";
-import { setPortalUser } from "@/lib/portalSession";
+import { setPortalUser, getPortalUser } from "@/lib/portalSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +57,11 @@ export default function AppLogin({ appId }) {
           setLoggedInEmail(user.email);
           setMustChangePassword(true);
           setLoading(false);
+          return;
+        }
+        // Caixa role → redireciona para painel exclusivo de caixa
+        if (user.workshop_role === "caixa") {
+          window.location.href = "/caixa-painel";
           return;
         }
         // Track app usage
@@ -164,7 +169,8 @@ export default function AppLogin({ appId }) {
           onClose={() => setMustChangePassword(false)}
           onPasswordChanged={() => {
             setMustChangePassword(false);
-            window.location.href = app.url;
+            const saved = getPortalUser();
+            window.location.href = saved?.workshop_role === "caixa" ? "/caixa-painel" : app.url;
           }}
         />
       )}
