@@ -23,6 +23,16 @@
       "default": "aberta",
       "description": "Status: aberta, em_andamento, aguardando_pecas, concluida, entregue, cancelada"
     },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "baixa",
+        "media",
+        "alta"
+      ],
+      "default": "media",
+      "description": "Prioridade da OS: baixa, media ou alta"
+    },
     "client_id": {
       "type": "string",
       "description": "ID do cliente"

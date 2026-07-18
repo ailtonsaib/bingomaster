@@ -13,6 +13,12 @@ const STATUS_CONFIG = {
   cancelada: { label: "Cancelada", color: "bg-red-500", text: "text-red-100", ring: "ring-red-400/40" },
 };
 
+const PRIORITY_CONFIG = {
+  alta: { label: "Alta", color: "bg-red-500", text: "text-red-100", border: "border-l-red-500" },
+  media: { label: "Média", color: "bg-yellow-500", text: "text-yellow-100", border: "border-l-yellow-500" },
+  baixa: { label: "Baixa", color: "bg-green-500", text: "text-green-100", border: "border-l-green-500" },
+};
+
 const OPEN_STATUSES = ["aberta", "em_andamento", "aguardando_pecas"];
 
 function formatPlate(plate) {
@@ -179,16 +185,20 @@ export default function OficinaTelao() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
             {orders.map(order => {
               const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.aberta;
+              const prio = PRIORITY_CONFIG[order.priority] || PRIORITY_CONFIG.media;
               const overdue = isOverdue(order);
               return (
                 <div
                   key={order.id}
-                  className={`relative rounded-2xl bg-slate-900 ring-2 ${overdue ? "ring-red-500 shadow-[0_0_18px_rgba(239,68,68,0.45)]" : "ring-1 " + config.ring} overflow-hidden flex flex-col`}
+                  className={`relative rounded-2xl bg-slate-900 ring-2 border-l-4 ${prio.border} ${overdue ? "ring-red-500 shadow-[0_0_18px_rgba(239,68,68,0.45)]" : "ring-1 " + config.ring} overflow-hidden flex flex-col`}
                 >
                   {/* Status bar */}
                   <div className={`${config.color} px-4 py-2 flex items-center justify-between`}>
                     <span className="text-sm font-bold text-white">OS #{order.order_number || "—"}</span>
                     <div className="flex items-center gap-2">
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md ${prio.color} text-white text-[10px] font-bold uppercase tracking-wide`}>
+                        {prio.label}
+                      </span>
                       {overdue && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-bold uppercase tracking-wide animate-pulse">
                           <AlertCircle className="w-3 h-3" /> Atrasada

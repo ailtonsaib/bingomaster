@@ -32,6 +32,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
   const [diagnosis, setDiagnosis] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [warrantyMonths, setWarrantyMonths] = useState(0);
+  const [priority, setPriority] = useState("media");
 
   const [partSearch, setPartSearch] = useState("");
   const [showPartDropdown, setShowPartDropdown] = useState(false);
@@ -89,6 +90,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         setDiagnosis(editOrder.technical_diagnosis || "");
         setScheduledDate(editOrder.scheduled_date ? editOrder.scheduled_date.split("T")[0] : "");
         setWarrantyMonths(editOrder.warranty_months || 0);
+        setPriority(editOrder.priority || "media");
         setItems(editOrder.items || []);
         setDiscount(editOrder.discount || 0);
         setNotes(editOrder.notes || "");
@@ -319,6 +321,7 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         total,
         scheduled_date: scheduledDate || "",
         warranty_months: Number(warrantyMonths) || 0,
+        priority,
         notes,
       };
 
@@ -498,6 +501,30 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         <div>
           <Label className="text-sm font-semibold">Previsão de Conclusão</Label>
           <Input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} className="h-10 mt-1" />
+        </div>
+      </div>
+
+      {/* Priority */}
+      <div>
+        <Label className="text-sm font-semibold">Prioridade</Label>
+        <div className="flex gap-2 mt-1">
+          {[
+            { value: "baixa", label: "Baixa", color: "bg-green-100 text-green-700 border-green-300", dot: "bg-green-500" },
+            { value: "media", label: "Média", color: "bg-yellow-100 text-yellow-700 border-yellow-300", dot: "bg-yellow-500" },
+            { value: "alta", label: "Alta", color: "bg-red-100 text-red-700 border-red-300", dot: "bg-red-500" },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPriority(opt.value)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                priority === opt.value ? `${opt.color} border-current` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${opt.dot}`} />
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
