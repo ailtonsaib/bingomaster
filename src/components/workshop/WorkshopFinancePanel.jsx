@@ -12,6 +12,7 @@ import WorkshopCaixaPanel from "@/components/workshop/WorkshopCaixaPanel";
 import WorkshopCaixaFechamento from "@/components/workshop/WorkshopCaixaFechamento";
 import WorkshopRelatorioFinanceiro from "@/components/workshop/WorkshopRelatorioFinanceiro";
 import WorkshopDashboardDiario from "@/components/workshop/WorkshopDashboardDiario";
+import WorkshopMovimentacaoCaixa from "@/components/workshop/WorkshopMovimentacaoCaixa";
 import { useToast } from "@/components/ui/use-toast";
 
 const fmtMoney = (v) => `R$ ${parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -210,6 +211,9 @@ export default function WorkshopFinancePanel({ userEmail }) {
 
       {/* Relatório Financeiro de Contas — filtro de data e status */}
       <WorkshopRelatorioFinanceiro transactions={transactions} />
+
+      {/* Relatório de Movimentações de Caixa — todas as movimentações com saldo corrido */}
+      <WorkshopMovimentacaoCaixa transactions={transactions} />
 
       {/* Cadastro de Contas Bancárias */}
       <WorkshopBankManager userEmail={userEmail} />
