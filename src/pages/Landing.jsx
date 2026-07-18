@@ -98,51 +98,40 @@ function AppCard({ app, onOpenPlans, loading }) {
         />
       )}
 
-      {/* Plans preview */}
+      {/* Free plan preview */}
       <div className="px-8 pb-4">
-        <TooltipProvider delayDuration={200}>
-          <div className="flex flex-wrap gap-1.5">
-            {loading ? (
-              <>
-                <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
-                <div className="h-6 w-24 rounded-full bg-gray-100 animate-pulse" />
-                <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
-              </>
-            ) : (
-              app.plans?.map((plan, i) => {
-                const specs = getPlanSpecs(plan);
-                const priceLabel = plan.price === 0 && plan.description ? plan.description : currency(plan.price);
-                return (
-                  <Tooltip key={i}>
-                    <TooltipTrigger asChild>
-                      <span
-                        className="text-xs px-2.5 py-1 rounded-full font-medium cursor-help transition-opacity hover:opacity-80"
-                        style={{ backgroundColor: `${app.accent}15`, color: app.accent }}
-                      >
-                        {plan.name}: {priceLabel}
-                      </span>
-                    </TooltipTrigger>
-                    {specs.length > 0 && (
-                      <TooltipContent side="bottom" className="max-w-[220px]">
-                        <div className="space-y-1">
-                          <p className="font-bold text-xs">{plan.name}</p>
-                          <ul className="space-y-0.5">
-                            {specs.map((spec, j) => (
-                              <li key={j} className="flex items-start gap-1.5 text-xs">
-                                <Check className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
-                                {spec}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                );
-              })
-            )}
-          </div>
-        </TooltipProvider>
+        <div className="flex flex-wrap gap-1.5">
+          {loading ? (
+            <>
+              <div className="h-6 w-20 rounded-full bg-gray-100 animate-pulse" />
+              <div className="h-6 w-24 rounded-full bg-gray-100 animate-pulse" />
+            </>
+          ) : (
+            (() => {
+              const freePlan = app.plans?.find((p) => p.price === 0) || app.plans?.[0];
+              const specs = freePlan ? getPlanSpecs(freePlan).slice(0, 2) : [];
+              return (
+                <>
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{ backgroundColor: `${app.accent}15`, color: app.accent }}
+                  >
+                    Free: {specs.join(" • ") || "Comece grátis"}
+                  </span>
+                  {app.plans && app.plans.length > 1 && (
+                    <button
+                      onClick={() => onOpenPlans(app)}
+                      className="text-xs px-2.5 py-1 rounded-full font-medium border transition-opacity hover:opacity-80"
+                      style={{ borderColor: `${app.accent}40`, color: app.accent }}
+                    >
+                      Ver planos →
+                    </button>
+                  )}
+                </>
+              );
+            })()
+          )}
+        </div>
       </div>
 
       {/* Actions */}
