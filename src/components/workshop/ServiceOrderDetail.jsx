@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil, FileText } from "lucide-react";
+import { ArrowLeft, Printer, Phone, Car, UserCog, Calendar, Shield, Pencil, FileText, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import ResponsibilityTermModal from "@/components/workshop/ResponsibilityTermModal";
 import { printElements } from "@/lib/printUtils";
@@ -38,28 +38,34 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
       await base44.entities.ServiceOrder.update(order.id, updateData);
 
       // Ao concluir a OS, cria automaticamente um título a receber no financeiro da oficina
+      // EXCETO se for OS de retorno sem itens adicionais (total = 0)
       if (willBeConcluida && !wasConcluida) {
-        const existing = await base44.entities.PortalFinanceTransaction.filter({
-          user_email: userEmail,
-          source_module: "workshop",
-        }).then(list => list.filter(t => t.description && t.description.includes(order.order_number)));
-        if (existing.length === 0) {
-          await base44.entities.PortalFinanceTransaction.create({
-            user_email: userEmail,
-            description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
-            amount: order.total || 0,
-            type: "income",
-            source_module: "workshop",
-            category: "Ordem de Serviço",
-            date: new Date().toISOString(),
-            launch_date: new Date().toISOString(),
-            due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
-            contact_name: order.client_name || "",
-            status: "pending",
-          });
-          toast({ title: "OS concluída", description: `Título de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total || 0)} gerado no financeiro.` });
+        const isReturnWithoutItems = order.is_return && (!order.items || order.items.length === 0) && (!order.total || order.total === 0);
+        if (isReturnWithoutItems) {
+          toast({ title: "OS de Retorno concluída", description: "Sem itens adicionais — nenhum título financeiro gerado." });
         } else {
-          toast({ title: "OS concluída", description: "Status atualizado. Título financeiro já existia." });
+          const existing = await base44.entities.PortalFinanceTransaction.filter({
+            user_email: userEmail,
+            source_module: "workshop",
+          }).then(list => list.filter(t => t.description && t.description.includes(order.order_number)));
+          if (existing.length === 0) {
+            await base44.entities.PortalFinanceTransaction.create({
+              user_email: userEmail,
+              description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
+              amount: order.total || 0,
+              type: "income",
+              source_module: "workshop",
+              category: "Ordem de Serviço",
+              date: new Date().toISOString(),
+              launch_date: new Date().toISOString(),
+              due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+              contact_name: order.client_name || "",
+              status: "pending",
+            });
+            toast({ title: "OS concluída", description: `Título de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total || 0)} gerado no financeiro.` });
+          } else {
+            toast({ title: "OS concluída", description: "Status atualizado. Título financeiro já existia." });
+          }
         }
       } else if (newStatus === "cancelada" && wasConcluida) {
         const txs = await base44.entities.PortalFinanceTransaction.filter({
@@ -109,8 +115,16 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
         {/* Header */}
         <div className="flex items-start justify-between border-b pb-4">
           <div>
-            <h2 className="text-xl font-bold">{order.order_number}</h2>
-            <p className="text-xs text-gray-500">Aberta em {formatDate(order.created_date)}</p>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              {order.is_return && <RotateCcw className="w-5 h-5 text-amber-500" />}
+              {order.order_number}
+            </h2>
+            <p className="text-xs text-gray-500">
+              Aberta em {formatDate(order.created_date)}
+              {order.is_return && order.original_order_number && (
+                <span className="ml-2 text-amber-600">• Retorno da OS {order.original_order_number}</span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>{statusInfo.label}</span>
@@ -181,6 +195,42 @@ export default function ServiceOrderDetail({ order, userEmail, onBack, onEdit })
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{order.technical_diagnosis}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Itens originais (OS de retorno) */}
+        {order.is_return && order.original_items && order.original_items.length > 0 && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+            <p className="text-xs font-semibold text-amber-600 mb-2 flex items-center gap-1">
+              <RotateCcw className="w-3.5 h-3.5" />
+              ITENS DA OS ORIGINAL {order.original_order_number || ""} (não cobrados)
+            </p>
+            <table className="w-full text-sm border border-amber-100 rounded-lg overflow-hidden">
+              <thead className="bg-amber-100/50 text-left">
+                <tr>
+                  <th className="p-2 font-medium">Tipo</th>
+                  <th className="p-2 font-medium">Descrição</th>
+                  <th className="p-2 font-medium text-center">Qtd</th>
+                  <th className="p-2 font-medium text-right">Valor Unit.</th>
+                  <th className="p-2 font-medium text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.original_items.map((item, idx) => (
+                  <tr key={idx} className="border-t border-amber-100">
+                    <td className="p-2">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${item.type === "peca" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
+                        {item.type === "peca" ? "Peça" : "Serviço"}
+                      </span>
+                    </td>
+                    <td className="p-2">{item.description}</td>
+                    <td className="p-2 text-center">{item.quantity}</td>
+                    <td className="p-2 text-right">{formatCurrency(item.unit_price)}</td>
+                    <td className="p-2 text-right font-medium text-gray-400 line-through">{formatCurrency(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 

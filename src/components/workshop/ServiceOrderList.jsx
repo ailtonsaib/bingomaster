@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, Search, ClipboardList, Car, ChevronDown } from "lucide-react";
+import { Plus, Loader2, Search, ClipboardList, Car, ChevronDown, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import ServiceOrderForm from "./ServiceOrderForm";
 import ServiceOrderDetail from "./ServiceOrderDetail";
@@ -74,29 +74,35 @@ export default function ServiceOrderList({ userEmail }) {
       });
 
       // Ao concluir a OS, cria automaticamente um título a receber no financeiro
+      // EXCETO se for OS de retorno sem itens adicionais (total = 0)
       if (willBeConcluida && !wasConcluida) {
-        const existing = await base44.entities.PortalFinanceTransaction.filter({
-          user_email: userEmail,
-          transaction_id: order.id,
-        });
-        if (existing.length === 0) {
-          await base44.entities.PortalFinanceTransaction.create({
+        const isReturnWithoutItems = order.is_return && (!order.items || order.items.length === 0) && (!order.total || order.total === 0);
+        if (isReturnWithoutItems) {
+          toast({ title: "OS de Retorno concluída", description: "Sem itens adicionais — nenhum título financeiro gerado." });
+        } else {
+          const existing = await base44.entities.PortalFinanceTransaction.filter({
             user_email: userEmail,
-            description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
-            amount: order.total || 0,
-            type: "income",
-            source_module: "workshop",
-            category: "Ordem de Serviço",
-            date: new Date().toISOString(),
-            launch_date: new Date().toISOString(),
-            due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
-            contact_name: order.client_name || "",
-            status: "pending",
             transaction_id: order.id,
           });
-          toast({ title: "OS concluída", description: `Título de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total || 0)} gerado no financeiro.` });
-        } else {
-          toast({ title: "OS concluída", description: "Status atualizado. Título financeiro já existia." });
+          if (existing.length === 0) {
+            await base44.entities.PortalFinanceTransaction.create({
+              user_email: userEmail,
+              description: `OS ${order.order_number} — ${order.vehicle_brand || ""} ${order.vehicle_model || ""}`.trim(),
+              amount: order.total || 0,
+              type: "income",
+              source_module: "workshop",
+              category: "Ordem de Serviço",
+              date: new Date().toISOString(),
+              launch_date: new Date().toISOString(),
+              due_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+              contact_name: order.client_name || "",
+              status: "pending",
+              transaction_id: order.id,
+            });
+            toast({ title: "OS concluída", description: `Título de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total || 0)} gerado no financeiro.` });
+          } else {
+            toast({ title: "OS concluída", description: "Status atualizado. Título financeiro já existia." });
+          }
         }
       } else if (newStatus === "cancelada" && wasConcluida) {
         // Se cancelar uma OS que estava concluída, remove o título pendente
@@ -291,7 +297,12 @@ export default function ServiceOrderList({ userEmail }) {
             <tbody>
               {filtered.map((o) => (
                 <tr key={o.id} onClick={() => handleViewDetail(o)} className="border-t border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors">
-                  <td className="p-3 font-mono text-xs font-medium text-blue-600">{o.order_number}</td>
+                  <td className="p-3 font-mono text-xs font-medium text-blue-600">
+                    <div className="flex items-center gap-1">
+                      {o.is_return && <RotateCcw className="w-3 h-3 text-amber-500" />}
+                      {o.order_number}
+                    </div>
+                  </td>
                   <td className="p-3 font-medium">{o.client_name}</td>
                   <td className="p-3 text-gray-500">
                     <span className="flex items-center gap-1">

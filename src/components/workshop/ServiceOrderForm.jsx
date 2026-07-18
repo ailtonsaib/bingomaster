@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, Loader2, Search, Package, Wrench, User, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Search, Package, Wrench, User, AlertCircle, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { maskCpfCnpj, onlyDigits } from "@/lib/brMasks";
 
@@ -47,6 +47,9 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [clientLoading, setClientLoading] = useState(false);
+  const [isReturn, setIsReturn] = useState(false);
+  const [originalOrder, setOriginalOrder] = useState(null);
+  const [searchingReturn, setSearchingReturn] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -94,6 +97,14 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         setItems(editOrder.items || []);
         setDiscount(editOrder.discount || 0);
         setNotes(editOrder.notes || "");
+        setIsReturn(!!editOrder.is_return);
+        if (editOrder.original_order_id) {
+          setOriginalOrder({
+            id: editOrder.original_order_id,
+            order_number: editOrder.original_order_number || "",
+            items: editOrder.original_items || [],
+          });
+        }
       }
     };
     load();
@@ -121,6 +132,50 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
     } catch { /* ignore */ }
     setSearching(false);
   };
+
+  // Quando seleciona um veículo em modo retorno, busca a última OS concluída/entregue daquele veículo
+  useEffect(() => {
+    if (!isReturn || !selectedVehicleId || isEditing) return;
+    const fetchLastOS = async () => {
+      setSearchingReturn(true);
+      try {
+        const veh = vehicles.find(v => v.id === selectedVehicleId);
+        if (!veh) return;
+        const allOrders = await base44.entities.ServiceOrder.filter({
+          user_email: userEmail,
+          vehicle_id: selectedVehicleId,
+        }, "-created_date");
+        // Prioriza OS concluída/entregue; se não houver, pega a mais recente
+        const lastOS = allOrders.find(o => o.status === "concluida" || o.status === "entregue") || allOrders[0];
+        if (lastOS) {
+          setOriginalOrder({
+            id: lastOS.id,
+            order_number: lastOS.order_number,
+            items: lastOS.items || [],
+          });
+          // Preenche os campos com os dados da OS original
+          setSelectedServiceTypeId(lastOS.service_type_id || "");
+          setSelectedMechanicId(lastOS.mechanic_id || "");
+          setComplaint(lastOS.client_complaint || "");
+          setDiagnosis(lastOS.technical_diagnosis || "");
+          setWarrantyMonths(lastOS.warranty_months || 0);
+          setNotes(lastOS.notes ? `[Retorno OS ${lastOS.order_number}] ${lastOS.notes}` : `[Retorno OS ${lastOS.order_number}]`);
+          // Mantém os itens vazios — serão preenchidos apenas com itens adicionais
+          setItems([]);
+          setDiscount(0);
+          toast({
+            title: "OS de Retorno",
+            description: `Dados herdados da OS ${lastOS.order_number}. Adicione apenas itens/serviços novos.`,
+          });
+        } else {
+          setOriginalOrder(null);
+          toast({ title: "Aviso", description: "Nenhuma OS anterior encontrada para este veículo.", variant: "destructive" });
+        }
+      } catch { /* ignore */ }
+      setSearchingReturn(false);
+    };
+    fetchLastOS();
+  }, [isReturn, selectedVehicleId, isEditing]);
 
   const filteredParts = partSearch
     ? parts.filter(p => {
@@ -323,6 +378,10 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         warranty_months: Number(warrantyMonths) || 0,
         priority,
         notes,
+        is_return: isReturn,
+        original_order_id: originalOrder?.id || "",
+        original_order_number: originalOrder?.order_number || "",
+        original_items: originalOrder?.items || [],
       };
 
       if (isEditing) {
@@ -349,6 +408,71 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
 
   return (
     <div className="space-y-5">
+      {/* Tipo de OS: Nova ou Retorno */}
+      {!isEditing && (
+        <div>
+          <Label className="text-sm font-semibold mb-2 block">Tipo de Abertura</Label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setIsReturn(false); setOriginalOrder(null); }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
+                !isReturn ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-400 hover:border-gray-300"
+              }`}
+            >
+              <Plus className="w-4 h-4" /> Nova OS
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsReturn(true)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
+                isReturn ? "border-amber-500 bg-amber-50 text-amber-700" : "border-gray-200 text-gray-400 hover:border-gray-300"
+              }`}
+            >
+              <RotateCcw className="w-4 h-4" /> OS de Retorno
+            </button>
+          </div>
+          {isReturn && (
+            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Selecione o veículo e o sistema buscará automaticamente a última OS para herdar os dados.
+              {" "}Adicione apenas peças/serviços novos — itens herdados não geram financeiro.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Indicador de OS original (quando retorno) */}
+      {originalOrder && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-center gap-2">
+          <RotateCcw className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-700">
+              Retorno da OS {originalOrder.order_number}
+            </p>
+            <p className="text-xs text-amber-600">
+              {originalOrder.items?.length || 0} itens na OS original (não geram cobrança).
+              {" "}Apenas itens adicionados agora geram financeiro.
+            </p>
+          </div>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={() => setOriginalOrder(null)}
+              className="text-xs text-amber-600 hover:underline"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
+
+      {searchingReturn && (
+        <div className="flex items-center gap-2 text-sm text-amber-600">
+          <Loader2 className="w-4 h-4 animate-spin" /> Buscando última OS do veículo...
+        </div>
+      )}
+
       {/* Client search */}
       <div>
         <Label className="text-sm font-semibold">Cliente</Label>
@@ -540,9 +664,37 @@ export default function ServiceOrderForm({ userEmail, onSaved, onCancel, editOrd
         </div>
       </div>
 
+      {/* Itens da OS original (quando retorno) */}
+      {isReturn && originalOrder && originalOrder.items && originalOrder.items.length > 0 && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <p className="text-xs font-semibold text-amber-600 mb-2 flex items-center gap-1">
+            <RotateCcw className="w-3.5 h-3.5" />
+            ITENS DA OS ORIGINAL {originalOrder.order_number} (não cobrados)
+          </p>
+          <div className="space-y-1">
+            {originalOrder.items.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-amber-100 last:border-0">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${item.type === "peca" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
+                    {item.type === "peca" ? "Peça" : "Serviço"}
+                  </span>
+                  <span>{item.description}</span>
+                </div>
+                <span className="text-gray-400 line-through text-xs">{formatCurrency(item.total)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Items */}
       <div>
-        <Label className="text-sm font-semibold mb-2 block">Itens da OS (Peças e Serviços)</Label>
+        <Label className="text-sm font-semibold mb-2 block">
+          {isReturn ? "Itens Adicionais (peças/serviços novos)" : "Itens da OS (Peças e Serviços)"}
+        </Label>
+        {isReturn && (
+          <p className="text-xs text-amber-600 mb-2">Adicione apenas itens/serviços novos. Os itens da OS original já constam acima e não geram cobrança.</p>
+        )}
 
         {/* Services section */}
         <div className="rounded-lg border border-purple-100 bg-purple-50/30 p-3 mb-3">

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, CreditCard, QrCode, Receipt, Banknote, Landmark, Loader2, BadgePercent } from "lucide-react";
+import { X, CreditCard, QrCode, Receipt, Banknote, Landmark, Loader2, BadgePercent, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import BoletoGenerator from "./BoletoGenerator";
 import DiscountAuthModal from "./DiscountAuthModal";
@@ -230,8 +230,16 @@ export default function WorkshopPaymentModal({ order, userEmail, onClose, onConf
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-3 rounded-lg bg-muted/30 space-y-1">
-            <p className="text-sm font-medium">{order.order_number}</p>
+            <p className="text-sm font-medium flex items-center gap-1">
+              {order.is_return && <RotateCcw className="w-3.5 h-3.5 text-amber-500" />}
+              {order.order_number}
+            </p>
             <p className="text-xs text-muted-foreground">{order.client_name} • {order.vehicle_brand} {order.vehicle_model}</p>
+            {order.is_return && (
+              <p className="text-xs text-amber-600">
+                OS de Retorno {order.original_order_number ? `(${order.original_order_number})` : ""} — cobrança apenas de itens adicionais
+              </p>
+            )}
             <p className="text-lg font-bold text-blue-600">{fmtMoney(order.total)}</p>
             {hasDiscount && (
               <p className="text-sm text-amber-600 font-medium">

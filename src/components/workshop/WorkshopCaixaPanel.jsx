@@ -21,7 +21,8 @@ export default function WorkshopCaixaPanel({ userEmail }) {
         { user_email: userEmail, status: "concluida" },
         "-created_date"
       );
-      const pending = data.filter(o => !o.payment_status || o.payment_status === "pendente");
+      // Filtra OS de retorno sem itens adicionais (total = 0) — não geram financeiro
+      const pending = data.filter(o => (!o.payment_status || o.payment_status === "pendente") && !(o.is_return && (!o.total || o.total === 0)));
       setOrders(pending);
     } catch { /* ignore */ }
     setLoading(false);
