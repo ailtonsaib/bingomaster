@@ -223,7 +223,11 @@ export default function OficinaTelao() {
                         <p className="text-[10px] uppercase text-slate-500 font-semibold">Entrega prevista</p>
                         <p className="text-sm font-semibold text-white truncate">
                           {order.scheduled_date
-                            ? new Date(order.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                            ? (() => {
+                                const parts = order.scheduled_date.split("T")[0].split("-");
+                                if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                                return order.scheduled_date.split("T")[0];
+                              })()
                             : "—"}
                         </p>
                       </div>
