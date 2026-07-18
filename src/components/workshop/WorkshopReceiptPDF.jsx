@@ -616,10 +616,6 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
             Deseja gerar o recibo em PDF para impressão ou envio por email?
           </p>
 
-          <p className="text-xs text-gray-400 text-center -mt-1">
-            NF-e e NFS-e são opcionais — o recibo já contém todos os detalhes.
-          </p>
-
           <div className="flex flex-col gap-2">
             <Button onClick={handleDownload} disabled={generating} className="gap-2">
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
