@@ -3,6 +3,8 @@ import { XMLParser } from 'npm:fast-xml-parser@4.5.1';
 import { validarDimeSC } from './dime_sc.ts';
 import { validarDetalheContribuicoes, validarCruzadaContribuicoes, corrigirContribuicoes, corrigirC100Totais } from './contribuicoes_rules.ts';
 import { validarCruzadaFiscal, construirMapaParticipantes } from './fiscal_rules.ts';
+import { validarCruzadaECD, corrigirECD } from './ecd_rules.ts';
+import { validarCruzadaECF, corrigirECF } from './ecf_rules.ts';
 
 // ===================== REGISTROS REINF (XML) =====================
 // Validação conforme Guia Prático da EFD-REINF
@@ -585,6 +587,13 @@ function corrigirConteudo(conteudo, tipoDetectado) {
     linhas = corrigirContribuicoes(linhas);
     // Corrigir arredondamento de R$ 0,01 no C100 (VL_PIS/VL_COFINS >= soma dos C170)
     linhas = corrigirC100Totais(linhas);
+  }
+  // Correção de saldos para ECD (I155) e ECF (L100/P100/K155)
+  if (tipoDetectado === 'ECD') {
+    linhas = corrigirECD(linhas);
+  }
+  if (tipoDetectado === 'ECF') {
+    linhas = corrigirECF(linhas);
   }
 
   // Collect record counts
@@ -2312,9 +2321,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- 4b. CHV_NFE × 0150 + Contribuições cruzadas ---
+    // --- 4b. CHV_NFE × 0150 + validações cruzadas por tipo ---
     if (c100ChvNfeMap && c100ChvNfeMap.length > 0) validarCruzadaFiscal(c100ChvNfeMap, part0150Map, erros);
     if (tipoDetectado === 'CONTRIBUICOES') validarCruzadaContribuicoes(linhas, estatisticas, erros, avisos);
+    if (tipoDetectado === 'ECD') validarCruzadaECD(linhas, estatisticas, erros, avisos);
+    if (tipoDetectado === 'ECF') validarCruzadaECF(linhas, estatisticas, erros, avisos);
 
     // --- 5. Consistência de blocos (abertura/encerramento) ---
     const blocosEncontrados = Object.keys(estatisticas.blocos);

@@ -1,4 +1,10 @@
 // Regras de validação cruzada para SPED Fiscal (EFD-ICMS/IPI)
+// Baseado no Guia Prático 3.2.2 (vigência a partir de janeiro/2026)
+// Exceção nº 11 do C100: documentos fiscais que carreguem informações exclusivamente
+// acerca dos novos tributos da Reforma Tributária do Consumo (IBS/CBS) e que não
+// versem sobre ICMS ou IPI NÃO devem ser escriturados na EFD.
+// Documentos que envolvam tanto os novos tributos quanto ICMS/IPI devem ser escriturados
+// em relação a estes tributos (Ajuste SINIEF 49/25).
 
 // Constrói mapa COD_PART → CNPJ/CPF a partir dos registros 0150
 export function construirMapaParticipantes(linhas: string[]): Record<string, string> {

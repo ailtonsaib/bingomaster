@@ -2,8 +2,9 @@
 // Replica as regras do validador oficial da Receita Federal
 
 // ===================== TABELAS MONOFÁSICAS =====================
-// Tabela 4.3.10 (v1.25 — 30/03/2026): Alíquotas Diferenciadas (CST 02 e 04) — percentual
-// Tabela 4.3.11 (v1.33 — 16/04/2026): Alíquotas por Unidade de Medida (CST 03 e 04) — ad rem
+// Tabela 4.3.10 (v1.25 — 30/03/2026, atualizada por LC 228/2026): Alíquotas Diferenciadas (CST 02 e 04) — percentual
+//   Códigos 150-153: insumos da indústria química/petroquímica (LC 228/2026, art. 56 Lei 11.196/2005)
+// Tabela 4.3.11 (v1.33 — 16/04/2026, atualizada por Dec 12.923/2026 e Dec 12.924/2026): Alíquotas por Unidade de Medida (CST 03 e 04) — ad rem
 const TABELA_4_3_10 = [
   { cod:'101',desc:'Gasolinas',ncms:['27101159'],pis:5.08,cofins:23.44},
   { cod:'102',desc:'Óleo Diesel',ncms:['27101921'],pis:4.21,cofins:19.42},
@@ -17,6 +18,9 @@ const TABELA_4_3_10 = [
   { cod:'112',desc:'Álcool (Produtor/Importador)',ncms:['22071000','22072010','22089000'],pis:1.50,cofins:6.90},
   { cod:'113',desc:'Álcool (Distribuidor)',ncms:['22071000','22072010','22089000'],pis:3.75,cofins:17.25},
   { cod:'150',desc:'Nafta Petroquímica',ncms:['27101141'],pis:1.00,cofins:4.60},
+  { cod:'151',desc:'Insumos Petroquímicos (LC 228/2026)',ncms:['27071000','27072000','27073000','27074000','27075000','27076000','27079100'],pis:0.80,cofins:3.68},
+  { cod:'152',desc:'Intermediários Petroquímicos (LC 228/2026)',ncms:['29011000','29012200','29012400','29012910','29012920','29012930'],pis:0.65,cofins:3.00},
+  { cod:'153',desc:'Produtos Químicos Estratégicos (LC 228/2026)',ncms:['29141100','29141200','29141300','29141910','29141920'],pis:0.50,cofins:2.30},
   { cod:'201',desc:'Produtos Farmacêuticos',ncms:['3001','3003','3004','300210','300220','300630','30029020','30029092','30029099','30051010','30066000'],pis:2.10,cofins:9.90},
   { cod:'202',desc:'Perfumaria/Higiene',ncms:['3303','3304','3305','3306','3307','34011190','34012010','96032100'],pis:2.20,cofins:10.30},
   { cod:'301',desc:'Veículos/Máquinas Agrícolas',ncms:['8429','843240','843280','843320','843330','843340','84335','8701','8702','8703','8704','8705','8706'],pis:2.00,cofins:9.60},
@@ -30,8 +34,14 @@ const TABELA_4_3_10 = [
 ];
 
 const TABELA_4_3_11 = [
+  // Tabela 4.3.11 v1.33 (16/04/2026) — atualizada por Dec 12.923/2026 e Dec 12.924/2026
   { cod:'101',desc:'Gasolinas',ncms:['27101159'],pisAdRem:158.50,cofinsAdRem:732.40,unidade:'m³'},
   { cod:'102',desc:'Óleo Diesel (Dec 12.875/2026)',ncms:['27101921'],pisAdRem:0.01,cofinsAdRem:0.05,unidade:'m³'},
+  { cod:'103',desc:'GLP',ncms:['27111910'],pisAdRem:127.50,cofinsAdRem:592.80,unidade:'t'},
+  { cod:'104',desc:'Querosene de Aviação',ncms:['27101911'],pisAdRem:62.50,cofinsAdRem:290.00,unidade:'m³'},
+  { cod:'109',desc:'Biodiesel (Dec 12.923/2026)',ncms:['38249029'],pisAdRem:76.88,cofinsAdRem:354.00,unidade:'m³'},
+  { cod:'112',desc:'Álcool (Produtor/Importador)',ncms:['22071000','22072010','22089000'],pisAdRem:18.75,cofinsAdRem:86.25,unidade:'m³'},
+  { cod:'113',desc:'Álcool (Distribuidor)',ncms:['22071000','22072010','22089000'],pisAdRem:46.88,cofinsAdRem:215.63,unidade:'m³'},
 ];
 
 function normNcm(ncm) { return String(ncm||'').replace(/[.\s]/g,'').replace(/Ex\d*/gi,'').trim(); }
