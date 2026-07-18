@@ -215,6 +215,19 @@ export default function OficinaTelao() {
                         <p className="text-sm font-semibold text-white truncate">{order.mechanic_name || "Não atribuído"}</p>
                       </div>
                     </div>
+
+                    {/* Entrega prevista */}
+                    <div className="flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase text-slate-500 font-semibold">Entrega prevista</p>
+                        <p className="text-sm font-semibold text-white truncate">
+                          {order.scheduled_date
+                            ? new Date(order.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Footer */}
@@ -223,11 +236,6 @@ export default function OficinaTelao() {
                       <Clock className="w-3.5 h-3.5 text-slate-500" />
                       <span className="text-xs text-slate-400">{elapsedLabel(order.start_date || order.created_date)}</span>
                     </div>
-                    {order.total > 0 && (
-                      <span className="text-xs font-semibold text-emerald-400">
-                        R$ {order.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </span>
-                    )}
                   </div>
                 </div>
               );
