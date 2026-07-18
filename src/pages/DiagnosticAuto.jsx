@@ -164,7 +164,7 @@ export default function DiagnosticAuto() {
 
   const handleLogout = () => {
     clearPortalUser();
-    navigate("/");
+    navigate("/diagnostico");
   };
 
   if (printData) {

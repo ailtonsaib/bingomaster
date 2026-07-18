@@ -197,8 +197,8 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Top controls */}
       <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => window.location.href = '/'}>
-          <ArrowLeft className="w-4 h-4" /> Portal
+        <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => window.location.href = '/bingo'}>
+          <ArrowLeft className="w-4 h-4" /> Sair
         </Button>
         <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => setShowChangePassword(true)}>
           <KeyRound className="w-4 h-4" /> Alterar Senha
