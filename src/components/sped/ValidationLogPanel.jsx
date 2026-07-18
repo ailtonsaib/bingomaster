@@ -3,15 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   ScrollText,
   XCircle,
   AlertTriangle,
   Search,
-  ChevronDown,
-  ChevronRight,
   FileSearch,
-  Clipboard,
+  ChevronRight,
 } from 'lucide-react';
 
 function extrairCampo(mensagem) {
@@ -62,116 +61,59 @@ function extrairValorEncontrado(mensagem, linhaConteudo) {
   return '—';
 }
 
-const LogEntry = memo(function LogEntry({ entry, getLinhaConteudo, idx }) {
-  const [expandido, setExpandido] = useState(false);
+// Linha compacta de altura fixa — não expande inline, abre modal ao clicar
+const ROW_HEIGHT = 52; // 44px conteúdo + 8px gap
+const LogRow = memo(function LogRow({ entry, idx, onClick }) {
   const isErro = entry.severidade === 'erro';
   const campo = useMemo(() => extrairCampo(entry.mensagem), [entry.mensagem]);
-  const regraPVA = useMemo(() => extrairRegraPVA(entry.mensagem, entry.registro), [entry.mensagem, entry.registro]);
-  // Só busca o conteúdo da linha quando o item está expandido — evita percorrer
-  // a string de 628KB para cada item visível a cada render (causa freeze)
-  const linhaConteudo = useMemo(
-    () => (expandido && entry.linha > 0 ? getLinhaConteudo(entry.linha) : null),
-    [expandido, entry.linha, getLinhaConteudo]
-  );
-  const valorEncontrado = useMemo(() => extrairValorEncontrado(entry.mensagem, linhaConteudo), [entry.mensagem, linhaConteudo]);
 
   return (
-    <div className={`rounded-lg border ${isErro ? 'border-red-200 bg-red-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
-      <button
-        className="w-full flex items-start gap-3 p-3 text-left hover:bg-black/[0.02] transition-colors"
-        onClick={() => setExpandido(!expandido)}
-      >
-        {expandido ? (
-          <ChevronDown className={`w-4 h-4 mt-0.5 shrink-0 ${isErro ? 'text-red-500' : 'text-amber-500'}`} />
-        ) : (
-          <ChevronRight className={`w-4 h-4 mt-0.5 shrink-0 ${isErro ? 'text-red-500' : 'text-amber-500'}`} />
-        )}
-        {isErro ? (
-          <XCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-        ) : (
-          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
-              #{idx + 1}
-            </span>
-            <Badge variant="outline" className={`text-xs font-mono ${isErro ? 'border-red-400 text-red-700' : 'border-amber-400 text-amber-700'}`}>
-              Linha {entry.linha || '—'}
-            </Badge>
-            {entry.registro && (
-              <Badge variant="secondary" className="text-xs font-mono">
-                {entry.registro}
-              </Badge>
-            )}
-            {campo !== '—' && (
-              <Badge variant="outline" className="text-xs font-mono text-primary border-primary/40">
-                {campo}
-              </Badge>
-            )}
-            <span className={`text-xs font-medium ${isErro ? 'text-red-700' : 'text-amber-700'}`}>
-              {entry.mensagem.length > 80 ? entry.mensagem.substring(0, 80) + '...' : entry.mensagem}
-            </span>
-          </div>
-        </div>
-      </button>
-
-      {expandido && (
-        <div className="border-t border-slate-200 px-4 pb-3 pt-2 space-y-2 bg-white/60">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mensagem Completa</p>
-              <p className={`text-sm ${isErro ? 'text-red-800' : 'text-amber-800'}`}>{entry.mensagem}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Regra PVA (Exigência Oficial)</p>
-              <p className="text-sm text-slate-700 font-medium">{regraPVA}</p>
-            </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valor Encontrado</p>
-              <p className="text-sm font-mono text-slate-800 bg-slate-100 rounded px-2 py-1 break-all">{valorEncontrado}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Campo Identificado</p>
-              <p className="text-sm font-mono text-primary font-bold">{campo}</p>
-            </div>
-          </div>
-          {linhaConteudo && (
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                <FileSearch className="w-3.5 h-3.5" />
-                Conteúdo da Linha {entry.linha}
-              </p>
-              <div className="mt-1 rounded bg-slate-900 text-slate-100 px-3 py-2 font-mono text-xs overflow-x-auto whitespace-pre-wrap break-all">
-                {linhaConteudo}
-              </div>
-            </div>
-          )}
-        </div>
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-3 text-left rounded-md border transition-colors hover:bg-black/[0.02] ${isErro ? 'border-red-200 bg-red-50/50' : 'border-amber-200 bg-amber-50/50'}`}
+      style={{ height: 44, marginBottom: 8 }}
+    >
+      <ChevronRight className={`w-3.5 h-3.5 shrink-0 ${isErro ? 'text-red-500' : 'text-amber-500'}`} />
+      {isErro ? (
+        <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+      ) : (
+        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
       )}
-    </div>
+      <span className="text-xs font-mono font-bold px-1 py-0.5 rounded bg-slate-200 text-slate-700 shrink-0">
+        {idx + 1}
+      </span>
+      <Badge variant="outline" className={`text-xs font-mono shrink-0 ${isErro ? 'border-red-400 text-red-700' : 'border-amber-400 text-amber-700'}`}>
+        L{entry.linha || '—'}
+      </Badge>
+      {entry.registro && (
+        <Badge variant="secondary" className="text-xs font-mono shrink-0">
+          {entry.registro}
+        </Badge>
+      )}
+      {campo !== '—' && (
+        <Badge variant="outline" className="text-xs font-mono text-primary border-primary/40 shrink-0">
+          {campo}
+        </Badge>
+      )}
+      <span className={`text-xs truncate ${isErro ? 'text-red-700' : 'text-amber-700'}`}>
+        {entry.mensagem}
+      </span>
+    </button>
   );
 });
 
 function ValidationLogPanel({ resultado, conteudo }) {
   const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
-  const [limite, setLimite] = useState(50);
+  const [selectedEntry, setSelectedEntry] = useState(null);
   const buscaDeferida = useDeferredValue(busca);
+
+  // Virtualização
   const scrollRef = useRef(null);
-  const sentinelRef = useRef(null);
-  const carregandoMais = useRef(false);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(500);
+  const BUFFER = 5;
 
-  // Carregamento infinito via IntersectionObserver — detecta quando o usuário
-  // rola perto do final e incrementa o limite sem travar a UI
-  const carregarMais = useCallback(() => {
-    setLimite((prev) => prev + 50);
-  }, []);
-
-  // Busca preguiçosa de linha: em vez de dividir o arquivo inteiro (628KB → 11.818 strings),
-  // localiza apenas a linha solicitada usando indexOf — O(linhaNum) mas só para itens visíveis
   const getLinhaConteudo = useCallback((linhaNum) => {
     if (!conteudo || !linhaNum || linhaNum <= 0) return null;
     let pos = 0;
@@ -210,40 +152,48 @@ function ValidationLogPanel({ resultado, conteudo }) {
     return lista;
   }, [todasEntradas, buscaDeferida, filtroTipo]);
 
-  // Reset paginação quando filtros mudam
+  // Reset scroll quando filtros mudam
   useEffect(() => {
-    setLimite(50);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    setScrollTop(0);
   }, [buscaDeferida, filtroTipo]);
 
-  // IntersectionObserver — carrega mais itens quando o sentinel fica visível
+  // Medir altura do viewport
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    const scrollContainer = scrollRef.current;
-    if (!sentinel || !scrollContainer) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const updateHeight = () => setViewportHeight(el.clientHeight);
+    updateHeight();
+    const ro = new ResizeObserver(updateHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && !carregandoMais.current) {
-          carregandoMais.current = true;
-          carregarMais();
-          setTimeout(() => { carregandoMais.current = false; }, 150);
-        }
-      },
-      { root: scrollContainer, rootMargin: '100px', threshold: 0 }
-    );
+  const handleScroll = useCallback((e) => {
+    setScrollTop(e.target.scrollTop);
+  }, []);
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [carregarMais, entradasFiltradas.length]);
+  const totalHeight = entradasFiltradas.length * ROW_HEIGHT;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER * 2;
+  const endIndex = Math.min(entradasFiltradas.length, startIndex + visibleCount);
+  const visiveis = entradasFiltradas.slice(startIndex, endIndex);
+  const offsetY = startIndex * ROW_HEIGHT;
+
+  // Detalhes do item selecionado (modal)
+  const selectedLinhaConteudo = useMemo(() => {
+    if (!selectedEntry || selectedEntry.linha <= 0) return null;
+    return getLinhaConteudo(selectedEntry.linha);
+  }, [selectedEntry, getLinhaConteudo]);
+
+  const selectedCampo = useMemo(() => selectedEntry ? extrairCampo(selectedEntry.mensagem) : '—', [selectedEntry]);
+  const selectedRegraPVA = useMemo(() => selectedEntry ? extrairRegraPVA(selectedEntry.mensagem, selectedEntry.registro) : '—', [selectedEntry]);
+  const selectedValor = useMemo(() => selectedEntry ? extrairValorEncontrado(selectedEntry.mensagem, selectedLinhaConteudo) : '—', [selectedEntry, selectedLinhaConteudo]);
 
   if (!resultado) return null;
 
   const totalErros = resultado.erros?.length || 0;
   const totalAvisos = resultado.avisos?.length || 0;
-  const visiveis = entradasFiltradas.slice(0, limite);
-  const temMais = entradasFiltradas.length > limite;
-
 
   return (
     <Card className="border-slate-300">
@@ -253,7 +203,7 @@ function ValidationLogPanel({ resultado, conteudo }) {
           Log de Validação — Comparação com PVA Oficial
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Detalhamento linha a linha, campo a campo, do que o PVA (Programa Validador de Arquivos) exige versus o que foi encontrado no arquivo.
+          Clique em qualquer item para ver detalhes completos (campo, regra PVA, valor encontrado e conteúdo da linha).
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -268,43 +218,26 @@ function ValidationLogPanel({ resultado, conteudo }) {
             />
           </div>
           <div className="flex gap-1.5 flex-wrap">
-            <Button
-              size="sm"
-              variant={filtroTipo === 'todos' ? 'default' : 'outline'}
-              onClick={() => setFiltroTipo('todos')}
-            >
+            <Button size="sm" variant={filtroTipo === 'todos' ? 'default' : 'outline'} onClick={() => setFiltroTipo('todos')}>
               Todos ({todasEntradas.length})
             </Button>
-            <Button
-              size="sm"
-              variant={filtroTipo === 'erros' ? 'destructive' : 'outline'}
-              onClick={() => setFiltroTipo('erros')}
-            >
+            <Button size="sm" variant={filtroTipo === 'erros' ? 'destructive' : 'outline'} onClick={() => setFiltroTipo('erros')}>
               <XCircle className="w-3.5 h-3.5 mr-1" />
               Erros ({totalErros})
             </Button>
-            <Button
-              size="sm"
-              variant={filtroTipo === 'avisos' ? 'secondary' : 'outline'}
-              onClick={() => setFiltroTipo('avisos')}
-            >
+            <Button size="sm" variant={filtroTipo === 'avisos' ? 'secondary' : 'outline'} onClick={() => setFiltroTipo('avisos')}>
               <AlertTriangle className="w-3.5 h-3.5 mr-1" />
               Avisos ({totalAvisos})
             </Button>
-            <Button
-              size="sm"
-              variant={filtroTipo === 'estrutura' ? 'default' : 'outline'}
-              onClick={() => setFiltroTipo('estrutura')}
-            >
+            <Button size="sm" variant={filtroTipo === 'estrutura' ? 'default' : 'outline'} onClick={() => setFiltroTipo('estrutura')}>
               Estrutura
             </Button>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-slate-50 rounded-lg px-3 py-2">
-          <Clipboard className="w-3.5 h-3.5" />
           <span>
-            Clique em cada item para expandir e ver: <strong>campo</strong>, <strong>regra PVA</strong>, <strong>valor encontrado</strong> e o <strong>conteúdo da linha</strong>.
+            Exibindo {visiveis.length} de {entradasFiltradas.length} ocorrência(s) • Rolagem virtualizada
           </span>
         </div>
 
@@ -314,43 +247,76 @@ function ValidationLogPanel({ resultado, conteudo }) {
             <p className="text-sm">Nenhuma ocorrência encontrada com os filtros atuais.</p>
           </div>
         ) : (
-          <>
-            <div ref={scrollRef} className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1 scroll-smooth">
-              {visiveis.map((entry, idx) => (
-                <LogEntry
-                  key={entry._origIdx}
-                  entry={entry}
-                  getLinhaConteudo={getLinhaConteudo}
-                  idx={idx}
-                />
-              ))}
-              {/* Sentinel para carregamento infinito — dispara quando visível */}
-              {temMais && (
-                <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
-                  <div className="w-5 h-5 border-2 border-slate-300 border-t-primary rounded-full animate-spin" />
-                  <span className="text-xs">Carregando mais {Math.min(50, entradasFiltradas.length - limite)} de {entradasFiltradas.length - limite}...</span>
-                </div>
+          <div ref={scrollRef} onScroll={handleScroll} className="max-h-[600px] overflow-y-auto pr-1">
+            <div style={{ height: totalHeight, position: 'relative' }}>
+              <div style={{ position: 'absolute', top: offsetY, left: 0, right: 0 }}>
+                {visiveis.map((entry, i) => (
+                  <LogRow
+                    key={entry._origIdx}
+                    entry={entry}
+                    idx={startIndex + i}
+                    onClick={() => setSelectedEntry(entry)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      {/* Modal de detalhes — abre ao clicar em uma ocorrência */}
+      <Dialog open={!!selectedEntry} onOpenChange={(open) => { if (!open) setSelectedEntry(null); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedEntry?.severidade === 'erro' ? (
+                <XCircle className="w-5 h-5 text-red-600" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
               )}
-              {!temMais && entradasFiltradas.length > 50 && (
-                <div className="text-center py-3 text-xs text-muted-foreground border-t border-slate-200">
-                  Fim da lista — {entradasFiltradas.length} ocorrência(s) carregada(s)
+              {selectedEntry?.registro || 'Detalhe da Ocorrência'}
+            </DialogTitle>
+            <DialogDescription>
+              Linha {selectedEntry?.linha || '—'} {selectedEntry?.registro ? `• Registro ${selectedEntry.registro}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEntry && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Mensagem Completa</p>
+                <p className={`text-sm ${selectedEntry.severidade === 'erro' ? 'text-red-800' : 'text-amber-800'}`}>
+                  {selectedEntry.mensagem}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Regra PVA (Exigência Oficial)</p>
+                  <p className="text-sm text-slate-700 font-medium">{selectedRegraPVA}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Campo Identificado</p>
+                  <p className="text-sm font-mono text-primary font-bold">{selectedCampo}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Valor Encontrado</p>
+                <p className="text-sm font-mono text-slate-800 bg-slate-100 rounded px-2 py-1 break-all">{selectedValor}</p>
+              </div>
+              {selectedLinhaConteudo && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <FileSearch className="w-3.5 h-3.5" />
+                    Conteúdo da Linha {selectedEntry.linha}
+                  </p>
+                  <div className="rounded bg-slate-900 text-slate-100 px-3 py-2 font-mono text-xs overflow-x-auto whitespace-pre-wrap break-all">
+                    {selectedLinhaConteudo}
+                  </div>
                 </div>
               )}
             </div>
-            {/* Botão de fallback para carregamento manual */}
-            {temMais && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {visiveis.length} de {entradasFiltradas.length} exibidos
-                </span>
-                <Button variant="outline" size="sm" onClick={carregarMais}>
-                  Carregar mais 50
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
