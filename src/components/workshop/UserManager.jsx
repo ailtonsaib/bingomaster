@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { UserPlus, Pencil, Trash2, X, Shield, Eye, Wrench, Loader2, Search, Users, BadgePercent } from "lucide-react";
+import { maskPhone } from "@/lib/brMasks";
 
 // Painéis disponíveis (mesmos IDs do TABS do Workshop)
 const AVAILABLE_PANELS = [
@@ -244,14 +245,14 @@ function UserFormModal({ editing, setEditing, onSave, onClose, saving, togglePan
             </div>
             <div>
               <Label>Email *</Label>
-              <Input type="email" value={editing.email} onChange={e => setEditing({ ...editing, email: e.target.value })} placeholder="joao@oficina.com" />
+              <Input type="email" autoComplete="email" value={editing.email} onChange={e => setEditing({ ...editing, email: e.target.value })} placeholder="joao@oficina.com" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Telefone</Label>
-              <Input value={editing.phone || ""} onChange={e => setEditing({ ...editing, phone: e.target.value })} placeholder="(00) 00000-0000" />
+              <Input inputMode="tel" autoComplete="tel" value={editing.phone || ""} onChange={e => setEditing({ ...editing, phone: maskPhone(e.target.value) })} placeholder="(00) 00000-0000" />
             </div>
             <div>
               <Label>{editing.id ? "Nova senha (opcional)" : "Senha *"}</Label>
