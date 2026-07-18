@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import DivergenceReport from '@/components/sped/DivergenceReport';
 import ValidationLogPanel from '@/components/sped/ValidationLogPanel';
 import ValidationComparison from '@/components/sped/ValidationComparison';
+import BlockErrorSummary from '@/components/sped/BlockErrorSummary';
 import jsPDF from 'jspdf';
 import {
   UploadCloud,
@@ -619,6 +620,11 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Resumo de Erros por Bloco */}
+          {resultado.erros.length > 0 && (
+            <BlockErrorSummary resultado={resultado} />
           )}
 
           {/* Lista de Erros */}
