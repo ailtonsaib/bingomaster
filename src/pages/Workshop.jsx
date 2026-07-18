@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2, ArrowDownToLine } from "lucide-react";
+import { LogOut, Wrench, ClipboardList, Users, Package, Stethoscope, Car, Settings, DollarSign, History, BarChart3, Trophy, Activity, AlertTriangle, Loader2, Building2, ArrowDownToLine, Monitor } from "lucide-react";
 import ServiceOrderList from "@/components/workshop/ServiceOrderList";
 import MechanicManager from "@/components/workshop/MechanicManager";
 import PartManager from "@/components/workshop/PartManager";
@@ -156,6 +156,13 @@ export default function Workshop() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors"
             >
               <Building2 className="w-4 h-4" /> Empresa
+            </button>
+            <button
+              onClick={() => navigate("/oficina-telao")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-[#2563EB] hover:bg-[#1D4ED8] transition-colors"
+              title="Abrir painel telão para acompanhamento"
+            >
+              <Monitor className="w-4 h-4" /> Telão
             </button>
             <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#52525B] hover:bg-gray-100 transition-colors">
               <LogOut className="w-4 h-4" /> Sair

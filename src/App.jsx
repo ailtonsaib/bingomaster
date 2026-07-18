@@ -60,6 +60,7 @@ import InstallInstructions from '@/pages/InstallInstructions';
 import DiagnosticLogin from '@/pages/DiagnosticLogin';
 import DiagnosticAuto from '@/pages/DiagnosticAuto';
 import Workshop from '@/pages/Workshop';
+import OficinaTelao from '@/pages/OficinaTelao';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -160,6 +161,7 @@ const AuthenticatedApp = () => {
       <Route element={<PortalGuard permission="can_access_diagnostic" />}>
         <Route path="/diagnostico-auto" element={<DiagnosticAuto />} />
         <Route path="/diagnostico-oficina" element={<Workshop />} />
+        <Route path="/oficina-telao" element={<OficinaTelao />} />
       </Route>
       {/* PDV — Frente de Caixa */}
       <Route path="/pdv" element={<PDVLogin />} />
