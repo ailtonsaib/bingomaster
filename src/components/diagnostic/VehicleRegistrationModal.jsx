@@ -62,42 +62,24 @@ export default function VehicleRegistrationModal({ open, onClose, userEmail, cpf
     setSearchingPlate(true);
     setError("");
     try {
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Você é um sistema de consulta veicular brasileiro. Busque na internet os dados cadastrais do veículo de placa "${cleanPlate}" (placa brasileira, formato antigo AAA0000 ou Mercosul AAA0A00). Retorne: marca/montadora, modelo completo, ano de fabricação, cor predominante, tipo de combustível (flex, gasolina, etanol, diesel, híbrido ou elétrico), motorização (ex: 1.0, 1.6, 2.0) e número do chassi (VIN) se disponível. Se não encontrar dados específicos para esta placa, retorne encontrado=false.`,
-        add_context_from_internet: true,
-        model: "gemini_3_flash",
-        response_json_schema: {
-          type: "object",
-          properties: {
-            encontrado: { type: "boolean" },
-            marca: { type: "string" },
-            modelo: { type: "string" },
-            ano: { type: "string" },
-            cor: { type: "string" },
-            combustivel: { type: "string" },
-            motor: { type: "string" },
-            chassi: { type: "string" }
-          }
-        }
-      });
+      const result = await base44.functions.invoke("consultaPlaca", { placa: cleanPlate });
 
-      if (result?.encontrado) {
+      if (result?.success && result?.encontrado) {
         setVehicleData(prev => ({
           ...prev,
           brand: result.marca || prev.brand,
           model: result.modelo || prev.model,
           year: result.ano || prev.year,
           color: result.cor || prev.color,
-          engine: result.motor || prev.engine,
           vin: result.chassi || prev.vin,
           fuel: mapFuel(result.combustivel) || prev.fuel,
         }));
         toast({ title: "Veículo encontrado", description: "Os dados foram preenchidos automaticamente. Verifique e ajuste se necessário." });
       } else {
-        toast({ title: "Placa não encontrada", description: "Não foi possível encontrar dados para esta placa. Preencha manualmente.", variant: "destructive" });
+        toast({ title: "Placa não encontrada", description: result?.error || "Não foi possível encontrar dados para esta placa. Preencha manualmente.", variant: "destructive" });
       }
     } catch (err) {
-      setError("Não foi possível consultar a placa. Preencha os dados manualmente.");
+      setError("Não foi possível consultar a placa no momento. Preencha os dados manualmente.");
     } finally {
       setSearchingPlate(false);
     }
