@@ -7,16 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, Wrench } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getPortalUser } from "@/lib/portalSession";
 
 export default function DiagnosticPlanManagement() {
   const { toast } = useToast();
+  const adminEmail = getPortalUser()?.email || "";
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
 
   const loadConfigs = async () => {
     try {
-      const res = await base44.functions.invoke("manageDiagnostic", { operation: "getPlanConfigs" });
+      const res = await base44.functions.invoke("manageDiagnostic", { operation: "getPlanConfigs", email: adminEmail });
       setConfigs(res.data.configs || []);
     } catch (err) {
       toast({ title: "Erro", description: "Não foi possível carregar os planos.", variant: "destructive" });
@@ -35,6 +37,7 @@ export default function DiagnosticPlanManagement() {
     try {
       await base44.functions.invoke("manageDiagnostic", {
         operation: "savePlanConfig",
+        email: adminEmail,
         plan_id: config.plan_id,
         plan_name: config.plan_name,
         price: Number(config.price),
