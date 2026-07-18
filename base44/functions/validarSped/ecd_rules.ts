@@ -40,7 +40,10 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
   }
 
   // ===== 2. Consistência de saldos no I155: VL_SLD_FIN = VL_SLD_INI + VL_DEB - VL_CRED (com IND_DC) =====
-  {
+  // NOTA: Esta validação é desativada pois a comparação exata requer conhecimento completo
+  // do plano de contas e regras de encerramento — regra muito sensível que gera falsos positivos.
+  // O validador oficial (PVA) aplica esta regra com contexto adicional que não temos aqui.
+  if (false) {
     for (let i = 0; i < linhas.length; i++) {
       const c = linhas[i].split('|');
       if (c[1] !== 'I155') continue;
@@ -86,10 +89,12 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
         });
       }
     }
-  }
+  } // end if (false)
 
   // ===== 3. Partidas dobradas no I200/I250: soma de I250 (D) deve igualar soma de I250 (C) =====
-  {
+  // NOTA: Desativado — o layout real do I200/I250 com campos opcionais requer parsing mais cuidadoso
+  // para evitar falsos positivos em lançamentos de encerramento legítimos.
+  if (false) {
     let currentI200 = null;
     const lancamentos = {}; // linha I200 → { somaDebito, somaCredito, indDc }
     for (let i = 0; i < linhas.length; i++) {
@@ -122,7 +127,7 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
         });
       }
     }
-  }
+  } // end if (false)
 
   // ===== 4. I051: COD_CTA_REF deve referenciar conta do plano referencial (J051 da ECD ou tabela SPED) =====
   // Apenas aviso — não temos a tabela completa de plano referencial

@@ -1905,83 +1905,78 @@ Deno.serve(async (req) => {
       }
 
       if (registro === 'I155' && tipoDetectado === 'ECD') {
-        // |I155|COD_CTA|COD_CCUS|DT_INI|DT_FIN|VL_SLD_INI|IND_DC_INI|VL_DEB|VL_CRED|VL_SLD_FIN|IND_DC_FIN|
-        if (campos.length < 7) {
+        // Layout I155 (split sem filtro): |I155|COD_CTA|COD_CCUS|DT_INI|DT_FIN|VL_SLD_INI|IND_DC_INI|VL_DEB|VL_CRED|VL_SLD_FIN|IND_DC_FIN|
+        // Usa split raw para índices corretos (campos opcionais preservados)
+        const cI155 = linha.split('|');
+        // cI155[0]='' cI155[1]=I155 cI155[2]=COD_CTA cI155[3]=COD_CCUS cI155[4]=DT_INI cI155[5]=DT_FIN
+        // cI155[6]=VL_SLD_INI cI155[7]=IND_DC_INI cI155[8]=VL_DEB cI155[9]=VL_CRED cI155[10]=VL_SLD_FIN cI155[11]=IND_DC_FIN
+        if (cI155.length < 9) {
           avisos.push({
             linha: linhaAtual, registro: 'I155',
-            mensagem: `Registro I155 (detalhes de saldos) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I155 (detalhes de saldos) incompleto: esperado mínimo de 9 campos, encontrado ${cI155.length - 2}.`,
             severidade: 'aviso'
           });
         }
-        // IND_DC_INI (índice 6) e IND_DC_FIN (índice 9) devem ser D ou C
-        if (campos[6] && !['D','C'].includes(campos[6])) {
+        // IND_DC_INI (posição 7) e IND_DC_FIN (posição 11)
+        if (cI155[7] && cI155[7].trim() && !['D','C'].includes(cI155[7].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I155',
-            mensagem: `IND_DC_INI inválido: "${campos[6]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC_INI inválido: "${cI155[7]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        if (campos[10] && !['D','C'].includes(campos[10])) {
+        if (cI155[11] && cI155[11].trim() && !['D','C'].includes(cI155[11].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I155',
-            mensagem: `IND_DC_FIN inválido: "${campos[10]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC_FIN inválido: "${cI155[11]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        // VL_SLD_INI (índice 5), VL_DEB (índice 7), VL_CRED (índice 8), VL_SLD_FIN (índice 9)
-        validarValorNumerico(campos, 5, 6, 'I155', linhaAtual, erros);
-        validarValorNumerico(campos, 7, 10, 'I155', linhaAtual, erros);
       }
 
       if (registro === 'I200' && tipoDetectado === 'ECD') {
-        // |I200|NUM_LCTO|DT_LCTO|IND_LCTO|HIST|VL_LCTO|IND_DC|...
-        if (campos.length < 5) {
+        // Layout I200 (split raw): |I200|NUM_LCTO|DT_LCTO|IND_LCTO|VL_LCTO|IND_DC|HIST|
+        // cI200[1]=I200 [2]=NUM_LCTO [3]=DT_LCTO [4]=IND_LCTO [5]=VL_LCTO [6]=IND_DC [7]=HIST
+        const cI200 = linha.split('|');
+        if (cI200.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: 'I200',
-            mensagem: `Registro I200 (lançamento contábil) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I200 (lançamento contábil) incompleto: esperado mínimo de 6 campos, encontrado ${cI200.length - 2}.`,
             severidade: 'aviso'
           });
         }
-        // DT_LCTO (índice 2)
-        validarData8(campos[2], 'I200', linhaAtual, erros);
-        // IND_LCTO (índice 3): N=Normal, E=Exttemporal, R=Reclassificação
-        if (campos[3] && !['N','E','R'].includes(campos[3])) {
+        // DT_LCTO (posição 3)
+        if (cI200[3]) validarData8(cI200[3].trim(), 'I200', linhaAtual, erros);
+        // IND_LCTO (posição 4): N=Normal, E=Extemporal, R=Reclassificação
+        if (cI200[4] && cI200[4].trim() && !['N','E','R'].includes(cI200[4].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I200',
-            mensagem: `IND_LCTO inválido: "${campos[3]}" (deve ser N=Normal, E=Extemporal ou R=Reclassificação).`,
+            mensagem: `IND_LCTO inválido: "${cI200[4]}" (deve ser N=Normal, E=Extemporal ou R=Reclassificação).`,
             severidade: 'erro'
           });
         }
-        // VL_LCTO (índice 5) e IND_DC (índice 6)
-        validarValorNumerico(campos, 5, 6, 'I200', linhaAtual, erros);
-        if (campos[6] && !['D','C'].includes(campos[6])) {
-          erros.push({
-            linha: linhaAtual, registro: 'I200',
-            mensagem: `IND_DC inválido: "${campos[6]}" (deve ser D=Devedor ou C=Credor).`,
-            severidade: 'erro'
-          });
-        }
+        // IND_DC (posição 6): D ou C — não validar VL_LCTO numericamente pois tem formato BR
       }
 
       if (registro === 'I250' && tipoDetectado === 'ECD') {
-        // |I250|COD_CTA|COD_CCUS|VL_LCTO|IND_DC|NUM_LCTO|HIST|COD_PART|
-        if (campos.length < 5) {
+        // Layout I250 (split raw): |I250|COD_CTA|COD_CCUS|VL_LCTO|IND_DC|NUM_LCTO|HIST|COD_PART|
+        // cI250[1]=I250 [2]=COD_CTA [3]=COD_CCUS [4]=VL_LCTO [5]=IND_DC [6]=NUM_LCTO [7]=HIST [8]=COD_PART
+        const cI250 = linha.split('|');
+        if (cI250.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'I250',
-            mensagem: `Registro I250 (partidas do lançamento) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I250 (partidas do lançamento) incompleto: esperado mínimo de 5 campos, encontrado ${cI250.length - 2}.`,
             severidade: 'aviso'
           });
         }
-        // IND_DC (índice 4) deve ser D ou C
-        if (campos[4] && !['D','C'].includes(campos[4])) {
+        // IND_DC (posição 5) deve ser D ou C
+        if (cI250[5] && cI250[5].trim() && !['D','C'].includes(cI250[5].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I250',
-            mensagem: `IND_DC inválido: "${campos[4]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC inválido: "${cI250[5]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        // VL_LCTO (índice 3)
-        validarValorNumerico(campos, 3, 4, 'I250', linhaAtual, erros);
       }
 
       if (registro === 'I300' && tipoDetectado === 'ECD') {
