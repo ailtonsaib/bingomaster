@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   ArrowRight,
   CheckCircle2,
@@ -15,7 +16,7 @@ function erroKey(e) {
   return `${e.linha || 0}|${e.registro || ''}|${e.mensagem || ''}`;
 }
 
-export default function ValidationComparison({ resultadoOriginal, resultadoCorrigido }) {
+function ValidationComparison({ resultadoOriginal, resultadoCorrigido }) {
   const analise = useMemo(() => {
     if (!resultadoOriginal || !resultadoCorrigido) return null;
 
@@ -42,6 +43,10 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
       reducao: errosOrig.length - errosCorr.length,
     };
   }, [resultadoOriginal, resultadoCorrigido]);
+
+  const [limiteCorrigidos, setLimiteCorrigidos] = useState(30);
+  const [limiteNovos, setLimiteNovos] = useState(30);
+  const [limitePersistentes, setLimitePersistentes] = useState(30);
 
   if (!analise) return null;
 
@@ -101,7 +106,7 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
               Erros resolvidos pela correção automática ({analise.corrigidos.length})
             </h4>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {analise.corrigidos.map((e, idx) => (
+              {analise.corrigidos.slice(0, limiteCorrigidos).map((e, idx) => (
                 <div key={idx} className="flex items-start gap-2 rounded border border-emerald-200 bg-emerald-50 p-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -111,6 +116,13 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
                 </div>
               ))}
             </div>
+            {analise.corrigidos.length > limiteCorrigidos && (
+              <div className="mt-2 text-center">
+                <Button variant="outline" size="sm" onClick={() => setLimiteCorrigidos(l => l + 30)}>
+                  Ver mais ({analise.corrigidos.length - limiteCorrigidos} restantes)
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -122,7 +134,7 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
               Novos erros após correção ({analise.novos.length})
             </h4>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {analise.novos.map((e, idx) => (
+              {analise.novos.slice(0, limiteNovos).map((e, idx) => (
                 <div key={idx} className="flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2">
                   <XCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -132,6 +144,13 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
                 </div>
               ))}
             </div>
+            {analise.novos.length > limiteNovos && (
+              <div className="mt-2 text-center">
+                <Button variant="outline" size="sm" onClick={() => setLimiteNovos(l => l + 30)}>
+                  Ver mais ({analise.novos.length - limiteNovos} restantes)
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -143,7 +162,7 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
               Erros não resolvidos — requerem correção manual ({analise.persistentes.length})
             </h4>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {analise.persistentes.map((e, idx) => (
+              {analise.persistentes.slice(0, limitePersistentes).map((e, idx) => (
                 <div key={idx} className="flex items-start gap-2 rounded border border-amber-200 bg-amber-50 p-2">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -153,6 +172,13 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
                 </div>
               ))}
             </div>
+            {analise.persistentes.length > limitePersistentes && (
+              <div className="mt-2 text-center">
+                <Button variant="outline" size="sm" onClick={() => setLimitePersistentes(l => l + 30)}>
+                  Ver mais ({analise.persistentes.length - limitePersistentes} restantes)
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -176,3 +202,5 @@ export default function ValidationComparison({ resultadoOriginal, resultadoCorri
     </Card>
   );
 }
+
+export default memo(ValidationComparison);
