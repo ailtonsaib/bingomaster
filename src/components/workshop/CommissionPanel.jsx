@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Loader2, DollarSign, CheckCircle2, Receipt, Calendar, Printer, Building2 } from "lucide-react";
+import { Search, Loader2, DollarSign, CheckCircle2, Receipt, Calendar, Printer, Building2, Wrench } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import CommissionReceipt from "./CommissionReceipt";
 import CompanyConfigModal from "./CompanyConfigModal";
@@ -24,6 +24,7 @@ export default function CommissionPanel({ userEmail }) {
 
   const [startDate, setStartDate] = useState(firstDayStr);
   const [endDate, setEndDate] = useState(today);
+  const [selectedMechanic, setSelectedMechanic] = useState("");
   const [partsCommissionRate, setPartsCommissionRate] = useState("");
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(null);
@@ -58,6 +59,7 @@ export default function CommissionPanel({ userEmail }) {
       const filtered = allOrders.filter(o => {
         const statusOk = o.status === "concluida" || o.status === "entregue";
         if (!statusOk) return false;
+        if (selectedMechanic && o.mechanic_id !== selectedMechanic) return false;
         const ref = o.completion_date || o.delivery_date || o.start_date;
         if (!ref) return false;
         const d = new Date(ref);
@@ -173,19 +175,34 @@ export default function CommissionPanel({ userEmail }) {
         </Button>
       </div>
 
-      {/* Filtros de data */}
-      <div className="flex flex-col sm:flex-row gap-3 items-end">
-        <div className="flex-1">
+      {/* Filtros de data + mecânico */}
+      <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
+        <div className="flex-1 min-w-[140px]">
           <Label className="text-sm font-semibold flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" /> Data Início
           </Label>
           <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-10 mt-1" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[140px]">
           <Label className="text-sm font-semibold flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" /> Data Fim
           </Label>
           <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-10 mt-1" />
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <Label className="text-sm font-semibold flex items-center gap-1.5">
+            <Wrench className="w-3.5 h-3.5" /> Mecânico
+          </Label>
+          <select
+            value={selectedMechanic}
+            onChange={e => setSelectedMechanic(e.target.value)}
+            className="h-10 mt-1 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="">Todos os mecânicos</option>
+            {mechanics.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
         </div>
         <div className="w-full sm:w-32">
           <Label className="text-sm font-semibold">% sobre Peças</Label>
