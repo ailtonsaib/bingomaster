@@ -93,6 +93,16 @@ export default function OficinaTelao() {
     );
   }
 
+  // Verifica se a OS está atrasada (data prevista anterior a hoje)
+  const isOverdue = (order) => {
+    if (!order.scheduled_date) return false;
+    const parts = order.scheduled_date.split("T")[0].split("-");
+    if (parts.length !== 3) return false;
+    const due = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return !isNaN(due) && due < today;
+  };
+
   // Agrupar por status
   const byStatus = OPEN_STATUSES.map(status => ({
     status,
@@ -169,15 +179,23 @@ export default function OficinaTelao() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
             {orders.map(order => {
               const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.aberta;
+              const overdue = isOverdue(order);
               return (
                 <div
                   key={order.id}
-                  className={`relative rounded-2xl bg-slate-900 ring-1 ${config.ring} overflow-hidden flex flex-col`}
+                  className={`relative rounded-2xl bg-slate-900 ring-2 ${overdue ? "ring-red-500 shadow-[0_0_18px_rgba(239,68,68,0.45)]" : "ring-1 " + config.ring} overflow-hidden flex flex-col`}
                 >
                   {/* Status bar */}
                   <div className={`${config.color} px-4 py-2 flex items-center justify-between`}>
                     <span className="text-sm font-bold text-white">OS #{order.order_number || "—"}</span>
-                    <span className="text-xs font-bold text-white uppercase tracking-wide">{config.label}</span>
+                    <div className="flex items-center gap-2">
+                      {overdue && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-bold uppercase tracking-wide animate-pulse">
+                          <AlertCircle className="w-3 h-3" /> Atrasada
+                        </span>
+                      )}
+                      <span className="text-xs font-bold text-white uppercase tracking-wide">{config.label}</span>
+                    </div>
                   </div>
 
                   {/* Body */}
@@ -218,10 +236,10 @@ export default function OficinaTelao() {
 
                     {/* Entrega prevista */}
                     <div className="flex items-start gap-2">
-                      <Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <Clock className={`w-4 h-4 mt-0.5 flex-shrink-0 ${overdue ? "text-red-400" : "text-slate-400"}`} />
                       <div className="min-w-0">
                         <p className="text-[10px] uppercase text-slate-500 font-semibold">Entrega prevista</p>
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className={`text-sm font-semibold truncate ${overdue ? "text-red-400" : "text-white"}`}>
                           {order.scheduled_date
                             ? (() => {
                                 const parts = order.scheduled_date.split("T")[0].split("-");
