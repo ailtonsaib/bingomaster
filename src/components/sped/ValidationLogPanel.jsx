@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 
 function extrairCampo(mensagem) {
-  // Tenta extrair o nome do campo da mensagem
   const matchCampo = mensagem.match(/campo\s+([^\s,)]+|"[^"]*")/i);
   if (matchCampo) return matchCampo[1].replace(/"/g, '');
 
@@ -32,7 +31,6 @@ function extrairCampo(mensagem) {
 }
 
 function extrairRegraPVA(mensagem, registro) {
-  // Extrai o que o PVA exige a partir da mensagem
   const matchDeve = mensagem.match(/deve ser\s+(.+?)(?:\.|$)/i);
   if (matchDeve) return matchDeve[1].trim();
 
@@ -64,12 +62,12 @@ function extrairValorEncontrado(mensagem, linhaConteudo) {
   return '—';
 }
 
-function LogEntry({ entry, linhaConteudo, idx }) {
+const LogEntry = memo(function LogEntry({ entry, linhaConteudo, idx }) {
   const [expandido, setExpandido] = useState(false);
   const isErro = entry.severidade === 'erro';
-  const campo = extrairCampo(entry.mensagem);
-  const regraPVA = extrairRegraPVA(entry.mensagem, entry.registro);
-  const valorEncontrado = extrairValorEncontrado(entry.mensagem, linhaConteudo);
+  const campo = useMemo(() => extrairCampo(entry.mensagem), [entry.mensagem]);
+  const regraPVA = useMemo(() => extrairRegraPVA(entry.mensagem, entry.registro), [entry.mensagem, entry.registro]);
+  const valorEncontrado = useMemo(() => extrairValorEncontrado(entry.mensagem, linhaConteudo), [entry.mensagem, linhaConteudo]);
 
   return (
     <div className={`rounded-lg border ${isErro ? 'border-red-200 bg-red-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
@@ -149,21 +147,22 @@ function LogEntry({ entry, linhaConteudo, idx }) {
       )}
     </div>
   );
-}
+});
 
 export default function ValidationLogPanel({ resultado, conteudo }) {
   const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
+  const [limite, setLimite] = useState(30);
 
   const linhasArquivo = useMemo(() => {
     if (!conteudo) return [];
-    return conteudo.split(/\r?\n/).filter(l => l.trim().length > 0);
+    return conteudo.split(/\r?\n/);
   }, [conteudo]);
 
   const todasEntradas = useMemo(() => {
     if (!resultado) return [];
-    const erros = (resultado.erros || []).map(e => ({ ...e, severidade: 'erro' }));
-    const avisos = (resultado.avisos || []).map(a => ({ ...a, severidade: 'aviso' }));
+    const erros = (resultado.erros || []).map((e, i) => ({ ...e, severidade: 'erro', _origIdx: i }));
+    const avisos = (resultado.avisos || []).map((a, i) => ({ ...a, severidade: 'aviso', _origIdx: erros.length + i }));
     return [...erros, ...avisos].sort((a, b) => (a.linha || 0) - (b.linha || 0));
   }, [resultado]);
 
@@ -186,10 +185,16 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
     return lista;
   }, [todasEntradas, busca, filtroTipo]);
 
+  // Reset paginação quando filtros mudam
+  React.useEffect(() => {
+    setLimite(30);
+  }, [busca, filtroTipo]);
+
   if (!resultado) return null;
 
   const totalErros = resultado.erros?.length || 0;
   const totalAvisos = resultado.avisos?.length || 0;
+  const visiveis = entradasFiltradas.slice(0, limite);
 
   return (
     <Card className="border-slate-300">
@@ -203,7 +208,6 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Controles de filtro */}
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -248,7 +252,6 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
           </div>
         </div>
 
-        {/* Cabeçalho informativo */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-slate-50 rounded-lg px-3 py-2">
           <Clipboard className="w-3.5 h-3.5" />
           <span>
@@ -256,28 +259,36 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
           </span>
         </div>
 
-        {/* Lista de logs */}
         {entradasFiltradas.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <ScrollText className="w-10 h-10 mx-auto mb-2 opacity-40" />
             <p className="text-sm">Nenhuma ocorrência encontrada com os filtros atuais.</p>
           </div>
         ) : (
-          <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
-            {entradasFiltradas.map((entry, idx) => {
-              const linhaConteudo = entry.linha > 0 && linhasArquivo[entry.linha - 1]
-                ? linhasArquivo[entry.linha - 1]
-                : null;
-              return (
-                <LogEntry
-                  key={idx}
-                  entry={entry}
-                  linhaConteudo={linhaConteudo}
-                  idx={todasEntradas.indexOf(entry)}
-                />
-              );
-            })}
-          </div>
+          <>
+            <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
+              {visiveis.map((entry, idx) => {
+                const linhaConteudo = entry.linha > 0 && linhasArquivo[entry.linha - 1]
+                  ? linhasArquivo[entry.linha - 1]
+                  : null;
+                return (
+                  <LogEntry
+                    key={entry._origIdx}
+                    entry={entry}
+                    linhaConteudo={linhaConteudo}
+                    idx={idx}
+                  />
+                );
+              })}
+            </div>
+            {entradasFiltradas.length > limite && (
+              <div className="text-center">
+                <Button variant="outline" size="sm" onClick={() => setLimite(l => l + 30)}>
+                  Ver mais ({entradasFiltradas.length - limite} restantes)
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
