@@ -62,11 +62,17 @@ function extrairValorEncontrado(mensagem, linhaConteudo) {
   return '—';
 }
 
-const LogEntry = memo(function LogEntry({ entry, linhaConteudo, idx }) {
+const LogEntry = memo(function LogEntry({ entry, getLinhaConteudo, idx }) {
   const [expandido, setExpandido] = useState(false);
   const isErro = entry.severidade === 'erro';
   const campo = useMemo(() => extrairCampo(entry.mensagem), [entry.mensagem]);
   const regraPVA = useMemo(() => extrairRegraPVA(entry.mensagem, entry.registro), [entry.mensagem, entry.registro]);
+  // Só busca o conteúdo da linha quando o item está expandido — evita percorrer
+  // a string de 628KB para cada item visível a cada render (causa freeze)
+  const linhaConteudo = useMemo(
+    () => (expandido && entry.linha > 0 ? getLinhaConteudo(entry.linha) : null),
+    [expandido, entry.linha, getLinhaConteudo]
+  );
   const valorEncontrado = useMemo(() => extrairValorEncontrado(entry.mensagem, linhaConteudo), [entry.mensagem, linhaConteudo]);
 
   return (
@@ -314,7 +320,7 @@ function ValidationLogPanel({ resultado, conteudo }) {
                 <LogEntry
                   key={entry._origIdx}
                   entry={entry}
-                  linhaConteudo={entry.linha > 0 ? getLinhaConteudo(entry.linha) : null}
+                  getLinhaConteudo={getLinhaConteudo}
                   idx={idx}
                 />
               ))}
