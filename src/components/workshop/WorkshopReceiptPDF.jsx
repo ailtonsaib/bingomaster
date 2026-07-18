@@ -28,10 +28,39 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
   const receiptNumber = `REC-${order.order_number || order.id.slice(-6).toUpperCase()}`;
   const now = new Date();
 
-  const generatePDF = () => {
+  // Carrega a logo da empresa como dataURL para inserir no PDF
+  const loadLogo = () => new Promise((resolve) => {
+    const url = companyConfig?.logo_url;
+    if (!url) { resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+
+  const generatePDF = (logoData) => {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
     const pageW = 210;
     let y = 20;
+
+    // Logo da empresa (se disponível)
+    if (logoData) {
+      try {
+        doc.addImage(logoData, "PNG", 15, 12, 22, 22);
+      } catch { /* ignore */ }
+    }
 
     // Cabeçalho — empresa
     doc.setFontSize(16);
@@ -223,7 +252,7 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
   };
 
   // ─── GERAR NF-e (Nota Fiscal de Produto — peças) ───
-  const generateNFePDF = () => {
+  const generateNFePDF = (logoData) => {
     const parts = (order.items || []).filter(i => i.type === "peca");
     if (parts.length === 0) return null;
 
@@ -231,25 +260,30 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
     const pageW = 210;
     let y = 15;
 
+    // Logo da empresa (se disponível)
+    if (logoData) {
+      try { doc.addImage(logoData, "PNG", 15, 8, 18, 18); } catch { /* ignore */ }
+    }
+
     // Cabeçalho
     doc.setFontSize(14);
     doc.setFont(undefined, "bold");
-    doc.text(companyConfig?.razao_social || "Oficina", 15, y);
+    doc.text(companyConfig?.razao_social || "Oficina", logoData ? 38 : 15, y);
     y += 6;
     doc.setFontSize(8);
     doc.setFont(undefined, "normal");
     if (companyConfig?.cnpj) {
-      doc.text(`CNPJ: ${companyConfig.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}`, 15, y);
+      doc.text(`CNPJ: ${companyConfig.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}`, logoData ? 38 : 15, y);
       y += 4;
     }
     if (companyConfig?.ie) {
-      doc.text(`IE: ${companyConfig.ie}`, 15, y);
+      doc.text(`IE: ${companyConfig.ie}`, logoData ? 38 : 15, y);
       y += 4;
     }
     const addrParts = [companyConfig?.address, companyConfig?.number, companyConfig?.district].filter(Boolean);
-    if (addrParts.length) { doc.text(addrParts.join(", "), 15, y); y += 4; }
+    if (addrParts.length) { doc.text(addrParts.join(", "), logoData ? 38 : 15, y); y += 4; }
     const cityParts = [companyConfig?.city, companyConfig?.uf].filter(Boolean);
-    if (cityParts.length) { doc.text(cityParts.join(" - "), 15, y); y += 4; }
+    if (cityParts.length) { doc.text(cityParts.join(" - "), logoData ? 38 : 15, y); y += 4; }
 
     // Box NF-e
     doc.setFillColor(245, 245, 245);
@@ -339,7 +373,7 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
   };
 
   // ─── GERAR NFS-e (Nota Fiscal de Serviço — mão de obra) ───
-  const generateNFSePDF = () => {
+  const generateNFSePDF = (logoData) => {
     const services = (order.items || []).filter(i => i.type === "servico");
     const laborTotal = order.labor_total || services.reduce((s, i) => s + (i.total || 0), 0);
     if (services.length === 0 && laborTotal === 0) return null;
@@ -348,22 +382,27 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
     const pageW = 210;
     let y = 15;
 
+    // Logo da empresa (se disponível)
+    if (logoData) {
+      try { doc.addImage(logoData, "PNG", 15, 8, 18, 18); } catch { /* ignore */ }
+    }
+
     // Cabeçalho
     doc.setFontSize(14);
     doc.setFont(undefined, "bold");
-    doc.text(companyConfig?.razao_social || "Oficina", 15, y);
+    doc.text(companyConfig?.razao_social || "Oficina", logoData ? 38 : 15, y);
     y += 6;
     doc.setFontSize(8);
     doc.setFont(undefined, "normal");
     if (companyConfig?.cnpj) {
-      doc.text(`CNPJ: ${companyConfig.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}`, 15, y);
+      doc.text(`CNPJ: ${companyConfig.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}`, logoData ? 38 : 15, y);
       y += 4;
     }
     const addrParts = [companyConfig?.address, companyConfig?.number, companyConfig?.district].filter(Boolean);
-    if (addrParts.length) { doc.text(addrParts.join(", "), 15, y); y += 4; }
+    if (addrParts.length) { doc.text(addrParts.join(", "), logoData ? 38 : 15, y); y += 4; }
     const cityParts = [companyConfig?.city, companyConfig?.uf].filter(Boolean);
-    if (cityParts.length) { doc.text(cityParts.join(" - "), 15, y); y += 4; }
-    if (companyConfig?.phone) { doc.text(`Telefone: ${companyConfig.phone}`, 15, y); y += 4; }
+    if (cityParts.length) { doc.text(cityParts.join(" - "), logoData ? 38 : 15, y); y += 4; }
+    if (companyConfig?.phone) { doc.text(`Telefone: ${companyConfig.phone}`, logoData ? 38 : 15, y); y += 4; }
 
     // Box NFS-e
     doc.setFillColor(239, 246, 255);
@@ -462,7 +501,8 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
   const handleDownloadNFe = async () => {
     setGeneratingNFe(true);
     try {
-      const doc = generateNFePDF();
+      const logoData = await loadLogo();
+      const doc = generateNFePDF(logoData);
       if (!doc) {
         toast({ title: "Sem peças", description: "Esta OS não possui peças para gerar NF-e.", variant: "destructive" });
         setGeneratingNFe(false);
@@ -479,7 +519,8 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
   const handleDownloadNFSe = async () => {
     setGeneratingNFSe(true);
     try {
-      const doc = generateNFSePDF();
+      const logoData = await loadLogo();
+      const doc = generateNFSePDF(logoData);
       if (!doc) {
         toast({ title: "Sem serviços", description: "Esta OS não possui mão de obra para gerar NFS-e.", variant: "destructive" });
         setGeneratingNFSe(false);
@@ -496,7 +537,8 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
   const handleDownload = async () => {
     setGenerating(true);
     try {
-      const doc = generatePDF();
+      const logoData = await loadLogo();
+      const doc = generatePDF(logoData);
       doc.save(`recibo-${order.order_number || order.id}.pdf`);
       toast({ title: "Recibo gerado", description: "O PDF foi baixado." });
     } catch {
@@ -513,7 +555,8 @@ export default function WorkshopReceiptPDF({ order, companyConfig, paymentMethod
     setSending(true);
     try {
       // Gera o PDF como base64 para anexar
-      const doc = generatePDF();
+      const logoData = await loadLogo();
+      const doc = generatePDF(logoData);
       const pdfBase64 = doc.output("datauristring");
 
       // Tenta enviar por email — apenas usuários registrados
