@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo, useDeferredValue } from 'react';
+import React, { useState, useMemo, memo, useDeferredValue, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -149,15 +149,24 @@ const LogEntry = memo(function LogEntry({ entry, linhaConteudo, idx }) {
   );
 });
 
-export default function ValidationLogPanel({ resultado, conteudo }) {
+function ValidationLogPanel({ resultado, conteudo }) {
   const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [limite, setLimite] = useState(30);
   const buscaDeferida = useDeferredValue(busca);
 
-  const linhasArquivo = useMemo(() => {
-    if (!conteudo) return [];
-    return conteudo.split(/\r?\n/);
+  // Busca preguiçosa de linha: em vez de dividir o arquivo inteiro (628KB → 11.818 strings),
+  // localiza apenas a linha solicitada usando indexOf — O(linhaNum) mas só para itens visíveis
+  const getLinhaConteudo = useCallback((linhaNum) => {
+    if (!conteudo || !linhaNum || linhaNum <= 0) return null;
+    let pos = 0;
+    for (let i = 1; i < linhaNum; i++) {
+      pos = conteudo.indexOf('\n', pos);
+      if (pos === -1) return null;
+      pos++;
+    }
+    const end = conteudo.indexOf('\n', pos);
+    return conteudo.substring(pos, end === -1 ? undefined : end);
   }, [conteudo]);
 
   const todasEntradas = useMemo(() => {
@@ -196,6 +205,7 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
   const totalErros = resultado.erros?.length || 0;
   const totalAvisos = resultado.avisos?.length || 0;
   const visiveis = entradasFiltradas.slice(0, limite);
+
 
   return (
     <Card className="border-slate-300">
@@ -268,19 +278,14 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
         ) : (
           <>
             <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
-              {visiveis.map((entry, idx) => {
-                const linhaConteudo = entry.linha > 0 && linhasArquivo[entry.linha - 1]
-                  ? linhasArquivo[entry.linha - 1]
-                  : null;
-                return (
-                  <LogEntry
-                    key={entry._origIdx}
-                    entry={entry}
-                    linhaConteudo={linhaConteudo}
-                    idx={idx}
-                  />
-                );
-              })}
+              {visiveis.map((entry, idx) => (
+                <LogEntry
+                  key={entry._origIdx}
+                  entry={entry}
+                  linhaConteudo={entry.linha > 0 ? getLinhaConteudo(entry.linha) : null}
+                  idx={idx}
+                />
+              ))}
             </div>
             {entradasFiltradas.length > limite && (
               <div className="text-center">
@@ -295,3 +300,5 @@ export default function ValidationLogPanel({ resultado, conteudo }) {
     </Card>
   );
 }
+
+export default memo(ValidationLogPanel);

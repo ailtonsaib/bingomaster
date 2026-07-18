@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import DivergenceReport from '@/components/sped/DivergenceReport';
 import ValidationLogPanel from '@/components/sped/ValidationLogPanel';
 import ValidationComparison from '@/components/sped/ValidationComparison';
+import CollapsibleLogPanel from '@/components/sped/CollapsibleLogPanel';
+import CollapsibleDivergenceReport from '@/components/sped/CollapsibleDivergenceReport';
 import BlockErrorSummary from '@/components/sped/BlockErrorSummary';
 import jsPDF from 'jspdf';
 import {
@@ -710,14 +712,14 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
             </Card>
           )}
 
-          {/* Painel de Logs Detalhado — Linha, Campo, Regra PVA */}
+          {/* Painel de Logs Detalhado — renderizado sob demanda para evitar travamento em arquivos grandes */}
           {deferredResultado && (
-            <ValidationLogPanel resultado={deferredResultado} conteudo={conteudoEditado || conteudo} />
+            <CollapsibleLogPanel resultado={deferredResultado} conteudo={conteudoEditado || conteudo} />
           )}
 
-          {/* Relatório Resumido de Divergências */}
+          {/* Relatório Resumido de Divergências — renderizado sob demanda */}
           {deferredResultado && (
-            <DivergenceReport resultado={deferredResultado} />
+            <CollapsibleDivergenceReport resultado={deferredResultado} />
           )}
 
           {/* Editor / Correção */}
@@ -730,15 +732,25 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Edite o conteúdo abaixo para corrigir os erros encontrados. Use as informações da lista de erros acima para localizar as linhas problemáticas. Após editar, clique em "Revalidar" para verificar novamente.
-                </p>
-                <Textarea
-                  value={conteudoEditado}
-                  onChange={(e) => setConteudoEditado(e.target.value)}
-                  className="font-mono text-xs min-h-[400px] resize-y"
-                  spellCheck={false}
-                />
+                {conteudoEditado.length > 100000 ? (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-2">
+                    <p className="text-sm font-semibold text-amber-800">
+                      Arquivo muito grande para edição inline ({(conteudoEditado.length / 1024).toFixed(0)} KB)
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      Para arquivos grandes, recomendamos usar o botão "Baixar Corrigido" para baixar o arquivo,
+                      editar em um editor externo (Bloco de Notas, Notepad++) e reenviar o arquivo corrigido.
+                      A edição direta no navegador pode travar em arquivos acima de 100 KB.
+                    </p>
+                  </div>
+                ) : (
+                  <Textarea
+                    value={conteudoEditado}
+                    onChange={(e) => setConteudoEditado(e.target.value)}
+                    className="font-mono text-xs min-h-[400px] resize-y"
+                    spellCheck={false}
+                  />
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
