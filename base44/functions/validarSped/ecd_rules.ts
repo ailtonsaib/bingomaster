@@ -17,10 +17,10 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
       const c = linhas[i].split('|');
       if (c[1] === 'I050') {
         // Layout I050: |I050|DT_ALT|COD_NAT|IND_CTA|NIVEL|COD_CTA|COD_CTA_SUP|CTA|
-        const codCta = c[6] || '';
-        const codCtaSup = c[7] || '';
+        const codCta = (c[6] || '').trim();
+        const codCtaSup = (c[7] || '').trim();
         if (codCta) contasCadastradas.add(codCta);
-        registrosI050.push({ linha: i + 1, codCta, codCtaSup, indCta: c[4] || '', nivel: c[5] || '' });
+        registrosI050.push({ linha: i + 1, codCta, codCtaSup, indCta: (c[4] || '').trim(), nivel: (c[5] || '').trim() });
       }
     }
     for (const r of registrosI050) {
@@ -28,11 +28,13 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
       // Conta analítica (IND_CTA=A) deve ter COD_CTA_SUP preenchido e válido
       if (r.indCta === 'A' && r.codCtaSup) {
         if (!contasCadastradas.has(r.codCtaSup)) {
-          erros.push({
+          // Converter em aviso: o PVA verifica isso, mas referências a contas de período anterior
+          // ou formatações diferentes podem gerar falsos positivos
+          avisos.push({
             linha: r.linha,
             registro: 'I050',
-            mensagem: `COD_CTA_SUP "${r.codCtaSup}" não foi encontrado no plano de contas. Toda conta analítica deve referenciar uma conta sintética (I050) cadastrada.`,
-            severidade: 'erro'
+            mensagem: `COD_CTA_SUP "${r.codCtaSup}" não foi encontrado no plano de contas. Verifique se a conta pai está cadastrada.`,
+            severidade: 'aviso'
           });
         }
       }
@@ -179,8 +181,8 @@ export function validarCruzadaECD(linhas, estatisticas, erros, avisos) {
       const c = linha.split('|');
       if (c[1] === '0000') {
         // ECD: |0000|LECD|DT_INI|DT_FIN|NOME|CNPJ|...
-        dtIniEsc = c[3] || '';
-        dtFinEsc = c[4] || '';
+        dtIniEsc = (c[3] || '').trim();
+        dtFinEsc = (c[4] || '').trim();
         break;
       }
     }

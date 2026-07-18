@@ -1993,21 +1993,28 @@ Deno.serve(async (req) => {
 
       if (registro === 'I310' && tipoDetectado === 'ECD') {
         // |I310|COD_CTA|COD_CCUS|VL_SLD_FIN|IND_DC|
-        if (campos.length < 5) {
+        // Split SEM filtro para preservar índices (COD_CCUS pode ser vazio)
+        const cI310 = linha.split('|');
+        if (cI310.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'I310',
-            mensagem: `Registro I310 (detalhes do balancete diário) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I310 (detalhes do balancete diário) incompleto.`,
             severidade: 'aviso'
           });
         }
-        if (campos[4] && !['D','C'].includes(campos[4])) {
+        if (cI310[5] && cI310[5].trim() && !['D','C'].includes(cI310[5].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I310',
-            mensagem: `IND_DC inválido: "${campos[4]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC inválido: "${cI310[5]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 3, 4, 'I310', linhaAtual, erros);
+        if (cI310[4] && cI310[4].trim()) {
+          const v = cI310[4].trim().replace(',', '.');
+          if (isNaN(parseFloat(v))) {
+            erros.push({ linha: linhaAtual, registro: 'I310', mensagem: `VL_SLD_FIN inválido: "${cI310[4]}".`, severidade: 'erro' });
+          }
+        }
       }
 
       if (registro === 'I350' && tipoDetectado === 'ECD') {
@@ -2024,21 +2031,28 @@ Deno.serve(async (req) => {
 
       if (registro === 'I355' && tipoDetectado === 'ECD') {
         // |I355|COD_CTA|VL_CTA|IND_DC|
-        if (campos.length < 4) {
+        // Split SEM filtro para preservar índices
+        const cI355 = linha.split('|');
+        if (cI355.length < 5) {
           avisos.push({
             linha: linhaAtual, registro: 'I355',
-            mensagem: `Registro I355 (detalhes dos saldos de resultado) incompleto: esperado mínimo de 4 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro I355 (detalhes dos saldos de resultado) incompleto.`,
             severidade: 'aviso'
           });
         }
-        if (campos[3] && !['D','C'].includes(campos[3])) {
+        if (cI355[4] && cI355[4].trim() && !['D','C'].includes(cI355[4].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'I355',
-            mensagem: `IND_DC inválido: "${campos[3]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC inválido: "${cI355[4]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 2, 3, 'I355', linhaAtual, erros);
+        if (cI355[3] && cI355[3].trim()) {
+          const v = cI355[3].trim().replace(',', '.');
+          if (isNaN(parseFloat(v))) {
+            erros.push({ linha: linhaAtual, registro: 'I355', mensagem: `VL_CTA inválido: "${cI355[3]}".`, severidade: 'erro' });
+          }
+        }
       }
 
       // === SPED ECD: J005, J100, J150, J200, J210, J900, J930, J932, J935 ===
@@ -2066,120 +2080,152 @@ Deno.serve(async (req) => {
 
       if (registro === 'J100' && tipoDetectado === 'ECD') {
         // |J100|DT_INI|DT_FIN|COD_CTA|COD_CTA_RES|VL_SLD_FIN|IND_DC|...
-        if (campos.length < 7) {
+        // Split SEM filtro para preservar índices (COD_CTA_RES pode ser vazio)
+        const cJ100 = linha.split('|');
+        if (cJ100.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'J100',
-            mensagem: `Registro J100 (balanço patrimonial) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J100 (balanço patrimonial) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(campos[1], 'J100', linhaAtual, erros);
-        validarData8(campos[2], 'J100', linhaAtual, erros);
-        if (campos[6] && !['D','C'].includes(campos[6])) {
+        validarData8(cJ100[2], 'J100', linhaAtual, erros);
+        validarData8(cJ100[3], 'J100', linhaAtual, erros);
+        if (cJ100[7] && cJ100[7].trim() && !['D','C'].includes(cJ100[7].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'J100',
-            mensagem: `IND_DC inválido: "${campos[6]}" (deve ser D=Devedor ou C=Credor).`,
+            mensagem: `IND_DC inválido: "${cJ100[7]}" (deve ser D=Devedor ou C=Credor).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 5, 6, 'J100', linhaAtual, erros);
-        validarValorNumerico(campos, 7, 8, 'J100', linhaAtual, erros);
+        if (cJ100[6] && cJ100[6].trim()) {
+          const v = cJ100[6].trim().replace(',', '.');
+          if (isNaN(parseFloat(v))) {
+            erros.push({ linha: linhaAtual, registro: 'J100', mensagem: `VL_SLD_FIN inválido: "${cJ100[6]}".`, severidade: 'erro' });
+          }
+        }
       }
 
       if (registro === 'J150' && tipoDetectado === 'ECD') {
         // |J150|DT_INI|DT_FIN|COD_CTA|COD_CTA_RES|VL_DEB|VL_CRED|IND_VL|...
-        if (campos.length < 8) {
+        // Split SEM filtro para preservar índices (COD_CTA_RES pode ser vazio)
+        const cJ150 = linha.split('|');
+        if (cJ150.length < 9) {
           avisos.push({
             linha: linhaAtual, registro: 'J150',
-            mensagem: `Registro J150 (DRE) incompleto: esperado mínimo de 8 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J150 (DRE) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(campos[1], 'J150', linhaAtual, erros);
-        validarData8(campos[2], 'J150', linhaAtual, erros);
-        if (campos[7] && !['D','C'].includes(campos[7])) {
+        validarData8(cJ150[2], 'J150', linhaAtual, erros);
+        validarData8(cJ150[3], 'J150', linhaAtual, erros);
+        if (cJ150[8] && cJ150[8].trim() && !['D','C'].includes(cJ150[8].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'J150',
-            mensagem: `IND_VL inválido: "${campos[7]}" (deve ser D=Despesa ou C=Receita).`,
+            mensagem: `IND_VL inválido: "${cJ150[8]}" (deve ser D=Despesa ou C=Receita).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 5, 7, 'J150', linhaAtual, erros);
-        validarValorNumerico(campos, 8, 9, 'J150', linhaAtual, erros);
+        for (let ji = 6; ji <= 7; ji++) {
+          if (cJ150[ji] && cJ150[ji].trim()) {
+            const v = cJ150[ji].trim().replace(',', '.');
+            if (isNaN(parseFloat(v))) {
+              erros.push({ linha: linhaAtual, registro: 'J150', mensagem: `Valor numérico inválido no campo ${ji}: "${cJ150[ji]}".`, severidade: 'erro' });
+            }
+          }
+        }
       }
 
       if (registro === 'J200' && tipoDetectado === 'ECD') {
         // |J200|COD_AGL|IND_GRP|DESC_COD_AGL|VL_AGL|
-        if (campos.length < 5) {
+        // Split SEM filtro para preservar índices (DESC_COD_AGL pode ser vazio)
+        const cJ200 = linha.split('|');
+        if (cJ200.length < 6) {
           avisos.push({
             linha: linhaAtual, registro: 'J200',
-            mensagem: `Registro J200 (aglutinação) incompleto: esperado mínimo de 5 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J200 (aglutinação) incompleto.`,
             severidade: 'aviso'
           });
         }
-        // IND_GRP (índice 2): A=Ativo, P=Passivo, R=Receita, D=Despesa
-        if (campos[2] && !['A','P','R','D'].includes(campos[2])) {
+        // IND_GRP (posição 3): A=Ativo, P=Passivo, R=Receita, D=Despesa
+        if (cJ200[3] && cJ200[3].trim() && !['A','P','R','D'].includes(cJ200[3].trim())) {
           erros.push({
             linha: linhaAtual, registro: 'J200',
-            mensagem: `IND_GRP inválido: "${campos[2]}" (deve ser A=Ativo, P=Passivo, R=Receita ou D=Despesa).`,
+            mensagem: `IND_GRP inválido: "${cJ200[3]}" (deve ser A=Ativo, P=Passivo, R=Receita ou D=Despesa).`,
             severidade: 'erro'
           });
         }
-        validarValorNumerico(campos, 4, 5, 'J200', linhaAtual, erros);
+        if (cJ200[5] && cJ200[5].trim()) {
+          const v = cJ200[5].trim().replace(',', '.');
+          if (isNaN(parseFloat(v))) {
+            erros.push({ linha: linhaAtual, registro: 'J200', mensagem: `VL_AGL inválido: "${cJ200[5]}".`, severidade: 'erro' });
+          }
+        }
       }
 
       if (registro === 'J210' && tipoDetectado === 'ECD') {
         // |J210|DT_INI|DT_FIN|COD_AGL|IND_GRP|DESC_COD_AGL|VL_AGL|
-        if (campos.length < 7) {
+        // Split SEM filtro para preservar índices (DESC_COD_AGL pode ser vazio)
+        const cJ210 = linha.split('|');
+        if (cJ210.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'J210',
-            mensagem: `Registro J210 (DLPA/DMPL) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J210 (DLPA/DMPL) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(campos[1], 'J210', linhaAtual, erros);
-        validarData8(campos[2], 'J210', linhaAtual, erros);
-        validarValorNumerico(campos, 6, 7, 'J210', linhaAtual, erros);
+        validarData8(cJ210[2], 'J210', linhaAtual, erros);
+        validarData8(cJ210[3], 'J210', linhaAtual, erros);
+        if (cJ210[7] && cJ210[7].trim()) {
+          const v = cJ210[7].trim().replace(',', '.');
+          if (isNaN(parseFloat(v))) {
+            erros.push({ linha: linhaAtual, registro: 'J210', mensagem: `VL_AGL inválido: "${cJ210[7]}".`, severidade: 'erro' });
+          }
+        }
       }
 
       if (registro === 'J900' && tipoDetectado === 'ECD') {
         // |J900|NUM_ORD|NAT_LIVR|DT_INI|DT_FIN|NOME|CNPJ|...
-        if (campos.length < 7) {
+        // Split SEM filtro para preservar índices (NAT_LIVR pode ser vazio)
+        const cJ900 = linha.split('|');
+        if (cJ900.length < 8) {
           avisos.push({
             linha: linhaAtual, registro: 'J900',
-            mensagem: `Registro J900 (termo de encerramento) incompleto: esperado mínimo de 7 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J900 (termo de encerramento) incompleto.`,
             severidade: 'aviso'
           });
         }
-        validarData8(campos[3], 'J900', linhaAtual, erros);
-        validarData8(campos[4], 'J900', linhaAtual, erros);
-        validarCpfCnpj(campos[6], 'J900', linhaAtual, erros, 'CNPJ');
+        validarData8(cJ900[4], 'J900', linhaAtual, erros);
+        validarData8(cJ900[5], 'J900', linhaAtual, erros);
+        validarCpfCnpj(cJ900[7], 'J900', linhaAtual, erros, 'CNPJ');
       }
 
       if (registro === 'J930' && tipoDetectado === 'ECD') {
         // |J930|NOME|CPF|IDENT_QUALIF|QUALIF|COD_ASSIN|...
-        if (campos.length < 6) {
+        // Split SEM filtro para preservar índices (IDENT_QUALIF pode ser vazio)
+        const cJ930 = linha.split('|');
+        if (cJ930.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: 'J930',
-            mensagem: `Registro J930 (signatários da escrituração) incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J930 (signatários da escrituração) incompleto.`,
             severidade: 'aviso'
           });
         }
-        if (campos[2]) {
-          const cpf = campos[2].replace(/\D/g, '');
+        if (cJ930[3]) {
+          const cpf = cJ930[3].replace(/\D/g, '');
           if (cpf.length !== 11) {
             erros.push({
               linha: linhaAtual, registro: 'J930',
-              mensagem: `CPF inválido no registro J930: "${campos[2]}" (esperado 11 dígitos).`,
+              mensagem: `CPF inválido no registro J930: "${cJ930[3]}" (esperado 11 dígitos).`,
               severidade: 'erro'
             });
           }
         }
-        // COD_ASSIN (índice 5): deve estar entre 1 e 9
-        if (campos[5] && !['1','2','3','4','5','6','7','8','9'].includes(campos[5])) {
+        // COD_ASSIN (posição 6): deve estar entre 1 e 9
+        if (cJ930[6] && !['1','2','3','4','5','6','7','8','9'].includes(cJ930[6])) {
           erros.push({
             linha: linhaAtual, registro: 'J930',
-            mensagem: `COD_ASSIN inválido: "${campos[5]}" (deve estar entre 1 e 9).`,
+            mensagem: `COD_ASSIN inválido: "${cJ930[6]}" (deve estar entre 1 e 9).`,
             severidade: 'erro'
           });
         }
@@ -2187,19 +2233,21 @@ Deno.serve(async (req) => {
 
       if (registro === 'J932' && tipoDetectado === 'ECD') {
         // |J932|NOME|CPF|IDENT_QUALIF|QUALIF|COD_ASSIN|...
-        if (campos.length < 6) {
+        // Split SEM filtro para preservar índices
+        const cJ932 = linha.split('|');
+        if (cJ932.length < 7) {
           avisos.push({
             linha: linhaAtual, registro: 'J932',
-            mensagem: `Registro J932 (signatários do termo de verificação) incompleto: esperado mínimo de 6 campos, encontrado ${campos.length}.`,
+            mensagem: `Registro J932 (signatários do termo de verificação) incompleto.`,
             severidade: 'aviso'
           });
         }
-        if (campos[2]) {
-          const cpf = campos[2].replace(/\D/g, '');
+        if (cJ932[3]) {
+          const cpf = cJ932[3].replace(/\D/g, '');
           if (cpf.length !== 11) {
             erros.push({
               linha: linhaAtual, registro: 'J932',
-              mensagem: `CPF inválido no registro J932: "${campos[2]}" (esperado 11 dígitos).`,
+              mensagem: `CPF inválido no registro J932: "${cJ932[3]}" (esperado 11 dígitos).`,
               severidade: 'erro'
             });
           }
