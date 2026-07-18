@@ -28,16 +28,7 @@ import {
   Wrench,
   Building2,
 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 
 export default function SpedValidator({ planKey, limitReached, clienteId, clienteNome, onClienteCadastrado }) {
   const [arquivo, setArquivo] = useState(null);
@@ -504,6 +495,31 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
             </CardContent>
           </Card>
 
+          {/* Banner de Ajuste Automático — inline (não bloqueia a tela) */}
+          {showAjusteDialog && !resultado.isValid && (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Wrench className="w-5 h-5 text-amber-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-800">
+                    Ajuste automático disponível
+                  </p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Foram encontrados {resultado?.erros?.length || 0} erro(s) e {resultado?.avisos?.length || 0} aviso(s). Deseja que o sistema faça os ajustes automáticos e gere um arquivo corrigido?
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button variant="outline" size="sm" onClick={() => setShowAjusteDialog(false)}>
+                    Ver relatório
+                  </Button>
+                  <Button size="sm" className="gap-2" onClick={handleAutoAjuste} disabled={loading}>
+                    <Wrench className="h-4 w-4" /> Ajustar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Comparativo Antes × Depois */}
           {resultadoOriginal && resultadoCorrigido && (
             <ValidationComparison
@@ -721,26 +737,6 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
         </>
       )}
 
-      {/* Dialog de Ajuste Automático */}
-      <AlertDialog open={showAjusteDialog} onOpenChange={setShowAjusteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-amber-500" />
-              Arquivo contém erros e avisos
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Foram encontrados {resultado?.erros?.length || 0} erro(s) e {resultado?.avisos?.length || 0} aviso(s) no arquivo. Deseja que o sistema faça os ajustes automáticos e gere um novo arquivo corrigido?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Não, mostrar relatório</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAutoAjuste}>
-              Sim, ajustar automaticamente
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
