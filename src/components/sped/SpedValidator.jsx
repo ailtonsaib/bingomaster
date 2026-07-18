@@ -146,14 +146,15 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
       if (dados.success) {
         startTransition(() => {
           setResultado(dados);
+          setLimiteErros(50);
+          setLimiteAvisos(50);
+          setConteudo(conteudoParaValidar);
+          setResultadoOriginal(dados);
+          setResultadoCorrigido(null);
         });
-        setLimiteErros(50);
-        setLimiteAvisos(50);
-        setConteudo(conteudoParaValidar);
-        setResultadoOriginal(dados);
-        setResultadoCorrigido(null);
+        // Adia o dialog para não bloquear o render inicial dos resultados
         if (dados.erros?.length > 0 || dados.avisos?.length > 0) {
-          setShowAjusteDialog(true);
+          setTimeout(() => setShowAjusteDialog(true), 800);
         }
         await salvarValidacao(dados, nome, conteudoParaValidar, foiCorrigido);
         if (dados.cliente && onClienteCadastrado) {
@@ -644,75 +645,7 @@ export default function SpedValidator({ planKey, limitReached, clienteId, client
             <BlockErrorSummary resultado={deferredResultado} />
           )}
 
-          {/* Lista de Erros */}
-          {deferredResultado?.erros?.length > 0 && (
-            <Card className="border-red-200">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-red-700">
-                  <XCircle className="w-5 h-5" />
-                  Erros Críticos ({deferredResultado.erros.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {deferredResultado.erros.slice(0, limiteErros).map((e, idx) => (
-                    <div key={idx} className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                      <XCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-red-800">{e.mensagem}</p>
-                        <p className="text-xs text-red-600 mt-1">
-                          Linha {e.linha} {e.registro && `| Registro ${e.registro}`}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {deferredResultado.erros.length > limiteErros && (
-                  <div className="mt-3 text-center">
-                    <Button variant="outline" size="sm" onClick={() => setLimiteErros(l => l + 50)}>
-                      Ver mais ({deferredResultado.erros.length - limiteErros} restantes)
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Lista de Avisos */}
-          {deferredResultado.avisos.length > 0 && (
-            <Card className="border-amber-200">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-amber-700">
-                  <AlertTriangle className="w-5 h-5" />
-                  Avisos ({deferredResultado.avisos.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {deferredResultado.avisos.slice(0, limiteAvisos).map((a, idx) => (
-                    <div key={idx} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-amber-800">{a.mensagem}</p>
-                        <p className="text-xs text-amber-600 mt-1">
-                          {a.linha > 0 ? `Linha ${a.linha}` : 'Estrutura'} {a.registro && `| Registro ${a.registro}`}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {deferredResultado.avisos.length > limiteAvisos && (
-                  <div className="mt-3 text-center">
-                    <Button variant="outline" size="sm" onClick={() => setLimiteAvisos(l => l + 50)}>
-                      Ver mais ({deferredResultado.avisos.length - limiteAvisos} restantes)
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Painel de Logs Detalhado — renderizado sob demanda para evitar travamento em arquivos grandes */}
+          {/* Painel de Logs Detalhado — lista virtualizada de erros e avisos */}
           {deferredResultado && (
             <CollapsibleLogPanel resultado={deferredResultado} conteudo={conteudoEditado || conteudo} />
           )}
