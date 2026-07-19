@@ -212,14 +212,14 @@ function PlansModal({ app, onClose }) {
                           <span className="text-lg font-bold" style={{ color: app.accent }}>{currency(plan.acquisition_price)}</span>
                         </div>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-xs text-[#71717A]">Mensal:</span>
-                          <span className="text-lg font-bold" style={{ color: app.accent }}>{currency(plan.price)}<span className="text-xs font-normal text-[#71717A]">/mês</span></span>
+                          <span className="text-xs text-[#71717A]">Valor único:</span>
+                          <span className="text-lg font-bold" style={{ color: app.accent }}>{currency(plan.price)}</span>
                         </div>
                       </div>
                     ) : (
                       <p className="text-2xl font-bold" style={{ color: app.accent }}>
                         {currency(plan.price)}
-                        {plan.price !== 0 && <span className="text-xs font-normal text-[#71717A]">/mês</span>}
+                        {plan.price !== 0 && <span className="text-xs font-normal text-[#71717A]"> valor único</span>}
                       </p>
                     )}
                   </div>
