@@ -94,28 +94,9 @@ export default function DiagnosticPlanManagement() {
                 </label>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <Label className="text-xs mb-1 block">Nome de exibição</Label>
-                  <Input
-                    value={config.plan_name}
-                    onChange={(e) => handleField(config.id, "plan_name", e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Aquisição (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={config.acquisition_price}
-                    onChange={(e) => handleField(config.id, "acquisition_price", e.target.value)}
-                    className="h-9"
-                    placeholder="0 = sem taxa"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Mensalidade (R$ / mês)</Label>
+                  <Label className="text-xs mb-1 block">Valor único (R$)</Label>
                   <Input
                     type="number"
                     step="0.01"
