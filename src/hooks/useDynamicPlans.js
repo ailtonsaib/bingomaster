@@ -114,7 +114,7 @@ export function useDynamicPlans() {
 
   /** Converte planos do Diagnóstico Automotivo (DiagnosticPlanConfig) para o formato da Landing */
   const mappedDiagnosticPlans = diagnosticPlans
-    .filter((p) => p.is_active !== false)
+    .filter((p) => p.is_active !== false && p.plan_id !== "teste")
     .map((p) => {
       const specs = [];
       if (p.max_diagnostics < 0) specs.push("Diagnósticos ilimitados");
