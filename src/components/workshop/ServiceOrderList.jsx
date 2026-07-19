@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, Search, ClipboardList, Car, ChevronDown, RotateCcw } from "lucide-react";
+import { Plus, Loader2, Search, ClipboardList, Car, ChevronDown, RotateCcw, Wrench } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getPortalUser } from "@/lib/portalSession";
 import ServiceOrderForm from "./ServiceOrderForm";
 import ServiceOrderDetail from "./ServiceOrderDetail";
 import PlanUpgradePanel from "./PlanUpgradePanel";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formatCurrency = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -50,6 +51,8 @@ export default function ServiceOrderList({ userEmail }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [planUsage, setPlanUsage] = useState(null);
   const [statusMenuId, setStatusMenuId] = useState(null);
+  const [mechanics, setMechanics] = useState([]);
+  const [mechanicFilter, setMechanicFilter] = useState("all");
 
   const STATUS_CHANGE_OPTIONS = [
     "aberta",
@@ -132,12 +135,14 @@ export default function ServiceOrderList({ userEmail }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [data, usageRes] = await Promise.all([
+      const [data, usageRes, mechs] = await Promise.all([
         base44.entities.ServiceOrder.filter({ user_email: userEmail }, "-created_date"),
         base44.functions.invoke("manageDiagnostic", { operation: "getUsage" }).catch(() => null),
+        base44.entities.DiagnosticMechanic.filter({ user_email: userEmail, is_active: true }).catch(() => []),
       ]);
       setOrders(data);
       if (usageRes?.data) setPlanUsage(usageRes.data);
+      setMechanics(mechs || []);
     } catch { /* ignore */ }
     setLoading(false);
   };
@@ -150,11 +155,12 @@ export default function ServiceOrderList({ userEmail }) {
 
   const filtered = orders.filter(o => {
     const statusMatch = statusFilter === "all" || o.status === statusFilter;
+    const mechanicMatch = mechanicFilter === "all" || o.mechanic_id === mechanicFilter;
     const searchMatch = !search ||
       o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
       o.client_name?.toLowerCase().includes(search.toLowerCase()) ||
       o.vehicle_plate?.toLowerCase().includes(search.toLowerCase());
-    return statusMatch && searchMatch;
+    return statusMatch && mechanicMatch && searchMatch;
   });
 
   const handleViewDetail = (order) => {
@@ -256,6 +262,33 @@ export default function ServiceOrderList({ userEmail }) {
         <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por OS, cliente ou placa..." className="pl-9" />
       </div>
 
+      {/* Mechanic filter */}
+      {mechanics.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <Wrench className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <Select value={mechanicFilter} onValueChange={setMechanicFilter}>
+            <SelectTrigger className="w-full sm:w-64 h-9">
+              <SelectValue placeholder="Filtrar por mecânico" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os mecânicos</SelectItem>
+              {mechanics.map(m => (
+                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {mechanicFilter !== "all" && (
+            <button
+              type="button"
+              onClick={() => setMechanicFilter("all")}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Status filter */}
       <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
         {STATUS_FILTERS.map(f => (
@@ -281,7 +314,7 @@ export default function ServiceOrderList({ userEmail }) {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <ClipboardList className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p>{search || statusFilter !== "all" ? "Nenhuma OS encontrada." : "Nenhuma ordem de serviço cadastrada."}</p>
+          <p>{search || statusFilter !== "all" || mechanicFilter !== "all" ? "Nenhuma OS encontrada." : "Nenhuma ordem de serviço cadastrada."}</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-100">
