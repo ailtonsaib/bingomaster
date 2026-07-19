@@ -132,7 +132,7 @@ export function useDynamicPlans() {
         price: p.price ?? 0,
         acquisition_price: p.acquisition_price ?? 0,
         specs,
-        description: p.description || specs.join(", "),
+        description: p.description || "",
       };
     });
 
