@@ -31,7 +31,10 @@ export default function GamePlay() {
     const cached = getCachedGameData(gameId);
     return cached?.game?.draw_type || "horizontal";
   });
-  const [cardFilter, setCardFilter] = useState("validated"); // "validated" (padrão), "all" ou "sold"
+  const [cardFilter, setCardFilter] = useState(() => {
+    const cached = getCachedGameData(gameId);
+    return cached?.game?.card_filter || "validated";
+  });
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
   const manualInputRef = useRef(null);
@@ -74,6 +77,13 @@ export default function GamePlay() {
       setDrawType(game.draw_type);
     }
   }, [game?.draw_type]);
+
+  // Sincroniza o cardFilter a partir dos dados persistidos no jogo (servidor)
+  useEffect(() => {
+    if (game?.card_filter) {
+      setCardFilter(game.card_filter);
+    }
+  }, [game?.card_filter]);
 
   // Cacheia dados do jogo para funcionamento offline — debounce para não
   // bloquear o thread a cada sorteio (JSON.stringify de 100+ cartelas é pesado)
@@ -851,36 +861,6 @@ export default function GamePlay() {
             {/* Last drawn number - big display */}
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-6 flex flex-col items-center gap-4">
               <LastNumberDisplay number={drawnNumbers[drawnNumbers.length - 1]} drawing={drawing} />
-
-              {/* Card filter selector */}
-              <div className="w-full mt-3">
-                <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Cartelas no Sorteio</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: "all", label: "Todas", count: cardCounts.all, icon: "📋" },
-                    { value: "sold", label: "Vendidas", count: cardCounts.sold, icon: "🛒" },
-                    { value: "validated", label: "Validadas", count: cardCounts.validated, icon: "✅" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => !isPlaying && setCardFilter(opt.value)}
-                      disabled={isPlaying}
-                      className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
-                        cardFilter === opt.value
-                          ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/30"
-                          : "bg-white/10 border-white/10 text-violet-300 hover:bg-white/20"
-                      } disabled:opacity-60 disabled:cursor-not-allowed`}
-                    >
-                      <span className="text-base mr-1">{opt.icon}</span> {opt.label} ({opt.count})
-                    </button>
-                  ))}
-                </div>
-                {isPlaying && (
-                  <p className="text-xs text-violet-400 text-center mt-1">
-                    Encerre o jogo para alterar o filtro.
-                  </p>
-                )}
-              </div>
 
               {/* Draw mode selector */}
               <div className="w-full">

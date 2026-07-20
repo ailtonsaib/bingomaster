@@ -108,6 +108,15 @@
       ],
       "default": "horizontal",
       "description": "Tipo de sorteio selecionado (horizontal, vertical, diagonal, full=cartela cheia)"
+    },
+    "card_filter": {
+      "type": "string",
+      "enum": [
+        "all",
+        "validated"
+      ],
+      "default": "validated",
+      "description": "Quais cartelas participam do sorteio: all (todas) ou validated (apenas validadas)"
     }
   },
   "required": [
