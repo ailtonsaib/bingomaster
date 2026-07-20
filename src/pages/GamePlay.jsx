@@ -326,6 +326,10 @@ export default function GamePlay() {
     const updates = { prizes };
     if (!hasMorePrizes) {
       updates.status = "finished";
+    } else {
+      // Zera os números sorteados para a próxima rodada — evita detectar
+      // vencedores do próximo prêmio automaticamente com os números anteriores
+      updates.drawn_numbers = [];
     }
     await updateGame(updates);
 
@@ -452,6 +456,8 @@ export default function GamePlay() {
   const isPlaying = game.status === "in_progress";
   const isFinished = game.status === "finished";
   const allDrawn = drawnNumbers.length >= maxNumber;
+  const awardedPrizesCount = (game.prizes || []).filter(p => p.awarded).length;
+  const remainingPrizes = (game.prizes || []).filter(p => !p.awarded).length;
   const allPrizesAwarded = (game.prizes || []).length > 0 && (game.prizes || []).every(p => p.awarded);
 
   return (
@@ -735,6 +741,16 @@ export default function GamePlay() {
                     <Play className="w-5 h-5" /> Iniciar Jogo
                   </Button>
                 )}
+                {isPlaying && drawnNumbers.length === 0 && awardedPrizesCount > 0 && remainingPrizes > 0 && (
+                  <Button
+                    size="lg"
+                    className="gap-2 px-10 bg-emerald-500 hover:bg-emerald-600 text-white border-0 text-lg font-bold"
+                    onClick={() => handleDraw()}
+                    disabled={drawing}
+                  >
+                    <Play className="w-5 h-5" /> Iniciar Próximo Jogo
+                  </Button>
+                )}
                 {isPlaying && (
                   <>
                     {drawMode === "manual" && (
@@ -822,7 +838,7 @@ export default function GamePlay() {
                         </div>
                       </div>
                     )}
-                    {drawMode === "normal" && (
+                    {drawMode === "normal" && !(drawnNumbers.length === 0 && awardedPrizesCount > 0) && (
                       <Button
                         size="lg"
                         className="gap-2 px-10 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold min-w-52"
