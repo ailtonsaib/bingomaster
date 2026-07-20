@@ -38,6 +38,7 @@ export default function NewGame() {
       status: "waiting",
       drawn_numbers: [],
       max_number: 75,
+      draw_type: "horizontal",
       prizes: prizes.filter((p) => p.name.trim()),
       event_location: eventLocation.trim() || undefined,
       event_address: eventAddress.trim() || undefined,
