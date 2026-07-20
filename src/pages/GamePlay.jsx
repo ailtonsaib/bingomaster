@@ -31,7 +31,7 @@ export default function GamePlay() {
     const cached = getCachedGameData(gameId);
     return cached?.game?.draw_type || "horizontal";
   });
-  const [cardFilter, setCardFilter] = useState("all"); // "all" ou "sold"
+  const [cardFilter, setCardFilter] = useState("validated"); // "validated" (padrão), "all" ou "sold"
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
   const manualInputRef = useRef(null);
