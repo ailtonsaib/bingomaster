@@ -64,11 +64,16 @@ export default function GamePlay() {
     retry: false,
   });
 
-  // Cacheia dados do jogo para funcionamento offline
+  // Cacheia dados do jogo para funcionamento offline — debounce para não
+  // bloquear o thread a cada sorteio (JSON.stringify de 100+ cartelas é pesado)
+  const cacheTimerRef = useRef(null);
   useEffect(() => {
-    if (game && cards) {
+    if (!game || !cards) return;
+    if (cacheTimerRef.current) clearTimeout(cacheTimerRef.current);
+    cacheTimerRef.current = setTimeout(() => {
       cacheGameData(gameId, game, cards);
-    }
+    }, 1500);
+    return () => { if (cacheTimerRef.current) clearTimeout(cacheTimerRef.current); };
   }, [game, cards, gameId]);
 
   // Sincroniza atualizações pendentes quando volta online

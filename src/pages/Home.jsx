@@ -61,14 +61,19 @@ export default function Home() {
   const [showCleanDialog, setShowCleanDialog] = useState(false);
   const [cleaning, setCleaning] = useState(false);
 
-  // Games that were cancelled/restarted (waiting status) with leftover winner data
-  const cancelledGames = games.filter(g => g.status === "waiting");
-  const orphanCards = allCards.filter(c => {
-    const game = games.find(g => String(g.id) === String(c.game_id));
-    return !game || game.status === "waiting";
-  });
-  const cleanableCards = orphanCards.filter(c => c.is_winner || (c.won_prizes && c.won_prizes.length > 0));
-  const cleanableGames = cancelledGames.filter(g => g.prizes && g.prizes.some(p => p.awarded));
+  // Games that were cancelled/restarted (waiting status) with leftover winner data — memoizado
+  const { cleanableCards, cleanableGames } = useMemo(() => {
+    const cancelledGames = games.filter(g => g.status === "waiting");
+    const gameMap = new Map(games.map(g => [String(g.id), g]));
+    const orphanCards = allCards.filter(c => {
+      const game = gameMap.get(String(c.game_id));
+      return !game || game.status === "waiting";
+    });
+    return {
+      cleanableCards: orphanCards.filter(c => c.is_winner || (c.won_prizes && c.won_prizes.length > 0)),
+      cleanableGames: cancelledGames.filter(g => g.prizes && g.prizes.some(p => p.awarded)),
+    };
+  }, [games, allCards]);
   const [showGamePicker, setShowGamePicker] = useState(false);
   const [showCardsPicker, setShowCardsPicker] = useState(false);
   const [showGameManager, setShowGameManager] = useState(false);
@@ -94,29 +99,22 @@ export default function Home() {
   const handleCleanCancelledGames = async () => {
     setCleaning(true);
     try {
-      // 1. Reset winner data on cards from cancelled/restarted games or orphaned cards
-      for (const card of cleanableCards) {
-        try {
-          await base44.entities.BingoCard.update(card.id, {
-            is_winner: false,
-            won_prizes: [],
-          });
-        } catch (e) {
-          console.warn(`Erro ao limpar cartela ${card.id}:`, e);
-        }
+      // 1. Reset winner data on cards in batch (avoid sequential loop)
+      if (cleanableCards.length > 0) {
+        const cardIds = cleanableCards.map(c => c.id);
+        await base44.entities.BingoCard.updateMany(
+          { id: { $in: cardIds } },
+          { $set: { is_winner: false, won_prizes: [] } }
+        );
       }
 
-      // 2. Reset prize awards on cancelled/restarted games
+      // 2. Reset prize awards on cancelled/restarted games (sequential — few games)
       for (const game of cleanableGames) {
         try {
           const resetPrizes = (game.prizes || []).map(p => ({
             name: p.name,
             description: p.description,
             awarded: false,
-            awarded_card_id: undefined,
-            awarded_card_number: undefined,
-            awarded_player_name: undefined,
-            pedra_maior: undefined,
           }));
           await base44.entities.BingoGame.update(game.id, { prizes: resetPrizes });
         } catch (e) {
@@ -138,12 +136,8 @@ export default function Home() {
 
   const handleDelete = async (id) => {
     try {
-      // Delete cards first, then game
-      const res = await base44.functions.invoke("getGameCards", { game_id: String(id) });
-      const cards = res.data.cards;
-      for (const card of cards) {
-        await base44.entities.BingoCard.delete(card.id);
-      }
+      // Delete all cards of this game in batch, then the game
+      await base44.entities.BingoCard.deleteMany({ game_id: String(id) });
       await base44.entities.BingoGame.delete(id);
       refetch();
     } catch (error) {
@@ -159,32 +153,20 @@ export default function Home() {
   const handleResetAll = async () => {
     setResetting(true);
     try {
-      // Delete all cards (only current user's)
+      // Delete all cards in batch (avoid sequential loop that freezes UI)
       const allCards = await base44.entities.BingoCard.filter(scope(), "created_date", 100000);
       if (allCards.length > 0) {
-        for (const card of allCards) {
-          try {
-            await base44.entities.BingoCard.delete(card.id);
-          } catch (e) {
-            console.warn(`Erro ao deletar cartela ${card.id}:`, e);
-          }
-        }
+        await base44.entities.BingoCard.deleteMany(scope());
       }
-      // Delete all games (only current user's)
+      // Delete all games in batch
       const allGames = await base44.entities.BingoGame.filter(scope(), "created_date", 10000);
       if (allGames.length > 0) {
-        for (const game of allGames) {
-          try {
-            await base44.entities.BingoGame.delete(game.id);
-          } catch (e) {
-            console.warn(`Erro ao deletar jogo ${game.id}:`, e);
-          }
-        }
+        await base44.entities.BingoGame.deleteMany(scope());
       }
       await queryClient.invalidateQueries();
       refetch();
       setShowResetDialog(false);
-      alert("Reset concluído com sucesso!");
+      alert(`Reset concluído! ${allCards.length} cartela(s) e ${allGames.length} jogo(s) removidos.`);
     } catch (error) {
       console.error("Erro ao resetar:", error);
       alert("Erro ao resetar. Tente novamente.");
