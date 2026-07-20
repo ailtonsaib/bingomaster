@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, memo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -207,7 +207,7 @@ export default function GamePlay() {
   // Keep handleDraw ref up-to-date to avoid stale closure in timers
   useEffect(() => {
     autoDrawRef.current = handleDraw;
-  });
+  }, [handleDraw]);
 
   const autoTimerRef = useRef(null);
 
@@ -255,7 +255,7 @@ export default function GamePlay() {
       stopAutoDraw();
       setDrawMode("normal");
     }
-  }, [game?.status]);
+  }, [game?.status, autoDrawing, stopAutoDraw]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -481,6 +481,13 @@ export default function GamePlay() {
     gameName: game?.name,
   })), [winners, game?.name]);
 
+  // Contagens de cartelas por filtro — memoizado para evitar recompute em todo render
+  const cardCounts = useMemo(() => ({
+    all: cards.length,
+    sold: cards.filter((c) => c.player_phone || c.player_city).length,
+    validated: cards.filter((c) => c.is_validated).length,
+  }), [cards]);
+
   if (isLoading || !game) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -510,12 +517,14 @@ export default function GamePlay() {
         </div>
       )}
       {!isOnline && <OfflineBanner hasPendingSync={hasPendingSync} />}
-      <BingoWinnerAlert
-        winners={alertWinners}
-        drawnCount={drawnNumbers.length}
-        onClose={() => setWinners([])}
-        onConfirm={handleConfirmWinners}
-      />
+      {winners.length > 0 && (
+        <BingoWinnerAlert
+          winners={alertWinners}
+          drawnCount={drawnNumbers.length}
+          onClose={() => setWinners([])}
+          onConfirm={handleConfirmWinners}
+        />
+      )}
       {showWinnerCards && (
         <WinnerCardsModal
           game={game}
@@ -737,9 +746,9 @@ export default function GamePlay() {
                 <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Cartelas no Sorteio</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: "all", label: "Todas", count: cards.length, icon: "📋" },
-                    { value: "sold", label: "Vendidas", count: cards.filter((c) => c.player_phone || c.player_city).length, icon: "🛒" },
-                    { value: "validated", label: "Validadas", count: cards.filter((c) => c.is_validated).length, icon: "✅" },
+                    { value: "all", label: "Todas", count: cardCounts.all, icon: "📋" },
+                    { value: "sold", label: "Vendidas", count: cardCounts.sold, icon: "🛒" },
+                    { value: "validated", label: "Validadas", count: cardCounts.validated, icon: "✅" },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -985,7 +994,7 @@ export default function GamePlay() {
                 <StatBox label="Restantes" value={maxNumber - drawnNumbers.length} />
                 <StatBox
                   label={cardFilter === "validated" ? "Cartelas (Validadas)" : cardFilter === "sold" ? "Cartelas (Vendidas)" : "Cartelas (Todas)"}
-                  value={cardFilter === "validated" ? cards.filter((c) => c.is_validated).length : cardFilter === "sold" ? cards.filter((c) => c.player_phone || c.player_city).length : cards.length}
+                  value={cardFilter === "validated" ? cardCounts.validated : cardFilter === "sold" ? cardCounts.sold : cardCounts.all}
                 />
                 <StatBox label="Prêmios Restantes" value={(game.prizes || []).filter(p => !p.awarded).length} />
                 <button
@@ -1006,11 +1015,11 @@ export default function GamePlay() {
   );
 }
 
-function StatBox({ label, value }) {
+const StatBox = memo(function StatBox({ label, value }) {
   return (
     <div className="bg-white/10 rounded-xl p-3 text-center">
       <div className="text-2xl font-bold font-heading text-accent">{value}</div>
       <div className="text-xs text-violet-300 mt-0.5">{label}</div>
     </div>
   );
-}
+});

@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import BingoNumberBall from "./BingoNumberBall";
 
-export default function LastNumberDisplay({ number, drawing }) {
+function LastNumberDisplay({ number, drawing }) {
   const BINGO_LETTERS = ["B", "I", "N", "G", "O"];
   const getLetter = (num) => {
     if (!num) return null;
@@ -71,3 +72,5 @@ export default function LastNumberDisplay({ number, drawing }) {
     </div>
   );
 }
+
+export default memo(LastNumberDisplay);

@@ -1,13 +1,12 @@
-import { memo } from "react";
-import { motion } from "framer-motion";
-import BingoNumberBall from "./BingoNumberBall";
+import { memo, useMemo } from "react";
 import { useBrandName } from "@/hooks/useBrandName";
-import { getBrandLetters, COLUMN_SOFT } from "@/lib/brandConfig";
+import { getBrandLetters, COLUMN_SOFT, getLetterForNumber, getColumnIndex, COLUMN_GRADIENT } from "@/lib/brandConfig";
+import { cn } from "@/lib/utils";
 
 function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
   const { brandName } = useBrandName();
   const letters = getBrandLetters(brandName);
-  const drawnSet = new Set(drawnNumbers);
+  const drawnSet = useMemo(() => new Set(drawnNumbers), [drawnNumbers]);
 
   const COLUMNS = letters.map((letter, i) => ({
     letter,
@@ -15,6 +14,9 @@ function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
     max: i * 15 + 15,
     color: COLUMN_SOFT[i],
   }));
+
+  // Histórico reverso memoizado — não recria array a cada render
+  const reversedDrawn = useMemo(() => [...drawnNumbers].reverse(), [drawnNumbers]);
 
   return (
     <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-5 space-y-4">
@@ -27,7 +29,7 @@ function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
         </span>
       </div>
 
-      {/* Column-based board */}
+      {/* Column-based board — plain divs with CSS transitions (no framer-motion) */}
       <div className="grid grid-cols-5 gap-2">
         {COLUMNS.map((col) => (
           <div key={col.letter} className={`rounded-xl border p-2 ${col.color}`}>
@@ -36,14 +38,17 @@ function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
               {Array.from({ length: col.max - col.min + 1 }, (_, i) => col.min + i).map((num) => {
                 const drawn = drawnSet.has(num);
                 return (
-                  <motion.div
+                  <div
                     key={num}
-                    animate={drawn ? { scale: [1, 1.15, 1] } : {}}
-                    transition={{ duration: 0.3 }}
-                    className={`text-center text-xs font-semibold rounded-md py-1 transition-all duration-300 ${drawn ? "bg-white text-violet-900 shadow-lg font-bold" : "bg-white/5 text-white/40"}`}
+                    className={cn(
+                      "text-center text-xs font-semibold rounded-md py-1 transition-all duration-300",
+                      drawn
+                        ? "bg-white text-violet-900 shadow-lg font-bold scale-110"
+                        : "bg-white/5 text-white/40 scale-100"
+                    )}
                   >
                     {num}
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
@@ -51,21 +56,28 @@ function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
         ))}
       </div>
 
-      {/* Last drawn list */}
-      {drawnNumbers.length > 0 && (
+      {/* Last drawn list — plain divs (no framer-motion, no BingoNumberBall) */}
+      {reversedDrawn.length > 0 && (
         <div>
           <div className="text-xs text-violet-300 mb-2 font-medium">Ordem de sorteio:</div>
           <div className="flex flex-wrap gap-1.5">
-            {[...drawnNumbers].reverse().map((num, idx) => (
-              <motion.div
-                key={num}
-                initial={idx === 0 ? { scale: 0 } : false}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              >
-                <BingoNumberBall number={num} size="sm" isDrawn minimal />
-              </motion.div>
-            ))}
+            {reversedDrawn.map((num, idx) => {
+              const letter = getLetterForNumber(num, brandName);
+              const gradient = COLUMN_GRADIENT[getColumnIndex(num)] || "from-gray-500 to-gray-600";
+              return (
+                <div
+                  key={num}
+                  className={cn(
+                    "rounded-full flex items-center justify-center font-bold font-heading w-8 h-8 text-xs transition-all duration-200",
+                    idx === 0
+                      ? `bg-gradient-to-br ${gradient} text-white shadow-lg scale-125 ring-2 ring-white/50`
+                      : `bg-gradient-to-br ${gradient} text-white shadow`
+                  )}
+                >
+                  {num}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
