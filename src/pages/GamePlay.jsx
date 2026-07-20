@@ -405,6 +405,40 @@ export default function GamePlay() {
     }
   };
 
+  // Safety net: detecta vencedores sempre que os números sorteados mudam,
+  // independente do fluxo de sorteio. Garante que vencedores sejam detectados
+  // mesmo quando o último sorteio retorna null (todas as pedras já sorteadas).
+  useEffect(() => {
+    if (!game || game.status !== "in_progress") return;
+    if (drawing || showTiebreaker) return;
+    const dn = game.drawn_numbers || [];
+    if (!Array.isArray(dn) || dn.length === 0) return;
+
+    const drawnSet = new Set(dn);
+    const filteredCards = cardFilter === "validated"
+      ? cards.filter((c) => c.is_validated)
+      : cardFilter === "sold"
+      ? cards.filter((c) => c.player_phone || c.player_city)
+      : cards;
+    const currentWinners = filteredCards.filter((c) => {
+      if (c.is_winner) return false;
+      return getCardMaxPoints(c, drawnSet) >= 20;
+    });
+    if (currentWinners.length === 0) return;
+
+    const prizeIdx = (game.prizes || []).findIndex(p => !p.awarded);
+    if (prizeIdx < 0) return;
+
+    if (currentWinners.length === 1) {
+      awardPrize(prizeIdx, currentWinners[0]);
+    } else {
+      setPendingWinners(currentWinners);
+      setTiebreakerPrizeIndex(prizeIdx);
+      setShowTiebreaker(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.drawn_numbers, game?.status, cards, cardFilter]);
+
   // Conta cartelas vencedoras — memoizado para evitar recomputação pesada em todo render
   const { currentWinnersCount, totalWinnersCount } = useMemo(() => {
     const dn = game?.drawn_numbers || [];
