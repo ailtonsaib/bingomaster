@@ -20,6 +20,7 @@ import FullScreenDraw from "@/components/bingo/FullScreenDraw";
 import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
 import DrawHistoryModal from "@/components/bingo/DrawHistoryModal";
 import TiebreakerModal from "@/components/bingo/TiebreakerModal";
+import LeaderboardPanel from "@/components/bingo/LeaderboardPanel";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -1138,6 +1139,13 @@ export default function GamePlay() {
                 </button>
               </div>
             </div>
+
+            {/* Painel de líderes em tempo real */}
+            <LeaderboardPanel
+              cards={cards}
+              drawnNumbers={drawnNumbers}
+              cardFilter={cardFilter}
+            />
           </div>
         </div>
       </div>
