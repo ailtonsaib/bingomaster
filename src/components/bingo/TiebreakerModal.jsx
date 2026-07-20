@@ -136,7 +136,13 @@ export default function TiebreakerModal({ winners, drawnNumbers, maxNumber, priz
     onAward(winnerCard, winnerPedra);
   };
 
-  const currentSpinningResult = spinning !== null ? pedras[spinning] : null;
+  // Mostra na bola grande o número sorteado da cartela ativa.
+  // Durante o giro (spinning !== null e sem pedra ainda) a bola mostra a animação.
+  // Após o giro, exibe o número sorteado da última cartela que girou.
+  const lastSpunCardId = drawOrder.length > 0 ? drawOrder[drawOrder.length - 1] : null;
+  const currentSpinningResult = spinning !== null
+    ? pedras[spinning] ?? null
+    : (lastSpunCardId ? pedras[lastSpunCardId] ?? null : null);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
