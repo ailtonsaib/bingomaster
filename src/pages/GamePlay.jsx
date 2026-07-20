@@ -27,8 +27,10 @@ export default function GamePlay() {
   const queryClient = useQueryClient();
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState([]);
-  const [drawType, setDrawType] = useState("horizontal");
-  const drawTypeInitialized = useRef(false);
+  const [drawType, setDrawType] = useState(() => {
+    const cached = getCachedGameData(gameId);
+    return cached?.game?.draw_type || "horizontal";
+  });
   const [cardFilter, setCardFilter] = useState("all"); // "all" ou "sold"
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
@@ -66,11 +68,10 @@ export default function GamePlay() {
     retry: false,
   });
 
-  // Inicializa o drawType a partir dos dados persistidos no jogo
+  // Sincroniza o drawType a partir dos dados persistidos no jogo (servidor)
   useEffect(() => {
-    if (game?.draw_type && !drawTypeInitialized.current) {
+    if (game?.draw_type) {
       setDrawType(game.draw_type);
-      drawTypeInitialized.current = true;
     }
   }, [game?.draw_type]);
 
@@ -871,7 +872,7 @@ export default function GamePlay() {
                   ].map((opt) => (
                     <button
                       key={opt.value}
-                      onClick={() => !isPlaying && updateGame({ draw_type: opt.value }).then(() => setDrawType(opt.value))}
+                      onClick={() => !isPlaying && updateGame({ draw_type: opt.value })}
                       disabled={isPlaying}
                       className={`rounded-xl px-3 py-2 text-sm font-semibold transition-all border ${
                         drawType === opt.value
