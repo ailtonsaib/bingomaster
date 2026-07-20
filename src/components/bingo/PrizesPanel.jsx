@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { Trophy, CheckCircle2, Crown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winnersCount = 0 }) {
+function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winnersCount = 0 }) {
   if (!prizes || prizes.length === 0) {
     return (
       <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4">
@@ -114,3 +115,5 @@ export default function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePri
     </div>
   );
 }
+
+export default memo(PrizesPanel);

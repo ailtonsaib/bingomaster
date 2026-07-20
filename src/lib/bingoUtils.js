@@ -101,16 +101,22 @@ export function checkAllCardsForBingo(cards, drawnNumbers, prizes, drawType = "h
 // Retorna o maior placar da cartela avaliando cada grade separadamente (20 números cada)
 // Uma cartela vence quando UMA grade tem todos os 20 números sorteados
 export function getCardMaxPoints(card, drawnSet) {
-  const grids = [
-    card.grid_1, card.grid_2, card.grid_3,
-    card.grid_1a, card.grid_1b, card.grid_1c, card.grid_1d, card.grid_1e,
-    card.grid_2a, card.grid_2b, card.grid_2c, card.grid_2d, card.grid_2e,
-    card.grid_3a, card.grid_3b, card.grid_3c, card.grid_3d, card.grid_3e,
-  ].filter((g) => Array.isArray(g) && g.length > 0);
+  const gridKeys = [
+    "grid_1", "grid_2", "grid_3",
+    "grid_1a", "grid_1b", "grid_1c", "grid_1d", "grid_1e",
+    "grid_2a", "grid_2b", "grid_2c", "grid_2d", "grid_2e",
+    "grid_3a", "grid_3b", "grid_3c", "grid_3d", "grid_3e",
+  ];
 
   let max = 0;
-  for (const grid of grids) {
-    const pts = grid.filter((n) => n !== 0 && drawnSet.has(n)).length;
+  for (const key of gridKeys) {
+    const grid = card[key];
+    if (!Array.isArray(grid) || grid.length === 0) continue;
+    let pts = 0;
+    for (let i = 0; i < grid.length; i++) {
+      const n = grid[i];
+      if (n !== 0 && drawnSet.has(n)) pts++;
+    }
     if (pts > max) max = pts;
   }
   return max;

@@ -16,7 +16,6 @@ import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
 import PrizesPanel from "@/components/bingo/PrizesPanel";
 import GameProgressBar from "@/components/bingo/GameProgressBar";
 import BingoWinnerAlert from "@/components/bingo/BingoWinnerAlert";
-import DrawStatistics from "@/components/bingo/DrawStatistics";
 import FullScreenDraw from "@/components/bingo/FullScreenDraw";
 import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
 import DrawHistoryModal from "@/components/bingo/DrawHistoryModal";
@@ -34,7 +33,6 @@ export default function GamePlay() {
   const manualInputRef = useRef(null);
   const [autoInterval, setAutoInterval] = useState(10); // segundos
   const [autoDrawing, setAutoDrawing] = useState(false);
-  const [autoTimer, setAutoTimer] = useState(null);
   const [autoCountdown, setAutoCountdown] = useState(null);
   const autoDrawRef = useRef(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
@@ -49,7 +47,7 @@ export default function GamePlay() {
   const isOnline = useOnlineStatus();
   const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0 || getPendingCardUpdates().length > 0);
 
-  const cachedData = getCachedGameData(gameId);
+  const [cachedData] = useState(() => getCachedGameData(gameId));
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -220,7 +218,6 @@ export default function GamePlay() {
     }
     setAutoDrawing(false);
     setAutoCountdown(null);
-    setAutoTimer(null);
   }, []);
 
   const startAutoDraw = () => {
@@ -240,7 +237,6 @@ export default function GamePlay() {
     }, 1000);
 
     autoTimerRef.current = countTimer;
-    setAutoTimer(countTimer);
   };
 
   const toggleAutoDraw = () => {

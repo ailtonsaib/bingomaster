@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import BingoNumberBall from "./BingoNumberBall";
 import { useBrandName } from "@/hooks/useBrandName";
 import { getBrandLetters, COLUMN_SOFT } from "@/lib/brandConfig";
 
-export default function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
+function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 }) {
   const { brandName } = useBrandName();
   const letters = getBrandLetters(brandName);
   const drawnSet = new Set(drawnNumbers);
@@ -57,8 +58,8 @@ export default function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 })
           <div className="flex flex-wrap gap-1.5">
             {[...drawnNumbers].reverse().map((num, idx) => (
               <motion.div
-                key={`${num}-${idx}`}
-                initial={idx === 0 ? { scale: 0 } : {}}
+                key={num}
+                initial={idx === 0 ? { scale: 0 } : false}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
@@ -71,3 +72,5 @@ export default function DrawnNumbersBoard({ drawnNumbers = [], maxNumber = 75 })
     </div>
   );
 }
+
+export default memo(DrawnNumbersBoard);
