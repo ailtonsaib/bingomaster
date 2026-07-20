@@ -330,6 +330,7 @@ export default function GamePlay() {
       awarded_card_number: card.card_number,
       awarded_player_name: card.player_name,
       pedra_maior: pedraMaior,
+      awarded_won_at_draw: lastDrawn,
     };
 
     const hasMorePrizes = prizes.slice(prizeIndex + 1).some(p => !p.awarded);

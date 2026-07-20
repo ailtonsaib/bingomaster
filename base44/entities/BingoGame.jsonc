@@ -57,6 +57,10 @@
           "pedra_maior": {
             "type": "number",
             "description": "N\u00famero da pedra maior (desempate entre m\u00faltiplos vencedores)"
+          },
+          "awarded_won_at_draw": {
+            "type": "number",
+            "description": "N\u00famero sorteado que completou o bingo da cartela vencedora"
           }
         }
       },

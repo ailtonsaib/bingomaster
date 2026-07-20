@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { Trophy, CheckCircle2, Crown, User } from "lucide-react";
+import { Trophy, CheckCircle2, Crown, User, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winnersCount = 0 }) {
@@ -73,6 +73,11 @@ function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winner
                       {prize.awarded_player_name && (
                         <p className="text-xs text-white/60 flex items-center gap-1">
                           <User className="w-3 h-3" /> {prize.awarded_player_name}
+                        </p>
+                      )}
+                      {prize.awarded_won_at_draw != null && (
+                        <p className="text-xs text-blue-400/80 flex items-center gap-1">
+                          <Shuffle className="w-3 h-3" /> Sorteado: {prize.awarded_won_at_draw}
                         </p>
                       )}
                       {prize.pedra_maior != null && (
