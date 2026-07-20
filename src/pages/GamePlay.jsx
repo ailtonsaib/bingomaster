@@ -374,9 +374,32 @@ export default function GamePlay() {
   };
 
   const handleAwardPrize = async (idx) => {
-    const prizes = [...(game.prizes || [])];
-    prizes[idx] = { ...prizes[idx], awarded: true };
-    await updateGame({ prizes });
+    // Detecta cartelas que atingiram bingo (20+ pontos) e ainda não foram premiadas
+    const drawnSet = new Set(game.drawn_numbers || []);
+    const filteredCards = cardFilter === "validated"
+      ? cards.filter((c) => c.is_validated)
+      : cardFilter === "sold"
+      ? cards.filter((c) => c.player_phone || c.player_city)
+      : cards;
+    const currentWinners = filteredCards.filter((c) => {
+      if (c.is_winner) return false;
+      return getCardMaxPoints(c, drawnSet) >= 20;
+    });
+
+    if (currentWinners.length === 0) {
+      // Sem vencedor — não pode conceder
+      return;
+    }
+
+    if (currentWinners.length === 1) {
+      // Cartela única — marcar diretamente
+      await awardPrize(idx, currentWinners[0]);
+    } else {
+      // 2+ vencedores — exige sorteio de pedra maior
+      setPendingWinners(currentWinners);
+      setTiebreakerPrizeIndex(idx);
+      setShowTiebreaker(true);
+    }
   };
 
   if (isLoading || !game) {
@@ -394,6 +417,15 @@ export default function GamePlay() {
   const isFinished = game.status === "finished";
   const allDrawn = drawnNumbers.length >= maxNumber;
   const allPrizesAwarded = (game.prizes || []).length > 0 && (game.prizes || []).every(p => p.awarded);
+
+  // Conta cartelas que atingiram bingo e ainda não foram premiadas (para o botão do painel)
+  const drawnSetNow = new Set(drawnNumbers);
+  const filteredCardsNow = cardFilter === "validated"
+    ? cards.filter((c) => c.is_validated)
+    : cardFilter === "sold"
+    ? cards.filter((c) => c.player_phone || c.player_city)
+    : cards;
+  const currentWinnersCount = filteredCardsNow.filter((c) => !c.is_winner && getCardMaxPoints(c, drawnSetNow) >= 20).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
@@ -837,6 +869,7 @@ export default function GamePlay() {
               isPlaying={isPlaying}
               onAwardPrize={handleAwardPrize}
               activePrizeIndex={(game.prizes || []).findIndex(p => !p.awarded)}
+              winnersCount={currentWinnersCount}
             />
 
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4 space-y-3">

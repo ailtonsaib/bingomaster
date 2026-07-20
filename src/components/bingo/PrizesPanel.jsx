@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Trophy, CheckCircle2, Crown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex }) {
+export default function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winnersCount = 0 }) {
   if (!prizes || prizes.length === 0) {
     return (
       <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4">
@@ -90,10 +90,19 @@ export default function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePri
               {isPlaying && !prize.awarded && (
                 <Button
                   size="sm"
-                  className="w-full mt-2 h-7 text-xs bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold"
+                  disabled={winnersCount === 0}
                   onClick={() => onAwardPrize(idx)}
+                  className={
+                    winnersCount === 0
+                      ? "w-full mt-2 h-7 text-xs bg-white/5 text-violet-400/50 font-bold cursor-not-allowed"
+                      : "w-full mt-2 h-7 text-xs bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold"
+                  }
                 >
-                  Marcar como Premiado
+                  {winnersCount === 0
+                    ? "Aguardando bingo..."
+                    : winnersCount === 1
+                      ? "Marcar como Premiado"
+                      : `Desempate — Pedra Maior (${winnersCount} cartelas)`}
                 </Button>
               )}
             </motion.div>
