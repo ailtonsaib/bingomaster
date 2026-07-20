@@ -317,6 +317,19 @@ export default function GamePlay() {
     setWinners([]);
   };
 
+  // Limpeza automática: zera números sorteados, histórico do globo e estado local
+  // sempre que uma nova rodada de prêmio começa
+  const cleanupForNewRound = useCallback(async () => {
+    stopAutoDraw();
+    setDrawMode("normal");
+    setWinners([]);
+    setPendingWinners([]);
+    setShowTiebreaker(false);
+    setTiebreakerPrizeIndex(-1);
+    setDrawing(false);
+    await updateGame({ drawn_numbers: [] });
+  }, [stopAutoDraw, updateGame]);
+
   const awardPrize = async (prizeIndex, card, pedraMaior = null) => {
     if (prizeIndex < 0 || prizeIndex >= (game.prizes || []).length) return;
     const prizes = [...(game.prizes || [])];
@@ -338,11 +351,20 @@ export default function GamePlay() {
     if (!hasMorePrizes) {
       updates.status = "finished";
     } else {
-      // Zera os números sorteados para a próxima rodada — evita detectar
-      // vencedores do próximo prêmio automaticamente com os números anteriores
+      // Limpeza automática: zera tudo para a próxima rodada
       updates.drawn_numbers = [];
     }
     await updateGame(updates);
+
+    // Limpa estado local para a nova rodada
+    if (hasMorePrizes) {
+      stopAutoDraw();
+      setDrawMode("normal");
+      setWinners([]);
+      setPendingWinners([]);
+      setShowTiebreaker(false);
+      setTiebreakerPrizeIndex(-1);
+    }
 
     // Offline: atualiza cartela localmente e enfileira para sincronizar depois
     if (!isOnline) {
