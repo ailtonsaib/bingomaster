@@ -1153,7 +1153,6 @@ export default function GamePlay() {
             <LeaderboardPanel
               cards={cards}
               drawnNumbers={drawnNumbers}
-              cardFilter={cardFilter}
             />
           </div>
         </div>

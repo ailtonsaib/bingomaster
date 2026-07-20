@@ -1,19 +1,15 @@
 import { useMemo } from "react";
-import { motion } from "framer-motion";
 import { Flame, TrendingUp, Hash, Crown } from "lucide-react";
 import { getCardMaxPoints } from "@/lib/bingoUtils";
 
-export default function LeaderboardPanel({ cards, drawnNumbers, cardFilter = "all", maxItems = 8 }) {
+export default function LeaderboardPanel({ cards, drawnNumbers, maxItems = 8 }) {
   const ranking = useMemo(() => {
     const dn = drawnNumbers || [];
     if (!Array.isArray(dn) || dn.length === 0) return [];
 
     const drawnSet = new Set(dn);
-    const filtered = cardFilter === "validated"
-      ? cards.filter((c) => c.is_validated)
-      : cardFilter === "sold"
-      ? cards.filter((c) => c.player_phone || c.player_city)
-      : cards;
+    // Painel de líderes mostra apenas cartelas validadas (habilitadas para concorrer)
+    const filtered = (cards || []).filter((c) => c.is_validated);
 
     return filtered
       .map((c) => ({
@@ -27,7 +23,7 @@ export default function LeaderboardPanel({ cards, drawnNumbers, cardFilter = "al
       .filter((c) => c.points > 0)
       .sort((a, b) => b.points - a.points)
       .slice(0, maxItems);
-  }, [cards, drawnNumbers, cardFilter, maxItems]);
+  }, [cards, drawnNumbers, maxItems]);
 
   if (ranking.length === 0) {
     return null;
@@ -64,23 +60,17 @@ export default function LeaderboardPanel({ cards, drawnNumbers, cardFilter = "al
           const isHot = card.points >= 17 && card.points < 20;
 
           return (
-            <motion.div
+            <div
               key={card.id}
-              layout
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.25, delay: idx * 0.03 }}
               className={`relative rounded-xl border p-2.5 ${style.bg} ${style.border} ${
                 isHot ? `shadow-lg ${style.glow}` : ""
               }`}
             >
               {/* Progress bar background */}
               <div className="absolute inset-0 rounded-xl overflow-hidden opacity-20">
-                <motion.div
+                <div
                   className={`h-full ${style.bar}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.5 }}
+                  style={{ width: `${pct}%`, transition: "width 0.4s ease" }}
                 />
               </div>
 
@@ -113,12 +103,7 @@ export default function LeaderboardPanel({ cards, drawnNumbers, cardFilter = "al
                 {/* Points badge */}
                 <div className="flex-shrink-0 flex items-center gap-1">
                   {isHot && (
-                    <motion.span
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.6, repeat: Infinity }}
-                    >
-                      <Flame className={`w-4 h-4 ${style.text}`} />
-                    </motion.span>
+                    <Flame className={`w-4 h-4 ${style.text}`} />
                   )}
                   <span className={`font-bold font-heading text-lg ${style.text}`}>
                     {card.points}
@@ -126,7 +111,7 @@ export default function LeaderboardPanel({ cards, drawnNumbers, cardFilter = "al
                   </span>
                 </div>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
