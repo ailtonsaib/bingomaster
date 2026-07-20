@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2 } from "lucide-react";
-import { drawNumber, checkAllCardsForBingo, getCardMaxPoints } from "@/lib/bingoUtils";
+import { drawNumber, getCardMaxPoints } from "@/lib/bingoUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
@@ -173,8 +173,8 @@ export default function GamePlay() {
         return getCardMaxPoints(c, drawnSet) >= 20;
       });
 
-      // Atualiza números sorteados (sem auto-finalizar)
-      updateGame({ drawn_numbers: newDrawn });
+      // Atualiza números sorteados — aguarda para ter estado consistente
+      await updateGame({ drawn_numbers: newDrawn });
 
       // Se há novas vencedoras, gerencia o prêmio ativo
       if (newWinners.length > 0) {
@@ -182,23 +182,16 @@ export default function GamePlay() {
         const prizeIdx = (game.prizes || []).findIndex(p => !p.awarded);
         if (prizeIdx >= 0) {
           if (newWinners.length === 1) {
+            // Situação 1: apenas um ganhador → marca a cartela como vencedora do prêmio
             await awardPrize(prizeIdx, newWinners[0]);
           } else {
+            // Situação 2: mais de um ganhador → ativa sorteio de pedra maior
             setPendingWinners(newWinners);
             setTiebreakerPrizeIndex(prizeIdx);
             setShowTiebreaker(true);
           }
         } else {
           updateGame({ status: "finished" });
-        }
-      }
-
-      // Check all cards for bingo after the new number — só se não há alerta ativo
-      if (winners.length === 0) {
-        const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
-        if (found.length > 0) {
-          if (autoDrawing) stopAutoDraw();
-          setWinners(found);
         }
       }
     }
