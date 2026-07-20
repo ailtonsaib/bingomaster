@@ -526,6 +526,25 @@ export default function GamePlay() {
     return count;
   }, [cards, cardFilter, game?.drawn_numbers]);
 
+  // Conta cartelas a 1 número de completar bingo (19 pts)
+  const oneAwayCount = useMemo(() => {
+    const dn = game?.drawn_numbers || [];
+    if (!Array.isArray(dn) || dn.length === 0) return 0;
+    const drawnSet = new Set(dn);
+    const filtered = cardFilter === "validated"
+      ? cards.filter((c) => c.is_validated)
+      : cardFilter === "sold"
+      ? cards.filter((c) => c.player_phone || c.player_city)
+      : cards;
+    let count = 0;
+    for (const c of filtered) {
+      if (c.is_winner) continue;
+      const pts = getCardMaxPoints(c, drawnSet);
+      if (pts === 19) count++;
+    }
+    return count;
+  }, [cards, cardFilter, game?.drawn_numbers]);
+
   // Toca alerta sonoro quando uma cartela chega perto de bingo (17+ pts)
   const prevCloseCountRef = useRef(0);
   useEffect(() => {
@@ -553,6 +572,33 @@ export default function GamePlay() {
     }
     prevCloseCountRef.current = closeToBingoCount;
   }, [closeToBingoCount]);
+
+  // Alerta sonoro urgente: cartela a 1 número do bingo (19 pts)
+  const prevOneAwayRef = useRef(0);
+  useEffect(() => {
+    if (oneAwayCount > prevOneAwayRef.current && oneAwayCount > 0) {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // 3 bipes urgentes repetidos em tom alto
+        for (let rep = 0; rep < 3; rep++) {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.frequency.value = 1046.50; // C6 — agudo e chamativo
+          osc.type = "square";
+          const start = audioContext.currentTime + rep * 0.22;
+          gain.gain.setValueAtTime(0.35, start);
+          gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
+          osc.start(start);
+          osc.stop(start + 0.15);
+        }
+      } catch (e) {
+        // falha silenciosa — navegador sem Audio API
+      }
+    }
+    prevOneAwayRef.current = oneAwayCount;
+  }, [oneAwayCount]);
 
   // Memoiza o prop winners do BingoWinnerAlert — NÃO depende de drawn_numbers
   // para evitar retrigger do useEffect de confetti/áudio a cada sorteio
