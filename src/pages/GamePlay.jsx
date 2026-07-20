@@ -485,6 +485,53 @@ export default function GamePlay() {
     return { currentWinnersCount: current, totalWinnersCount: total };
   }, [cards, cardFilter, game?.drawn_numbers]);
 
+  // Conta cartelas próximas de bingo (17-19 pontos) — memoizado
+  const closeToBingoCount = useMemo(() => {
+    const dn = game?.drawn_numbers || [];
+    if (!Array.isArray(dn) || dn.length === 0) return 0;
+    const drawnSet = new Set(dn);
+    const filtered = cardFilter === "validated"
+      ? cards.filter((c) => c.is_validated)
+      : cardFilter === "sold"
+      ? cards.filter((c) => c.player_phone || c.player_city)
+      : cards;
+    let count = 0;
+    for (const c of filtered) {
+      if (c.is_winner) continue;
+      const pts = getCardMaxPoints(c, drawnSet);
+      if (pts >= 17 && pts < 20) count++;
+    }
+    return count;
+  }, [cards, cardFilter, game?.drawn_numbers]);
+
+  // Toca alerta sonoro quando uma cartela chega perto de bingo (17+ pts)
+  const prevCloseCountRef = useRef(0);
+  useEffect(() => {
+    if (closeToBingoCount > prevCloseCountRef.current && closeToBingoCount > 0) {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Bip crescente de alerta — 3 notas ascendentes
+        const notes = [659.25, 783.99, 987.77]; // E5, G5, B5
+        notes.forEach((freq, index) => {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.frequency.value = freq;
+          osc.type = "triangle";
+          const start = audioContext.currentTime + index * 0.12;
+          gain.gain.setValueAtTime(0.3, start);
+          gain.gain.exponentialRampToValueAtTime(0.01, start + 0.18);
+          osc.start(start);
+          osc.stop(start + 0.18);
+        });
+      } catch (e) {
+        // falha silenciosa — navegador sem Audio API
+      }
+    }
+    prevCloseCountRef.current = closeToBingoCount;
+  }, [closeToBingoCount]);
+
   // Memoiza o prop winners do BingoWinnerAlert — NÃO depende de drawn_numbers
   // para evitar retrigger do useEffect de confetti/áudio a cada sorteio
   const alertWinners = useMemo(() => winners.map(w => ({
