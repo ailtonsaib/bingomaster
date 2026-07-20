@@ -97,6 +97,17 @@
     "card_bg_image_url": {
       "type": "string",
       "description": "URL da imagem de fundo das cartelas impressas"
+    },
+    "draw_type": {
+      "type": "string",
+      "enum": [
+        "horizontal",
+        "vertical",
+        "diagonal",
+        "full"
+      ],
+      "default": "horizontal",
+      "description": "Tipo de sorteio selecionado (horizontal, vertical, diagonal, full=cartela cheia)"
     }
   },
   "required": [

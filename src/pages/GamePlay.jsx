@@ -28,6 +28,7 @@ export default function GamePlay() {
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState([]);
   const [drawType, setDrawType] = useState("horizontal");
+  const drawTypeInitialized = useRef(false);
   const [cardFilter, setCardFilter] = useState("all"); // "all" ou "sold"
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
@@ -64,6 +65,14 @@ export default function GamePlay() {
     initialData: cachedData ? cachedData.cards : undefined,
     retry: false,
   });
+
+  // Inicializa o drawType a partir dos dados persistidos no jogo
+  useEffect(() => {
+    if (game?.draw_type && !drawTypeInitialized.current) {
+      setDrawType(game.draw_type);
+      drawTypeInitialized.current = true;
+    }
+  }, [game?.draw_type]);
 
   // Cacheia dados do jogo para funcionamento offline — debounce para não
   // bloquear o thread a cada sorteio (JSON.stringify de 100+ cartelas é pesado)
@@ -862,7 +871,7 @@ export default function GamePlay() {
                   ].map((opt) => (
                     <button
                       key={opt.value}
-                      onClick={() => !isPlaying && setDrawType(opt.value)}
+                      onClick={() => !isPlaying && updateGame({ draw_type: opt.value }).then(() => setDrawType(opt.value))}
                       disabled={isPlaying}
                       className={`rounded-xl px-3 py-2 text-sm font-semibold transition-all border ${
                         drawType === opt.value
