@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -370,6 +370,10 @@ export default function GamePlay() {
   const handleReset = () => {
     stopAutoDraw();
     setDrawMode("normal");
+    setWinners([]);
+    setPendingWinners([]);
+    setShowTiebreaker(false);
+    setTiebreakerPrizeIndex(-1);
     updateGame({ status: "waiting", drawn_numbers: [], prizes: (game.prizes || []).map(p => ({ name: p.name, description: p.description, awarded: false })) });
   };
 
@@ -402,6 +406,34 @@ export default function GamePlay() {
     }
   };
 
+  // Conta cartelas vencedoras — memoizado para evitar recomputação pesada em todo render
+  const { currentWinnersCount, totalWinnersCount } = useMemo(() => {
+    const dn = game?.drawn_numbers || [];
+    const drawnSet = new Set(dn);
+    const filtered = cardFilter === "validated"
+      ? cards.filter((c) => c.is_validated)
+      : cardFilter === "sold"
+      ? cards.filter((c) => c.player_phone || c.player_city)
+      : cards;
+    let current = 0;
+    let total = 0;
+    for (const c of filtered) {
+      const pts = getCardMaxPoints(c, drawnSet);
+      if (pts >= 20) {
+        total++;
+        if (!c.is_winner) current++;
+      }
+    }
+    return { currentWinnersCount: current, totalWinnersCount: total };
+  }, [cards, cardFilter, game?.drawn_numbers]);
+
+  // Memoiza o prop winners do BingoWinnerAlert para evitar retrigger do useEffect de confetti/áudio
+  const alertWinners = useMemo(() => winners.map(w => ({
+    ...w,
+    gameName: game?.name,
+    drawnNumbers: (game?.drawn_numbers || []).length
+  })), [winners, game?.name, game?.drawn_numbers]);
+
   if (isLoading || !game) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -418,24 +450,11 @@ export default function GamePlay() {
   const allDrawn = drawnNumbers.length >= maxNumber;
   const allPrizesAwarded = (game.prizes || []).length > 0 && (game.prizes || []).every(p => p.awarded);
 
-  // Conta cartelas que atingiram bingo e ainda não foram premiadas (para o botão do painel)
-  const drawnSetNow = new Set(drawnNumbers);
-  const filteredCardsNow = cardFilter === "validated"
-    ? cards.filter((c) => c.is_validated)
-    : cardFilter === "sold"
-    ? cards.filter((c) => c.player_phone || c.player_city)
-    : cards;
-  const currentWinnersCount = filteredCardsNow.filter((c) => !c.is_winner && getCardMaxPoints(c, drawnSetNow) >= 20).length;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
       {!isOnline && <OfflineBanner hasPendingSync={hasPendingSync} />}
       <BingoWinnerAlert
-        winners={winners.map(w => ({
-          ...w,
-          gameName: game.name,
-          drawnNumbers: (game.drawn_numbers || []).length
-        }))}
+        winners={alertWinners}
         onClose={() => setWinners([])}
         onConfirm={handleConfirmWinners}
       />
@@ -889,7 +908,7 @@ export default function GamePlay() {
                   className="bg-white/10 rounded-xl p-3 text-center hover:bg-white/20 transition-colors cursor-pointer"
                 >
                   <div className="text-2xl font-bold font-heading text-green-400">
-                    {cards.filter((c) => getCardMaxPoints(c, new Set(drawnNumbers)) >= 20).length}
+                    {totalWinnersCount}
                   </div>
                   <div className="text-xs text-violet-300 mt-0.5">Vencedoras</div>
                 </button>
