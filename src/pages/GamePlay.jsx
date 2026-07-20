@@ -502,29 +502,21 @@ export default function GamePlay() {
       ? cards.filter((c) => c.player_phone || c.player_city)
       : cards;
 
-    // Sem números sorteados: conta apenas cartelas já premiadas (is_winner)
+    // Sem números sorteados: nenhuma cartela pode ter bingo na rodada atual
     if (!Array.isArray(dn) || dn.length === 0) {
-      return {
-        currentWinnersCount: 0,
-        totalWinnersCount: filtered.filter((c) => c.is_winner).length,
-      };
+      return { currentWinnersCount: 0, totalWinnersCount: 0 };
     }
 
+    // Conta apenas cartelas com 20+ pontos na rodada atual (números sorteados atuais).
+    // Cartelas premiadas em rodadas anteriores (is_winner=true) NÃO contam aqui,
+    // pois os números foram zerados para a nova rodada.
     const drawnSet = new Set(dn);
     let current = 0;
     let total = 0;
-    const countedIds = new Set();
     for (const c of filtered) {
-      // Cartelas já premiadas contam como vencedoras
-      if (c.is_winner && !countedIds.has(c.id)) {
-        total++;
-        countedIds.add(c.id);
-        continue;
-      }
       const pts = getCardMaxPoints(c, drawnSet);
-      if (pts >= 20 && !countedIds.has(c.id)) {
+      if (pts >= 20) {
         total++;
-        countedIds.add(c.id);
         if (!c.is_winner) current++;
       }
     }
