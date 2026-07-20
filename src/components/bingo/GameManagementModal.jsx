@@ -28,6 +28,7 @@ export default function GameManagementModal({ games, onClose, onSaved }) {
   const [eventDate, setEventDate] = useState("");
   const [eventPrice, setEventPrice] = useState("");
   const [maxNumber, setMaxNumber] = useState(75);
+  const [drawType, setDrawType] = useState("horizontal");
   const [prizes, setPrizes] = useState([{ name: "", description: "", awarded: false }]);
   const [cardImageUrl, setCardImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -42,6 +43,7 @@ export default function GameManagementModal({ games, onClose, onSaved }) {
     setEventDate("");
     setEventPrice("");
     setMaxNumber(75);
+    setDrawType("horizontal");
     setPrizes([{ name: "", description: "", awarded: false }]);
     setCardImageUrl("");
     setCardBgImageUrl("");
@@ -56,6 +58,7 @@ export default function GameManagementModal({ games, onClose, onSaved }) {
     setEventDate(game.event_date ? game.event_date.slice(0, 16) : "");
     setEventPrice(game.event_price || "");
     setMaxNumber(game.max_number || 75);
+    setDrawType(game.draw_type || "horizontal");
     setPrizes(game.prizes?.length > 0 ? game.prizes : [{ name: "", description: "", awarded: false }]);
     setCardImageUrl(game.card_image_url || "");
     setCardBgImageUrl(game.card_bg_image_url || "");
@@ -90,6 +93,7 @@ export default function GameManagementModal({ games, onClose, onSaved }) {
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
       max_number: Number(maxNumber) || 75,
+      draw_type: drawType,
       prizes: prizes.filter((p) => p.name.trim()),
       card_image_url: cardImageUrl || undefined,
       card_bg_image_url: cardBgImageUrl || undefined,
@@ -280,6 +284,31 @@ export default function GameManagementModal({ games, onClose, onSaved }) {
                     onChange={(e) => setMaxNumber(e.target.value)}
                     placeholder="75"
                   />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Sorteio</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { value: "horizontal", label: "Horizontal", icon: "↔" },
+                    { value: "vertical",   label: "Vertical",   icon: "↕" },
+                    { value: "diagonal",   label: "Diagonal",   icon: "⤢" },
+                    { value: "full",       label: "Cartela Cheia", icon: "▦" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setDrawType(opt.value)}
+                      className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
+                        drawType === opt.value
+                          ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/30"
+                          : "bg-background border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <span className="text-base mr-1">{opt.icon}</span> {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
