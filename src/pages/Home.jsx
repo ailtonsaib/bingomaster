@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText, Mail } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText, Mail, History } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useUserScope } from "@/hooks/useUserScope";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
@@ -291,6 +291,11 @@ export default function Home() {
               <Link to="/past-games">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
                   <Monitor className="w-5 h-5" /> Jogos Anteriores
+                </Button>
+              </Link>
+              <Link to="/draw-history">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
+                  <History className="w-5 h-5" /> Histórico de Sorteios
                 </Button>
               </Link>
               <Link to="/game-analytics">
