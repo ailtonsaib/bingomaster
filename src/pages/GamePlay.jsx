@@ -211,14 +211,17 @@ export default function GamePlay() {
     autoDrawRef.current = handleDraw;
   });
 
-  const stopAutoDraw = () => {
-    if (autoTimer) {
-      clearInterval(autoTimer);
-      setAutoTimer(null);
+  const autoTimerRef = useRef(null);
+
+  const stopAutoDraw = useCallback(() => {
+    if (autoTimerRef.current) {
+      clearInterval(autoTimerRef.current);
+      autoTimerRef.current = null;
     }
     setAutoDrawing(false);
     setAutoCountdown(null);
-  };
+    setAutoTimer(null);
+  }, []);
 
   const startAutoDraw = () => {
     const secs = autoInterval;
@@ -236,6 +239,7 @@ export default function GamePlay() {
       });
     }, 1000);
 
+    autoTimerRef.current = countTimer;
     setAutoTimer(countTimer);
   };
 
@@ -260,9 +264,9 @@ export default function GamePlay() {
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      if (autoTimer) clearInterval(autoTimer);
+      if (autoTimerRef.current) clearInterval(autoTimerRef.current);
     };
-  }, [autoTimer]);
+  }, []);
 
   const handleConfirmWinners = async () => {
     if (winners.length === 0) return;
@@ -366,16 +370,55 @@ export default function GamePlay() {
 
   const handleFinish = () => updateGame({ status: "finished" });
 
-  const handleClearDraw = () => updateGame({ drawn_numbers: [] });
+  const [resetting, setResetting] = useState(false);
 
-  const handleReset = () => {
+  // Zera apenas a rodada atual: limpa números sorteados, mantém prêmios já concedidos
+  const handleClearCurrentRound = async () => {
     stopAutoDraw();
     setDrawMode("normal");
     setWinners([]);
     setPendingWinners([]);
     setShowTiebreaker(false);
     setTiebreakerPrizeIndex(-1);
-    updateGame({ status: "waiting", drawn_numbers: [], prizes: (game.prizes || []).map(p => ({ name: p.name, description: p.description, awarded: false })) });
+    setShowCancelDialog(false);
+    setResetting(true);
+    try {
+      await updateGame({ drawn_numbers: [] });
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Zera tudo: números sorteados, prêmios, cartelas vencedoras — volta ao estado inicial
+  const handleResetAll = async () => {
+    stopAutoDraw();
+    setDrawMode("normal");
+    setWinners([]);
+    setPendingWinners([]);
+    setShowTiebreaker(false);
+    setTiebreakerPrizeIndex(-1);
+    setShowCancelDialog(false);
+    setShowRestartDialog(false);
+    setResetting(true);
+    try {
+      const resetPrizes = (game.prizes || []).map(p => ({
+        name: p.name,
+        description: p.description,
+        awarded: false,
+      }));
+      await updateGame({ status: "waiting", drawn_numbers: [], prizes: resetPrizes });
+
+      // Reseta todas as cartelas vencedoras deste jogo em lote
+      await base44.entities.BingoCard.updateMany(
+        { game_id: String(gameId), is_winner: true },
+        { $set: { is_winner: false, won_prizes: [] } }
+      );
+      queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+    } catch (e) {
+      // erro silencioso — optimistic update já aplicado
+    } finally {
+      setResetting(false);
+    }
   };
 
   const handleAwardPrize = async (idx) => {
@@ -462,6 +505,14 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
+      {resetting && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white/10 rounded-2xl p-8 flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+            <p className="text-white font-semibold text-sm">Processando...</p>
+          </div>
+        </div>
+      )}
       {!isOnline && <OfflineBanner hasPendingSync={hasPendingSync} />}
       <BingoWinnerAlert
         winners={alertWinners}
@@ -506,44 +557,61 @@ export default function GamePlay() {
         />
       )}
 
-      {/* Restart finished game dialog */}
+      {/* Restart finished game dialog — zera tudo */}
       <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-heading">Reiniciar Sorteio?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá <strong>zerar todos os números sorteados e os prêmios concedidos</strong>, voltando o jogo para o estado inicial. Deseja continuar?
+              Esta ação irá <strong>zerar todos os números sorteados, os prêmios concedidos e as cartelas vencedoras</strong>, voltando o jogo para o estado inicial. Deseja continuar?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-500 hover:bg-red-600"
-              onClick={() => { handleReset(); setShowRestartDialog(false); }}
+              disabled={resetting}
+              onClick={() => handleResetAll()}
             >
-              Sim, Reiniciar
+              {resetting ? "Reiniciando..." : "Sim, Reiniciar Tudo"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Cancel draw dialog */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+      {/* Cancel draw dialog — duas opções: zerar rodada atual ou zerar tudo */}
+      <AlertDialog open={showCancelDialog} onOpenChange={(open) => !resetting && setShowCancelDialog(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-heading">Cancelar Sorteio?</AlertDialogTitle>
+            <AlertDialogTitle className="font-heading">Cancelar Sorteio</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá <strong>zerar todos os números sorteados e os prêmios concedidos</strong>, voltando o jogo para o estado inicial. Deseja continuar?
+              Escolha o que deseja cancelar:
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={() => { handleReset(); setShowCancelDialog(false); }}
+          <div className="space-y-3 py-2">
+            <button
+              disabled={resetting}
+              onClick={() => handleClearCurrentRound()}
+              className="w-full text-left rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
             >
-              Sim, Cancelar Sorteio
-            </AlertDialogAction>
+              <div className="font-bold text-amber-300 mb-1">🔄 Zerar Rodada Atual</div>
+              <p className="text-sm text-violet-200">
+                Limpa apenas os números sorteados desta rodada. Os prêmios já concedidos e as cartelas vencedoras são mantidos.
+              </p>
+            </button>
+            <button
+              disabled={resetting}
+              onClick={() => handleResetAll()}
+              className="w-full text-left rounded-xl border border-red-400/40 bg-red-500/10 p-4 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+            >
+              <div className="font-bold text-red-300 mb-1">🗑️ Zerar Tudo</div>
+              <p className="text-sm text-violet-200">
+                Zera números sorteados, prêmios concedidos e cartelas vencedoras. O jogo volta ao estado inicial.
+              </p>
+            </button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Voltar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
