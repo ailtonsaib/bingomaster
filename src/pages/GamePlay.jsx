@@ -140,6 +140,11 @@ export default function GamePlay() {
 
   const updateGame = useCallback(async (updates) => {
     if (!game) return;
+    // Cancela refetches pendentes para evitar que dados stale de um
+    // update anterior (ex: sorteio) sobrescrevam o optimistic update
+    // atual (ex: zerar números ao conceder prêmio)
+    await queryClient.cancelQueries({ queryKey: ["game", gameId] });
+
     // Optimistic update — reflete no UI imediatamente (síncrono)
     const newGameData = (() => {
       const arr = Array.isArray(queryClient.getQueryData(["game", gameId])) ? queryClient.getQueryData(["game", gameId]) : [];
