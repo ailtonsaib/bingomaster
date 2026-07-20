@@ -90,19 +90,21 @@ export default function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePri
               {isPlaying && !prize.awarded && (
                 <Button
                   size="sm"
-                  disabled={winnersCount === 0}
+                  disabled={!isActive || winnersCount === 0}
                   onClick={() => onAwardPrize(idx)}
                   className={
-                    winnersCount === 0
+                    !isActive || winnersCount === 0
                       ? "w-full mt-2 h-7 text-xs bg-white/5 text-violet-400/50 font-bold cursor-not-allowed"
                       : "w-full mt-2 h-7 text-xs bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold"
                   }
                 >
-                  {winnersCount === 0
-                    ? "Aguardando bingo..."
-                    : winnersCount === 1
-                      ? "Marcar como Premiado"
-                      : `Desempate — Pedra Maior (${winnersCount} cartelas)`}
+                  {!isActive
+                    ? "Aguardando vez..."
+                    : winnersCount === 0
+                      ? "Aguardando bingo..."
+                      : winnersCount === 1
+                        ? "Marcar como Premiado"
+                        : `Desempate — Pedra Maior (${winnersCount} cartelas)`}
                 </Button>
               )}
             </motion.div>
