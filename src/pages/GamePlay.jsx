@@ -144,21 +144,26 @@ export default function GamePlay() {
     if (!game || drawing || game.status === "finished") return;
     setDrawing(true);
     
+    // Usa game.drawn_numbers/max_number diretamente (drawnNumbers/maxNumber
+    // são definidos mais abaixo no componente — referenciá-los aqui causa
+    // ReferenceError de zona morta temporal quando o auto-draw dispara)
+    const currentDrawnArr = game.drawn_numbers || [];
+    const currentMax = game.max_number || 75;
     let num;
     if (number !== null) {
       // Manual mode: use provided number
       num = parseInt(number);
-      if (isNaN(num) || num < 1 || num > maxNumber) {
+      if (isNaN(num) || num < 1 || num > currentMax) {
         setDrawing(false);
         return;
       }
-      if (drawnNumbers.includes(num)) {
+      if (currentDrawnArr.includes(num)) {
         setDrawing(false);
         return;
       }
     } else {
       // Normal mode: random draw
-      num = drawNumber(game.drawn_numbers || [], game.max_number || 75);
+      num = drawNumber(currentDrawnArr, currentMax);
     }
     
     const currentDrawn = num !== null
