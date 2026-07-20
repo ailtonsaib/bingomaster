@@ -145,7 +145,7 @@ export default function Sellers() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
+            <Link to="/app" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
             <h1 className="text-2xl font-bold font-heading flex items-center gap-2">

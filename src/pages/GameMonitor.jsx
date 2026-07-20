@@ -247,7 +247,7 @@ export default function GameMonitor() {
                 Acompanhe todos os jogos em tempo real • atualiza a cada {REFRESH_MS / 1000}s
               </p>
             </div>
-            <Link to="/">
+            <Link to="/app">
               <Button variant="outline" size="sm" className="gap-1.5">
                 ← Voltar
               </Button>

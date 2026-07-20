@@ -53,7 +53,7 @@ export default function WinnerSummary() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 pt-10 pb-6">
-        <Link to="/" className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-4">
+        <Link to="/app" className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-4">
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Link>
         <h1 className="text-2xl font-bold font-heading flex items-center gap-2">

@@ -39,7 +39,7 @@ export default function Rifas() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Link to="/">
+            <Link to="/app">
               <Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button>
             </Link>
             <div>

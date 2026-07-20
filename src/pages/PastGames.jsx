@@ -226,7 +226,7 @@ export default function PastGames() {
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
+          <Link to="/app" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
             <ArrowLeft className="w-4 h-4" /> Início
           </Link>
           <h1 className="text-2xl font-bold font-heading">Jogos Anteriores</h1>

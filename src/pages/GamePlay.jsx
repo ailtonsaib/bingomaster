@@ -511,7 +511,7 @@ export default function GamePlay() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-violet-300 hover:text-white mb-1 transition-colors">
+            <Link to="/app" className="inline-flex items-center gap-1.5 text-sm text-violet-300 hover:text-white mb-1 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Início
             </Link>
             <h1 className="text-2xl md:text-3xl font-bold font-heading">{game.name}</h1>

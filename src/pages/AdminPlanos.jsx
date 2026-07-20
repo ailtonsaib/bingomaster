@@ -124,7 +124,7 @@ export default function AdminPlanos() {
   }
 
   if (!currentUser || currentUser.role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   return (
