@@ -825,16 +825,7 @@ export default function GamePlay() {
                     <Play className="w-5 h-5" /> Iniciar Jogo
                   </Button>
                 )}
-                {isPlaying && drawnNumbers.length === 0 && awardedPrizesCount > 0 && remainingPrizes > 0 && (
-                  <Button
-                    size="lg"
-                    className="gap-2 px-10 bg-emerald-500 hover:bg-emerald-600 text-white border-0 text-lg font-bold"
-                    onClick={() => handleDraw()}
-                    disabled={drawing}
-                  >
-                    <Play className="w-5 h-5" /> Iniciar Próximo Jogo
-                  </Button>
-                )}
+
                 {isPlaying && (
                   <>
                     {drawMode === "manual" && (
@@ -922,7 +913,7 @@ export default function GamePlay() {
                         </div>
                       </div>
                     )}
-                    {drawMode === "normal" && !(drawnNumbers.length === 0 && awardedPrizesCount > 0) && (
+                    {drawMode === "normal" && (
                       <Button
                         size="lg"
                         className="gap-2 px-10 bg-accent hover:bg-accent/90 text-accent-foreground border-0 text-lg font-bold min-w-52"
