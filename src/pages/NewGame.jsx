@@ -39,7 +39,6 @@ export default function NewGame() {
       status: "waiting",
       drawn_numbers: [],
       max_number: 75,
-      draw_type: "horizontal",
       prizes: prizes.filter((p) => p.name.trim()),
       event_location: eventLocation.trim() || undefined,
       event_address: eventAddress.trim() || undefined,
@@ -114,9 +113,9 @@ export default function NewGame() {
                   onChange={(e) => setEventPrice(e.target.value)}
                 />
               </div>
-              </div>
+            </div>
 
-              <div className="space-y-3">
+            <div className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Sorteio</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
@@ -139,9 +138,9 @@ export default function NewGame() {
                   </button>
                 ))}
               </div>
-              </div>
+            </div>
 
-              <PrizeForm prizes={prizes} onChange={setPrizes} />
+                  <PrizeForm prizes={prizes} onChange={setPrizes} />
 
             <div className="space-y-2">
               <Label>Imagem da Cartela (opcional)</Label>
