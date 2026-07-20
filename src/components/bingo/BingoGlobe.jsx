@@ -1,16 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function BingoGlobe({ spinning, result, availableCount, maxNumber }) {
+export default function BingoGlobe({ spinning, result, availableCount, maxNumber, availableNumbers }) {
   const [displayNumber, setDisplayNumber] = useState(null);
   const intervalRef = useRef(null);
+  const idxRef = useRef(0);
 
   useEffect(() => {
     if (spinning) {
-      // Cicla números rapidamente durante o giro (3 segundos)
+      // Cicla pelos números que faltam (disponíveis) durante 10 segundos
       setDisplayNumber(null);
+      const pool = (availableNumbers && availableNumbers.length > 0)
+        ? availableNumbers
+        : Array.from({ length: maxNumber }, (_, i) => i + 1);
+      idxRef.current = 0;
       intervalRef.current = setInterval(() => {
-        setDisplayNumber(Math.floor(Math.random() * maxNumber) + 1);
+        setDisplayNumber(pool[idxRef.current % pool.length]);
+        idxRef.current++;
       }, 80);
     } else {
       if (intervalRef.current) {
@@ -22,7 +28,7 @@ export default function BingoGlobe({ spinning, result, availableCount, maxNumber
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [spinning, result, maxNumber]);
+  }, [spinning, result, maxNumber, availableNumbers]);
 
   return (
     <div className="flex flex-col items-center gap-3">

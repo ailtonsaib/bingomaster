@@ -39,7 +39,7 @@ export default function TiebreakerModal({ winners, drawnNumbers, maxNumber, priz
     if (availableNumbers.length === 0 || spinning !== null) return;
     setSpinning(cardId);
     setError(prev => ({ ...prev, [cardId]: undefined }));
-    // 3 segundos de giro do globo
+    // 10 segundos de giro do globo — cicla pelos números disponíveis
     setTimeout(() => {
       const currentUsed = new Set(Object.values(pedras));
       const pool = Array.from({ length: maxNumber }, (_, i) => i + 1)
@@ -52,7 +52,7 @@ export default function TiebreakerModal({ winners, drawnNumbers, maxNumber, priz
       setPedras(prev => ({ ...prev, [cardId]: num }));
       setDrawOrder(prev => [...prev, cardId]);
       setSpinning(null);
-    }, 3000);
+    }, 10000);
   };
 
   const handleSortearTodos = () => {
@@ -91,7 +91,7 @@ export default function TiebreakerModal({ winners, drawnNumbers, maxNumber, priz
         }
         return updated;
       });
-    }, 3000);
+    }, 10000);
   };
 
   const handleManualSet = (cardId) => {
@@ -167,6 +167,7 @@ export default function TiebreakerModal({ winners, drawnNumbers, maxNumber, priz
               result={currentSpinningResult}
               availableCount={availableNumbers.length}
               maxNumber={maxNumber}
+              availableNumbers={availableNumbers}
             />
           </div>
           <div className="space-y-2">
