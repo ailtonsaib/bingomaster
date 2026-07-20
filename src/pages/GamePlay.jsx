@@ -852,37 +852,6 @@ export default function GamePlay() {
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-6 flex flex-col items-center gap-4">
               <LastNumberDisplay number={drawnNumbers[drawnNumbers.length - 1]} drawing={drawing} />
 
-              {/* Draw type selector */}
-              <div className="w-full">
-                <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Tipo de Sorteio</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { value: "horizontal", label: "Horizontal", icon: "↔" },
-                    { value: "vertical",   label: "Vertical",   icon: "↕" },
-                    { value: "diagonal",   label: "Diagonal",   icon: "⤢" },
-                    { value: "full",       label: "Cartela Cheia", icon: "▦" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => !isPlaying && updateGame({ draw_type: opt.value })}
-                      disabled={isPlaying}
-                      className={`rounded-xl px-3 py-2 text-sm font-semibold transition-all border ${
-                        drawType === opt.value
-                          ? "bg-primary border-primary text-white shadow-lg shadow-primary/30"
-                          : "bg-white/10 border-white/10 text-violet-300 hover:bg-white/20"
-                      } disabled:opacity-60 disabled:cursor-not-allowed`}
-                    >
-                      <span className="text-base mr-1">{opt.icon}</span> {opt.label}
-                    </button>
-                  ))}
-                </div>
-                {isPlaying && (
-                  <p className="text-xs text-violet-400 text-center mt-1">
-                    Encerre o jogo para alterar o tipo de sorteio.
-                  </p>
-                )}
-              </div>
-
               {/* Card filter selector */}
               <div className="w-full mt-3">
                 <p className="text-xs text-violet-300 uppercase tracking-wider text-center mb-2 font-semibold">Cartelas no Sorteio</p>

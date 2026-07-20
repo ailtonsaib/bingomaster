@@ -18,6 +18,7 @@ export default function NewGame() {
   const [eventAddress, setEventAddress] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventPrice, setEventPrice] = useState("");
+  const [drawType, setDrawType] = useState("horizontal");
   const [cardImageUrl, setCardImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -44,6 +45,7 @@ export default function NewGame() {
       event_address: eventAddress.trim() || undefined,
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
+      draw_type: drawType,
       card_image_url: cardImageUrl || undefined,
     });
     navigate(`/game/${game.id}`);
@@ -112,9 +114,34 @@ export default function NewGame() {
                   onChange={(e) => setEventPrice(e.target.value)}
                 />
               </div>
-            </div>
+              </div>
 
-            <PrizeForm prizes={prizes} onChange={setPrizes} />
+              <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Sorteio</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { value: "horizontal", label: "Horizontal", icon: "↔" },
+                  { value: "vertical",   label: "Vertical",   icon: "↕" },
+                  { value: "diagonal",   label: "Diagonal",   icon: "⤢" },
+                  { value: "full",       label: "Cartela Cheia", icon: "▦" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setDrawType(opt.value)}
+                    className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
+                      drawType === opt.value
+                        ? "bg-primary border-primary text-white shadow-lg shadow-primary/30"
+                        : "bg-background border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <span className="text-base mr-1">{opt.icon}</span> {opt.label}
+                  </button>
+                ))}
+              </div>
+              </div>
+
+              <PrizeForm prizes={prizes} onChange={setPrizes} />
 
             <div className="space-y-2">
               <Label>Imagem da Cartela (opcional)</Label>
