@@ -14,6 +14,9 @@ export default function EditGameModal({ game, onClose, onSaved }) {
     game.event_date ? game.event_date.slice(0, 16) : ""
   );
   const [eventPrice, setEventPrice] = useState(game.event_price || "");
+  const [maxNumber, setMaxNumber] = useState(game.max_number || 75);
+  const [drawType, setDrawType] = useState(game.draw_type || "horizontal");
+  const [cardFilter, setCardFilter] = useState(game.card_filter || "validated");
   const [prizes, setPrizes] = useState(
     game.prizes?.length > 0
       ? game.prizes
@@ -52,6 +55,9 @@ export default function EditGameModal({ game, onClose, onSaved }) {
       event_address: eventAddress.trim() || undefined,
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
+      max_number: Number(maxNumber) || 75,
+      draw_type: drawType,
+      card_filter: cardFilter,
       prizes: prizes.filter((p) => p.name.trim()),
       card_image_url: cardImageUrl || undefined,
       card_bg_image_url: cardBgImageUrl || undefined,
@@ -120,6 +126,63 @@ export default function EditGameModal({ game, onClose, onSaved }) {
                 onChange={(e) => setEventPrice(e.target.value)}
                 placeholder="Ex: 10,00"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Número Máximo (75 ou 90)</Label>
+              <Input
+                type="number"
+                value={maxNumber}
+                onChange={(e) => setMaxNumber(e.target.value)}
+                placeholder="75"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Sorteio</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { value: "horizontal", label: "Horizontal", icon: "↔" },
+                { value: "vertical",   label: "Vertical",   icon: "↕" },
+                { value: "diagonal",   label: "Diagonal",   icon: "⤢" },
+                { value: "full",       label: "Cartela Cheia", icon: "▦" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setDrawType(opt.value)}
+                  className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
+                    drawType === opt.value
+                      ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/30"
+                      : "bg-background border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <span className="text-base mr-1">{opt.icon}</span> {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Cartelas no Sorteio</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: "all", label: "Todas as Cartelas", icon: "📋" },
+                { value: "validated", label: "Apenas Validadas", icon: "✅" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCardFilter(opt.value)}
+                  className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
+                    cardFilter === opt.value
+                      ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/30"
+                      : "bg-background border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <span className="text-base mr-1">{opt.icon}</span> {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 

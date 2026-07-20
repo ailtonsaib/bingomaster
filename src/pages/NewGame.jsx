@@ -19,6 +19,7 @@ export default function NewGame() {
   const [eventDate, setEventDate] = useState("");
   const [eventPrice, setEventPrice] = useState("");
   const [drawType, setDrawType] = useState("horizontal");
+  const [cardFilter, setCardFilter] = useState("validated");
   const [cardImageUrl, setCardImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -45,6 +46,7 @@ export default function NewGame() {
       event_date: eventDate || undefined,
       event_price: eventPrice.trim() || undefined,
       draw_type: drawType,
+      card_filter: cardFilter,
       card_image_url: cardImageUrl || undefined,
     });
     navigate(`/game/${game.id}`);
@@ -140,7 +142,30 @@ export default function NewGame() {
               </div>
             </div>
 
-                  <PrizeForm prizes={prizes} onChange={setPrizes} />
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Cartelas no Sorteio</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: "all", label: "Todas as Cartelas", icon: "📋" },
+                        { value: "validated", label: "Apenas Validadas", icon: "✅" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setCardFilter(opt.value)}
+                          className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all border ${
+                            cardFilter === opt.value
+                              ? "bg-primary border-primary text-white shadow-lg shadow-primary/30"
+                              : "bg-background border-border text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="text-base mr-1">{opt.icon}</span> {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                         <PrizeForm prizes={prizes} onChange={setPrizes} />
 
             <div className="space-y-2">
               <Label>Imagem da Cartela (opcional)</Label>
