@@ -381,8 +381,11 @@ export default function GamePlay() {
   };
 
   const handleAwardPrize = async (idx) => {
+    // Sem números sorteados → não há vencedor possível
+    const dn = game.drawn_numbers || [];
+    if (!Array.isArray(dn) || dn.length === 0) return;
     // Detecta cartelas que atingiram bingo (20+ pontos) e ainda não foram premiadas
-    const drawnSet = new Set(game.drawn_numbers || []);
+    const drawnSet = new Set(dn);
     const filteredCards = cardFilter === "validated"
       ? cards.filter((c) => c.is_validated)
       : cardFilter === "sold"
@@ -412,6 +415,10 @@ export default function GamePlay() {
   // Conta cartelas vencedoras — memoizado para evitar recomputação pesada em todo render
   const { currentWinnersCount, totalWinnersCount } = useMemo(() => {
     const dn = game?.drawn_numbers || [];
+    // Sem números sorteados → nenhuma cartela pode ter bingo
+    if (!Array.isArray(dn) || dn.length === 0) {
+      return { currentWinnersCount: 0, totalWinnersCount: 0 };
+    }
     const drawnSet = new Set(dn);
     const filtered = cardFilter === "validated"
       ? cards.filter((c) => c.is_validated)
