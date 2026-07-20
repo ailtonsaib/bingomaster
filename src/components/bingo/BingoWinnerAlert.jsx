@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { useEffect, useRef } from "react";
 import { useBrandName } from "@/hooks/useBrandName";
 
-export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
+export default function BingoWinnerAlert({ winners, drawnCount = 0, onClose, onConfirm }) {
   const audioRef = useRef(null);
   const { brandName } = useBrandName();
 
@@ -150,7 +150,7 @@ export default function BingoWinnerAlert({ winners, onClose, onConfirm }) {
     const winnerName = winner.card.player_name || "Ganhador(a)";
     const gameName = winner.gameName || "Bingo";
     const prizeName = winner.prizeName || "Prêmio";
-    const drawnNumbers = winner.drawnNumbers || 0;
+    const drawnNumbers = drawnCount;
 
     const message = `🎉 *${brandName}! VOCÊ GANHOU!* 🎉\n\n` +
       `Olá ${winnerName}, parabéns!\n\n` +

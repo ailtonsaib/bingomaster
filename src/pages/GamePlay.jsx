@@ -193,10 +193,13 @@ export default function GamePlay() {
         }
       }
 
-      // Check all cards for bingo after the new number
-      const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
-      if (found.length > 0) {
-        setWinners(found);
+      // Check all cards for bingo after the new number — só se não há alerta ativo
+      if (winners.length === 0) {
+        const found = checkAllCardsForBingo(filteredCards, newDrawn, game.prizes || [], drawType);
+        if (found.length > 0) {
+          if (autoDrawing) stopAutoDraw();
+          setWinners(found);
+        }
       }
     }
     setDrawing(false);
@@ -427,12 +430,12 @@ export default function GamePlay() {
     return { currentWinnersCount: current, totalWinnersCount: total };
   }, [cards, cardFilter, game?.drawn_numbers]);
 
-  // Memoiza o prop winners do BingoWinnerAlert para evitar retrigger do useEffect de confetti/áudio
+  // Memoiza o prop winners do BingoWinnerAlert — NÃO depende de drawn_numbers
+  // para evitar retrigger do useEffect de confetti/áudio a cada sorteio
   const alertWinners = useMemo(() => winners.map(w => ({
     ...w,
     gameName: game?.name,
-    drawnNumbers: (game?.drawn_numbers || []).length
-  })), [winners, game?.name, game?.drawn_numbers]);
+  })), [winners, game?.name]);
 
   if (isLoading || !game) {
     return (
@@ -455,6 +458,7 @@ export default function GamePlay() {
       {!isOnline && <OfflineBanner hasPendingSync={hasPendingSync} />}
       <BingoWinnerAlert
         winners={alertWinners}
+        drawnCount={drawnNumbers.length}
         onClose={() => setWinners([])}
         onConfirm={handleConfirmWinners}
       />
