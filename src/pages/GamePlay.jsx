@@ -485,22 +485,35 @@ export default function GamePlay() {
   // Conta cartelas vencedoras — memoizado para evitar recomputação pesada em todo render
   const { currentWinnersCount, totalWinnersCount } = useMemo(() => {
     const dn = game?.drawn_numbers || [];
-    // Sem números sorteados → nenhuma cartela pode ter bingo
-    if (!Array.isArray(dn) || dn.length === 0) {
-      return { currentWinnersCount: 0, totalWinnersCount: 0 };
-    }
-    const drawnSet = new Set(dn);
     const filtered = cardFilter === "validated"
       ? cards.filter((c) => c.is_validated)
       : cardFilter === "sold"
       ? cards.filter((c) => c.player_phone || c.player_city)
       : cards;
+
+    // Sem números sorteados: conta apenas cartelas já premiadas (is_winner)
+    if (!Array.isArray(dn) || dn.length === 0) {
+      return {
+        currentWinnersCount: 0,
+        totalWinnersCount: filtered.filter((c) => c.is_winner).length,
+      };
+    }
+
+    const drawnSet = new Set(dn);
     let current = 0;
     let total = 0;
+    const countedIds = new Set();
     for (const c of filtered) {
-      const pts = getCardMaxPoints(c, drawnSet);
-      if (pts >= 20) {
+      // Cartelas já premiadas contam como vencedoras
+      if (c.is_winner && !countedIds.has(c.id)) {
         total++;
+        countedIds.add(c.id);
+        continue;
+      }
+      const pts = getCardMaxPoints(c, drawnSet);
+      if (pts >= 20 && !countedIds.has(c.id)) {
+        total++;
+        countedIds.add(c.id);
         if (!c.is_winner) current++;
       }
     }
