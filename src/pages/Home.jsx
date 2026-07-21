@@ -228,16 +228,16 @@ export default function Home() {
                 className="gap-2 text-base px-8"
                 onClick={() => setShowGameManager(true)}
               >
-                <Plus className="w-5 h-5" /> Novo Jogo
+                Novo Jogo
               </Button>
               <Link to="/sellers">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8">
-                  <UserCheck className="w-5 h-5" /> Vendedores
+                  Vendedores
                 </Button>
               </Link>
               <a href="/sell" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-300 text-green-700 hover:bg-green-50">
-                  <ShoppingCart className="w-5 h-5" /> App do Vendedor
+                  App do Vendedor
                 </Button>
               </a>
               <Button
@@ -246,26 +246,26 @@ export default function Home() {
                 className="gap-2 text-base px-8 border-purple-300 text-purple-700 hover:bg-purple-50"
                 onClick={() => setShowDistribute(true)}
               >
-                <Layers className="w-5 h-5" /> Distribuir Cartelas
+                Distribuir Cartelas
               </Button>
               <Link to="/validate">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
-                  <CheckSquare className="w-5 h-5" /> Validar Cartelas
+                  Validar Cartelas
                 </Button>
               </Link>
               <Link to="/winners">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-amber-300 text-amber-700 hover:bg-amber-50">
-                  <Trophy className="w-5 h-5" /> Prêmios & Vencedores
+                  Prêmios & Vencedores
                 </Button>
               </Link>
               <Link to="/monitor">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
-                  <Monitor className="w-5 h-5" /> Monitor de Jogos
+                  Monitor de Jogos
                 </Button>
               </Link>
               <Link to="/bingo-financeiro">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-400 text-green-700 hover:bg-green-50 font-semibold">
-                  <Wallet className="w-5 h-5" /> Movimentações do Evento
+                  Movimentações do Evento
                 </Button>
               </Link>
               <Link to="/admin-financial">
@@ -275,47 +275,47 @@ export default function Home() {
               </Link>
               <Link to="/sales-dashboard">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-                  <BarChart3 className="w-5 h-5" /> Dashboard de Vendas
+                  Dashboard de Vendas
                 </Button>
               </Link>
               <Link to="/seller-report">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
-                  <FileBarChart2 className="w-5 h-5" /> Relatório de Vendas
+                  Relatório de Vendas
                 </Button>
               </Link>
               <Link to="/final-report">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-rose-300 text-rose-700 hover:bg-rose-50">
-                  <ClipboardList className="w-5 h-5" /> Relatório Final
+                  Relatório Final
                 </Button>
               </Link>
               <Link to="/financial-report">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-                  <DollarSign className="w-5 h-5" /> Relatório Financeiro
+                  Relatório Financeiro
                 </Button>
               </Link>
               <Link to="/past-games">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
-                  <Monitor className="w-5 h-5" /> Jogos Anteriores
+                  Jogos Anteriores
                 </Button>
               </Link>
               <Link to="/draw-history">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
-                  <History className="w-5 h-5" /> Histórico de Sorteios
+                  Histórico de Sorteios
                 </Button>
               </Link>
               <Link to="/game-analytics">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
-                  <BarChart3 className="w-5 h-5" /> Analytics
+                  Analytics
                 </Button>
               </Link>
               <Link to="/rifas">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
-                  <Ticket className="w-5 h-5" /> Gerador de Rifas
+                  Gerador de Rifas
                 </Button>
               </Link>
               <a href="/buyer" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-cyan-300 text-cyan-700 hover:bg-cyan-50">
-                  <Smartphone className="w-5 h-5" /> App do Comprador
+                  App do Comprador
                 </Button>
               </a>
               <Button
@@ -324,7 +324,7 @@ export default function Home() {
                 className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50"
                 onClick={() => setShowGamePicker(true)}
               >
-                <Shuffle className="w-5 h-5" /> Sorteio
+                Sorteio
               </Button>
               <Button
                 size="lg"
@@ -332,16 +332,16 @@ export default function Home() {
                 className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50"
                 onClick={() => setShowCardsPicker(true)}
               >
-                <Grid3x3 className="w-5 h-5" /> Cartelas
+                Cartelas
               </Button>
               <Link to="/convite">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
-                  <Mail className="w-5 h-5" /> Convite do Bingo
+                  Convite do Bingo
                 </Button>
               </Link>
               <Link to="/info-planos">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
-                  <Layers className="w-5 h-5" /> Planos & Info
+                  Planos & Info
                 </Button>
               </Link>
               <Button
