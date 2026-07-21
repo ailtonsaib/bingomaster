@@ -32,7 +32,12 @@ export default function ValidateCards() {
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["validate-cards", selectedGame?.id],
-    queryFn: () => base44.entities.BingoCard.filter(scope({ game_id: String(selectedGame.id) }), "card_number"),
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getGameCards", {
+        game_id: String(selectedGame.id),
+      });
+      return (res.data.cards || []).sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
+    },
     enabled: !!selectedGame,
   });
 
