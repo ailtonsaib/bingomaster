@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserScope } from "@/hooks/useUserScope";
@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Search, ChevronDown, User, Phone, CheckCircle2,
-  XCircle, ArrowLeft, Eye, EyeOff, ShieldCheck, Undo2, ShoppingCart, Clock, Users, ListChecks
+  XCircle, ArrowLeft, Eye, EyeOff, ShieldCheck, Undo2, ShoppingCart, Clock, Users, ListChecks, UserCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import DelegateValidationModal from "@/components/bingo/DelegateValidationModal";
 
 export default function ValidateCards() {
   const queryClient = useQueryClient();
@@ -29,6 +30,7 @@ export default function ValidateCards() {
   const [saleName, setSaleName] = useState("");
   const [salePhone, setSalePhone] = useState("");
   const [saleLoading, setSaleLoading] = useState(false);
+  const [showDelegate, setShowDelegate] = useState(false);
   const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [] } = useQuery({
@@ -36,6 +38,15 @@ export default function ValidateCards() {
     queryFn: () => base44.entities.BingoGame.filter({}, "-created_date"),
     enabled,
   });
+
+  // Real-time: atualiza quando o auxiliar valida cartelas externamente
+  useEffect(() => {
+    if (!selectedGame) return;
+    const unsubscribe = base44.entities.BingoCard.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    });
+    return unsubscribe;
+  }, [selectedGame, queryClient]);
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["validate-cards", selectedGame?.id],
@@ -196,10 +207,24 @@ export default function ValidateCards() {
         <Link to="/app" className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-4">
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Link>
-        <h1 className="text-2xl font-bold font-heading">Validação de Cartelas</h1>
-        <p className="text-primary-foreground/80 text-sm mt-1">
-          Habilite as cartelas pagas para concorrerem aos prêmios no sorteio
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold font-heading">Validação de Cartelas</h1>
+            <p className="text-primary-foreground/80 text-sm mt-1">
+              Habilite as cartelas pagas para concorrerem aos prêmios no sorteio
+            </p>
+          </div>
+          {selectedGame && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowDelegate(true)}
+              className="gap-1.5 shrink-0"
+            >
+              <UserCheck className="w-4 h-4" /> Auxiliar
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
@@ -443,6 +468,13 @@ export default function ValidateCards() {
               </Button>
             </div>
           </div>
+        )}
+
+        {showDelegate && selectedGame && (
+          <DelegateValidationModal
+            game={selectedGame}
+            onClose={() => setShowDelegate(false)}
+          />
         )}
       </div>
     </div>

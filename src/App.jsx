@@ -70,6 +70,7 @@ import CaixaPanel from '@/pages/CaixaPanel';
 import PublicBids from '@/pages/PublicBids';
 import PublicBidDetail from '@/pages/PublicBidDetail';
 import CardValidationPanel from '@/pages/CardValidationPanel';
+import AuxiliarValidation from '@/pages/AuxiliarValidation';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -105,6 +106,8 @@ const AuthenticatedApp = () => {
       <Route path="/telao/:gameId" element={<Telao />} />
       {/* App do Comprador é público — acesso apenas com o celular da cartela */}
       <Route path="/buyer" element={<BuyerApp />} />
+      {/* Painel do Auxiliar — validação pública por jogo */}
+      <Route path="/auxiliar/:gameId" element={<AuxiliarValidation />} />
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
       {/* Galaxy Blaster — jogo de ação público */}
