@@ -179,11 +179,11 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Top controls */}
       <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => window.location.href = '/bingo'}>
-          <ArrowLeft className="w-4 h-4" /> Sair
+        <Button variant="ghost" size="sm" className="bg-card/80 backdrop-blur shadow-sm" onClick={() => window.location.href = '/bingo'}>
+          Sair
         </Button>
-        <Button variant="ghost" size="sm" className="gap-2 bg-card/80 backdrop-blur shadow-sm" onClick={() => setShowChangePassword(true)}>
-          <KeyRound className="w-4 h-4" /> Alterar Senha
+        <Button variant="ghost" size="sm" className="bg-card/80 backdrop-blur shadow-sm" onClick={() => setShowChangePassword(true)}>
+          Alterar Senha
         </Button>
       </div>
       <div className="max-w-5xl mx-auto px-4 pt-4">
@@ -225,46 +225,46 @@ export default function Home() {
             <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
               <Button
                 size="lg"
-                className="gap-2 text-base px-8"
+                className="text-base px-8"
                 onClick={() => setShowGameManager(true)}
               >
                 Novo Jogo
               </Button>
               <Link to="/sellers">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8">
+                <Button size="lg" variant="outline" className="text-base px-8">
                   Vendedores
                 </Button>
               </Link>
               <a href="/sell" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-300 text-green-700 hover:bg-green-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-green-300 text-green-700 hover:bg-green-50">
                   App do Vendedor
                 </Button>
               </a>
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 text-base px-8 border-purple-300 text-purple-700 hover:bg-purple-50"
+                className="text-base px-8 border-purple-300 text-purple-700 hover:bg-purple-50"
                 onClick={() => setShowDistribute(true)}
               >
                 Distribuir Cartelas
               </Button>
               <Link to="/validate">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
                   Validar Cartelas
                 </Button>
               </Link>
               <Link to="/winners">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-amber-300 text-amber-700 hover:bg-amber-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-amber-300 text-amber-700 hover:bg-amber-50">
                   Prêmios & Vencedores
                 </Button>
               </Link>
               <Link to="/monitor">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
                   Monitor de Jogos
                 </Button>
               </Link>
               <Link to="/bingo-financeiro">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-400 text-green-700 hover:bg-green-50 font-semibold">
+                <Button size="lg" variant="outline" className="text-base px-8 border-green-400 text-green-700 hover:bg-green-50 font-semibold">
                   Movimentações do Evento
                 </Button>
               </Link>
@@ -274,54 +274,54 @@ export default function Home() {
                 </Button>
               </Link>
               <Link to="/sales-dashboard">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
                   Dashboard de Vendas
                 </Button>
               </Link>
               <Link to="/seller-report">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
                   Relatório de Vendas
                 </Button>
               </Link>
               <Link to="/final-report">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-rose-300 text-rose-700 hover:bg-rose-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-rose-300 text-rose-700 hover:bg-rose-50">
                   Relatório Final
                 </Button>
               </Link>
               <Link to="/financial-report">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
                   Relatório Financeiro
                 </Button>
               </Link>
               <Link to="/past-games">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50">
                   Jogos Anteriores
                 </Button>
               </Link>
               <Link to="/draw-history">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
                   Histórico de Sorteios
                 </Button>
               </Link>
               <Link to="/game-analytics">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-blue-300 text-blue-700 hover:bg-blue-50">
                   Analytics
                 </Button>
               </Link>
               <Link to="/rifas">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
                   Gerador de Rifas
                 </Button>
               </Link>
               <a href="/buyer" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-cyan-300 text-cyan-700 hover:bg-cyan-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-cyan-300 text-cyan-700 hover:bg-cyan-50">
                   App do Comprador
                 </Button>
               </a>
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50"
+                className="text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50"
                 onClick={() => setShowGamePicker(true)}
               >
                 Sorteio
@@ -329,25 +329,25 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50"
+                className="text-base px-8 border-slate-300 text-slate-700 hover:bg-slate-50"
                 onClick={() => setShowCardsPicker(true)}
               >
                 Cartelas
               </Button>
               <Link to="/convite">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
                   Convite do Bingo
                 </Button>
               </Link>
               <Link to="/info-planos">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
+                <Button size="lg" variant="outline" className="text-base px-8 border-violet-300 text-violet-700 hover:bg-violet-50">
                   Planos & Info
                 </Button>
               </Link>
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 text-base px-8 border-orange-300 text-orange-700 hover:bg-orange-50"
+                className="text-base px-8 border-orange-300 text-orange-700 hover:bg-orange-50"
                 onClick={() => setShowCleanDialog(true)}
                 disabled={cleanableCards.length === 0 && cleanableGames.length === 0}
               >
@@ -356,7 +356,7 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="destructive"
-                className="gap-2 text-base px-8 bg-red-500 hover:bg-red-600 text-white border-0"
+                className="text-base px-8 bg-red-500 hover:bg-red-600 text-white border-0"
                 onClick={() => setShowResetDialog(true)}
               >
                 Resetar Tudo
