@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, TrendingUp, TrendingDown, Wallet, DollarSign, Receipt } from "lucide-react";
+import { ArrowLeft, Search, TrendingUp, Wallet, DollarSign, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -42,11 +42,6 @@ export default function AdminFinancialPanel() {
       base44.functions.invoke("portalAuth", { operation: "listUsers" }).then(r => r.data.users || r.data || []),
   });
 
-  const { data: finTransactions = [], isLoading: loadingFT } = useQuery({
-    queryKey: ["admin-financial-transactions"],
-    queryFn: () => base44.entities.PortalFinanceTransaction.list("-created_date", 500),
-  });
-
   // Only approved plan requests count as revenue
   const approvedRequests = planRequests.filter(pr => pr.status === "approved");
 
@@ -62,15 +57,6 @@ export default function AdminFinancialPanel() {
     [planRequests]
   );
 
-  const totalFinIncome = useMemo(() =>
-    finTransactions.filter(t => t.type === "income").reduce((s, t) => s + (t.amount || 0), 0),
-    [finTransactions]
-  );
-  const totalFinExpense = useMemo(() =>
-    finTransactions.filter(t => t.type === "expense").reduce((s, t) => s + (t.amount || 0), 0),
-    [finTransactions]
-  );
-
   const filteredRequests = useMemo(() => {
     return planRequests.filter(pr => {
       const matchesSearch = !search ||
@@ -81,15 +67,6 @@ export default function AdminFinancialPanel() {
       return matchesSearch && matchesStatus;
     });
   }, [planRequests, search, statusFilter]);
-
-  const filteredTransactions = useMemo(() => {
-    if (!search) return finTransactions;
-    return finTransactions.filter(t =>
-      t.user_email?.toLowerCase().includes(search.toLowerCase()) ||
-      t.description?.toLowerCase().includes(search.toLowerCase()) ||
-      t.category?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [finTransactions, search]);
 
   if (userLoading) {
     return (
@@ -118,7 +95,7 @@ export default function AdminFinancialPanel() {
               <h1 className="text-lg font-bold font-heading flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-emerald-600" /> Painel Financeiro
               </h1>
-              <p className="text-xs text-muted-foreground">Faturamento de planos e movimentações</p>
+              <p className="text-xs text-muted-foreground">Faturamento de planos do Bingo</p>
             </div>
           </div>
         </div>
@@ -126,7 +103,7 @@ export default function AdminFinancialPanel() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="border-emerald-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-1">
@@ -150,32 +127,6 @@ export default function AdminFinancialPanel() {
               </div>
               <p className="text-xl font-bold text-amber-700">{BRL(totalPending)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{planRequests.filter(pr => pr.status === "awaiting_payment" || pr.status === "pending").length} solicitações</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground font-medium">Receitas (Finanças)</span>
-                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                </div>
-              </div>
-              <p className="text-xl font-bold text-green-700">{BRL(totalFinIncome)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{finTransactions.filter(t => t.type === "income").length} entradas</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground font-medium">Despesas (Finanças)</span>
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                  <TrendingDown className="w-4 h-4 text-red-600" />
-                </div>
-              </div>
-              <p className="text-xl font-bold text-red-700">{BRL(totalFinExpense)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{finTransactions.filter(t => t.type === "expense").length} saídas</p>
             </CardContent>
           </Card>
         </div>
@@ -257,56 +208,6 @@ export default function AdminFinancialPanel() {
           </CardContent>
         </Card>
 
-        {/* Financial transactions table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2 text-base">
-              <Wallet className="w-4 h-4 text-primary" /> Movimentações dos Usuários ({filteredTransactions.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loadingFT ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">Carregando...</div>
-            ) : filteredTransactions.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma movimentação encontrada.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 border-y">
-                    <tr className="text-left text-xs text-muted-foreground uppercase">
-                      <th className="px-4 py-2.5 font-medium">Data</th>
-                      <th className="px-4 py-2.5 font-medium">Usuário</th>
-                      <th className="px-4 py-2.5 font-medium">Descrição</th>
-                      <th className="px-4 py-2.5 font-medium">Categoria</th>
-                      <th className="px-4 py-2.5 font-medium text-right">Valor</th>
-                      <th className="px-4 py-2.5 font-medium">Tipo</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {filteredTransactions.map((t) => (
-                      <tr key={t.id} className="hover:bg-muted/30">
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                          {t.date ? format(new Date(t.date), "dd/MM/yyyy") : "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[150px]">{t.user_email}</td>
-                        <td className="px-4 py-2.5 font-medium truncate max-w-[200px]">{t.description}</td>
-                        <td className="px-4 py-2.5 text-xs">{t.category || "—"}</td>
-                        <td className={`px-4 py-2.5 text-right font-semibold whitespace-nowrap ${t.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
-                          {t.type === "income" ? "+" : "−"} {BRL(t.amount)}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <Badge variant="outline" className={t.type === "income" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}>
-                            {t.type === "income" ? "Receita" : "Despesa"}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -329,11 +329,6 @@ export default function Home() {
               >
                 <Grid3x3 className="w-5 h-5" /> Cartelas
               </Button>
-              <Link to="/validador-sped">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-sky-300 text-sky-700 hover:bg-sky-50">
-                  <FileText className="w-5 h-5" /> Validador SPED
-                </Button>
-              </Link>
               <Link to="/convite">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-pink-300 text-pink-700 hover:bg-pink-50">
                   <Mail className="w-5 h-5" /> Convite do Bingo
