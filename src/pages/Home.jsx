@@ -269,8 +269,8 @@ export default function Home() {
                 </Button>
               </Link>
               <Link to="/admin-financial">
-                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-emerald-400 text-emerald-700 hover:bg-emerald-50 font-semibold">
-                  <Receipt className="w-5 h-5" /> Painel Financeiro
+                <Button size="lg" variant="outline" className="text-base px-8 border-emerald-400 text-emerald-700 hover:bg-emerald-50 font-semibold">
+                  Painel Financeiro
                 </Button>
               </Link>
               <Link to="/sales-dashboard">
@@ -351,7 +351,7 @@ export default function Home() {
                 onClick={() => setShowCleanDialog(true)}
                 disabled={cleanableCards.length === 0 && cleanableGames.length === 0}
               >
-                <Trash2 className="w-5 h-5" /> Limpar Dados Cancelados
+                Limpar Dados Cancelados
               </Button>
               <Button
                 size="lg"
@@ -359,7 +359,7 @@ export default function Home() {
                 className="gap-2 text-base px-8 bg-red-500 hover:bg-red-600 text-white border-0"
                 onClick={() => setShowResetDialog(true)}
               >
-                <RotateCcw className="w-5 h-5" /> Resetar Tudo
+                Resetar Tudo
               </Button>
             </div>
           </motion.div>
