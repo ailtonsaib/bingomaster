@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Trash2, Search, DollarSign } from "lucide-react";
+import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Trash2, Search, DollarSign, Scale } from "lucide-react";
 import { useUserScope } from "@/hooks/useUserScope";
 import { useAuth } from "@/lib/AuthContext";
 import { format } from "date-fns";
@@ -122,9 +122,16 @@ export default function BingoFinanceiro() {
               <p className="text-xs text-muted-foreground">Vendas de cartelas e despesas do bingo</p>
             </div>
           </div>
-          <Button className="gap-2" onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4" /> Nova Movimentação
-          </Button>
+          <div className="flex gap-2">
+            <Link to="/saldo-eventos">
+              <Button variant="outline" className="gap-2">
+                <Scale className="w-4 h-4" /> Saldo por Evento
+              </Button>
+            </Link>
+            <Button className="gap-2" onClick={() => setShowForm(true)}>
+              <Plus className="w-4 h-4" /> Nova Movimentação
+            </Button>
+          </div>
         </div>
       </div>
 
