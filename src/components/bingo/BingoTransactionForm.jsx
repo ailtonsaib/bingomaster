@@ -57,27 +57,27 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
     setCategory(newType === "income" ? "venda_cartelas" : "papel");
   };
 
-  // Converte valores brasileiros (vírgula) para número
-  const parseBR = (val) => parseFloat(String(val || "").replace(/\./g, "").replace(",", ".")) || 0;
+  // Campos são type="number" — parseFloat direto (ponto como decimal)
+  const toNum = (val) => parseFloat(val) || 0;
 
   // Calcula valor total automaticamente quando quantidade e preço unitário são preenchidos
   const handleQuantityChange = (val) => {
     setQuantity(val);
-    const q = parseBR(val);
-    const u = parseBR(unitPrice);
+    const q = toNum(val);
+    const u = toNum(unitPrice);
     if (q > 0 && u > 0) setAmount((q * u).toFixed(2));
   };
 
   const handleUnitPriceChange = (val) => {
     setUnitPrice(val);
-    const q = parseBR(quantity);
-    const u = parseBR(val);
+    const q = toNum(quantity);
+    const u = toNum(val);
     if (q > 0 && u > 0) setAmount((q * u).toFixed(2));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const numAmount = parseBR(amount);
+    const numAmount = toNum(amount);
     if (!gameId || !description.trim() || !numAmount || numAmount <= 0) return;
 
     setSaving(true);
@@ -88,8 +88,8 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
         category,
         description: description.trim(),
         amount: numAmount,
-        quantity: parseBR(quantity),
-        unit_price: parseBR(unitPrice),
+        quantity: toNum(quantity),
+        unit_price: toNum(unitPrice),
         date: new Date(date).toISOString(),
         payment_method: paymentMethod,
         supplier: supplier.trim(),
@@ -226,7 +226,7 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
             />
             {quantity && unitPrice && (
               <p className="text-xs text-muted-foreground mt-1">
-                Calculado automaticamente: {parseFloat(quantity) || 0} × R$ {(parseFloat(unitPrice) || 0).toFixed(2)}
+                Calculado automaticamente: {toNum(quantity)} × R$ {toNum(unitPrice).toFixed(2)}
               </p>
             )}
           </div>
