@@ -26,7 +26,7 @@ export default function ValidateCards() {
 
   const { data: games = [] } = useQuery({
     queryKey: ["validate-games", userId],
-    queryFn: () => base44.entities.BingoGame.filter(scope(), "-created_date"),
+    queryFn: () => base44.entities.BingoGame.filter({}, "-created_date"),
     enabled,
   });
 
