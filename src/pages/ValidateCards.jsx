@@ -25,6 +25,10 @@ export default function ValidateCards() {
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [rangeLoading, setRangeLoading] = useState(false);
+  const [saleCard, setSaleCard] = useState(null);
+  const [saleName, setSaleName] = useState("");
+  const [salePhone, setSalePhone] = useState("");
+  const [saleLoading, setSaleLoading] = useState(false);
   const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [] } = useQuery({
@@ -137,6 +141,28 @@ export default function ValidateCards() {
     setRangeLoading(false);
     setRangeStart("");
     setRangeEnd("");
+  };
+
+  const handleOpenSale = (card) => {
+    setSaleCard(card);
+    setSaleName(card.player_name || "");
+    setSalePhone(card.player_phone || "");
+  };
+
+  const handleSaveSale = async () => {
+    if (!saleName.trim()) return;
+    setSaleLoading(true);
+    await base44.entities.BingoCard.update(saleCard.id, {
+      player_name: saleName.trim(),
+      player_phone: salePhone.trim(),
+      payment_status: "paid",
+      is_validated: true,
+    });
+    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    setSaleLoading(false);
+    setSaleCard(null);
+    setSaleName("");
+    setSalePhone("");
   };
 
   const getCardStyle = (card) => {
@@ -315,7 +341,7 @@ export default function ValidateCards() {
               </Button>
               {showDetails && (
                 <span className="text-xs text-muted-foreground ml-auto">
-                  Clique no número para validar/remover
+                  Clique no número para vender/editar
                 </span>
               )}
             </div>
@@ -352,7 +378,7 @@ export default function ValidateCards() {
                   return (
                     <button
                       key={card.id}
-                      onClick={() => (validated ? handleUnvalidate(card) : handleValidate(card))}
+                      onClick={() => (showDetails ? handleOpenSale(card) : (validated ? handleUnvalidate(card) : handleValidate(card)))}
                       disabled={validated ? unvalidating === card.id : validating === card.id}
                       title={title}
                       className={`flex items-center justify-center h-9 rounded-md text-xs font-bold font-heading transition-all hover:scale-110 hover:z-10 relative ${cellStyle} ${
@@ -366,6 +392,57 @@ export default function ValidateCards() {
               </div>
             )}
           </>
+        )}
+
+        {/* Sale modal */}
+        {saleCard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !saleLoading && setSaleCard(null)}>
+            <div className="bg-card rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold font-heading text-lg">
+                  Vender Cartela {String(saleCard.card_number || "").padStart(4, "0")}
+                </h3>
+                {!saleLoading && (
+                  <button onClick={() => setSaleCard(null)} className="text-muted-foreground hover:text-foreground">
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Nome do comprador</label>
+                  <Input
+                    className="mt-1 h-10"
+                    placeholder="Digite o nome..."
+                    value={saleName}
+                    onChange={(e) => setSaleName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Telefone</label>
+                  <Input
+                    className="mt-1 h-10"
+                    placeholder="(00) 00000-0000"
+                    value={salePhone}
+                    onChange={(e) => setSalePhone(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg px-3 py-2">
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                A cartela será validada automaticamente para concorrer aos prêmios.
+              </div>
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
+                disabled={saleLoading || !saleName.trim()}
+                onClick={handleSaveSale}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {saleLoading ? "Salvando..." : "Vender e Validar"}
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
