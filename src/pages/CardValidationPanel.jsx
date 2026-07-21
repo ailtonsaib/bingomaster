@@ -234,20 +234,47 @@ export default function CardValidationPanel() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Legend */}
-                <div className="flex flex-wrap gap-3 mb-4 text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded bg-green-500 border border-green-600" />
-                    Validada
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded bg-amber-300 border border-amber-400" />
-                    Pendente
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded bg-muted border border-border" />
-                    Não encontrada
-                  </span>
+                {/* Legend + Grid Filter */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded bg-green-500 border border-green-600" />
+                      Validada
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded bg-amber-300 border border-amber-400" />
+                      Pendente
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded bg-muted border border-border" />
+                      Não encontrada
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={filter === "all" ? "default" : "outline"}
+                      onClick={() => setFilter("all")}
+                    >
+                      Todas
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={filter === "validated" ? "default" : "outline"}
+                      className={filter === "validated" ? "bg-green-600 hover:bg-green-700" : ""}
+                      onClick={() => setFilter("validated")}
+                    >
+                      Validadas
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={filter === "pending" ? "default" : "outline"}
+                      className={filter === "pending" ? "bg-amber-600 hover:bg-amber-700" : ""}
+                      onClick={() => setFilter("pending")}
+                    >
+                      Não validadas
+                    </Button>
+                  </div>
                 </div>
 
                 {isLoading ? (
@@ -260,6 +287,11 @@ export default function CardValidationPanel() {
                   <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-15 gap-1.5">
                     {gridNumbers.map((num) => {
                       const status = getCardStatus(num);
+                      // Dim cells that don't match the active filter
+                      const matchesFilter =
+                        filter === "all" ||
+                        (filter === "validated" && status === "validated") ||
+                        (filter === "pending" && status === "pending");
                       const cellClass =
                         status === "validated"
                           ? "bg-green-500 text-white border-green-600 hover:bg-green-600"
@@ -269,7 +301,9 @@ export default function CardValidationPanel() {
                       return (
                         <div
                           key={num}
-                          className={`aspect-square rounded border flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors cursor-default ${cellClass}`}
+                          className={`aspect-square rounded border flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all cursor-default ${cellClass} ${
+                            matchesFilter ? "opacity-100" : "opacity-20"
+                          }`}
                           title={`Cartela ${num} — ${status === "validated" ? "Validada" : status === "pending" ? "Pendente" : "Não encontrada"}`}
                         >
                           {num}
