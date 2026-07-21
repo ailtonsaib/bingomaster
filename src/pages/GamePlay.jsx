@@ -972,9 +972,10 @@ export default function GamePlay() {
                       size="lg"
                       variant="outline"
                       className="gap-2 border-red-400/50 text-red-300 hover:bg-red-500/20"
-                      onClick={() => setShowCancelDialog(true)}
+                      onClick={handleClearCurrentRound}
+                      disabled={resetting || drawing}
                     >
-                      <XCircle className="w-4 h-4" /> Cancelar Sorteio
+                      <XCircle className="w-4 h-4" /> Zerar Sorteio
                     </Button>
                     {allPrizesAwarded && (
                       <Button
