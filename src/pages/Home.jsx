@@ -472,10 +472,10 @@ export default function Home() {
             </div>
             <p className="text-sm text-muted-foreground">Escolha um jogo para gerenciar as cartelas:</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {games.length === 0 ? (
+              {games.filter(g => g.status !== "finished").length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">Nenhum jogo encontrado.</p>
               ) : (
-                games.map((game) => (
+                games.filter(g => g.status !== "finished").map((game) => (
                   <Link key={game.id} to={`/cards/${game.id}`} onClick={() => setShowCardsPicker(false)}>
                     <div className="flex items-center justify-between p-3 rounded-xl border hover:border-slate-400 hover:bg-slate-50 transition-all cursor-pointer group">
                       <div>

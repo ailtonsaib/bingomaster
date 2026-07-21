@@ -165,10 +165,10 @@ export default function ValidateCards() {
           </button>
           {showGamePicker && (
             <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg max-h-52 overflow-auto">
-              {games.length === 0 ? (
+              {games.filter(g => g.status !== "finished").length === 0 ? (
                 <div className="text-xs text-muted-foreground text-center py-4">Nenhum jogo encontrado</div>
               ) : (
-                games.map((g) => (
+                games.filter(g => g.status !== "finished").map((g) => (
                   <button
                     key={g.id}
                     className="w-full text-left px-4 py-3 hover:bg-muted text-sm"
