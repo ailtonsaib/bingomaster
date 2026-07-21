@@ -97,6 +97,7 @@ export default function MechanicPanel() {
     loadOrders();
   };
 
+  const STATUS_ORDER = { aberta: 0, em_andamento: 1, aguardando_pecas: 2, concluida: 3 };
   const filtered = orders.filter(o => {
     if (statusFilter !== "all" && o.status !== statusFilter) return false;
     if (search) {
@@ -108,7 +109,7 @@ export default function MechanicPanel() {
              (o.vehicle_model || "").toLowerCase().includes(q);
     }
     return true;
-  });
+  }).sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
 
   if (!mechanic) return null;
 
