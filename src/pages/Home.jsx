@@ -268,11 +268,7 @@ export default function Home() {
                   Movimentações do Evento
                 </Button>
               </Link>
-              <Link to="/admin-financial">
-                <Button size="lg" variant="outline" className="text-base px-8 border-emerald-400 text-emerald-700 hover:bg-emerald-50 font-semibold [&>svg]:hidden gap-0">
-                  Painel Financeiro
-                </Button>
-              </Link>
+
               <Link to="/sales-dashboard">
                 <Button size="lg" variant="outline" className="text-base px-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
                   Dashboard de Vendas
@@ -344,23 +340,8 @@ export default function Home() {
                   Planos & Info
                 </Button>
               </Link>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-base px-8 border-orange-300 text-orange-700 hover:bg-orange-50 [&>svg]:hidden gap-0"
-                onClick={() => setShowCleanDialog(true)}
-                disabled={cleanableCards.length === 0 && cleanableGames.length === 0}
-              >
-                Limpar Dados Cancelados
-              </Button>
-              <Button
-                size="lg"
-                variant="destructive"
-                className="text-base px-8 bg-red-500 hover:bg-red-600 text-white border-0 [&>svg]:hidden gap-0"
-                onClick={() => setShowResetDialog(true)}
-              >
-                Resetar Tudo
-              </Button>
+
+
             </div>
           </motion.div>
         </div>
