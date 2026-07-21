@@ -51,11 +51,6 @@ export default function Home() {
       return res.data.cards || [];
     },
   });
-  const { data: distributions = [] } = useQuery({
-    queryKey: ["all-distributions", userId],
-    queryFn: () => base44.entities.SellerDistribution.filter(scope()),
-    enabled,
-  });
   const [editingGame, setEditingGame] = useState(null);
   const [showDistribute, setShowDistribute] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -82,21 +77,17 @@ export default function Home() {
 
   const sellerStats = useMemo(() => {
     const stats = sellers.map((seller) => {
-      const soldCards = allCards.filter((c) => {
-        const isSold = !!(c.player_phone || c.player_city);
-        return isSold && c.seller_id === seller.id;
-      });
-      const sellerDists = distributions.filter((d) => d.seller_id === seller.id);
-      const distributed = sellerDists.reduce((acc, d) => acc + (d.range_to - d.range_from + 1), 0);
-      if (soldCards.length === 0 && distributed === 0) return null;
+      const sellerCards = allCards.filter((c) => c.seller_id === seller.id);
+      const soldCards = sellerCards.filter((c) => !!(c.player_phone || c.player_city));
+      if (sellerCards.length === 0) return null;
       return {
         name: seller.name,
-        distribuídas: distributed,
+        distribuídas: sellerCards.length,
         vendidas: soldCards.length,
       };
     }).filter(Boolean).sort((a, b) => b.distribuídas - a.distribuídas);
     return stats;
-  }, [sellers, allCards, distributions]);
+  }, [sellers, allCards]);
 
   const handleCleanCancelledGames = async () => {
     setCleaning(true);
