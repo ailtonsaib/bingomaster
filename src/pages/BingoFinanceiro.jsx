@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Trash2, Search, DollarSign } from "lucide-react";
 import { useUserScope } from "@/hooks/useUserScope";
+import { useAuth } from "@/lib/AuthContext";
 import { format } from "date-fns";
 import BingoTransactionForm from "@/components/bingo/BingoTransactionForm";
 
@@ -35,6 +36,7 @@ const CATEGORY_LABELS = {
 
 export default function BingoFinanceiro() {
   const { scope, enabled } = useUserScope();
+  const { user: authUser } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
@@ -88,6 +90,7 @@ export default function BingoFinanceiro() {
     await base44.entities.BingoTransaction.create({
       ...data,
       ...scope(),
+      user_email: authUser?.email || "",
     });
     queryClient.invalidateQueries({ queryKey: ["bingo-transactions"] });
     setShowForm(false);
