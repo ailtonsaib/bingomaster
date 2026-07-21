@@ -253,6 +253,11 @@ export default function Home() {
                   Validar Cartelas
                 </Button>
               </Link>
+              <Link to="/painel-validacao">
+                <Button size="lg" variant="outline" className="text-base px-8 border-cyan-300 text-cyan-700 hover:bg-cyan-50">
+                  Painel de Conferência
+                </Button>
+              </Link>
               <Link to="/winners">
                 <Button size="lg" variant="outline" className="text-base px-8 border-amber-300 text-amber-700 hover:bg-amber-50">
                   Prêmios & Vencedores

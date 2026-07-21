@@ -69,6 +69,7 @@ import MechanicPanel from '@/pages/MechanicPanel';
 import CaixaPanel from '@/pages/CaixaPanel';
 import PublicBids from '@/pages/PublicBids';
 import PublicBidDetail from '@/pages/PublicBidDetail';
+import CardValidationPanel from '@/pages/CardValidationPanel';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -146,6 +147,7 @@ const AuthenticatedApp = () => {
           <Route path="/print/:gameId" element={<PrintCards />} />
           <Route path="/sellers" element={<Sellers />} />
           <Route path="/validate" element={<ValidateCards />} />
+          <Route path="/painel-validacao" element={<CardValidationPanel />} />
           <Route path="/past-games" element={<PastGames />} />
           <Route path="/game-analytics" element={<GameAnalytics />} />
           <Route path="/winners" element={<WinnerSummary />} />
