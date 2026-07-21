@@ -416,7 +416,7 @@ export default function Home() {
             <h2 className="font-heading font-bold text-lg">Convites dos Eventos</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {games.map((game) => (
+            {games.filter(g => g.status !== "finished").map((game) => (
               <BingoInvitationCard key={game.id} game={game} />
             ))}
           </div>
