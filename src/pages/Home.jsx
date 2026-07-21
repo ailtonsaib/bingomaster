@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText, Mail, History } from "lucide-react";
+import { Plus, Play, Eye, Trash2, Trophy, Users, Pencil, UserCheck, ShoppingCart, Layers, CheckSquare, RotateCcw, BarChart3, Ticket, Shuffle, Monitor, Smartphone, Grid3x3, FileBarChart2, ClipboardList, DollarSign, ArrowLeft, KeyRound, Receipt, FileText, Mail, History, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useUserScope } from "@/hooks/useUserScope";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
@@ -261,6 +261,11 @@ export default function Home() {
               <Link to="/monitor">
                 <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-teal-300 text-teal-700 hover:bg-teal-50">
                   <Monitor className="w-5 h-5" /> Monitor de Jogos
+                </Button>
+              </Link>
+              <Link to="/bingo-financeiro">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 border-green-400 text-green-700 hover:bg-green-50 font-semibold">
+                  <Wallet className="w-5 h-5" /> Movimentações do Evento
                 </Button>
               </Link>
               <Link to="/admin-financial">

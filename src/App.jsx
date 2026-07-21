@@ -29,6 +29,7 @@ import InfoPlanos from '@/pages/InfoPlanos';
 import AdminPlanos from '@/pages/AdminPlanos';
 import AdminSolicitacoes from '@/pages/AdminSolicitacoes';
 import AdminFinancialPanel from '@/pages/AdminFinancialPanel';
+import BingoFinanceiro from '@/pages/BingoFinanceiro';
 import ValidadorSped from '@/pages/ValidadorSped';
 import SpedValidations from '@/pages/SpedValidations';
 import Rifas from '@/pages/Rifas';
@@ -159,6 +160,7 @@ const AuthenticatedApp = () => {
           <Route path="/draw-history" element={<DrawHistory />} />
           <Route path="/convite" element={<BingoInvitation />} />
           <Route path="/admin-financial" element={<AdminFinancialPanel />} />
+          <Route path="/bingo-financeiro" element={<BingoFinanceiro />} />
         </Route>
       </Route>
       {/* Diagnóstico Automotivo */}
