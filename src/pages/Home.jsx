@@ -45,9 +45,11 @@ export default function Home() {
     enabled,
   });
   const { data: allCards = [] } = useQuery({
-    queryKey: ["all-cards-stats", userId],
-    queryFn: () => base44.entities.BingoCard.filter(scope(), "created_date", 100000),
-    enabled,
+    queryKey: ["all-cards-stats"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getAllCards", {});
+      return res.data.cards || [];
+    },
   });
   const { data: distributions = [] } = useQuery({
     queryKey: ["all-distributions", userId],

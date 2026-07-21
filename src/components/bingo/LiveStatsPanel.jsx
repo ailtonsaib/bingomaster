@@ -19,9 +19,11 @@ export default function LiveStatsPanel() {
   });
 
   const { data: allCards = [] } = useQuery({
-    queryKey: ["live-cards", userId],
-    queryFn: () => base44.entities.BingoCard.filter(scope(), "created_date", 100000),
-    enabled,
+    queryKey: ["live-cards-all"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getAllCards", {});
+      return res.data.cards || [];
+    },
     refetchInterval: REFRESH_MS,
   });
 
