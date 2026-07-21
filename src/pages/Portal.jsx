@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Grid3x3, Wallet, FileText, Shield, Wrench, LogOut, KeyRound } from "lucide-react";
+import { Grid3x3, Wallet, FileText, Shield, Wrench, LogOut, KeyRound, Gavel } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { APPS } from "@/lib/appRegistry";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 
-const iconMap = { Grid3x3, Wallet, FileText, Shield, Wrench };
+const iconMap = { Grid3x3, Wallet, FileText, Shield, Wrench, Gavel };
 
 export default function Portal() {
   const navigate = useNavigate();

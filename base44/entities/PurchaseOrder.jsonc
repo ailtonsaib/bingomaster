@@ -1,0 +1,99 @@
+{
+  "name": "PurchaseOrder",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero do empenho (ex: NE 001/2026)"
+    },
+    "bid_id": {
+      "type": "string",
+      "description": "ID do preg\u00e3o vinculado (PublicBid)"
+    },
+    "bid_number": {
+      "type": "string",
+      "description": "N\u00famero do preg\u00e3o (cache)"
+    },
+    "agency_id": {
+      "type": "string",
+      "description": "ID do \u00f3rg\u00e3o (cache)"
+    },
+    "agency_name": {
+      "type": "string",
+      "description": "Nome do \u00f3rg\u00e3o (cache)"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor (BidSupplier)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor (cache)"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      },
+      "default": [],
+      "description": "Itens empenhados"
+    },
+    "total_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do empenho"
+    },
+    "delivery_date": {
+      "type": "string",
+      "description": "Data prevista de entrega (ISO)"
+    },
+    "emission_date": {
+      "type": "string",
+      "description": "Data de emiss\u00e3o do empenho (ISO)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "emitido",
+        "parcial",
+        "liquidado",
+        "pago",
+        "cancelado"
+      ],
+      "default": "emitido",
+      "description": "Status: emitido, parcial, liquidado, pago, cancelado"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "order_number",
+    "bid_id",
+    "supplier_id",
+    "total_value"
+  ]
+}

@@ -67,6 +67,8 @@ import OficinaTelao from '@/pages/OficinaTelao';
 import MechanicLogin from '@/pages/MechanicLogin';
 import MechanicPanel from '@/pages/MechanicPanel';
 import CaixaPanel from '@/pages/CaixaPanel';
+import PublicBids from '@/pages/PublicBids';
+import PublicBidDetail from '@/pages/PublicBidDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -176,6 +178,11 @@ const AuthenticatedApp = () => {
       <Route path="/mecanico-painel" element={<MechanicPanel />} />
       {/* Painel do Caixa — usuário com role "caixa" redireciona após login */}
       <Route path="/caixa-painel" element={<CaixaPanel />} />
+      </Route>
+      {/* Licitações Públicas — Pregão / Empenho */}
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route path="/licitacoes" element={<PublicBids />} />
+        <Route path="/licitacoes/:bidId" element={<PublicBidDetail />} />
       </Route>
       {/* PDV — Frente de Caixa */}
       <Route path="/pdv" element={<PDVLogin />} />

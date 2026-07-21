@@ -1,0 +1,51 @@
+{
+  "name": "BidSupplier",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador"
+    },
+    "name": {
+      "type": "string",
+      "description": "Raz\u00e3o social do fornecedor"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ (apenas n\u00fameros)"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "Pessoa de contato"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o fornecedor est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ]
+}
