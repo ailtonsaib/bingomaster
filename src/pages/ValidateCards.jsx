@@ -145,7 +145,7 @@ export default function ValidateCards() {
 
   const handleOpenSale = (card) => {
     setSaleCard(card);
-    setSaleName(card.player_name || "");
+    setSaleName("");
     setSalePhone(card.player_phone || "");
   };
 
