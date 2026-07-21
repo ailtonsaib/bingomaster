@@ -574,7 +574,7 @@ export default function GameCards() {
                     {String(card.card_number || "").padStart(3, "0")}
                   </span>
                   <span className="text-[10px] text-current opacity-60 mt-0.5 truncate w-full text-center">
-                    {card.player_name}
+                    {card.player_name?.startsWith("Cartela ") ? "" : card.player_name}
                   </span>
                   <button
                     className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 text-destructive"
