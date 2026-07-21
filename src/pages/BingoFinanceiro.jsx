@@ -41,6 +41,7 @@ export default function BingoFinanceiro() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [gameFilter, setGameFilter] = useState("all");
 
   const { data: games = [] } = useQuery({
     queryKey: ["bingo-games-financeiro"],
@@ -77,14 +78,15 @@ export default function BingoFinanceiro() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const matchesType = typeFilter === "all" || t.type === typeFilter;
+      const matchesGame = gameFilter === "all" || t.game_id === gameFilter;
       const matchesSearch = !search ||
         t.description?.toLowerCase().includes(search.toLowerCase()) ||
         (CATEGORY_LABELS[t.category] || "").toLowerCase().includes(search.toLowerCase()) ||
         t.supplier?.toLowerCase().includes(search.toLowerCase()) ||
         t.game_name?.toLowerCase().includes(search.toLowerCase());
-      return matchesType && matchesSearch;
+      return matchesType && matchesGame && matchesSearch;
     });
-  }, [transactions, search, typeFilter]);
+  }, [transactions, search, typeFilter, gameFilter]);
 
   const handleSave = async (data) => {
     await base44.entities.BingoTransaction.create({
@@ -199,6 +201,16 @@ export default function BingoFinanceiro() {
 
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            value={gameFilter}
+            onChange={(e) => setGameFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm sm:w-56 shrink-0"
+          >
+            <option value="all">Todos os eventos</option>
+            {games.map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input

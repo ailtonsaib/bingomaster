@@ -78,7 +78,7 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const numAmount = parseBR(amount);
-    if (!description.trim() || !numAmount || numAmount <= 0) return;
+    if (!gameId || !description.trim() || !numAmount || numAmount <= 0) return;
 
     setSaving(true);
     try {
@@ -113,6 +113,25 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Evento — selecionado primeiro, obrigatório */}
+          <div>
+            <Label className="mb-1.5 block text-sm font-medium">Evento *</Label>
+            <select
+              value={gameId}
+              onChange={(e) => setGameId(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              required
+            >
+              <option value="">Selecione o evento...</option>
+              {games?.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Selecione o evento para registrar receitas e despesas correspondentes.
+            </p>
+          </div>
+
           {/* Tipo */}
           <div>
             <Label className="mb-2 block text-sm font-medium">Tipo de Movimentação</Label>
@@ -166,23 +185,6 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
               required
             />
           </div>
-
-          {/* Jogo vinculado */}
-          {games && games.length > 0 && (
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">Jogo Vinculado (opcional)</Label>
-              <select
-                value={gameId}
-                onChange={(e) => setGameId(e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-              >
-                <option value="">Nenhum jogo específico</option>
-                {games.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Quantidade e Preço Unitário */}
           <div className="grid grid-cols-2 gap-3">
@@ -273,7 +275,7 @@ export default function BingoTransactionForm({ games, onSave, onClose }) {
             <Button
               type="submit"
               className={`flex-1 ${type === "income" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"}`}
-              disabled={saving || !description.trim() || !amount}
+              disabled={saving || !gameId || !description.trim() || !amount}
             >
               {saving ? "Salvando..." : "Salvar"}
             </Button>
