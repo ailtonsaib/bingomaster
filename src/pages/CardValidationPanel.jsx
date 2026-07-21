@@ -25,27 +25,15 @@ export default function CardValidationPanel() {
     queryFn: () => base44.entities.BingoGame.filter({}, "-created_date"),
   });
 
-  // Fetch cards for the selected game — no created_by_id filter (visual conference tool)
+  // Fetch cards via backend function (service-role, no user scoping)
   const { data: allCards = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ["panel-cards", selectedGame?.id],
     queryFn: async () => {
       if (!selectedGame) return [];
-      const all = [];
-      let skip = 0;
-      // Paginate to get all cards for the game
-      while (true) {
-        const batch = await base44.entities.BingoCard.filter(
-          { game_id: String(selectedGame.id) },
-          "card_number",
-          500,
-          skip
-        );
-        all.push(...batch);
-        if (batch.length < 500) break;
-        skip += 500;
-        if (skip > 10000) break; // safety
-      }
-      return all;
+      const res = await base44.functions.invoke("getGameCards", {
+        game_id: String(selectedGame.id),
+      });
+      return res.data.cards || [];
     },
     enabled: !!selectedGame,
   });
