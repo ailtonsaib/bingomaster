@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Trash2, Search, DollarSign, Scale } from "lucide-react";
+import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Trash2, Search, DollarSign, Scale, FileDown } from "lucide-react";
 import { useUserScope } from "@/hooks/useUserScope";
 import { useAuth } from "@/lib/AuthContext";
 import { format } from "date-fns";
 import BingoTransactionForm from "@/components/bingo/BingoTransactionForm";
+import { generateFinanceReportPdf } from "@/lib/financeReportPdf";
 
 const BRL = (v) => (Number(v || 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -104,6 +105,20 @@ export default function BingoFinanceiro() {
     queryClient.invalidateQueries({ queryKey: ["bingo-transactions"] });
   };
 
+  const handleExportPdf = () => {
+    const gameLabel = gameFilter === "all"
+      ? "Todos os eventos"
+      : games.find((g) => g.id === gameFilter)?.name || "Evento";
+    const typeLabel = typeFilter === "all" ? "Todas" : typeFilter === "income" ? "Receitas" : "Despesas";
+    generateFinanceReportPdf({
+      transactions: filteredTransactions,
+      totals,
+      expensesByCategory,
+      gameFilterLabel: gameLabel,
+      typeFilterLabel: typeLabel,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -128,6 +143,14 @@ export default function BingoFinanceiro() {
                 <Scale className="w-4 h-4" /> Saldo por Evento
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleExportPdf}
+              disabled={filteredTransactions.length === 0}
+            >
+              <FileDown className="w-4 h-4" /> Exportar PDF
+            </Button>
             <Button className="gap-2" onClick={() => setShowForm(true)}>
               <Plus className="w-4 h-4" /> Nova Movimentação
             </Button>
