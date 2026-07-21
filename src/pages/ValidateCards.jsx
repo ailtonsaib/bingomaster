@@ -22,6 +22,9 @@ export default function ValidateCards() {
   const [unvalidating, setUnvalidating] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [rangeLoading, setRangeLoading] = useState(false);
   const { userId, scope, enabled } = useUserScope();
 
   const { data: games = [] } = useQuery({
@@ -46,7 +49,7 @@ export default function ValidateCards() {
   const isPaid = (card) => hasBuyer(card) && (card.payment_status === "paid" || !card.payment_status);
   const isPending = (card) => hasBuyer(card) && card.payment_status === "pending";
   const hasSeller = (card) => !!card.seller_id && !hasBuyer(card);
-  const isValidated = (card) => !!card.is_validated && hasBuyer(card);
+  const isValidated = (card) => !!card.is_validated;
   // Pendente de validação = paga mas ainda não marcada como concorrendo
   const awaitingValidation = (card) => isPaid(card) && !isValidated(card);
 
@@ -58,11 +61,11 @@ export default function ValidateCards() {
 
   // Sort: validated first, then awaiting validation, then pending payment, then with seller, then available
   const sortOrder = (card) => {
-    if (isValidated(card)) return 0;
-    if (awaitingValidation(card)) return 1;
-    if (isPending(card)) return 2;
-    if (hasSeller(card)) return 3;
-    return 4;
+    if (awaitingValidation(card)) return 0;
+    if (isPending(card)) return 1;
+    if (hasSeller(card)) return 2;
+    if (isValidated(card)) return 4;
+    return 3;
   };
 
   const filtered = cards
@@ -119,6 +122,23 @@ export default function ValidateCards() {
     setBulkLoading(false);
   };
 
+  const handleRangeValidate = async () => {
+    const start = parseInt(rangeStart, 10);
+    const end = parseInt(rangeEnd, 10);
+    if (!start || !end || start > end) return;
+    setRangeLoading(true);
+    const toValidate = cards.filter(
+      (c) => c.card_number >= start && c.card_number <= end && !c.is_validated
+    );
+    await Promise.all(
+      toValidate.map((c) => base44.entities.BingoCard.update(c.id, { is_validated: true }))
+    );
+    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    setRangeLoading(false);
+    setRangeStart("");
+    setRangeEnd("");
+  };
+
   const getCardStyle = (card) => {
     if (isValidated(card)) return "border-green-200 bg-green-50/50";
     if (awaitingValidation(card)) return "border-amber-200 bg-amber-50/30";
@@ -156,7 +176,7 @@ export default function ValidateCards() {
         </p>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Game selector */}
         <div className="relative">
           <button
@@ -266,11 +286,45 @@ export default function ValidateCards() {
               </div>
             )}
 
-            {/* Cards list */}
+            {/* Batch range validation */}
+            <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+              <span className="text-xs font-medium text-foreground shrink-0">Validar lote:</span>
+              <Input
+                type="number"
+                className="w-20 h-9 text-sm"
+                placeholder="De"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+              />
+              <span className="text-xs text-muted-foreground">até</span>
+              <Input
+                type="number"
+                className="w-20 h-9 text-sm"
+                placeholder="Até"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+              />
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white gap-1 text-xs h-9"
+                disabled={rangeLoading || !rangeStart || !rangeEnd}
+                onClick={handleRangeValidate}
+              >
+                <ListChecks className="w-3.5 h-3.5" />
+                {rangeLoading ? "Validando..." : "Validar faixa"}
+              </Button>
+              {showDetails && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  Clique no número para validar/remover
+                </span>
+              )}
+            </div>
+
+            {/* Cards grid */}
             {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />
+              <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))" }}>
+                {[...Array(80)].map((_, i) => (
+                  <div key={i} className="h-9 rounded-md bg-muted animate-pulse" />
                 ))}
               </div>
             ) : filtered.length === 0 ? (
@@ -278,90 +332,35 @@ export default function ValidateCards() {
                 Nenhuma cartela encontrada.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))" }}>
                 {filtered.map((card) => {
-                  const status = getCardStatus(card);
-                   const validated = isValidated(card);
-                   const pending = isPending(card);
-                   const withSeller = hasSeller(card);
-                  const canValidate = awaitingValidation(card);
-
+                  const validated = isValidated(card);
+                  const cellStyle = validated
+                    ? "bg-green-500 text-white"
+                    : awaitingValidation(card)
+                    ? "bg-amber-200 text-amber-900"
+                    : isPending(card)
+                    ? "bg-orange-200 text-orange-900"
+                    : hasSeller(card)
+                    ? "bg-blue-200 text-blue-900"
+                    : "bg-muted text-muted-foreground";
+                  const title = validated
+                    ? "Concorrendo — clique para remover"
+                    : `Cartela ${String(card.card_number || "").padStart(4, "0")}${
+                        card.player_name ? " — " + card.player_name : ""
+                      }${card.seller_name ? " — Vendedor: " + card.seller_name : ""}`;
                   return (
-                    <Card key={card.id} className={`border transition-all ${getCardStyle(card)}`}>
-                      <CardContent className="p-3 flex items-center gap-3">
-                        {canValidate && (
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 accent-green-600 cursor-pointer shrink-0"
-                            checked={selected.has(card.id)}
-                            onChange={() => toggleSelect(card.id)}
-                          />
-                        )}
-                        {getStatusIcon(card)}
-
-                        {/* Card number */}
-                        <span className={`font-bold font-heading text-base shrink-0 ${
-                          validated ? "text-green-800" : awaitingValidation(card) ? "text-amber-800" : pending ? "text-orange-800" : withSeller ? "text-blue-800" : "text-foreground"
-                        }`}>
-                          {String(card.card_number || "").padStart(4, "0")}
-                        </span>
-
-                        {/* Status badge */}
-                        <Badge variant="outline" className={`text-xs shrink-0 ${status.className}`}>
-                          {status.label}
-                        </Badge>
-
-                        {/* Buyer / seller info */}
-                        {showDetails && (
-                          <div className="flex-1 min-w-0 flex flex-wrap gap-x-4 gap-y-0.5">
-                            {card.player_name && (
-                              <span className="flex items-center gap-1 text-sm truncate">
-                                <User className="w-3.5 h-3.5 shrink-0" />
-                                {card.player_name}
-                              </span>
-                            )}
-                            {card.player_phone && (
-                              <span className="flex items-center gap-1 text-sm">
-                                <Phone className="w-3.5 h-3.5 shrink-0" />
-                                {card.player_phone}
-                              </span>
-                            )}
-                            {withSeller && card.seller_name && (
-                              <span className="flex items-center gap-1 text-sm text-blue-700">
-                                <Users className="w-3.5 h-3.5 shrink-0" />
-                                {card.seller_name}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {!showDetails && <div className="flex-1" />}
-
-                        {/* Action buttons */}
-                        {validated ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50 gap-1 text-xs"
-                            disabled={unvalidating === card.id}
-                            onClick={() => handleUnvalidate(card)}
-                          >
-                            <Undo2 className="w-3.5 h-3.5" />
-                            {unvalidating === card.id ? "..." : "Remover da disputa"}
-                          </Button>
-                        ) : canValidate ? (
-                          <Button
-                            size="sm"
-                            className="shrink-0 bg-green-600 hover:bg-green-700 text-white gap-1 text-xs"
-                            disabled={validating === card.id}
-                            onClick={() => handleValidate(card)}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            {validating === card.id ? "..." : "Concorrer aos Prêmios"}
-                          </Button>
-                        ) : null}
-                      </CardContent>
-                    </Card>
+                    <button
+                      key={card.id}
+                      onClick={() => (validated ? handleUnvalidate(card) : handleValidate(card))}
+                      disabled={validated ? unvalidating === card.id : validating === card.id}
+                      title={title}
+                      className={`flex items-center justify-center h-9 rounded-md text-xs font-bold font-heading transition-all hover:scale-110 hover:z-10 relative ${cellStyle} ${
+                        validated ? "ring-1 ring-green-600" : ""
+                      }`}
+                    >
+                      {String(card.card_number || "").padStart(4, "0")}
+                    </button>
                   );
                 })}
               </div>
