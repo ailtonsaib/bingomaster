@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2, Dices } from "lucide-react";
 import { drawNumber, getCardMaxPoints } from "@/lib/bingoUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
@@ -21,6 +21,7 @@ import WinnerCardsModal from "@/components/bingo/WinnerCardsModal";
 import DrawHistoryModal from "@/components/bingo/DrawHistoryModal";
 import TiebreakerModal from "@/components/bingo/TiebreakerModal";
 import LeaderboardPanel from "@/components/bingo/LeaderboardPanel";
+import LuckySpinModal from "@/components/bingo/LuckySpinModal";
 
 export default function GamePlay() {
   const { gameId } = useParams();
@@ -51,6 +52,7 @@ export default function GamePlay() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [showLuckySpin, setShowLuckySpin] = useState(false);
   const isOnline = useOnlineStatus();
   const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0 || getPendingCardUpdates().length > 0);
 
@@ -433,6 +435,28 @@ export default function GamePlay() {
     setTiebreakerPrizeIndex(-1);
   };
 
+  const handleGiroDaSorteWin = async (card, prizeDesc) => {
+    const now = new Date().toISOString();
+    const prizes = [...(game.prizes || [])];
+    prizes.push({
+      name: "Giro da Sorte",
+      description: prizeDesc,
+      awarded: true,
+      awarded_card_id: card.id,
+      awarded_card_number: card.card_number,
+      awarded_player_name: card.player_name,
+    });
+    await updateGame({ prizes });
+
+    const wonPrizes = [...(card.won_prizes || []), {
+      prize_index: prizes.length - 1,
+      prize_name: "Giro da Sorte",
+      won_at: now,
+    }];
+    await base44.entities.BingoCard.update(card.id, { is_winner: true, won_prizes: wonPrizes });
+    queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+  };
+
   const handleFinish = () => updateGame({ status: "finished" });
 
   const [resetting, setResetting] = useState(false);
@@ -677,6 +701,14 @@ export default function GamePlay() {
           onClose={() => setShowHistory(false)}
         />
       )}
+      {showLuckySpin && (
+        <LuckySpinModal
+          cards={cards}
+          gameName={game.name}
+          onClose={() => setShowLuckySpin(false)}
+          onConfirm={handleGiroDaSorteWin}
+        />
+      )}
 
       {/* Restart finished game dialog — zera tudo */}
       <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
@@ -799,6 +831,14 @@ export default function GamePlay() {
               disabled={drawnNumbers.length === 0}
             >
               <History className="w-4 h-4" /> Histórico
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowLuckySpin(true)}
+              className="gap-1.5 border-amber-400/40 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30"
+            >
+              <Dices className="w-4 h-4" /> Giro da Sorte
             </Button>
             <Badge
               className={
