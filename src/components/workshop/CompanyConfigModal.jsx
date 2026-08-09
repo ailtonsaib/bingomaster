@@ -65,12 +65,14 @@ export default function CompanyConfigModal({ userEmail, companyId, canCreateNew 
     const load = async () => {
       try {
         let d = null;
-        if (companyId) {
-          d = await base44.entities.DiagnosticCompanyConfig.get(companyId);
-        } else {
-          const list = await base44.entities.DiagnosticCompanyConfig.filter({ user_email: userEmail });
-          if (list.length > 0) d = list[0];
-        }
+        const res = await base44.functions.invoke("manageDiagnostic", {
+          operation: "getCompanies",
+          email: userEmail,
+          company_id: companyId || undefined,
+          filter_user_email: !companyId ? userEmail : undefined,
+        });
+        const list = res?.data?.companies || [];
+        if (list.length > 0) d = list[0];
         if (d) {
           setConfig({
             ...empty,
@@ -185,11 +187,15 @@ export default function CompanyConfigModal({ userEmail, companyId, canCreateNew 
         responsible_cpf: onlyDigits(config.responsible_cpf),
         user_email: userEmail,
       };
-      if (configId) {
-        await base44.entities.DiagnosticCompanyConfig.update(configId, payload);
-      } else {
-        const created = await base44.entities.DiagnosticCompanyConfig.create(payload);
-        setConfigId(created.id);
+      const res = await base44.functions.invoke("manageDiagnostic", {
+        operation: "saveCompany",
+        email: userEmail,
+        company_id: configId || undefined,
+        company_data: payload,
+      });
+      const result = res?.data ?? res;
+      if (!configId && result?.company?.id) {
+        setConfigId(result.company.id);
       }
       toast({ title: "Empresa salva", description: "Os dados da empresa foram salvos com sucesso." });
       if (onSaved) onSaved();

@@ -109,7 +109,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
             <p className="text-xs font-semibold text-amber-800 mb-1">Credenciais de acesso:</p>
             <p className="text-sm text-amber-700">Email: <span className="font-mono">{gestorEmail}</span></p>
             <p className="text-sm text-amber-700">Senha: <span className="font-mono">gestor123</span></p>
-            <p className="text-xs text-amber-600 mt-1">O gestor entra direto com esta senha no primeiro acesso.</p>
+            <p className="text-xs text-amber-600 mt-1">Será solicitada a troca de senha no primeiro acesso.</p>
           </div>
           <Button onClick={onClose} className="w-full">Fechar</Button>
         </div>
@@ -236,10 +236,10 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
           <div className="flex items-start gap-2 p-3 rounded-lg bg-cyan-50 border border-cyan-200">
             <Info className="w-4 h-4 text-cyan-600 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-cyan-800">
-              A senha padrão será <span className="font-mono font-semibold">gestor123</span>. O gestor entrará
-              direto com essa senha no primeiro acesso, sem necessidade de liberação. Ele terá acesso apenas
-              à empresa cadastrada, não poderá cadastrar novas empresas nem alterar o CNPJ, e poderá criar
-              seus próprios usuários dentro da oficina.
+              A senha padrão será <span className="font-mono font-semibold">gestor123</span>. No primeiro
+              acesso, o gestor será solicitado a trocar a senha. Ele terá acesso apenas à empresa
+              cadastrada, não poderá cadastrar novas empresas nem alterar o CNPJ, e poderá criar seus
+              próprios usuários dentro da oficina.
             </p>
           </div>
 

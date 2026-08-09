@@ -405,6 +405,65 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, message: 'Sistema desbloqueado com sucesso.' });
     }
 
+    // ─── GET COMPANIES (bypass RLS for portal users) ───
+    if (operation === 'getCompanies') {
+      const { company_id, filter_user_email } = body;
+
+      if (company_id) {
+        try {
+          const company = await base44.asServiceRole.entities.DiagnosticCompanyConfig.get(company_id);
+          return Response.json({ companies: company ? [company] : [] });
+        } catch (_) {
+          return Response.json({ companies: [] });
+        }
+      }
+
+      const userEmailFilter = filter_user_email || userEmail;
+      const companies = await base44.asServiceRole.entities.DiagnosticCompanyConfig.filter({ admin_email: userEmailFilter });
+      return Response.json({ companies });
+    }
+
+    // ─── SAVE COMPANY (bypass RLS for portal users) ───
+    if (operation === 'saveCompany') {
+      const { company_id, company_data } = body;
+
+      if (!company_data?.razao_social) {
+        return Response.json({ error: 'Razão social é obrigatória' }, { status: 400 });
+      }
+
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
+      const digits = (s) => (s || '').replace(/\D/g, '');
+
+      const payload = { ...company_data };
+      if (!payload.user_email) payload.user_email = userEmail;
+
+      if (company_id) {
+        const existing = await base44.asServiceRole.entities.DiagnosticCompanyConfig.get(company_id);
+        if (!existing) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+
+        // Non-admin can only update their own company
+        if (!planInfo?.is_admin && existing.admin_email !== userEmail) {
+          return Response.json({ error: 'Acesso negado' }, { status: 403 });
+        }
+
+        // Non-admin cannot change CNPJ — preserve original
+        if (!planInfo?.is_admin && existing.cnpj) {
+          payload.cnpj = existing.cnpj;
+        }
+
+        const updated = await base44.asServiceRole.entities.DiagnosticCompanyConfig.update(company_id, payload);
+        return Response.json({ company: updated });
+      } else {
+        // Create — only admin can create
+        if (!planInfo?.is_admin) {
+          return Response.json({ error: 'Apenas o administrador pode cadastrar empresas' }, { status: 403 });
+        }
+
+        const created = await base44.asServiceRole.entities.DiagnosticCompanyConfig.create(payload);
+        return Response.json({ company: created });
+      }
+    }
+
     return Response.json({ error: `Operação não suportada: ${operation}` }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

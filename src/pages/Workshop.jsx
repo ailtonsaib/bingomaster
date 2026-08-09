@@ -78,7 +78,8 @@ export default function Workshop() {
     if (isSuperAdmin || !effectiveEmail) return;
     const loadCompanies = async () => {
       try {
-        const list = await base44.entities.DiagnosticCompanyConfig.filter({ admin_email: effectiveEmail });
+        const res = await base44.functions.invoke("manageDiagnostic", { operation: "getCompanies", email: effectiveEmail });
+        const list = res?.data?.companies || [];
         setCompanies(list);
         if (list.length === 1) {
           setSelectedCompany(list[0]);
@@ -248,12 +249,13 @@ export default function Workshop() {
         onSaved={() => {
           // Recarrega a empresa selecionada após salvar
           if (!isSuperAdmin && effectiveEmail) {
-            base44.entities.DiagnosticCompanyConfig.filter({ admin_email: effectiveEmail }).then(list => {
-              if (list.length > 0) {
-                setCompanies(list);
-                setSelectedCompany(list.find(c => c.id === selectedCompany?.id) || list[0]);
-              }
-            }).catch(() => {});
+           base44.functions.invoke("manageDiagnostic", { operation: "getCompanies", email: effectiveEmail }).then(res => {
+             const list = res?.data?.companies || [];
+             if (list.length > 0) {
+               setCompanies(list);
+               setSelectedCompany(list.find(c => c.id === selectedCompany?.id) || list[0]);
+             }
+           }).catch(() => {});
           }
         }}
       />
