@@ -1,9 +1,9 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { Trophy, CheckCircle2, Crown, User, Shuffle } from "lucide-react";
+import { Trophy, CheckCircle2, Crown, User, Shuffle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winnersCount = 0 }) {
+function PrizesPanel({ prizes, isPlaying, onAwardPrize, onResetPrize, activePrizeIndex, winnersCount = 0, isFinalized }) {
   if (!prizes || prizes.length === 0) {
     return (
       <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4">
@@ -92,6 +92,17 @@ function PrizesPanel({ prizes, isPlaying, onAwardPrize, activePrizeIndex, winner
                   )}
                 </div>
               </div>
+
+              {prize.awarded && !isFinalized && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onResetPrize(idx)}
+                  className="w-full mt-2 h-7 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold border border-red-400/30"
+                >
+                  <RotateCcw className="w-3 h-3" /> Zerar este prêmio
+                </Button>
+              )}
 
               {isPlaying && !prize.awarded && (
                 <Button

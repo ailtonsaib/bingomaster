@@ -52,6 +52,8 @@ export default function GamePlay() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [showResetPrizeDialog, setShowResetPrizeDialog] = useState(false);
+  const [resetPrizeIndex, setResetPrizeIndex] = useState(-1);
   const [showLuckySpin, setShowLuckySpin] = useState(false);
   const isOnline = useOnlineStatus();
   const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0 || getPendingCardUpdates().length > 0);
@@ -525,6 +527,64 @@ export default function GamePlay() {
     }
   };
 
+  // Zera um prêmio específico (e todos os subsequentes já concedidos),
+  // permitindo reiniciar o sorteio a partir dele. Limpa números sorteados,
+  // remove o prêmio das cartelas vencedoras e reativa o jogo.
+  const handleResetPrize = async (prizeIndex) => {
+    if (prizeIndex < 0 || prizeIndex >= (game.prizes || []).length) return;
+    stopAutoDraw();
+    setDrawMode("normal");
+    setWinners([]);
+    setPendingWinners([]);
+    setShowTiebreaker(false);
+    setTiebreakerPrizeIndex(-1);
+    setShowResetPrizeDialog(false);
+    setResetting(true);
+    try {
+      const prizes = (game.prizes || []).map((p, i) => {
+        if (i >= prizeIndex && p.awarded) {
+          return { name: p.name, description: p.description, awarded: false };
+        }
+        return p;
+      });
+      await updateGame({ status: "in_progress", drawn_numbers: [], prizes });
+
+      // Remove das cartelas as vitórias dos prêmios resetados (index >= prizeIndex)
+      const affectedCards = cards.filter(c =>
+        (c.won_prizes || []).some(wp => wp.prize_index >= prizeIndex)
+      );
+
+      if (!isOnline) {
+        queryClient.setQueryData(["cards", gameId], (old) => {
+          const arr = Array.isArray(old) ? old : [];
+          return arr.map((c) => {
+            const hasAffected = (c.won_prizes || []).some(wp => wp.prize_index >= prizeIndex);
+            if (!hasAffected) return c;
+            const remaining = (c.won_prizes || []).filter(wp => wp.prize_index < prizeIndex);
+            const newIsWinner = remaining.length > 0;
+            queuePendingCardUpdate(c.id, { is_winner: newIsWinner, won_prizes: remaining });
+            return { ...c, is_winner: newIsWinner, won_prizes: remaining };
+          });
+        });
+      } else {
+        for (const card of affectedCards) {
+          const remaining = (card.won_prizes || []).filter(wp => wp.prize_index < prizeIndex);
+          const newIsWinner = remaining.length > 0;
+          try {
+            await base44.entities.BingoCard.update(card.id, { is_winner: newIsWinner, won_prizes: remaining });
+          } catch (e) {
+            // falha silenciosa — optimistic update já aplicado
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
+      }
+    } catch (e) {
+      // erro silencioso
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const handleAwardPrize = async (idx) => {
     // Sem números sorteados → não há vencedor possível
     const dn = game.drawn_numbers || [];
@@ -743,6 +803,28 @@ export default function GamePlay() {
               onClick={() => handleResetAll()}
             >
               {resetting ? "Reiniciando..." : "Sim, Reiniciar Tudo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset individual prize dialog — zera o prêmio selecionado e os subsequentes */}
+      <AlertDialog open={showResetPrizeDialog} onOpenChange={(open) => !resetting && setShowResetPrizeDialog(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Zerar Prêmio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá <strong>zerar o prêmio "{(game.prizes || [])[resetPrizeIndex]?.name}" e todos os prêmios concedidos após ele</strong>, limpando os números sorteados, removendo a vitória das cartelas vencedoras e reativando o jogo para reiniciar o sorteio a partir deste prêmio. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              disabled={resetting}
+              onClick={() => handleResetPrize(resetPrizeIndex)}
+            >
+              {resetting ? "Zerando..." : "Sim, Zerar Prêmio"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1112,8 +1194,10 @@ export default function GamePlay() {
               prizes={game.prizes || []}
               isPlaying={isPlaying}
               onAwardPrize={handleAwardPrize}
+              onResetPrize={(idx) => { setResetPrizeIndex(idx); setShowResetPrizeDialog(true); }}
               activePrizeIndex={(game.prizes || []).findIndex(p => !p.awarded)}
               winnersCount={currentWinnersCount}
+              isFinalized={isFinalized}
             />
 
             <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-4 space-y-3">
