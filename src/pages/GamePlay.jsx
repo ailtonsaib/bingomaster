@@ -64,7 +64,7 @@ export default function GamePlay() {
   const { data: cards = [] } = useQuery({
     queryKey: ["cards", gameId],
     queryFn: () => base44.entities.BingoCard.filter({ game_id: String(gameId) }),
-    initialData: cachedData ? cachedData.cards : undefined,
+    initialData: cachedData ? (cachedData.cards || []) : undefined,
     retry: false,
   });
 

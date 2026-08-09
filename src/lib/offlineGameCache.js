@@ -55,7 +55,9 @@ export function getCachedGameData(gameId) {
     const cardsRaw = localStorage.getItem(GAME_CACHE_PREFIX + gameId + GAME_CARDS_SUFFIX);
     return {
       game: meta.game,
-      cards: cardsRaw ? JSON.parse(cardsRaw) : null,
+      // Sempre array — null quebraria o default `cards = []` do useQuery
+      // (o default só se aplica a undefined) e faria cards.filter() lançar.
+      cards: cardsRaw ? JSON.parse(cardsRaw) : [],
       cachedAt: meta.cachedAt,
     };
   } catch (e) {
