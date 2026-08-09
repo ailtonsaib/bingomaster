@@ -31,7 +31,7 @@ export default function TicketAdmin() {
     if (!user) { navigate("/chamados"); return; }
     (async () => {
       try {
-        const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id, user_role: user.role });
+        const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', actor_id: user.id });
         setCompanyLogo(res.data.company?.logo_url || null);
       } catch (e) {}
       setLoading(false);
@@ -111,7 +111,7 @@ function UserManager({ user }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id, user_role: user.role });
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'getUsers', actor_id: user.id });
       setUsers(res.data.users || []);
       if (user.role === "system_admin") {
         const compRes = await base44.functions.invoke('ticketSystem', { operation: 'getCompanies' });
@@ -128,7 +128,7 @@ function UserManager({ user }) {
     setSaving(true);
     try {
       const targetCompanyId = user.role === "system_admin" ? (form.company_id || user.company_id) : user.company_id;
-      await base44.functions.invoke('ticketSystem', { operation: 'createUser', ...form, company_id: targetCompanyId, created_by_role: user.role });
+      await base44.functions.invoke('ticketSystem', { operation: 'createUser', actor_id: user.id, name: form.name, email: form.email, password: form.password, role: form.role, company_id: targetCompanyId });
       setForm({ name: "", email: "", password: "Premier@123", role: "agent", company_id: "" });
       setShowForm(false);
       await load();
@@ -138,20 +138,20 @@ function UserManager({ user }) {
 
   const handleEdit = async (userId, updates) => {
     try {
-      await base44.functions.invoke('ticketSystem', { operation: 'updateUser', user_id: userId, ...updates, updated_by_role: user.role });
+      await base44.functions.invoke('ticketSystem', { operation: 'updateUser', actor_id: user.id, user_id: userId, ...updates });
       setEditingUser(null);
       await load();
     } catch (e) { alert(e.response?.data?.error || "Erro ao atualizar"); }
   };
 
   const toggleActive = async (u) => {
-    await base44.functions.invoke('ticketSystem', { operation: 'updateUser', user_id: u.id, is_active: !u.is_active });
+    await base44.functions.invoke('ticketSystem', { operation: 'updateUser', actor_id: user.id, user_id: u.id, is_active: !u.is_active });
     await load();
   };
 
   const handleDelete = async (u) => {
     if (!confirm(`Excluir ${u.name}?`)) return;
-    await base44.functions.invoke('ticketSystem', { operation: 'deleteUser', user_id: u.id });
+    await base44.functions.invoke('ticketSystem', { operation: 'deleteUser', actor_id: user.id, user_id: u.id });
     await load();
   };
 
@@ -317,7 +317,7 @@ function CompanyManager({ user }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try {       const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompaniesWithPlan', user_role: user.role }); setCompanies(res.data.companies || []); } catch (e) {}
+    try {       const res = await base44.functions.invoke('ticketSystem', { operation: 'getCompaniesWithPlan', actor_id: user.id }); setCompanies(res.data.companies || []); } catch (e) {}
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -328,8 +328,8 @@ function CompanyManager({ user }) {
       const newAccess = !c.ticket_full_access;
       await base44.functions.invoke('ticketSystem', {
         operation: 'updateCompanyPlan',
+        actor_id: user.id,
         company_id: c.id,
-        user_role: user.role,
         ticket_full_access: newAccess,
         ticket_plan: newAccess ? "full" : "free",
       });
@@ -343,6 +343,7 @@ function CompanyManager({ user }) {
     try {
       await base44.functions.invoke('ticketSystem', {
         operation: 'updateCompany',
+        actor_id: user.id,
         company_id: c.id,
         is_active: !c.is_active,
       });
@@ -417,7 +418,7 @@ function PromoteButton({ user }) {
     if (!confirm("Confirmar: você se tornará o Administrador do Sistema com acesso total. Esta ação não pode ser desfeita.")) return;
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('ticketSystem', { operation: 'promoteSystemAdmin', user_id: user.id });
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'promoteSystemAdmin', actor_id: user.id, user_id: user.id });
       setTicketUser(res.data.user);
       window.location.reload();
     } catch (e) {

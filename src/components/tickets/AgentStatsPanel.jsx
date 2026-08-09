@@ -48,13 +48,11 @@ export default function AgentStatsPanel({ user, tickets: propTickets, users: pro
       const [usersRes, ticketsRes] = await Promise.all([
         base44.functions.invoke("ticketSystem", {
           operation: "getUsers",
-          company_id: user.company_id,
-          user_role: user.role
+          actor_id: user.id
         }),
         base44.functions.invoke("ticketSystem", {
           operation: "getTickets",
-          company_id: user.company_id,
-          user_role: user.role
+          actor_id: user.id
         })
       ]);
       const allUsers = usersRes.data.users || [];

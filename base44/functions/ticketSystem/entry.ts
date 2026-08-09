@@ -8,6 +8,17 @@ async function hashPassword(password) {
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Resolve o usuário autenticado a partir do actor_id enviado pelo frontend.
+// Garante isolamento por empresa e papel real — ignora company_id/role enviados pelo cliente.
+async function resolveUser(base44, actorId) {
+  if (!actorId) return null;
+  try {
+    const u = await base44.asServiceRole.entities.SupportUser.get(actorId);
+    if (!u || !u.is_active) return null;
+    return u;
+  } catch { return null; }
+}
+
 const STATUS_TS = { aberto: 'aberto_at', em_analise: 'em_analise_at', iniciado: 'iniciado_at', em_teste: 'em_teste_at', concluido: 'concluido_at' };
 const STATUS_FLOW = ['aberto', 'em_analise', 'iniciado', 'em_teste', 'concluido'];
 
@@ -152,27 +163,35 @@ Deno.serve(async (req) => {
       return Response.json({ companies });
     }
 
-    // ─── COMPANY: update ───
+    // ─── COMPANY: update (admin do sistema) ───
     if (operation === 'updateCompany') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const { company_id, ...updates } = body;
+      delete updates.actor_id;
       if (updates.cnpj) updates.cnpj = updates.cnpj.replace(/\D/g, '');
       const company = await base44.asServiceRole.entities.SupportCompany.update(company_id, updates);
       return Response.json({ company });
     }
 
-    // ─── COMPANY: delete ───
+    // ─── COMPANY: delete (admin do sistema) ───
     if (operation === 'deleteCompany') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       await base44.asServiceRole.entities.SupportCompany.delete(body.company_id);
       return Response.json({ success: true });
     }
 
     // ─── USER: create ───
     if (operation === 'createUser') {
-      const { name, email, password, company_id, role, created_by_role } = body;
-      if (created_by_role === 'company_admin' || created_by_role === 'admin') {
-        if (role === 'system_admin' || role === 'company_admin') {
-          return Response.json({ error: 'Sem permissão para criar usuário administrador' }, { status: 403 });
-        }
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const { name, email, password, role } = body;
+      // A empresa é sempre a do próprio operador, exceto admin do sistema que pode definir outra
+      const company_id = actor.role === 'system_admin' ? (body.company_id || actor.company_id) : actor.company_id;
+      // Apenas o admin do sistema pode criar administradores
+      if (actor.role !== 'system_admin' && (role === 'system_admin' || role === 'company_admin')) {
+        return Response.json({ error: 'Sem permissão para criar usuário administrador' }, { status: 403 });
       }
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
@@ -193,25 +212,30 @@ Deno.serve(async (req) => {
 
     // ─── USER: list by company ───
     if (operation === 'getUsers') {
-      const { company_id, user_role } = body;
-      const users = user_role === 'system_admin'
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const users = actor.role === 'system_admin'
         ? await base44.asServiceRole.entities.SupportUser.list()
-        : await base44.asServiceRole.entities.SupportUser.filter({ company_id });
+        : await base44.asServiceRole.entities.SupportUser.filter({ company_id: actor.company_id });
       const safeUsers = users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, company_id: u.company_id, company_name: u.company_name, is_active: u.is_active, last_login_at: u.last_login_at }));
       return Response.json({ users: safeUsers });
     }
 
     // ─── USER: update ───
     if (operation === 'updateUser') {
-      const { user_id, updated_by_role, ...updates } = body;
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const { user_id, ...updates } = body;
+      delete updates.actor_id;
+      const target = await base44.asServiceRole.entities.SupportUser.get(user_id);
+      if (!target) return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      // Isolamento: só acessa usuários da própria empresa (admin do sistema vê todos)
+      if (actor.role !== 'system_admin' && target.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este usuário' }, { status: 403 });
+      }
       if (updates.role) {
-        if (updated_by_role === 'company_admin' || updated_by_role === 'admin') {
-          if (['system_admin', 'company_admin', 'admin'].includes(updates.role)) {
-            return Response.json({ error: 'Sem permissão para atribuir papel administrativo' }, { status: 403 });
-          }
-        }
-        if (updated_by_role !== 'system_admin' && updates.role === 'system_admin') {
-          return Response.json({ error: 'Sem permissão para atribuir admin do sistema' }, { status: 403 });
+        if (actor.role !== 'system_admin' && ['system_admin', 'company_admin', 'admin'].includes(updates.role)) {
+          return Response.json({ error: 'Sem permissão para atribuir papel administrativo' }, { status: 403 });
         }
       }
       if (updates.email) {
@@ -224,24 +248,39 @@ Deno.serve(async (req) => {
         updates.password_hash = await hashPassword(updates.password);
         delete updates.password;
       }
+      // Não permite mover o usuário para outra empresa
+      delete updates.company_id;
+      delete updates.company_name;
       const user = await base44.asServiceRole.entities.SupportUser.update(user_id, updates);
       return Response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     }
 
     // ─── USER: delete ───
     if (operation === 'deleteUser') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const target = await base44.asServiceRole.entities.SupportUser.get(body.user_id);
+      if (!target) return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && target.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este usuário' }, { status: 403 });
+      }
+      if (body.user_id === actor.id) {
+        return Response.json({ error: 'Você não pode excluir sua própria conta' }, { status: 403 });
+      }
       await base44.asServiceRole.entities.SupportUser.delete(body.user_id);
       return Response.json({ success: true });
     }
 
     // ─── COMPANY: get with plan info ───
     if (operation === 'getCompanyPlan') {
-      const { company_id, user_role } = body;
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const company_id = actor.role === 'system_admin' ? (body.company_id || actor.company_id) : actor.company_id;
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
       const tickets = await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
       const ticketCount = tickets.length;
-      const isAdmin = user_role === 'system_admin' || user_role === 'company_admin' || user_role === 'admin';
+      const isAdmin = actor.role === 'system_admin' || actor.role === 'company_admin' || actor.role === 'admin';
       const fullAccess = company.ticket_full_access || company.ticket_plan === 'full' || isAdmin;
       const limit = company.ticket_limit ?? 10;
       return Response.json({ company: { id: company.id, razao_social: company.razao_social, cnpj: company.cnpj, ticket_plan: company.ticket_plan || 'free', ticket_limit: limit, ticket_full_access: fullAccess, is_active: company.is_active, logo_url: company.logo_url }, ticket_count: ticketCount, limit_reached: !fullAccess && ticketCount >= limit });
@@ -249,7 +288,8 @@ Deno.serve(async (req) => {
 
     // ─── COMPANY: list with plan info (admin) ───
     if (operation === 'getCompaniesWithPlan') {
-      if (body.user_role !== 'system_admin') return Response.json({ error: 'Acesso negado ao painel de planos' }, { status: 403 });
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado ao painel de planos' }, { status: 403 });
       const companies = await base44.asServiceRole.entities.SupportCompany.list();
       const result = [];
       for (const c of companies) {
@@ -261,7 +301,8 @@ Deno.serve(async (req) => {
 
     // ─── COMPANY: update plan (admin) ───
     if (operation === 'updateCompanyPlan') {
-      if (body.user_role !== 'system_admin') return Response.json({ error: 'Acesso negado ao painel de planos' }, { status: 403 });
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado ao painel de planos' }, { status: 403 });
       const { company_id, ticket_full_access, ticket_limit, ticket_plan } = body;
       const updates = {};
       if (ticket_full_access !== undefined) updates.ticket_full_access = ticket_full_access;
@@ -273,9 +314,16 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: create ───
     if (operation === 'createTicket') {
-      const { title, description, company_id, company_name, type_id, type_name, module_id, module_name, submodule_id, submodule_name, priority_id, priority_name, priority_level, created_by_id, created_by_name, assigned_to_id, assigned_to_name, attachments, created_by_role } = body;
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const { title, description, type_id, type_name, module_id, module_name, submodule_id, submodule_name, priority_id, priority_name, priority_level, assigned_to_id, assigned_to_name, attachments } = body;
+      // Empresa e autor são sempre do usuário autenticado (não do corpo)
+      const company_id = actor.company_id;
+      const created_by_id = actor.id;
+      const created_by_name = actor.name;
+      const created_by_role = actor.role;
       // Admin tem acesso ilimitado por padrão
-      const isAdmin = ['system_admin', 'company_admin', 'admin'].includes(created_by_role);
+      const isAdmin = ['system_admin', 'company_admin', 'admin'].includes(actor.role);
       // Verifica limite do plano
       const company = await base44.asServiceRole.entities.SupportCompany.get(company_id);
       if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
@@ -299,7 +347,7 @@ Deno.serve(async (req) => {
       }
       const now = new Date().toISOString();
       const ticket = await base44.asServiceRole.entities.SupportTicket.create({
-        title, description, company_id, company_name, type_id, type_name, module_id: module_id || '', module_name: module_name || '', submodule_id: submodule_id || '', submodule_name: submodule_name || '', priority_id, priority_name, priority_level,
+        title, description, company_id, company_name: company.razao_social, type_id, type_name, module_id: module_id || '', module_name: module_name || '', submodule_id: submodule_id || '', submodule_name: submodule_name || '', priority_id, priority_name, priority_level,
         status: 'aberto', created_by_id, created_by_name,
         assigned_to_id: finalAssignedToId, assigned_to_name: finalAssignedToName,
         aberto_at: now,
@@ -319,35 +367,59 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: list by company ───
     if (operation === 'getTickets') {
-      const { company_id, user_role } = body;
-      const tickets = user_role === 'system_admin'
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const tickets = actor.role === 'system_admin'
         ? await base44.asServiceRole.entities.SupportTicket.list()
-        : await base44.asServiceRole.entities.SupportTicket.filter({ company_id });
+        : await base44.asServiceRole.entities.SupportTicket.filter({ company_id: actor.company_id });
       return Response.json({ tickets });
     }
 
     // ─── TICKET: update ───
     if (operation === 'updateTicket') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
       const { ticket_id, ...updates } = body;
+      delete updates.actor_id;
+      const existing = await base44.asServiceRole.entities.SupportTicket.get(ticket_id);
+      if (!existing) return Response.json({ error: 'Chamado não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && existing.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este chamado' }, { status: 403 });
+      }
+      // Não permite alterar a empresa do chamado
+      delete updates.company_id;
+      delete updates.company_name;
       const ticket = await base44.asServiceRole.entities.SupportTicket.update(ticket_id, updates);
       return Response.json({ ticket });
     }
 
     // ─── TICKET: delete ───
     if (operation === 'deleteTicket') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const ticket = await base44.asServiceRole.entities.SupportTicket.get(body.ticket_id);
+      if (!ticket) return Response.json({ error: 'Chamado não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && ticket.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este chamado' }, { status: 403 });
+      }
       await base44.asServiceRole.entities.SupportTicket.delete(body.ticket_id);
       return Response.json({ success: true });
     }
 
     // ─── TICKET: move (forward/backward) ───
     if (operation === 'moveTicket') {
-      const { ticket_id, new_status, moved_by_id, moved_by_name, direction } = body;
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const { ticket_id, new_status, direction } = body;
       const ticket = await base44.asServiceRole.entities.SupportTicket.get(ticket_id);
       if (!ticket) return Response.json({ error: 'Chamado não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && ticket.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este chamado' }, { status: 403 });
+      }
       const now = new Date().toISOString();
       const updates = {
         status: new_status,
-        history: [...(ticket.history || []), { from_status: ticket.status, to_status: new_status, moved_at: now, moved_by_id, moved_by_name, direction }]
+        history: [...(ticket.history || []), { from_status: ticket.status, to_status: new_status, moved_at: now, moved_by_id: actor.id, moved_by_name: actor.name, direction }]
       };
       const tsField = STATUS_TS[new_status];
       if (tsField) updates[tsField] = now;
@@ -357,21 +429,33 @@ Deno.serve(async (req) => {
 
     // ─── TICKET: transfer ───
     if (operation === 'transferTicket') {
-      const { ticket_id, assigned_to_id, assigned_to_name, moved_by_id, moved_by_name } = body;
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const { ticket_id, assigned_to_id, assigned_to_name } = body;
       const ticket = await base44.asServiceRole.entities.SupportTicket.get(ticket_id);
       if (!ticket) return Response.json({ error: 'Chamado não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && ticket.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este chamado' }, { status: 403 });
+      }
       const now = new Date().toISOString();
-      const history = [...(ticket.history || []), { from_status: ticket.status, to_status: ticket.status, moved_at: now, moved_by_id, moved_by_name, direction: 'transfer', note: 'Transferido para ' + assigned_to_name }];
+      const history = [...(ticket.history || []), { from_status: ticket.status, to_status: ticket.status, moved_at: now, moved_by_id: actor.id, moved_by_name: actor.name, direction: 'transfer', note: 'Transferido para ' + assigned_to_name }];
       const updated = await base44.asServiceRole.entities.SupportTicket.update(ticket_id, { assigned_to_id, assigned_to_name, history });
       return Response.json({ ticket: updated });
     }
 
     // ─── COMMENT: add ───
     if (operation === 'addComment') {
-      const { ticket_id, ticket_title, company_id, author_id, author_name, author_role, content, attachments } = body;
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const { ticket_id, ticket_title, content, attachments } = body;
+      const ticket = await base44.asServiceRole.entities.SupportTicket.get(ticket_id);
+      if (!ticket) return Response.json({ error: 'Chamado não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && ticket.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este chamado' }, { status: 403 });
+      }
       const comment = await base44.asServiceRole.entities.TicketComment.create({
-        ticket_id, ticket_title, company_id,
-        author_id, author_name, author_role: author_role || '',
+        ticket_id, ticket_title, company_id: ticket.company_id,
+        author_id: actor.id, author_name: actor.name, author_role: actor.role,
         content: content || '', attachments: attachments || [], is_system: false
       });
       return Response.json({ comment });
@@ -379,13 +463,27 @@ Deno.serve(async (req) => {
 
     // ─── COMMENT: list by ticket ───
     if (operation === 'getComments') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
       const { ticket_id } = body;
+      const ticket = await base44.asServiceRole.entities.SupportTicket.get(ticket_id);
+      if (!ticket) return Response.json({ error: 'Chamado não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && ticket.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado a este chamado' }, { status: 403 });
+      }
       const comments = await base44.asServiceRole.entities.TicketComment.filter({ ticket_id });
       return Response.json({ comments });
     }
 
     // ─── COMMENT: delete ───
     if (operation === 'deleteComment') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      const comment = await base44.asServiceRole.entities.TicketComment.get(body.comment_id);
+      if (!comment) return Response.json({ error: 'Comentário não encontrado' }, { status: 404 });
+      if (actor.role !== 'system_admin' && comment.company_id !== actor.company_id) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
       await base44.asServiceRole.entities.TicketComment.delete(body.comment_id);
       return Response.json({ success: true });
     }
@@ -462,12 +560,13 @@ Deno.serve(async (req) => {
 
     // ─── PROMOTE TO SYSTEM ADMIN (one-time, exclusive) ───
     if (operation === 'promoteSystemAdmin') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor) return Response.json({ error: 'Usuário não autenticado' }, { status: 401 });
+      if (actor.role !== 'admin' && actor.role !== 'company_admin') return Response.json({ error: 'Apenas administradores podem ser promovidos' }, { status: 403 });
       const { user_id } = body;
+      if (user_id !== actor.id) return Response.json({ error: 'Você só pode promover sua própria conta' }, { status: 403 });
       const existingAdmins = await base44.asServiceRole.entities.SupportUser.filter({ role: 'system_admin' });
       if (existingAdmins.length > 0) return Response.json({ error: 'Já existe um administrador do sistema' }, { status: 403 });
-      const targetUser = await base44.asServiceRole.entities.SupportUser.get(user_id);
-      if (!targetUser) return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
-      if (targetUser.role !== 'admin' && targetUser.role !== 'company_admin') return Response.json({ error: 'Apenas administradores podem ser promovidos' }, { status: 403 });
       const updated = await base44.asServiceRole.entities.SupportUser.update(user_id, { role: 'system_admin' });
       return Response.json({ user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, company_id: updated.company_id, company_name: updated.company_name } });
     }

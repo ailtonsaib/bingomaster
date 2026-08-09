@@ -39,7 +39,7 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
   const loadComments = useCallback(async () => {
     setLoadingComments(true);
     try {
-      const res = await base44.functions.invoke('ticketSystem', { operation: 'getComments', ticket_id: ticket.id });
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'getComments', actor_id: currentUser.id, ticket_id: ticket.id });
       const sorted = (res.data.comments || []).sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
       setComments(sorted);
     } catch (e) { console.error("Erro ao carregar comentários:", e); }
@@ -70,12 +70,9 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
     try {
       await base44.functions.invoke('ticketSystem', {
         operation: 'addComment',
+        actor_id: currentUser.id,
         ticket_id: ticket.id,
         ticket_title: ticket.title,
-        company_id: ticket.company_id,
-        author_id: currentUser.id,
-        author_name: currentUser.name,
-        author_role: currentUser.role,
         content: newComment,
         attachments,
       });

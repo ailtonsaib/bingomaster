@@ -38,13 +38,13 @@ export default function TicketKanban() {
     setLoading(true);
     try {
       const [txRes, usersRes, typesRes, priRes, modRes, subModRes, planRes] = await Promise.all([
-        base44.functions.invoke('ticketSystem', { operation: 'getTickets', company_id: user.company_id, user_role: user.role }),
-        base44.functions.invoke('ticketSystem', { operation: 'getUsers', company_id: user.company_id, user_role: user.role }),
+        base44.functions.invoke('ticketSystem', { operation: 'getTickets', actor_id: user.id }),
+        base44.functions.invoke('ticketSystem', { operation: 'getUsers', actor_id: user.id }),
         base44.functions.invoke('ticketSystem', { operation: 'getTypes' }),
         base44.functions.invoke('ticketSystem', { operation: 'getPriorities' }),
         base44.functions.invoke('ticketSystem', { operation: 'getModules' }),
         base44.functions.invoke('ticketSystem', { operation: 'getSubModules' }),
-        base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', company_id: user.company_id, user_role: user.role }),
+        base44.functions.invoke('ticketSystem', { operation: 'getCompanyPlan', actor_id: user.id }),
       ]);
       setTickets(txRes.data.tickets || []);
       setUsers(usersRes.data.users || []);
@@ -63,7 +63,7 @@ export default function TicketKanban() {
 
   const handleCreate = async (formData) => {
     try {
-      await base44.functions.invoke('ticketSystem', { operation: 'createTicket', ...formData });
+      await base44.functions.invoke('ticketSystem', { operation: 'createTicket', actor_id: user.id, ...formData });
       setShowForm(false);
       await loadData();
     } catch (err) {
@@ -74,18 +74,18 @@ export default function TicketKanban() {
   };
 
   const handleMove = async (ticketId, newStatus, direction) => {
-    await base44.functions.invoke('ticketSystem', { operation: 'moveTicket', ticket_id: ticketId, new_status: newStatus, direction, moved_by_id: user.id, moved_by_name: user.name });
+    await base44.functions.invoke('ticketSystem', { operation: 'moveTicket', actor_id: user.id, ticket_id: ticketId, new_status: newStatus, direction });
     await loadData();
   };
 
   const handleTransfer = async (ticketId, assignedToId, assignedToName) => {
-    await base44.functions.invoke('ticketSystem', { operation: 'transferTicket', ticket_id: ticketId, assigned_to_id: assignedToId, assigned_to_name: assignedToName, moved_by_id: user.id, moved_by_name: user.name });
+    await base44.functions.invoke('ticketSystem', { operation: 'transferTicket', actor_id: user.id, ticket_id: ticketId, assigned_to_id: assignedToId, assigned_to_name: assignedToName });
     await loadData();
     setSelectedTicket(null);
   };
 
   const handleDelete = async (ticketId) => {
-    await base44.functions.invoke('ticketSystem', { operation: 'deleteTicket', ticket_id: ticketId });
+    await base44.functions.invoke('ticketSystem', { operation: 'deleteTicket', actor_id: user.id, ticket_id: ticketId });
     setSelectedTicket(null);
     await loadData();
   };
