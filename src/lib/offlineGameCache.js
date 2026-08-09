@@ -12,9 +12,17 @@ export function cacheGame(gameId, game) {
       game,
       cachedAt: Date.now(),
     }));
+    // Migração: remove o cache legado unificado (pesado) ao gravar o novo formato
+    localStorage.removeItem(GAME_CACHE_PREFIX + gameId);
   } catch (e) {
     // localStorage cheio ou indisponível — ignora silenciosamente
   }
+}
+
+// Compatibilidade: cache unificado (legado). Prefira cacheGame + cacheCards.
+export function cacheGameData(gameId, game, cards) {
+  cacheGame(gameId, game);
+  cacheCards(gameId, cards);
 }
 
 // Cacheia as cartelas (payload grande) — chamado apenas quando as cartelas mudam.
@@ -32,8 +40,15 @@ export function getCachedGameData(gameId) {
     const metaRaw = localStorage.getItem(GAME_CACHE_PREFIX + gameId + GAME_META_SUFFIX);
     // Compatibilidade: se não houver meta nova, tenta o formato antigo unificado
     if (!metaRaw) {
-      const legacy = localStorage.getItem(GAME_CACHE_PREFIX + gameId);
+      const legacyKey = GAME_CACHE_PREFIX + gameId;
+      const legacy = localStorage.getItem(legacyKey);
       if (!legacy) return null;
+      // Cache legado gigante trava o carregamento (parse síncrono de vários MB).
+      // Descarta e deixa o novo cache ser reconstruído a partir do servidor.
+      if (legacy.length > 2_000_000) {
+        try { localStorage.removeItem(legacyKey); } catch (e) {}
+        return null;
+      }
       return JSON.parse(legacy);
     }
     const meta = JSON.parse(metaRaw);

@@ -28,14 +28,9 @@ export default function GamePlay() {
   const queryClient = useQueryClient();
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState([]);
-  const [drawType, setDrawType] = useState(() => {
-    const cached = getCachedGameData(gameId);
-    return cached?.game?.draw_type || "horizontal";
-  });
-  const [cardFilter, setCardFilter] = useState(() => {
-    const cached = getCachedGameData(gameId);
-    return cached?.game?.card_filter || "validated";
-  });
+  const [cachedData] = useState(() => getCachedGameData(gameId));
+  const [drawType, setDrawType] = useState(() => cachedData?.game?.draw_type || "horizontal");
+  const [cardFilter, setCardFilter] = useState(() => cachedData?.game?.card_filter || "validated");
   const [drawMode, setDrawMode] = useState("manual"); // "manual", "auto", "normal"
   const [manualNumber, setManualNumber] = useState("");
   const manualInputRef = useRef(null);
@@ -57,8 +52,6 @@ export default function GamePlay() {
   const [showLuckySpin, setShowLuckySpin] = useState(false);
   const isOnline = useOnlineStatus();
   const [hasPendingSync, setHasPendingSync] = useState(() => getPendingUpdates().length > 0 || getPendingCardUpdates().length > 0);
-
-  const [cachedData] = useState(() => getCachedGameData(gameId));
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
