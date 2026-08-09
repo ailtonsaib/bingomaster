@@ -914,6 +914,79 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── ADMIN: create gestor (Oficina Premium company manager) ───
+    if (operation === 'createGestor') {
+      const { admin_email, gestor_name, gestor_email, diagnostic_plan, company } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+      if (!gestor_name || !gestor_email) {
+        return Response.json({ error: 'Nome e email do gestor são obrigatórios' }, { status: 400 });
+      }
+      // Verifica se o email já existe em PortalUser
+      const existing = await base44.asServiceRole.entities.PortalUser.filter({ email: gestor_email });
+      if (existing.length > 0) {
+        return Response.json({ error: 'Email já cadastrado' }, { status: 409 });
+      }
+      // Cria PortalUser (gestor) com senha padrão gestor123
+      const defaultPassword = 'gestor123';
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(defaultPassword, salt);
+      await base44.asServiceRole.entities.PortalUser.create({
+        email: gestor_email,
+        password_hash: hash,
+        name: gestor_name,
+        is_admin: false,
+        can_access_bingo: false,
+        can_access_finance: false,
+        can_access_sped: false,
+        can_access_pdv: false,
+        can_access_chamados: false,
+        can_access_diagnostic: true,
+        diagnostic_plan: diagnostic_plan || 'free',
+        bingo_plan: 'free',
+        sped_plan: 'free',
+        finance_transaction_limit: 10,
+        finance_transactions_used: 0,
+        finance_full_access: false,
+        finance_release_requested: false,
+        finance_plan_price: 49.90,
+        must_change_password: true,
+        is_active: true,
+      });
+
+      // Cria DiagnosticCompanyConfig (dados da empresa) vinculado ao gestor
+      if (company && company.razao_social) {
+        const existingConfig = await base44.asServiceRole.entities.DiagnosticCompanyConfig.filter({ user_email: gestor_email });
+        if (existingConfig.length === 0) {
+          await base44.asServiceRole.entities.DiagnosticCompanyConfig.create({
+            user_email: gestor_email,
+            razao_social: company.razao_social,
+            nome_fantasia: company.nome_fantasia || undefined,
+            cnpj: company.cnpj || undefined,
+            cep: company.cep || undefined,
+            address: company.address || undefined,
+            number: company.number || undefined,
+            district: company.district || undefined,
+            city: company.city || undefined,
+            uf: company.uf || undefined,
+            phone: company.phone || undefined,
+            email: company.email || undefined,
+            admin_email: gestor_email,
+            admin_name: gestor_name,
+            access_granted: true,
+          });
+        }
+      }
+
+      return Response.json({
+        success: true,
+        default_password: defaultPassword,
+        message: `Gestor criado. Senha inicial: ${defaultPassword}`,
+      });
+    }
+
     // ─── ADMIN: histórico de tentativas de login ───
     if (operation === 'getLoginHistory') {
       const { admin_email, filter_email, filter_success } = body;

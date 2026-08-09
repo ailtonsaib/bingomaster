@@ -9,6 +9,7 @@ import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import UserFormModal from "@/components/portal/UserFormModal";
+import GestorFormModal from "@/components/portal/GestorFormModal";
 import PlanManagement from "@/components/portal/PlanManagement";
 import GameAdminPanel from "@/components/games/GameAdminPanel";
 import RevenueSummary from "@/components/portal/RevenueSummary";
@@ -26,6 +27,7 @@ export default function PortalAdmin() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showGestorForm, setShowGestorForm] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -348,6 +350,9 @@ export default function PortalAdmin() {
               <option value="inactive">Inativos</option>
               <option value="pending">Pendentes de plano</option>
             </select>
+            <Button variant="outline" className="gap-2 border-cyan-300 text-cyan-700 hover:bg-cyan-50" onClick={() => setShowGestorForm(true)}>
+              <Wrench className="w-4 h-4" /> Gestor Oficina
+            </Button>
             <Button className="gap-2" onClick={() => setShowForm(true)}>
               <Plus className="w-4 h-4" /> Novo Usuário
             </Button>
@@ -619,6 +624,13 @@ export default function PortalAdmin() {
         <UserFormModal
           adminEmail={user.email}
           onClose={() => setShowForm(false)}
+          onSaved={loadUsers}
+        />
+      )}
+      {showGestorForm && (
+        <GestorFormModal
+          adminEmail={user.email}
+          onClose={() => setShowGestorForm(false)}
           onSaved={loadUsers}
         />
       )}
