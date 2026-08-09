@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { maskPhone } from "@/lib/utils";
-import { useLicense } from "@/hooks/useLicense";
 import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
@@ -20,34 +19,32 @@ function SellerStep({ onEnter, locked }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { data: sellers = [] } = useQuery({
-    queryKey: ["sell-sellers"],
-    queryFn: () => base44.entities.Seller.filter({ is_active: true }, "name"),
-  });
-
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const phoneDigits = phone.replace(/\D/g, "");
     if (!phoneDigits) { setError("Informe seu telefone para continuar."); return; }
 
     setLoading(true);
     setError("");
 
-    const match = sellers.find((s) => {
-      const sellerDigits = (s.phone || "").replace(/\D/g, "");
-      return sellerDigits && sellerDigits === phoneDigits;
-    });
+    try {
+      const res = await base44.functions.invoke("sellAppPublic", { action: "validateSeller", phone: phoneDigits });
+      const match = res.data.seller;
 
-    setLoading(false);
+      setLoading(false);
 
-    if (!match) {
-      setError("Telefone não encontrado. Verifique com o organizador.");
-      return;
+      if (!match) {
+        setError("Telefone não encontrado. Verifique com o organizador.");
+        return;
+      }
+
+      localStorage.setItem("seller_name", match.name);
+      localStorage.setItem("seller_phone", match.phone || phone);
+      localStorage.setItem("seller_id", match.id);
+      onEnter({ name: match.name, phone: match.phone || phone, id: match.id });
+    } catch (e) {
+      setLoading(false);
+      setError("Erro ao validar telefone. Tente novamente.");
     }
-
-    localStorage.setItem("seller_name", match.name);
-    localStorage.setItem("seller_phone", match.phone || phone);
-    localStorage.setItem("seller_id", match.id);
-    onEnter({ name: match.name, phone: match.phone || phone, id: match.id });
   };
 
   return (
@@ -99,10 +96,8 @@ function SellerStep({ onEnter, locked }) {
 function GamePickStep({ seller, onPick, onBack, locked }) {
   const { data: games = [], isLoading } = useQuery({
     queryKey: ["sell-games"],
-    queryFn: () => base44.entities.BingoGame.list("-created_date"),
+    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "listGames" }).then(r => r.data.games || []),
   });
-
-  const active = games.filter((g) => g.status !== "finished");
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -130,12 +125,12 @@ function GamePickStep({ seller, onPick, onBack, locked }) {
           <div className="space-y-3">
             {[1, 2].map((i) => <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />)}
           </div>
-        ) : active.length === 0 ? (
+        ) : games.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground text-sm">
             Nenhum jogo disponível no momento.
           </div>
         ) : (
-          active.map((game) => (
+          games.map((game) => (
             <button
               key={game.id}
               onClick={() => onPick(game)}
@@ -172,7 +167,7 @@ function CardRangeStep({ seller, game, onConfirm, onBack }) {
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["sell-cards-range", game.id],
-    queryFn: () => base44.functions.invoke("getGameCards", { game_id: String(game.id) }).then(r => r.data.cards),
+    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "getCards", game_id: String(game.id) }).then(r => r.data.cards || []),
   });
 
   const totalCards = cards.length;
@@ -305,13 +300,13 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["sell-cards", game.id],
-    queryFn: () => base44.functions.invoke("getGameCards", { game_id: String(game.id) }).then(r => r.data.cards),
+    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "getCards", game_id: String(game.id) }).then(r => r.data.cards || []),
   });
 
   // Load seller distributions to determine assigned range
   const { data: distributions = [] } = useQuery({
     queryKey: ["sell-distributions", game.id, seller.id],
-    queryFn: () => base44.entities.SellerDistribution.filter({ game_id: game.id, seller_id: seller.id }),
+    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "getDistributions", game_id: String(game.id), seller_id: String(seller.id) }).then(r => r.data.distributions || []),
     enabled: !!seller.id,
   });
 
@@ -398,36 +393,48 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     if (!buyerName.trim() || !buyerPhone.trim()) return;
     setSaving(true);
 
-    let receiptUrl = selectedCard.payment_receipt_url || null;
+    let receiptBase64 = null;
+    let receiptMime = null;
+    let clearReceipt = false;
+
     if (receiptFile) {
       setUploading(true);
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
-        receiptUrl = file_url;
+        const reader = new FileReader();
+        receiptBase64 = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(receiptFile);
+        });
+        receiptMime = receiptFile.type || 'image/jpeg';
         if (receiptPreview && receiptPreview.startsWith("blob:")) {
           URL.revokeObjectURL(receiptPreview);
         }
       } catch {
-        // continua sem o comprovante se falhar
+        receiptBase64 = null;
       }
       setUploading(false);
     } else if (!receiptFile && receiptPreview === null) {
-      receiptUrl = null;
+      clearReceipt = true;
     }
 
-    const updateData = {
-      player_name: buyerName.trim(),
-      player_phone: buyerPhone.trim(),
-      player_city: "",
-      seller_id: seller.id || null,
-      seller_name: seller.name || null,
-      payment_status: asPending ? "pending" : "paid",
-    };
-    if (receiptUrl !== selectedCard.payment_receipt_url) {
-      updateData.payment_receipt_url = receiptUrl;
+    try {
+      await base44.functions.invoke("sellAppPublic", {
+        action: "sellCard",
+        card_id: String(selectedCard.id),
+        player_name: buyerName.trim(),
+        player_phone: buyerPhone.trim(),
+        seller_id: seller.id || null,
+        seller_name: seller.name || null,
+        payment_status: asPending ? "pending" : "paid",
+        receipt_base64: receiptBase64,
+        receipt_mime: receiptMime,
+        clear_receipt: clearReceipt,
+      });
+    } catch (e) {
+      setSaving(false);
+      return;
     }
 
-    await base44.entities.BingoCard.update(selectedCard.id, updateData);
     setSaving(false);
 
     const wasPendingNowPaid = !asPending && selectedCard.payment_status === "pending";
@@ -787,7 +794,6 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
 
 // --- Main orchestrator ---
 export default function SellApp() {
-  const { license } = useLicense();
   // Read URL params (pre-filled link from DistributeCardsModal)
   const urlParams = new URLSearchParams(window.location.search);
   const urlSellerName = urlParams.get("seller_name");
@@ -834,7 +840,7 @@ export default function SellApp() {
   // If URL has game_id, load that game directly
   const { data: preloadedGame } = useQuery({
     queryKey: ["sell-preloaded-game", urlGameId],
-    queryFn: () => base44.entities.BingoGame.filter({ id: urlGameId }).then((r) => r[0] || null),
+    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "getGame", game_id: String(urlGameId) }).then(r => r.data.game || null),
     enabled: !!urlGameId,
   });
 
@@ -844,18 +850,12 @@ export default function SellApp() {
   // Check if seller has distributions assigned (skip range step if yes)
   const { data: sellerDistributions = [] } = useQuery({
     queryKey: ["seller-dists", seller?.id, resolvedGame?.id],
-    queryFn: () => base44.entities.SellerDistribution.filter({ game_id: resolvedGame.id, seller_id: seller.id }),
+    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "getDistributions", game_id: String(resolvedGame.id), seller_id: String(seller.id) }).then(r => r.data.distributions || []),
     enabled: !!seller?.id && !!resolvedGame?.id,
   });
   const hasDistributions = sellerDistributions.length > 0;
 
-  const { data: planConfigs = [] } = useQuery({
-    queryKey: ["plan-configs-sell"],
-    queryFn: () => base44.entities.PlanConfig.list(),
-    enabled: !!license,
-  });
-  const currentPlanConfig = planConfigs.find((p) => p.plan_key === license?.plan_key);
-  const hasBuyerApp = currentPlanConfig?.app_buyer ?? false;
+  const hasBuyerApp = false;
 
   if (loggedOut) {
     return (
