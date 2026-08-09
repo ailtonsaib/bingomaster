@@ -382,7 +382,6 @@ export default function GamePlay() {
       awarded_player_name: card.player_name,
       pedra_maior: pedraMaior,
       awarded_won_at_draw: lastDrawn,
-      round_drawn_numbers: [...(game.drawn_numbers || [])],
     };
 
     const hasMorePrizes = prizes.slice(prizeIndex + 1).some(p => !p.awarded);
@@ -469,67 +468,6 @@ export default function GamePlay() {
     if (currentDrawn.length === 0) return;
     const newDrawn = currentDrawn.slice(0, -1);
     await updateGame({ drawn_numbers: newDrawn });
-  };
-
-  // Desfaz o último prêmio concedido — reverte o prêmio, restaura os números
-  // sorteados daquela rodada e desmarca a cartela vencedora
-  const handleUndoLastPrize = async () => {
-    if (!game || drawing || resetting) return;
-    const prizes = [...(game.prizes || [])];
-    // Encontra o último prêmio concedido (maior índice com awarded=true)
-    let lastPrizeIdx = -1;
-    for (let i = prizes.length - 1; i >= 0; i--) {
-      if (prizes[i].awarded) { lastPrizeIdx = i; break; }
-    }
-    if (lastPrizeIdx < 0) return;
-
-    const prize = prizes[lastPrizeIdx];
-    const restoredDrawn = prize.round_drawn_numbers || [];
-    const cardId = prize.awarded_card_id;
-
-    // Reverte o prêmio
-    prizes[lastPrizeIdx] = {
-      name: prize.name,
-      description: prize.description,
-      awarded: false,
-    };
-
-    const updates = {
-      prizes,
-      drawn_numbers: restoredDrawn,
-      status: "in_progress",
-    };
-    await updateGame(updates);
-
-    // Desmarca a cartela vencedora (remove o prêmio da lista won_prizes)
-    if (cardId) {
-      const card = cards.find((c) => c.id === cardId);
-      if (card) {
-        const remainingWonPrizes = (card.won_prizes || []).filter(
-          (wp) => wp.prize_index !== lastPrizeIdx
-        );
-        const stillWinner = remainingWonPrizes.length > 0;
-        if (!isOnline) {
-          queryClient.setQueryData(["cards", gameId], (old) => {
-            const arr = Array.isArray(old) ? old : [];
-            return arr.map((c) => c.id === cardId
-              ? { ...c, is_winner: stillWinner, won_prizes: remainingWonPrizes }
-              : c);
-          });
-          queuePendingCardUpdate(cardId, { is_winner: stillWinner, won_prizes: remainingWonPrizes });
-        } else {
-          try {
-            await base44.entities.BingoCard.update(cardId, {
-              is_winner: stillWinner,
-              won_prizes: remainingWonPrizes,
-            });
-            queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
-          } catch (e) {
-            // erro silencioso — optimistic update já aplicado
-          }
-        }
-      }
-    }
   };
 
   // Zera apenas a rodada atual: limpa números sorteados, mantém prêmios já concedidos
@@ -1094,22 +1032,10 @@ export default function GamePlay() {
                       variant="outline"
                       className="gap-2 border-red-400/50 text-red-300 hover:bg-red-500/20"
                       onClick={() => setShowCancelDialog(true)}
-                      disabled={resetting || drawing || drawnNumbers.length === 0}
+                      disabled={resetting || drawing}
                     >
                       <XCircle className="w-4 h-4" /> Zerar Sorteio
                     </Button>
-                    {awardedPrizesCount > 0 && (
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="gap-2 border-amber-400/50 text-amber-200 hover:bg-amber-500/20"
-                        onClick={handleUndoLastPrize}
-                        disabled={resetting || drawing}
-                        title="Desfazer o último prêmio concedido e voltar à rodada anterior"
-                      >
-                        <Undo2 className="w-4 h-4" /> Desfazer Prêmio
-                      </Button>
-                    )}
                     {allPrizesAwarded && (
                       <Button
                         size="lg"
@@ -1122,23 +1048,9 @@ export default function GamePlay() {
                   </>
                 )}
                 {isFinished && (
-                  <>
-                    {awardedPrizesCount > 0 && (
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="gap-2 border-amber-400/50 text-amber-200 hover:bg-amber-500/20"
-                        onClick={handleUndoLastPrize}
-                        disabled={resetting || drawing}
-                        title="Desfazer o último prêmio concedido e voltar à rodada anterior"
-                      >
-                        <Undo2 className="w-4 h-4" /> Desfazer Prêmio
-                      </Button>
-                    )}
-                    <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={() => setShowRestartDialog(true)}>
-                      <RotateCcw className="w-4 h-4" /> Reiniciar Sorteio
-                    </Button>
-                  </>
+                  <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={() => setShowRestartDialog(true)}>
+                    <RotateCcw className="w-4 h-4" /> Reiniciar Sorteio
+                  </Button>
                 )}
               </div>
 

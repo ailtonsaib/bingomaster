@@ -61,13 +61,6 @@
           "awarded_won_at_draw": {
             "type": "number",
             "description": "N\u00famero sorteado que completou o bingo da cartela vencedora"
-          },
-          "round_drawn_numbers": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "description": "N\u00fameros sorteados da rodada em que o pr\u00eamio foi concedido (para desfazer pr\u00eamio)"
           }
         }
       },
