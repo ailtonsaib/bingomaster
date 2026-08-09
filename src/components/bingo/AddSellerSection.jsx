@@ -55,7 +55,20 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
     return null;
   }, [valid, fromN, toN, minCard, maxCard]);
 
-  const hasError = overlapError || rangeError;
+  // Check if range contains already-sold cards (comprador já registrado)
+  const soldError = useMemo(() => {
+    if (!valid) return null;
+    const sold = cards.filter((c) => {
+      const n = c.card_number || 0;
+      return n >= fromN && n <= toN && (c.player_phone || c.player_city);
+    });
+    if (sold.length === 0) return null;
+    const nums = sold.map((c) => c.card_number).sort((a, b) => a - b);
+    const list = nums.length <= 6 ? nums.join(", ") : nums.slice(0, 6).join(", ") + "...";
+    return `Não é possível distribuir: ${sold.length} cartela(s) já vendida(s) no intervalo (${list}).`;
+  }, [valid, cards, fromN, toN]);
+
+  const hasError = overlapError || rangeError || soldError;
 
   // Find already assigned cards to this seller for this game
   const sellerCards = selectedSeller
@@ -182,6 +195,13 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
         {rangeError && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
             {rangeError}
+          </div>
+        )}
+
+        {/* Sold cards error */}
+        {soldError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            {soldError}
           </div>
         )}
       </div>
