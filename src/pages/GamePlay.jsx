@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2, Dices } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2, Dices, Undo2 } from "lucide-react";
 import { drawNumber, getCardMaxPoints } from "@/lib/bingoUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
@@ -460,6 +460,15 @@ export default function GamePlay() {
   const handleFinish = () => updateGame({ status: "finished" });
 
   const [resetting, setResetting] = useState(false);
+
+  // Desfaz a última pedra sorteada (útil quando o operador digita o número errado)
+  const handleUndoLastDraw = async () => {
+    if (!game || drawing || resetting) return;
+    const currentDrawn = game.drawn_numbers || [];
+    if (currentDrawn.length === 0) return;
+    const newDrawn = currentDrawn.slice(0, -1);
+    await updateGame({ drawn_numbers: newDrawn });
+  };
 
   // Zera apenas a rodada atual: limpa números sorteados, mantém prêmios já concedidos
   const handleClearCurrentRound = async () => {
@@ -1008,6 +1017,16 @@ export default function GamePlay() {
                         {drawing ? "Sorteando..." : allDrawn ? "Esgotado!" : "Sortear Número"}
                       </Button>
                     )}
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="gap-2 border-amber-400/50 text-amber-200 hover:bg-amber-500/20"
+                      onClick={handleUndoLastDraw}
+                      disabled={resetting || drawing || drawnNumbers.length === 0}
+                      title="Desfazer última pedra sorteada"
+                    >
+                      <Undo2 className="w-4 h-4" /> Desfazer Pedra
+                    </Button>
                     <Button
                       size="lg"
                       variant="outline"
