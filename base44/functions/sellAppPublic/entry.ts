@@ -122,38 +122,94 @@ export default async function(req) {
 
       case 'devolveUnsold': {
         // Devolve as cartelas não vendidas ao sistema: remove as distribuições
-        // do vendedor para este jogo. As cartelas vendidas por ele continuam
-        // visíveis (via seller_id) e as não vendidas voltam ao pool.
+        // do vendedor e LIMPA o seller_id das cartelas não vendidas (para que
+        // saiam da tela do vendedor e voltem ao pool de cartelas a validar).
+        // As cartelas já vendidas (com comprador) permanecem com o vendedor.
         if (!body.game_id || !body.seller_id) {
           return Response.json({ error: 'game_id e seller_id são obrigatórios' }, { status: 400 });
         }
+        const gameId = String(body.game_id);
+        const sellerId = String(body.seller_id);
         const dists = await base44.asServiceRole.entities.SellerDistribution.filter({
-          game_id: String(body.game_id),
-          seller_id: String(body.seller_id),
+          game_id: gameId,
+          seller_id: sellerId,
         });
+        if (dists.length === 0) {
+          return Response.json({ success: true, devolved: 0 });
+        }
+        const allCards = await base44.asServiceRole.entities.BingoCard.filter(
+          { game_id: gameId },
+          'card_number',
+          100000
+        );
+        const unsoldIds = [];
+        for (const d of dists) {
+          for (const c of allCards) {
+            const n = c.card_number || 0;
+            const isUnsold = !c.player_phone && !c.player_city;
+            const mine = !c.seller_id || c.seller_id === sellerId;
+            if (n >= d.range_from && n <= d.range_to && isUnsold && mine) {
+              unsoldIds.push(c.id);
+            }
+          }
+        }
+        if (unsoldIds.length > 0) {
+          await base44.asServiceRole.entities.BingoCard.bulkUpdate(
+            unsoldIds.map((id) => ({ id, seller_id: null, seller_name: null }))
+          );
+        }
         for (const d of dists) {
           await base44.asServiceRole.entities.SellerDistribution.delete(d.id);
         }
-        return Response.json({ success: true, devolved: dists.length });
+        return Response.json({ success: true, devolved: dists.length, cleared: unsoldIds.length });
       }
 
       case 'transferCards': {
-        // Transfere as distribuições do vendedor para outro vendedor.
-        // As cartelas já vendidas pelo vendedor original permanecem com ele.
+        // Transfere as distribuições e as cartelas não vendidas para outro
+        // vendedor. As cartelas já vendidas pelo vendedor original permanecem
+        // com ele (continuam visíveis via seller_id).
         if (!body.game_id || !body.seller_id || !body.to_seller_id) {
           return Response.json({ error: 'game_id, seller_id e to_seller_id são obrigatórios' }, { status: 400 });
         }
+        const gameId = String(body.game_id);
+        const sellerId = String(body.seller_id);
+        const toSellerId = String(body.to_seller_id);
+        const toSellerName = body.to_seller_name || '';
         const dists = await base44.asServiceRole.entities.SellerDistribution.filter({
-          game_id: String(body.game_id),
-          seller_id: String(body.seller_id),
+          game_id: gameId,
+          seller_id: sellerId,
         });
+        if (dists.length === 0) {
+          return Response.json({ success: true, transferred: 0 });
+        }
+        const allCards = await base44.asServiceRole.entities.BingoCard.filter(
+          { game_id: gameId },
+          'card_number',
+          100000
+        );
+        const unsoldIds = [];
+        for (const d of dists) {
+          for (const c of allCards) {
+            const n = c.card_number || 0;
+            const isUnsold = !c.player_phone && !c.player_city;
+            const mine = !c.seller_id || c.seller_id === sellerId;
+            if (n >= d.range_from && n <= d.range_to && isUnsold && mine) {
+              unsoldIds.push(c.id);
+            }
+          }
+        }
+        if (unsoldIds.length > 0) {
+          await base44.asServiceRole.entities.BingoCard.bulkUpdate(
+            unsoldIds.map((id) => ({ id, seller_id: toSellerId, seller_name: toSellerName }))
+          );
+        }
         for (const d of dists) {
           await base44.asServiceRole.entities.SellerDistribution.update(d.id, {
-            seller_id: String(body.to_seller_id),
-            seller_name: body.to_seller_name || d.seller_name,
+            seller_id: toSellerId,
+            seller_name: toSellerName || d.seller_name,
           });
         }
-        return Response.json({ success: true, transferred: dists.length });
+        return Response.json({ success: true, transferred: dists.length, moved: unsoldIds.length });
       }
 
       default:
