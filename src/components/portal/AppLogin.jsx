@@ -6,6 +6,7 @@ import { APPS, CONTACT } from "@/lib/appRegistry";
 import { setPortalUser, getPortalUser } from "@/lib/portalSession";
 import { setMechanicSession } from "@/lib/mechanicSession";
 import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
+import ForgotPasswordFlow from "@/components/portal/ForgotPasswordFlow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,9 +29,14 @@ export default function AppLogin({ appId }) {
   const [loading, setLoading] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loggedInEmail, setLoggedInEmail] = useState("");
+  const [forgotPassword, setForgotPassword] = useState(false);
 
   if (!app) return null;
   const Icon = iconMap[app.icon];
+
+  if (forgotPassword) {
+    return <ForgotPasswordFlow backendFunction="portalAuth" systemName={app.name} onBack={() => setForgotPassword(false)} />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,7 +140,7 @@ export default function AppLogin({ appId }) {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-2">
             <Label className="text-sm font-medium text-[#333333] mb-1.5 block">Senha</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7E57C2]" />
@@ -146,6 +152,12 @@ export default function AppLogin({ appId }) {
                 placeholder="••••••••"
               />
             </div>
+          </div>
+
+          <div className="mb-6 text-right">
+            <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-xs text-[#7E57C2] hover:text-[#6200EA] hover:underline">
+              Esqueceu sua senha?
+            </button>
           </div>
 
           {error && (

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import bcrypt from 'npm:bcryptjs@2.4.3';
+import { generateTempPassword, sendRecoveryEmail } from '../../shared/passwordRecovery.ts';
 
 function stripPassword(user) {
   if (!user) return null;
@@ -596,6 +597,53 @@ Deno.serve(async (req) => {
         password_hash: hash,
       });
       return Response.json({ success: true });
+    }
+
+    // ─── REQUEST PASSWORD RESET (envia senha temporária por email) ───
+    if (operation === 'requestPasswordReset') {
+      const { email } = body;
+      if (!email) return Response.json({ error: 'Email é obrigatório' }, { status: 400 });
+      if (email === 'teste@softpremier.com.br') {
+        return Response.json({ error: 'A senha do usuário de teste não pode ser recuperada' }, { status: 403 });
+      }
+      // Busca em PortalUser
+      const portalUsers = await base44.asServiceRole.entities.PortalUser.filter({ email });
+      if (portalUsers.length > 0) {
+        const user = portalUsers[0];
+        if (!user.is_active) return Response.json({ error: 'Usuário inativo. Contate o administrador.' }, { status: 403 });
+        const tempPassword = generateTempPassword();
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(tempPassword, salt);
+        await base44.asServiceRole.entities.PortalUser.update(user.id, { password_hash: hash, must_change_password: true });
+        // Sincroniza WorkshopUser (mesmo email) se existir
+        const wsUsersSync = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
+        for (const ws of wsUsersSync) {
+          await base44.asServiceRole.entities.WorkshopUser.update(ws.id, { password_hash: hash, must_change_password: true });
+        }
+        try {
+          await sendRecoveryEmail(base44, email, user.name, tempPassword, 'SoftPremier');
+        } catch (e) {
+          return Response.json({ error: 'Falha ao enviar email de recuperação' }, { status: 500 });
+        }
+        return Response.json({ success: true, message: 'Senha temporária enviada para seu email' });
+      }
+      // Busca em WorkshopUser (usuário de empresa que não tem PortalUser)
+      const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email });
+      if (wsUsers.length > 0) {
+        const wsUser = wsUsers[0];
+        if (!wsUser.is_active) return Response.json({ error: 'Usuário inativo. Contate o administrador.' }, { status: 403 });
+        const tempPassword = generateTempPassword();
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(tempPassword, salt);
+        await base44.asServiceRole.entities.WorkshopUser.update(wsUser.id, { password_hash: hash, must_change_password: true });
+        try {
+          await sendRecoveryEmail(base44, email, wsUser.name, tempPassword, 'SoftPremier Oficina');
+        } catch (e) {
+          return Response.json({ error: 'Falha ao enviar email de recuperação' }, { status: 500 });
+        }
+        return Response.json({ success: true, message: 'Senha temporária enviada para seu email' });
+      }
+      return Response.json({ error: 'Email não cadastrado no sistema' }, { status: 404 });
     }
 
     // ─── CHANGE PASSWORD (self) ───

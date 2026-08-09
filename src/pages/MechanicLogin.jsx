@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wrench, Loader2, Lock, Building2, ArrowLeft, AlertCircle } from "lucide-react";
 import { setMechanicSession } from "@/lib/mechanicSession";
+import ForgotPasswordFlow from "@/components/portal/ForgotPasswordFlow";
 
 export default function MechanicLogin() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function MechanicLogin() {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotPassword, setForgotPassword] = useState(false);
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -91,6 +93,10 @@ export default function MechanicLogin() {
     setError("");
   };
 
+  if (forgotPassword) {
+    return <ForgotPasswordFlow backendFunction="mechanicAuth" systemName="Painel do Mecânico" onBack={() => setForgotPassword(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
@@ -120,6 +126,9 @@ export default function MechanicLogin() {
               <Button type="submit" disabled={loading} className="w-full text-white" style={{ backgroundColor: "#2563EB" }}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continuar"}
               </Button>
+              <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-xs text-blue-600 hover:underline text-center w-full">
+                Esqueceu sua senha?
+              </button>
             </>
           )}
 

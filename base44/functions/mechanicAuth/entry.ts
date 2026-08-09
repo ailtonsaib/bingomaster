@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { generateTempPassword, sendRecoveryEmail } from '../../shared/passwordRecovery.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -74,6 +75,46 @@ Deno.serve(async (req) => {
         user_email: mech.user_email,
         specialty: mech.specialty,
       });
+    }
+
+    // ─── REQUEST PASSWORD RESET (envia senha temporária por email) ───
+    if (operation === 'requestPasswordReset') {
+      const { email } = body;
+      if (!email) return Response.json({ error: 'Email é obrigatório' }, { status: 400 });
+      const mechanics = await base44.asServiceRole.entities.DiagnosticMechanic.filter({ email: email.trim() });
+      if (mechanics.length === 0) return Response.json({ error: 'Email não encontrado' }, { status: 404 });
+      const mech = mechanics.find(m => m.is_active !== false) || mechanics[0];
+      if (mech.is_active === false) return Response.json({ error: 'Mecânico inativo' }, { status: 403 });
+      const tempPassword = generateTempPassword();
+      await base44.asServiceRole.entities.DiagnosticMechanic.update(mech.id, { password: tempPassword });
+      try {
+        await sendRecoveryEmail(base44, email, mech.name, tempPassword, 'Painel do Mecânico - SoftPremier');
+      } catch (e) {
+        return Response.json({ error: 'Falha ao enviar email de recuperação' }, { status: 500 });
+      }
+      return Response.json({ success: true, message: 'Senha temporária enviada para seu email' });
+    }
+
+    // ─── CHANGE PASSWORD (self) ───
+    if (operation === 'changePassword') {
+      const { email, current_password, new_password } = body;
+      if (!email || !current_password || !new_password) {
+        return Response.json({ error: 'Email, senha atual e nova senha são obrigatórios' }, { status: 400 });
+      }
+      if (new_password.length < 6) {
+        return Response.json({ error: 'A nova senha deve ter ao menos 6 caracteres' }, { status: 400 });
+      }
+      const mechanics = await base44.asServiceRole.entities.DiagnosticMechanic.filter({ email: email.trim() });
+      if (mechanics.length === 0) return Response.json({ error: 'Email não encontrado' }, { status: 404 });
+      const mech = mechanics[0];
+      if (mech.password !== current_password) {
+        return Response.json({ error: 'Senha atual incorreta' }, { status: 401 });
+      }
+      if (current_password === new_password) {
+        return Response.json({ error: 'A nova senha deve ser diferente da atual' }, { status: 400 });
+      }
+      await base44.asServiceRole.entities.DiagnosticMechanic.update(mech.id, { password: new_password });
+      return Response.json({ success: true });
     }
 
     return Response.json({ error: 'Operação inválida' }, { status: 400 });

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, Loader2, AlertCircle, Info } from "lucide-react";
 import { setPortalUser } from "@/lib/portalSession";
+import ForgotPasswordFlow from "@/components/portal/ForgotPasswordFlow";
 
 export default function PortalLogin() {
   const [email, setEmail] = useState("teste@softpremier.com.br");
@@ -12,6 +13,7 @@ export default function PortalLogin() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
 
   const validate = () => {
     const errors = {};
@@ -45,6 +47,10 @@ export default function PortalLogin() {
     }
     setLoading(false);
   };
+
+  if (forgotPassword) {
+    return <ForgotPasswordFlow backendFunction="portalAuth" systemName="SoftPremier" onBack={() => setForgotPassword(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -112,6 +118,11 @@ export default function PortalLogin() {
                 <span className="text-xs text-[#333333]">{fieldErrors.password}</span>
               </div>
             )}
+            <div className="text-right mt-1.5">
+              <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-xs text-[#7E57C2] hover:text-[#6200EA] hover:underline">
+                Esqueceu sua senha?
+              </button>
+            </div>
           </div>
 
           {/* General error */}
