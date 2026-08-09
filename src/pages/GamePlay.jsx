@@ -567,16 +567,26 @@ export default function GamePlay() {
           });
         });
       } else {
-        for (const card of affectedCards) {
+        const bulkPayload = affectedCards.map((card) => {
           const remaining = (card.won_prizes || []).filter(wp => wp.prize_index < prizeIndex);
-          const newIsWinner = remaining.length > 0;
-          try {
-            await base44.entities.BingoCard.update(card.id, { is_winner: newIsWinner, won_prizes: remaining });
-          } catch (e) {
-            // falha silenciosa — optimistic update já aplicado
+          return { id: card.id, is_winner: remaining.length > 0, won_prizes: remaining };
+        });
+        // Atualização otimista no cache — reflete imediatamente e evita
+        // refetch de TODAS as cartelas (pesado em jogos grandes)
+        queryClient.setQueryData(["cards", gameId], (old) => {
+          const arr = Array.isArray(old) ? old : [];
+          return arr.map((c) => {
+            const upd = bulkPayload.find((p) => p.id === c.id);
+            return upd ? { ...c, is_winner: upd.is_winner, won_prizes: upd.won_prizes } : c;
+          });
+        });
+        try {
+          if (bulkPayload.length > 0) {
+            await base44.entities.BingoCard.bulkUpdate(bulkPayload);
           }
+        } catch (e) {
+          // falha silenciosa — optimistic update já aplicado
         }
-        queryClient.invalidateQueries({ queryKey: ["cards", gameId] });
       }
     } catch (e) {
       // erro silencioso
@@ -725,7 +735,7 @@ export default function GamePlay() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-950 text-white">
       {resetting && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+        <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center">
           <div className="bg-white/10 rounded-2xl p-8 flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
             <p className="text-white font-semibold text-sm">Processando...</p>
