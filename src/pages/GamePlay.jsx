@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2, Dices, Undo2 } from "lucide-react";
+import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2, Dices, Undo2, Lock } from "lucide-react";
 import { drawNumber, getCardMaxPoints } from "@/lib/bingoUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
@@ -142,6 +142,7 @@ export default function GamePlay() {
 
   const updateGame = useCallback(async (updates) => {
     if (!game) return;
+    if (game.is_finalized) return; // Evento finalizado — bloqueado para alterações
     // Cancela refetches pendentes para evitar que dados stale de um
     // update anterior (ex: sorteio) sobrescrevam o optimistic update
     // atual (ex: zerar números ao conceder prêmio)
@@ -459,6 +460,9 @@ export default function GamePlay() {
 
   const handleFinish = () => updateGame({ status: "finished" });
 
+  // Finaliza o evento definitivamente — bloqueia sorteio, prêmios e reinício
+  const handleFinalizeEvent = () => updateGame({ status: "finished", is_finalized: true });
+
   const [resetting, setResetting] = useState(false);
 
   // Desfaz a última pedra sorteada (útil quando o operador digita o número errado)
@@ -650,6 +654,7 @@ export default function GamePlay() {
   const isWaiting = game.status === "waiting";
   const isPlaying = game.status === "in_progress";
   const isFinished = game.status === "finished";
+  const isFinalized = game.is_finalized === true;
   const allDrawn = drawnNumbers.length >= maxNumber;
   const awardedPrizesCount = (game.prizes || []).filter(p => p.awarded).length;
   const remainingPrizes = (game.prizes || []).filter(p => !p.awarded).length;
@@ -778,22 +783,22 @@ export default function GamePlay() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Finish event dialog */}
+      {/* Finalizar evento dialog */}
       <AlertDialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-heading">Encerrar Evento?</AlertDialogTitle>
+            <AlertDialogTitle className="font-heading">Finalizar Evento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Todos os prêmios foram sorteados. Deseja <strong>encerrar oficialmente o evento</strong>? O jogo será marcado como finalizado.
+              Ao finalizar, o evento será <strong>bloqueado permanentemente</strong>. Não será possível sortear números, conceder prêmios, reiniciar ou alterar qualquer dado — restarão apenas os históricos de sorteio, vendas e financeiro. Esta ação <strong>não pode ser desfeita</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-emerald-500 hover:bg-emerald-600"
-              onClick={() => { handleFinish(); setShowFinishDialog(false); }}
+              onClick={() => { handleFinalizeEvent(); setShowFinishDialog(false); }}
             >
-              Sim, Encerrar Evento
+              Sim, Finalizar Definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -846,19 +851,22 @@ export default function GamePlay() {
               size="sm"
               onClick={() => setShowLuckySpin(true)}
               className="gap-1.5 border-amber-400/40 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30"
+              disabled={isFinalized}
             >
               <Dices className="w-4 h-4" /> Giro da Sorte
             </Button>
             <Badge
               className={
-                isPlaying
-                  ? "bg-emerald-500 text-white border-0"
-                  : isFinished
-                    ? "bg-white/20 text-white border-0"
-                    : "bg-amber-500 text-white border-0"
+                isFinalized
+                  ? "bg-emerald-600 text-white border-0"
+                  : isPlaying
+                    ? "bg-emerald-500 text-white border-0"
+                    : isFinished
+                      ? "bg-white/20 text-white border-0"
+                      : "bg-amber-500 text-white border-0"
               }
             >
-              {isPlaying ? "● Em Andamento" : isFinished ? "Finalizado" : "Aguardando"}
+              {isFinalized ? <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Finalizado</span> : isPlaying ? "● Em Andamento" : isFinished ? "Finalizado" : "Aguardando"}
             </Badge>
           </div>
         </div>
@@ -1036,21 +1044,34 @@ export default function GamePlay() {
                     >
                       <XCircle className="w-4 h-4" /> Zerar Sorteio
                     </Button>
-                    {allPrizesAwarded && (
-                      <Button
-                        size="lg"
-                        className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white border-0 font-bold"
-                        onClick={() => setShowFinishDialog(true)}
-                      >
-                        <CheckCircle2 className="w-5 h-5" /> Encerrar Evento
-                      </Button>
-                    )}
+                    <Button
+                      size="lg"
+                      className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white border-0 font-bold"
+                      onClick={() => setShowFinishDialog(true)}
+                    >
+                      <Lock className="w-5 h-5" /> Finalizar Evento
+                    </Button>
                   </>
                 )}
-                {isFinished && (
-                  <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={() => setShowRestartDialog(true)}>
-                    <RotateCcw className="w-4 h-4" /> Reiniciar Sorteio
-                  </Button>
+                {isFinished && !isFinalized && (
+                  <>
+                    <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10" onClick={() => setShowRestartDialog(true)}>
+                      <RotateCcw className="w-4 h-4" /> Reiniciar Sorteio
+                    </Button>
+                    <Button
+                      size="lg"
+                      className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white border-0 font-bold"
+                      onClick={() => setShowFinishDialog(true)}
+                    >
+                      <Lock className="w-5 h-5" /> Finalizar Evento
+                    </Button>
+                  </>
+                )}
+                {isFinished && isFinalized && (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200">
+                    <Lock className="w-5 h-5" />
+                    <span className="font-bold">Evento Finalizado — somente leitura</span>
+                  </div>
                 )}
               </div>
 
@@ -1061,7 +1082,9 @@ export default function GamePlay() {
               )}
               {isFinished && (
                 <p className="text-violet-300 text-sm text-center">
-                  Jogo encerrado. {drawnNumbers.length} números foram sorteados.
+                  {isFinalized
+                    ? "Evento finalizado. Consulte os históricos de sorteio, vendas e financeiro."
+                    : `Jogo encerrado. ${drawnNumbers.length} números foram sorteados.`}
                 </p>
               )}
               

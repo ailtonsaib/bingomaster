@@ -16,6 +16,11 @@
       "default": "waiting",
       "description": "Status do jogo"
     },
+    "is_finalized": {
+      "type": "boolean",
+      "default": false,
+      "description": "Evento finalizado definitivamente \u2014 bloqueia qualquer altera\u00e7\u00e3o (sorteio, pr\u00eamios, rein\u00edcio). Permanece apenas como hist\u00f3rico."
+    },
     "drawn_numbers": {
       "type": "array",
       "items": {
