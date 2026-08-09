@@ -7,8 +7,8 @@ import { Mail, Lock, Loader2, AlertCircle, Info } from "lucide-react";
 import { setPortalUser } from "@/lib/portalSession";
 
 export default function PortalLogin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("teste@softpremier.com.br");
+  const [password, setPassword] = useState("teste123");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);

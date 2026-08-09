@@ -9,7 +9,7 @@ import ChangePasswordModal from "@/components/portal/ChangePasswordModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Loader2, AlertCircle, ArrowLeft, Phone, MessageCircle, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Loader2, AlertCircle, ArrowLeft, Phone, MessageCircle, ShieldCheck, Info } from "lucide-react";
 
 const iconMap = {
   Grid3x3: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>,
@@ -22,8 +22,8 @@ const iconMap = {
 export default function AppLogin({ appId }) {
   const navigate = useNavigate();
   const app = APPS.find((a) => a.id === appId);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("teste@softpremier.com.br");
+  const [password, setPassword] = useState("teste123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(false);
@@ -159,6 +159,19 @@ export default function AppLogin({ appId }) {
             {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Entrando...</>) : "Entrar"}
           </Button>
         </form>
+
+        {/* Test credentials info */}
+        <div className="mt-4 p-4 rounded-xl bg-white/80 border border-[#7E57C2]/20 backdrop-blur-sm">
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 text-[#7E57C2] flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-[#71717A] space-y-1">
+              <p className="font-semibold text-[#333333]">Credenciais de teste (plano free):</p>
+              <p>Email: <span className="font-mono text-[#7E57C2]">teste@softpremier.com.br</span></p>
+              <p>Senha: <span className="font-mono text-[#7E57C2]">teste123</span></p>
+              <p className="text-[#9CA3AF] mt-1">Todos os aplicativos habilitados no plano gratuito.</p>
+            </div>
+          </div>
+        </div>
 
         {/* Contact support */}
         <div className="mt-4 p-4 rounded-xl bg-white/80 border border-gray-200 backdrop-blur-sm">
