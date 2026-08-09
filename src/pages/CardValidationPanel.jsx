@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,32 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const PAGE_SIZE = 500;
+
+// Parse search query: supports single numbers, comma-separated (1,5,10) and ranges (1-5)
+const parseNumberQuery = (q) => {
+  const trimmed = (q || "").trim();
+  if (!trimmed) return null;
+  // Se contém letras, não é busca numérica
+  if (/[a-zA-Zà-úÀ-Ú]/.test(trimmed)) return null;
+  const parts = trimmed.split(/[,\s]+/).map(p => p.trim()).filter(Boolean);
+  const numbers = new Set();
+  let parsedAny = false;
+  for (const part of parts) {
+    const rangeMatch = part.match(/^(\d+)\s*[-~aà]\s*(\d+)$/i);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1]);
+      const end = parseInt(rangeMatch[2]);
+      const lo = Math.min(start, end);
+      const hi = Math.max(start, end);
+      for (let n = lo; n <= hi; n++) numbers.add(n);
+      parsedAny = true;
+    } else {
+      const num = parseInt(part);
+      if (!isNaN(num)) { numbers.add(num); parsedAny = true; }
+    }
+  }
+  return parsedAny ? numbers : null;
+};
 
 export default function CardValidationPanel() {
   const [selectedGame, setSelectedGame] = useState(null);
@@ -67,6 +93,9 @@ export default function CardValidationPanel() {
     return { minNum: min === Infinity ? 1 : min, maxNum: max };
   }, [allCards]);
 
+  // Números destacados pela busca (para a grade visual)
+  const searchNumbers = useMemo(() => parseNumberQuery(search), [search]);
+
   // Filtered list based on search + filter mode (for the detailed list view)
   const filteredCards = useMemo(() => {
     let result = allCards;
@@ -74,12 +103,17 @@ export default function CardValidationPanel() {
     if (filter === "pending") result = pendingCards;
 
     if (!search) return result;
+    // Busca por sequência de números
+    if (searchNumbers) {
+      return result.filter(c => c.card_number != null && searchNumbers.has(c.card_number));
+    }
+    // Busca textual por nome
     const q = search.toLowerCase();
     return result.filter(c =>
       String(c.card_number).includes(q) ||
       c.player_name?.toLowerCase().includes(q)
     );
-  }, [allCards, validatedCards, pendingCards, filter, search]);
+  }, [allCards, validatedCards, pendingCards, filter, search, searchNumbers]);
 
   // Paginated grid view
   const totalNumbers = maxNum - minNum + 1;
@@ -90,6 +124,17 @@ export default function CardValidationPanel() {
 
   const gridNumbers = [];
   for (let n = startNum; n <= endNum; n++) gridNumbers.push(n);
+
+  // Auto-navega para a página da primeira cartela encontrada na busca
+  useEffect(() => {
+    if (!searchNumbers || searchNumbers.size === 0) return;
+    const sorted = [...searchNumbers].sort((a, b) => a - b);
+    const first = sorted[0];
+    if (first >= minNum && first <= maxNum) {
+      const targetPage = Math.floor((first - minNum) / PAGE_SIZE);
+      if (targetPage !== currentPage) setPage(targetPage);
+    }
+  }, [searchNumbers, minNum, maxNum, currentPage]);
 
   const getCardStatus = (num) => {
     const card = cardMap.get(num);
@@ -234,6 +279,25 @@ export default function CardValidationPanel() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Search by number or sequence */}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-transparent pl-9 px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    placeholder="Localizar cartela: nº, sequência (ex: 1,5,10) ou faixa (ex: 1-50)..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  {search && (
+                    <button
+                      onClick={() => setSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
                 {/* Legend + Grid Filter */}
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div className="flex flex-wrap gap-3 text-xs">
@@ -292,6 +356,7 @@ export default function CardValidationPanel() {
                         filter === "all" ||
                         (filter === "validated" && status === "validated") ||
                         (filter === "pending" && status === "pending");
+                      const isHighlighted = searchNumbers?.has(num);
                       const cellClass =
                         status === "validated"
                           ? "bg-green-500 text-white border-green-600 hover:bg-green-600"
@@ -303,7 +368,7 @@ export default function CardValidationPanel() {
                           key={num}
                           className={`aspect-square rounded border flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all cursor-default ${cellClass} ${
                             matchesFilter ? "opacity-100" : "opacity-20"
-                          }`}
+                          } ${isHighlighted ? "ring-2 ring-blue-500 ring-offset-1 scale-110 z-10" : ""}`}
                           title={`Cartela ${num} — ${status === "validated" ? "Validada" : status === "pending" ? "Pendente" : "Não encontrada"}`}
                         >
                           {num}
