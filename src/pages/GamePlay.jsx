@@ -246,11 +246,13 @@ export default function GamePlay() {
     setDrawing(false);
   };
 
-  const handleManualDraw = () => {
+  const handleManualDraw = async () => {
     if (!manualNumber.trim()) return;
-    handleDraw(manualNumber);
+    const num = manualNumber;
     setManualNumber("");
-    setTimeout(() => manualInputRef.current?.focus(), 100);
+    await handleDraw(num);
+    // Devolve o foco ao input só após o sorteio concluir e o input reabilitar
+    requestAnimationFrame(() => manualInputRef.current?.focus());
   };
 
   // Keep handleDraw ref up-to-date to avoid stale closure in timers
