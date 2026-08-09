@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, Play, Square, RotateCcw, Users, Trophy, Shuffle, Monitor, Timer, Keyboard, Sparkles, Maximize, History, XCircle, CheckCircle2, Dices, Undo2, Lock } from "lucide-react";
 import { drawNumber, getCardMaxPoints } from "@/lib/bingoUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { cacheGameData, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
+import { cacheGame, cacheCards, getCachedGameData, queuePendingUpdate, getPendingUpdates, clearPendingUpdates, queuePendingCardUpdate, getPendingCardUpdates, clearPendingCardUpdates } from "@/lib/offlineGameCache";
 import LastNumberDisplay from "@/components/bingo/LastNumberDisplay";
 import OfflineBanner from "@/components/bingo/OfflineBanner";
 import DrawnNumbersBoard from "@/components/bingo/DrawnNumbersBoard";
@@ -89,17 +89,33 @@ export default function GamePlay() {
     }
   }, [game?.card_filter]);
 
-  // Cacheia dados do jogo para funcionamento offline — debounce para não
-  // bloquear o thread a cada sorteio (JSON.stringify de 100+ cartelas é pesado)
-  const cacheTimerRef = useRef(null);
+  // Cache do JOGO (payload pequeno) — a cada sorteio/alteração. Escrita leve.
+  const gameCacheTimerRef = useRef(null);
   useEffect(() => {
-    if (!game || !cards) return;
-    if (cacheTimerRef.current) clearTimeout(cacheTimerRef.current);
-    cacheTimerRef.current = setTimeout(() => {
-      cacheGameData(gameId, game, cards);
-    }, 1500);
-    return () => { if (cacheTimerRef.current) clearTimeout(cacheTimerRef.current); };
-  }, [game, cards, gameId]);
+    if (!game) return;
+    if (gameCacheTimerRef.current) clearTimeout(gameCacheTimerRef.current);
+    gameCacheTimerRef.current = setTimeout(() => {
+      cacheGame(gameId, game);
+    }, 800);
+    return () => { if (gameCacheTimerRef.current) clearTimeout(gameCacheTimerRef.current); };
+  }, [game, gameId]);
+
+  // Cache das CARTELAS (payload grande) — apenas quando as cartelas mudam,
+  // com debounce maior e deferido para idle para não travar a interação.
+  const cardsCacheTimerRef = useRef(null);
+  useEffect(() => {
+    if (!cards) return;
+    if (cardsCacheTimerRef.current) clearTimeout(cardsCacheTimerRef.current);
+    cardsCacheTimerRef.current = setTimeout(() => {
+      const run = () => cacheCards(gameId, cards);
+      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(run, { timeout: 3000 });
+      } else {
+        run();
+      }
+    }, 2500);
+    return () => { if (cardsCacheTimerRef.current) clearTimeout(cardsCacheTimerRef.current); };
+  }, [cards, gameId]);
 
   // Sincroniza atualizações pendentes quando volta online
   useEffect(() => {

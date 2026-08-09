@@ -1,12 +1,15 @@
 // Cache local para dados do jogo (permite funcionamento offline)
 const GAME_CACHE_PREFIX = 'softpremier_game_';
+const GAME_META_SUFFIX = '_meta';
+const GAME_CARDS_SUFFIX = '_cards';
 const PENDING_UPDATES_KEY = 'softpremier_pending_updates';
 
-export function cacheGameData(gameId, game, cards) {
+// Cacheia apenas o jogo (payload pequeno) — chamado a cada sorteio/alteração do jogo.
+// Escrita leve, não trava a thread.
+export function cacheGame(gameId, game) {
   try {
-    localStorage.setItem(GAME_CACHE_PREFIX + gameId, JSON.stringify({
+    localStorage.setItem(GAME_CACHE_PREFIX + gameId + GAME_META_SUFFIX, JSON.stringify({
       game,
-      cards,
       cachedAt: Date.now(),
     }));
   } catch (e) {
@@ -14,11 +17,32 @@ export function cacheGameData(gameId, game, cards) {
   }
 }
 
+// Cacheia as cartelas (payload grande) — chamado apenas quando as cartelas mudam.
+// O chamador deve deferir para idle (requestIdleCallback) para evitar travar a UI.
+export function cacheCards(gameId, cards) {
+  try {
+    localStorage.setItem(GAME_CACHE_PREFIX + gameId + GAME_CARDS_SUFFIX, JSON.stringify(cards));
+  } catch (e) {
+    // ignora
+  }
+}
+
 export function getCachedGameData(gameId) {
   try {
-    const raw = localStorage.getItem(GAME_CACHE_PREFIX + gameId);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    const metaRaw = localStorage.getItem(GAME_CACHE_PREFIX + gameId + GAME_META_SUFFIX);
+    // Compatibilidade: se não houver meta nova, tenta o formato antigo unificado
+    if (!metaRaw) {
+      const legacy = localStorage.getItem(GAME_CACHE_PREFIX + gameId);
+      if (!legacy) return null;
+      return JSON.parse(legacy);
+    }
+    const meta = JSON.parse(metaRaw);
+    const cardsRaw = localStorage.getItem(GAME_CACHE_PREFIX + gameId + GAME_CARDS_SUFFIX);
+    return {
+      game: meta.game,
+      cards: cardsRaw ? JSON.parse(cardsRaw) : null,
+      cachedAt: meta.cachedAt,
+    };
   } catch (e) {
     return null;
   }
@@ -89,6 +113,9 @@ export function clearPendingUpdates() {
 
 export function clearGameCache(gameId) {
   try {
+    localStorage.removeItem(GAME_CACHE_PREFIX + gameId + GAME_META_SUFFIX);
+    localStorage.removeItem(GAME_CACHE_PREFIX + gameId + GAME_CARDS_SUFFIX);
+    // Limpa também o formato antigo unificado (compatibilidade)
     localStorage.removeItem(GAME_CACHE_PREFIX + gameId);
   } catch (e) {
     // ignora
