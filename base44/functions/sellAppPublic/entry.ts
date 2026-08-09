@@ -120,6 +120,42 @@ export default async function(req) {
         return Response.json({ success: true });
       }
 
+      case 'devolveUnsold': {
+        // Devolve as cartelas não vendidas ao sistema: remove as distribuições
+        // do vendedor para este jogo. As cartelas vendidas por ele continuam
+        // visíveis (via seller_id) e as não vendidas voltam ao pool.
+        if (!body.game_id || !body.seller_id) {
+          return Response.json({ error: 'game_id e seller_id são obrigatórios' }, { status: 400 });
+        }
+        const dists = await base44.asServiceRole.entities.SellerDistribution.filter({
+          game_id: String(body.game_id),
+          seller_id: String(body.seller_id),
+        });
+        for (const d of dists) {
+          await base44.asServiceRole.entities.SellerDistribution.delete(d.id);
+        }
+        return Response.json({ success: true, devolved: dists.length });
+      }
+
+      case 'transferCards': {
+        // Transfere as distribuições do vendedor para outro vendedor.
+        // As cartelas já vendidas pelo vendedor original permanecem com ele.
+        if (!body.game_id || !body.seller_id || !body.to_seller_id) {
+          return Response.json({ error: 'game_id, seller_id e to_seller_id são obrigatórios' }, { status: 400 });
+        }
+        const dists = await base44.asServiceRole.entities.SellerDistribution.filter({
+          game_id: String(body.game_id),
+          seller_id: String(body.seller_id),
+        });
+        for (const d of dists) {
+          await base44.asServiceRole.entities.SellerDistribution.update(d.id, {
+            seller_id: String(body.to_seller_id),
+            seller_name: body.to_seller_name || d.seller_name,
+          });
+        }
+        return Response.json({ success: true, transferred: dists.length });
+      }
+
       default:
         return Response.json({ error: 'Ação inválida' }, { status: 400 });
     }

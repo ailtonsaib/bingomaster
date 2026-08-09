@@ -10,7 +10,7 @@ import {
   CheckCircle2, ShoppingCart, User, Phone, MapPin,
   ChevronRight, ArrowLeft, Search, TicketCheck, X,
   ChevronDown, UserCheck, Hash, Camera, Trash2, Loader2, LogOut, MessageCircle,
-  Clock, Paperclip, BadgeCheck
+  Clock, Paperclip, BadgeCheck, Undo2
 } from "lucide-react";
 
 // --- Step 1: Seller identification ---
@@ -295,6 +295,12 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [receiptFileName, setReceiptFileName] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+  const [transferPhone, setTransferPhone] = useState("");
+  const [transferError, setTransferError] = useState("");
+  const [transferNotFound, setTransferNotFound] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [manageMsg, setManageMsg] = useState(null);
 
   const storageKey = `last_card_count_${game.id}_${seller.id || seller.name}`;
 
@@ -328,36 +334,47 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     setNewCardsCount(0);
   };
 
-  // Apply range filter: use distributions if available, else cardRange param
+  // Distribuições efetivas: SellerDistribution ou intervalo do link (URL).
+  // Sem distribuição → o vendedor não vê nenhuma cartela.
+  const effectiveDistributions = distributions.length > 0
+    ? distributions
+    : (cardRange?.from || cardRange?.to)
+      ? [{ range_from: cardRange.from, range_to: cardRange.to }]
+      : [];
+
+  const inDistribution = (n) =>
+    effectiveDistributions.some((d) => n >= (d.range_from || 0) && n <= (d.range_to || Infinity));
+
+  // "Não vendida" = sem comprador. Mostra apenas cartelas vendidas por mim
+  // OU cartelas não vendidas dentro da minha distribuição. Cartelas vendidas
+  // por outro vendedor nunca aparecem (mesmo que dentro do meu intervalo).
+  const isUnsold = (c) => !c.player_phone && !c.player_city;
+
   const rangeCards = cards
     .filter((c) => {
-      const n = c.card_number || 0;
-      // If seller has distributions for this game, use them
-      if (distributions.length > 0) {
-        return distributions.some((d) => n >= d.range_from && n <= d.range_to);
-      }
-      // Fallback to manually provided cardRange
-      if (!cardRange?.from && !cardRange?.to) return true;
-      if (cardRange.from && n < cardRange.from) return false;
-      if (cardRange.to && n > cardRange.to) return false;
-      return true;
+      if (c.seller_id && c.seller_id === seller.id) return true;   // vendida por mim
+      if (c.seller_id && c.seller_id !== seller.id) return false;  // vendida por outro
+      return inDistribution(c.card_number || 0);                   // não vendida na minha distribuição
     })
-    .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
+    .sort((a, b) => {
+      const aSold = isUnsold(a) ? 0 : 1;
+      const bSold = isUnsold(b) ? 0 : 1;
+      if (aSold !== bSold) return aSold - bSold; // não vendidas primeiro
+      return (a.card_number || 0) - (b.card_number || 0); // ordem numérica dentro do grupo
+    });
 
-  const available = rangeCards.filter((c) => !c.player_phone && !c.player_city);
-  const pending = rangeCards.filter((c) => (c.player_phone || c.player_city) && c.payment_status === "pending");
-  const sold = rangeCards.filter((c) => (c.player_phone || c.player_city) && c.payment_status !== "pending");
+  const available = rangeCards.filter(isUnsold);
+  const pending = rangeCards.filter((c) => !isUnsold(c) && c.payment_status === "pending");
+  const sold = rangeCards.filter((c) => !isUnsold(c) && c.payment_status !== "pending");
 
-  const filtered = rangeCards
-    .filter((c) => {
-      const q = search.toLowerCase();
-      return (
-        String(c.card_number).includes(q) ||
-        c.player_name?.toLowerCase().includes(q) ||
-        c.player_phone?.includes(q)
-      );
-    })
-    .sort((a, b) => (a.card_number || 0) - (b.card_number || 0));
+  const filtered = rangeCards.filter((c) => {
+    const q = search.toLowerCase();
+    return (
+      String(c.card_number).includes(q) ||
+      c.player_name?.toLowerCase().includes(q) ||
+      c.player_phone?.includes(q)
+    );
+  });
 
   const openCard = (card) => {
     setSelectedCard(card);
@@ -468,6 +485,62 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
     }
   };
 
+  // --- Gerenciar não vendidas: devolver ao sistema ou transferir para outro vendedor ---
+  const handleDevolve = async () => {
+    setManaging(true);
+    setTransferError("");
+    try {
+      await base44.functions.invoke("sellAppPublic", {
+        action: "devolveUnsold",
+        game_id: String(game.id),
+        seller_id: String(seller.id),
+      });
+      queryClient.invalidateQueries({ queryKey: ["sell-distributions", game.id, seller.id] });
+      queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
+      setShowManage(false);
+      setTransferNotFound(false);
+      setTransferPhone("");
+      setManageMsg("Cartelas não vendidas devolvidas ao sistema.");
+      setTimeout(() => setManageMsg(null), 6000);
+    } catch (e) {
+      setTransferError("Erro ao devolver. Tente novamente.");
+    }
+    setManaging(false);
+  };
+
+  const handleTransfer = async () => {
+    const phoneDigits = transferPhone.replace(/\D/g, "");
+    if (!phoneDigits) { setTransferError("Informe o telefone do vendedor."); return; }
+    setManaging(true);
+    setTransferError("");
+    try {
+      const res = await base44.functions.invoke("sellAppPublic", { action: "validateSeller", phone: phoneDigits });
+      const target = res.data.seller;
+      if (!target) {
+        setTransferNotFound(true);
+        setManaging(false);
+        return;
+      }
+      await base44.functions.invoke("sellAppPublic", {
+        action: "transferCards",
+        game_id: String(game.id),
+        seller_id: String(seller.id),
+        to_seller_id: String(target.id),
+        to_seller_name: target.name,
+      });
+      queryClient.invalidateQueries({ queryKey: ["sell-distributions", game.id, seller.id] });
+      queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
+      setShowManage(false);
+      setTransferNotFound(false);
+      setTransferPhone("");
+      setManageMsg(`Cartelas não vendidas transferidas para ${target.name}.`);
+      setTimeout(() => setManageMsg(null), 6000);
+    } catch (e) {
+      setTransferError("Erro ao transferir. Tente novamente.");
+    }
+    setManaging(false);
+  };
+
   const rangeLabel = cardRange?.from || cardRange?.to
     ? `${String(cardRange.from || "").padStart(4, "0")}–${String(cardRange.to || "").padStart(4, "0")}`
     : null;
@@ -498,6 +571,14 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
           <span>•</span>
           <span>{available.length} disponíveis</span>
         </div>
+        {available.length > 0 && (
+          <button
+            onClick={() => { setShowManage(true); setTransferNotFound(false); setTransferError(""); setTransferPhone(""); }}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 transition-colors"
+          >
+            <Undo2 className="w-3.5 h-3.5" /> Devolver / Transferir não vendidas
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -598,15 +679,15 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
               <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
             ))}
           </div>
-        ) : rangeCards.length === 0 && (cardRange?.from || cardRange?.to) ? (
+        ) : rangeCards.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-            <div className="text-4xl">🔍</div>
-            <p className="font-semibold text-foreground">Nenhuma cartela neste intervalo</p>
+            <div className="text-4xl">📦</div>
+            <p className="font-semibold text-foreground">Nenhuma cartela distribuída para você</p>
             <p className="text-sm text-muted-foreground max-w-xs">
-              O intervalo {String(cardRange.from || "").padStart(4,"0")}–{String(cardRange.to || "").padStart(4,"0")} não tem cartelas cadastradas.
+              Procure o organizador para receber sua distribuição de cartelas.
             </p>
             <Button variant="outline" className="mt-2" onClick={onBack}>
-              Alterar intervalo
+              Voltar
             </Button>
           </div>
         ) : (
@@ -787,6 +868,85 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
         </div>
       )}
 
+      {/* Toast de gestão */}
+      {manageMsg && (
+        <div className="mx-4 mt-3 bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2 text-green-700 text-sm">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> {manageMsg}
+        </div>
+      )}
+
+      {/* Modal: Devolver / Transferir não vendidas */}
+      {showManage && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => { if (!managing) { setShowManage(false); setTransferNotFound(false); } }}>
+          <div className="bg-background rounded-t-2xl w-full max-w-md p-5 pb-10 space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg font-heading">Gerenciar Não Vendidas</h2>
+              <button onClick={() => { if (!managing) { setShowManage(false); setTransferNotFound(false); } }} className="text-muted-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Você tem <strong className="text-foreground">{available.length} cartela(s) não vendida(s)</strong> na sua distribuição.
+            </p>
+
+            {!transferNotFound ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  onClick={handleDevolve}
+                  disabled={managing || available.length === 0}
+                >
+                  {managing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />} Devolver não vendidas ao sistema
+                </Button>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Transferir para outro vendedor (telefone)</Label>
+                  <Input
+                    className="h-12 text-base"
+                    placeholder="(00) 00000-0000"
+                    value={transferPhone}
+                    onChange={(e) => { setTransferPhone(maskPhone(e.target.value)); setTransferError(""); }}
+                    inputMode="numeric"
+                  />
+                  <Button
+                    className="w-full h-12 gap-2"
+                    onClick={handleTransfer}
+                    disabled={managing || available.length === 0 || !transferPhone.replace(/\D/g, "")}
+                  >
+                    {managing ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />} Transferir não vendidas
+                  </Button>
+                </div>
+                {transferError && <p className="text-sm text-destructive">{transferError}</p>}
+              </>
+            ) : (
+              <>
+                <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm text-amber-800">
+                  Telefone não cadastrado no sistema. Deseja <strong>devolver</strong> as cartelas não vendidas ao sistema?
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-12"
+                    onClick={() => { setTransferNotFound(false); setTransferPhone(""); setTransferError(""); }}
+                    disabled={managing}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 gap-2"
+                    onClick={handleDevolve}
+                    disabled={managing}
+                  >
+                    {managing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />} Sim, devolver
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
@@ -847,14 +1007,6 @@ export default function SellApp() {
   const [game, setGame] = useState(null);
   const resolvedGame = game || (urlGameId ? preloadedGame : null);
 
-  // Check if seller has distributions assigned (skip range step if yes)
-  const { data: sellerDistributions = [] } = useQuery({
-    queryKey: ["seller-dists", seller?.id, resolvedGame?.id],
-    queryFn: () => base44.functions.invoke("sellAppPublic", { action: "getDistributions", game_id: String(resolvedGame.id), seller_id: String(seller.id) }).then(r => r.data.distributions || []),
-    enabled: !!seller?.id && !!resolvedGame?.id,
-  });
-  const hasDistributions = sellerDistributions.length > 0;
-
   const hasBuyerApp = false;
 
   if (loggedOut) {
@@ -896,17 +1048,6 @@ export default function SellApp() {
         onPick={(g) => { setGame(g); if (!urlRange) setCardRange(null); }}
         onBack={handleLogout}
         locked={lockedSeller}
-      />
-    );
-  }
-
-  if (cardRange === null && !hasDistributions) {
-    return (
-      <CardRangeStep
-        seller={seller}
-        game={resolvedGame}
-        onConfirm={(range) => setCardRange(range)}
-        onBack={() => setGame(null)}
       />
     );
   }
