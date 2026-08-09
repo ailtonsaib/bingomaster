@@ -75,7 +75,7 @@ function BuyerLoginStep({ onEnter }) {
     const raw = phone.replace(/\D/g, "");
     if (raw.length < 10) return;
     localStorage.setItem("buyer_phone", phone.trim());
-    onEnter({ phone: phone.trim(), name: "" });
+    onEnter({ phone: phone.trim() });
   };
 
   return (
@@ -133,7 +133,7 @@ function GamePickStep({ buyer, onPick, onBack }) {
         <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 text-sm mb-3">
           <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
-        <h1 className="text-xl font-bold font-heading">Olá, {buyer.name || buyer.phone}!</h1>
+        <h1 className="text-xl font-bold font-heading">Olá! ({buyer.phone})</h1>
         <p className="text-primary-foreground/80 text-sm mt-0.5">Escolha o evento</p>
       </div>
       <div className="flex-1 px-4 py-5 space-y-3">
@@ -238,11 +238,10 @@ function WatchStep({ buyer, game, onBack }) {
   const drawnNumbers = currentGame.drawn_numbers || [];
   const prizes = currentGame.prizes || [];
 
-  // Find my cards (by name or phone)
+  // Find my cards strictly by phone (the phone registered at card sale)
   const myCards = allCards.filter((c) => {
-    const nameMatch = buyer.name && c.player_name?.toLowerCase().includes(buyer.name.toLowerCase());
     const phoneMatch = buyer.phone && c.player_phone?.replace(/\D/g, "") === buyer.phone.replace(/\D/g, "");
-    return nameMatch || phoneMatch;
+    return phoneMatch;
   });
 
   // Retorna os grids correspondentes ao prêmio atual, um por chance da cartela.
@@ -449,7 +448,7 @@ function WatchStep({ buyer, game, onBack }) {
             <p className="text-sm text-muted-foreground">
               Verifique com seu vendedor se suas cartelas foram registradas no sistema.
             </p>
-            <Button variant="outline" className="mt-4" onClick={onBack}>Tentar com outro nome/telefone</Button>
+            <Button variant="outline" className="mt-4" onClick={onBack}>Tentar com outro telefone</Button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -539,16 +538,14 @@ function WatchStep({ buyer, game, onBack }) {
 export default function BuyerApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlPhone = urlParams.get("phone");
-  const urlName = urlParams.get("name");
   const urlGameId = urlParams.get("game_id");
 
   const [buyer, setBuyer] = useState(() => {
-    if (urlPhone || urlName) {
-      return { phone: urlPhone || "", name: urlName || "" };
+    if (urlPhone) {
+      return { phone: urlPhone };
     }
     const phone = localStorage.getItem("buyer_phone");
-    const name = localStorage.getItem("buyer_name");
-    return phone || name ? { phone: phone || "", name: name || "" } : null;
+    return phone ? { phone } : null;
   });
 
   const [game, setGame] = useState(null);
