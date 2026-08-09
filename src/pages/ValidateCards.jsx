@@ -98,15 +98,30 @@ export default function ValidateCards() {
 
   const handleValidate = async (card) => {
     setValidating(card.id);
-    await base44.entities.BingoCard.update(card.id, { is_validated: true });
-    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    // Optimistic update — atualiza apenas esta cartela no cache (sem refetch)
+    queryClient.setQueryData(["validate-cards", selectedGame?.id], (old) => {
+      const arr = Array.isArray(old) ? old : [];
+      return arr.map((c) => (c.id === card.id ? { ...c, is_validated: true } : c));
+    });
+    try {
+      await base44.entities.BingoCard.update(card.id, { is_validated: true });
+    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    }
     setValidating(null);
   };
 
   const handleUnvalidate = async (card) => {
     setUnvalidating(card.id);
-    await base44.entities.BingoCard.update(card.id, { is_validated: false });
-    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    queryClient.setQueryData(["validate-cards", selectedGame?.id], (old) => {
+      const arr = Array.isArray(old) ? old : [];
+      return arr.map((c) => (c.id === card.id ? { ...c, is_validated: false } : c));
+    });
+    try {
+      await base44.entities.BingoCard.update(card.id, { is_validated: false });
+    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    }
     setUnvalidating(null);
   };
 
@@ -131,9 +146,21 @@ export default function ValidateCards() {
   const handleBulkValidate = async () => {
     setBulkLoading(true);
     const toValidate = cards.filter((c) => selected.has(c.id));
-    await Promise.all(toValidate.map((c) => base44.entities.BingoCard.update(c.id, { is_validated: true })));
+    const ids = new Set(toValidate.map((c) => c.id));
+    // Optimistic update — marca todas como validadas no cache imediatamente
+    queryClient.setQueryData(["validate-cards", selectedGame?.id], (old) => {
+      const arr = Array.isArray(old) ? old : [];
+      return arr.map((c) => (ids.has(c.id) ? { ...c, is_validated: true } : c));
+    });
+    try {
+      const updates = toValidate.map((c) => ({ id: c.id, is_validated: true }));
+      if (updates.length > 0) {
+        await base44.entities.BingoCard.bulkUpdate(updates);
+      }
+    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    }
     setSelected(new Set());
-    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
     setBulkLoading(false);
   };
 
@@ -145,10 +172,19 @@ export default function ValidateCards() {
     const toValidate = cards.filter(
       (c) => c.card_number >= start && c.card_number <= end && !c.is_validated
     );
-    await Promise.all(
-      toValidate.map((c) => base44.entities.BingoCard.update(c.id, { is_validated: true }))
-    );
-    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    const ids = new Set(toValidate.map((c) => c.id));
+    queryClient.setQueryData(["validate-cards", selectedGame?.id], (old) => {
+      const arr = Array.isArray(old) ? old : [];
+      return arr.map((c) => (ids.has(c.id) ? { ...c, is_validated: true } : c));
+    });
+    try {
+      const updates = toValidate.map((c) => ({ id: c.id, is_validated: true }));
+      if (updates.length > 0) {
+        await base44.entities.BingoCard.bulkUpdate(updates);
+      }
+    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    }
     setRangeLoading(false);
     setRangeStart("");
     setRangeEnd("");
@@ -163,13 +199,22 @@ export default function ValidateCards() {
   const handleSaveSale = async () => {
     if (!saleName.trim()) return;
     setSaleLoading(true);
-    await base44.entities.BingoCard.update(saleCard.id, {
+    const cardId = saleCard.id;
+    const updates = {
       player_name: saleName.trim(),
       player_phone: salePhone.trim(),
       payment_status: "paid",
       is_validated: true,
+    };
+    queryClient.setQueryData(["validate-cards", selectedGame?.id], (old) => {
+      const arr = Array.isArray(old) ? old : [];
+      return arr.map((c) => (c.id === cardId ? { ...c, ...updates } : c));
     });
-    await queryClient.refetchQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    try {
+      await base44.entities.BingoCard.update(cardId, updates);
+    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ["validate-cards", selectedGame?.id] });
+    }
     setSaleLoading(false);
     setSaleCard(null);
     setSaleName("");
