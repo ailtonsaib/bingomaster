@@ -853,7 +853,7 @@ Deno.serve(async (req) => {
           can_access_diagnostic: true,
           diagnostic_plan: plan,
           is_active: true,
-          must_change_password: true,
+          must_change_password: false,
           password_hash: hash,
         });
       } else {
@@ -876,7 +876,7 @@ Deno.serve(async (req) => {
           finance_full_access: false,
           finance_release_requested: false,
           finance_plan_price: 49.90,
-          must_change_password: true,
+          must_change_password: false,
           is_active: true,
         });
       }
@@ -891,7 +891,7 @@ Deno.serve(async (req) => {
           name: admin_name,
           role: 'admin',
           is_active: true,
-          must_change_password: true,
+          must_change_password: false,
           password_hash: hash,
         });
       } else {
@@ -903,7 +903,7 @@ Deno.serve(async (req) => {
           role: 'admin',
           allowed_panels: [],
           is_active: true,
-          must_change_password: true,
+          must_change_password: false,
         });
       }
 
@@ -952,7 +952,7 @@ Deno.serve(async (req) => {
         finance_full_access: false,
         finance_release_requested: false,
         finance_plan_price: 49.90,
-        must_change_password: true,
+        must_change_password: false,
         is_active: true,
       });
 

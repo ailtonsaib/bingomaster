@@ -315,18 +315,24 @@ export default function CompanyConfigModal({ userEmail, companyId, canCreateNew 
                       if (digits.length === 14) handleCNPJLookup(e.target.value);
                     }}
                     placeholder="00.000.000/0000-00"
+                    readOnly={!canCreateNew && !!configId}
+                    disabled={!canCreateNew && !!configId}
+                    title={!canCreateNew && !!configId ? "O CNPJ não pode ser alterado — somente o administrador do sistema pode modificar" : undefined}
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    disabled={lookingUpCNPJ || onlyDigits(config.cnpj).length !== 14}
+                    disabled={lookingUpCNPJ || onlyDigits(config.cnpj).length !== 14 || (!canCreateNew && !!configId)}
                     onClick={() => handleCNPJLookup(config.cnpj)}
                     title="Buscar dados na Receita"
                   >
                     {lookingUpCNPJ ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </Button>
                 </div>
+                {!canCreateNew && !!configId && (
+                  <p className="text-xs text-amber-600 mt-1">O CNPJ é fixo e não pode ser alterado.</p>
+                )}
               </div>
               <div>
                 <Label className="text-sm font-medium">Inscrição Estadual</Label>
