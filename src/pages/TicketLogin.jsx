@@ -25,6 +25,60 @@ export default function TicketLogin() {
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [cnpjError, setCnpjError] = useState("");
 
+  // ─── Esqueceu a senha ───
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1 = email, 2 = trocar senha
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+
+  const handleForgotRequest = async () => {
+    setForgotError("");
+    setForgotSuccess("");
+    if (!forgotEmail) { setForgotError("Informe seu email cadastrado"); return; }
+    setForgotLoading(true);
+    try {
+      const res = await base44.functions.invoke('ticketSystem', { operation: 'requestPasswordReset', email: forgotEmail });
+      setForgotSuccess(res.data.message || "Senha temporária enviada para seu email.");
+      setForgotStep(2);
+    } catch (err) {
+      setForgotError(err.response?.data?.error || "Erro ao enviar email de recuperação");
+    }
+    setForgotLoading(false);
+  };
+
+  const handleForgotChange = async () => {
+    setForgotError("");
+    setForgotSuccess("");
+    if (!forgotEmail || !tempPassword || !newPassword) { setForgotError("Preencha todos os campos"); return; }
+    if (newPassword !== confirmPassword) { setForgotError("As senhas não coincidem"); return; }
+    if (newPassword.length < 6) { setForgotError("A nova senha deve ter ao menos 6 caracteres"); return; }
+    setForgotLoading(true);
+    try {
+      await base44.functions.invoke('ticketSystem', { operation: 'changePassword', email: forgotEmail, current_password: tempPassword, new_password: newPassword });
+      setForgotSuccess("Senha alterada com sucesso! Você já pode fazer login.");
+      setForgotStep(3);
+    } catch (err) {
+      setForgotError(err.response?.data?.error || "Erro ao alterar a senha");
+    }
+    setForgotLoading(false);
+  };
+
+  const resetForgot = () => {
+    setForgotPassword(false);
+    setForgotStep(1);
+    setForgotEmail("");
+    setTempPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setForgotError("");
+    setForgotSuccess("");
+  };
+
   const maskCNPJ = (v) => v.replace(/\D/g, "").slice(0, 14).replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
 
   const fetchCnpjData = async (cnpjValue) => {
@@ -180,6 +234,85 @@ export default function TicketLogin() {
     );
   }
 
+  if (forgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <Mail className="w-7 h-7 text-primary" />
+            </div>
+            <CardTitle>Recuperação de Senha</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {forgotStep === 1 && "Informe o email cadastrado para receber uma senha temporária"}
+              {forgotStep === 2 && "Digite a senha temporária recebida por email e sua nova senha"}
+              {forgotStep === 3 && "Senha alterada com sucesso!"}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {forgotStep === 1 && (
+              <>
+                <div>
+                  <Label>Email cadastrado</Label>
+                  <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="seu@email.com" onKeyDown={(e) => e.key === 'Enter' && handleForgotRequest()} autoFocus />
+                </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                {forgotError && <p className="text-sm text-destructive">{forgotError}</p>}
+                <Button className="w-full" onClick={handleForgotRequest} disabled={forgotLoading}>
+                  {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Enviar senha temporária
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Apenas emails cadastrados no sistema de chamados podem recuperar a senha.
+                </p>
+                <Button variant="ghost" className="w-full" onClick={resetForgot}>
+                  <ArrowLeft className="w-4 h-4" /> Voltar ao login
+                </Button>
+              </>
+            )}
+
+            {forgotStep === 2 && (
+              <>
+                {forgotSuccess && <p className="text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg p-3">{forgotSuccess}</p>}
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} disabled />
+                </div>
+                <div>
+                  <Label>Senha temporária</Label>
+                  <Input type="password" value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} placeholder="Senha recebida por email" autoFocus />
+                </div>
+                <div>
+                  <Label>Nova senha</Label>
+                  <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                </div>
+                <div>
+                  <Label>Confirmar nova senha</Label>
+                  <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" onKeyDown={(e) => e.key === 'Enter' && handleForgotChange()} />
+                </div>
+                {forgotError && <p className="text-sm text-destructive">{forgotError}</p>}
+                <Button className="w-full" onClick={handleForgotChange} disabled={forgotLoading}>
+                  {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Alterar senha
+                </Button>
+                <Button variant="ghost" className="w-full" onClick={() => setForgotStep(1)}>
+                  <ArrowLeft className="w-4 h-4" /> Reenviar senha temporária
+                </Button>
+              </>
+            )}
+
+            {forgotStep === 3 && (
+              <>
+                {forgotSuccess && <p className="text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">{forgotSuccess}</p>}
+                <Button className="w-full" onClick={resetForgot}>
+                  <Lock className="w-4 h-4" /> Ir para o login
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -257,6 +390,9 @@ export default function TicketLogin() {
                 <Label>Senha</Label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
               </div>
+              <button type="button" onClick={() => { setForgotPassword(true); setForgotStep(1); setForgotEmail(email); setForgotError(""); setError(""); }} className="text-xs text-primary hover:underline text-right w-full">
+                Esqueceu sua senha?
+              </button>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button className="w-full" onClick={handleLogin} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Entrar
@@ -293,6 +429,9 @@ export default function TicketLogin() {
                 <Label>Senha</Label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleClientLogin()} autoFocus />
               </div>
+              <button type="button" onClick={() => { setForgotPassword(true); setForgotStep(1); setForgotEmail(email); setForgotError(""); setError(""); }} className="text-xs text-primary hover:underline text-right w-full">
+                Esqueceu sua senha?
+              </button>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button className="w-full" onClick={handleClientLogin} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Entrar

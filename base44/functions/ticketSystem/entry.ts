@@ -62,6 +62,80 @@ Deno.serve(async (req) => {
       return Response.json({ company: { id: company.id, razao_social: company.razao_social, is_active: company.is_active }, user_name: user.name, user_role: user.role });
     }
 
+    // ─── AUTH: request password reset (envia senha temporária por email) ───
+    if (operation === 'requestPasswordReset') {
+      const { email } = body;
+      if (!email) return Response.json({ error: 'Email é obrigatório' }, { status: 400 });
+      const users = await base44.asServiceRole.entities.SupportUser.filter({ email });
+      if (!users.length) return Response.json({ error: 'Email não cadastrado no sistema de chamados' }, { status: 404 });
+      const user = users[0];
+      if (!user.is_active) return Response.json({ error: 'Usuário inativo. Contate o administrador.' }, { status: 403 });
+
+      // Gera senha temporária de 8 caracteres
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let tempPassword = '';
+      for (let i = 0; i < 8; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
+      const password_hash = await hashPassword(tempPassword);
+      await base44.asServiceRole.entities.SupportUser.update(user.id, { password_hash, must_change_password: true });
+
+      // Envia email via Gmail (alcança qualquer endereço, não apenas usuários registrados)
+      try {
+        const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
+        const subjectLine = 'Recuperação de Senha - Central de Chamados';
+        const subject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subjectLine)))}?=`;
+        const bodyText = `Olá, ${user.name}!\n\nRecebemos uma solicitação de recuperação de senha para sua conta na Central de Chamados.\n\nSua nova senha temporária é: ${tempPassword}\n\nUse-a para acessar o sistema. Recomendamos que você altere a senha após o login.\n\nSe você não solicitou esta recuperação, ignore este email.\n\nAtenciosamente,\nCentral de Chamados SoftPremier`;
+        const message = [
+          `To: ${email}`,
+          `Subject: ${subject}`,
+          `MIME-Version: 1.0`,
+          `Content-Type: text/plain; charset=UTF-8`,
+          `Content-Transfer-Encoding: quoted-printable`,
+          ``,
+          bodyText
+        ].join('\r\n');
+        const encoded = btoa(unescape(encodeURIComponent(message)))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+        const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ raw: encoded }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          return Response.json({ error: 'Falha ao enviar email. Tente novamente.' }, { status: 500 });
+        }
+      } catch (e) {
+        return Response.json({ error: 'Falha ao enviar email de recuperação' }, { status: 500 });
+      }
+      return Response.json({ success: true, message: 'Senha temporária enviada para seu email' });
+    }
+
+    // ─── AUTH: change password (verifica senha atual/temporária e define nova) ───
+    if (operation === 'changePassword') {
+      const { email, current_password, new_password } = body;
+      if (!email || !current_password || !new_password) {
+        return Response.json({ error: 'Email, senha atual e nova senha são obrigatórios' }, { status: 400 });
+      }
+      if (new_password.length < 6) {
+        return Response.json({ error: 'A nova senha deve ter ao menos 6 caracteres' }, { status: 400 });
+      }
+      const users = await base44.asServiceRole.entities.SupportUser.filter({ email });
+      if (!users.length) return Response.json({ error: 'Email não encontrado' }, { status: 404 });
+      const user = users[0];
+      const currentHash = await hashPassword(current_password);
+      if (user.password_hash !== currentHash) {
+        return Response.json({ error: 'Senha atual incorreta' }, { status: 401 });
+      }
+      if (current_password === new_password) {
+        return Response.json({ error: 'A nova senha deve ser diferente da atual' }, { status: 400 });
+      }
+      const newHash = await hashPassword(new_password);
+      await base44.asServiceRole.entities.SupportUser.update(user.id, { password_hash: newHash, must_change_password: false });
+      return Response.json({ success: true });
+    }
+
     // ─── COMPANY: create ───
     if (operation === 'createCompany') {
       const { razao_social, cnpj, endereco } = body;

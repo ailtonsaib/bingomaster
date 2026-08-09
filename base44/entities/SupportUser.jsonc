@@ -43,6 +43,11 @@
     "last_login_at": {
       "type": "string",
       "description": "Data/hora do \u00faltimo login (ISO)"
+    },
+    "must_change_password": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o usu\u00e1rio deve trocar a senha no pr\u00f3ximo acesso (ap\u00f3s recupera\u00e7\u00e3o por email)"
     }
   },
   "required": [
