@@ -6,12 +6,19 @@ import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  // Rotas com login próprio (sistema de chamados) não passam por nenhuma
+  // checagem de autenticação da plataforma — sequer o estado de "carregando"
+  // é exibido, para evitar qualquer chance de redirecionamento para a tela
+  // de login social (Google/Microsoft/Facebook/Apple) quando há um token
+  // Base44 stale no localStorage. Comporta-se exatamente como o app do
+  // vendedor (/sell), que renderiza direto sem loading nem auth.
+  const isTicketRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/chamados');
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(!isTicketRoute);
+  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(!isTicketRoute);
   const [authError, setAuthError] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(isTicketRoute);
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
@@ -103,6 +110,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkUserAuth = async () => {
+    // Nunca chama a auth da plataforma dentro do sistema de chamados
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/chamados')) {
+      return;
+    }
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
@@ -141,6 +152,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
+    // Bloqueia qualquer redirecionamento para o login social da plataforma
+    // dentro do sistema de chamados (login próprio por email + senha)
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/chamados')) {
+      return;
+    }
     // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
   };
