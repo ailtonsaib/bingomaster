@@ -60,12 +60,12 @@ export default function AddSellerSection({ sellers, cards, assigned, onAdd }) {
     if (!valid) return null;
     const sold = cards.filter((c) => {
       const n = c.card_number || 0;
-      return n >= fromN && n <= toN && (c.player_phone || c.player_city);
+      return n >= fromN && n <= toN && (c.player_phone || c.player_city || c.is_validated);
     });
     if (sold.length === 0) return null;
     const nums = sold.map((c) => c.card_number).sort((a, b) => a - b);
     const list = nums.length <= 6 ? nums.join(", ") : nums.slice(0, 6).join(", ") + "...";
-    return `Não é possível distribuir: ${sold.length} cartela(s) já vendida(s) no intervalo (${list}).`;
+    return `Não é possível distribuir: ${sold.length} cartela(s) já vendida(s) ou validada(s) no intervalo (${list}).`;
   }, [valid, cards, fromN, toN]);
 
   const hasError = overlapError || rangeError || soldError;

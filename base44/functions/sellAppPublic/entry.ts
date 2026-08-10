@@ -134,8 +134,13 @@ export default async function(req) {
           game_id: gameId,
           seller_id: sellerId,
         });
-        if (dists.length === 0) {
-          return Response.json({ success: true, devolved: 0 });
+        // Intervalos a devolver: distribuições registradas, ou intervalo do link
+        let ranges = dists.map((d) => ({ range_from: d.range_from, range_to: d.range_to }));
+        if (ranges.length === 0 && body.range_from != null && body.range_to != null) {
+          ranges = [{ range_from: Number(body.range_from), range_to: Number(body.range_to) }];
+        }
+        if (ranges.length === 0) {
+          return Response.json({ success: true, devolved: 0, cleared: 0 });
         }
         const allCards = await base44.asServiceRole.entities.BingoCard.filter(
           { game_id: gameId },
@@ -143,12 +148,13 @@ export default async function(req) {
           100000
         );
         const unsoldIds = [];
-        for (const d of dists) {
+        for (const r of ranges) {
           for (const c of allCards) {
             const n = c.card_number || 0;
-            const isUnsold = !c.player_phone && !c.player_city;
+            // Não devolver cartelas vendidas (com comprador) ou validadas
+            const isUnsold = !c.player_phone && !c.player_city && !c.is_validated;
             const mine = !c.seller_id || c.seller_id === sellerId;
-            if (n >= d.range_from && n <= d.range_to && isUnsold && mine) {
+            if (n >= r.range_from && n <= r.range_to && isUnsold && mine) {
               unsoldIds.push(c.id);
             }
           }
@@ -179,8 +185,13 @@ export default async function(req) {
           game_id: gameId,
           seller_id: sellerId,
         });
-        if (dists.length === 0) {
-          return Response.json({ success: true, transferred: 0 });
+        // Intervalos a transferir: distribuições registradas, ou intervalo do link
+        let ranges = dists.map((d) => ({ range_from: d.range_from, range_to: d.range_to }));
+        if (ranges.length === 0 && body.range_from != null && body.range_to != null) {
+          ranges = [{ range_from: Number(body.range_from), range_to: Number(body.range_to) }];
+        }
+        if (ranges.length === 0) {
+          return Response.json({ success: true, transferred: 0, moved: 0 });
         }
         const allCards = await base44.asServiceRole.entities.BingoCard.filter(
           { game_id: gameId },
@@ -188,12 +199,13 @@ export default async function(req) {
           100000
         );
         const unsoldIds = [];
-        for (const d of dists) {
+        for (const r of ranges) {
           for (const c of allCards) {
             const n = c.card_number || 0;
-            const isUnsold = !c.player_phone && !c.player_city;
+            // Não transferir cartelas vendidas (com comprador) ou validadas
+            const isUnsold = !c.player_phone && !c.player_city && !c.is_validated;
             const mine = !c.seller_id || c.seller_id === sellerId;
-            if (n >= d.range_from && n <= d.range_to && isUnsold && mine) {
+            if (n >= r.range_from && n <= r.range_to && isUnsold && mine) {
               unsoldIds.push(c.id);
             }
           }

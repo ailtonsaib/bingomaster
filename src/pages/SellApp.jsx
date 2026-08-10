@@ -301,6 +301,8 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   const [transferNotFound, setTransferNotFound] = useState(false);
   const [managing, setManaging] = useState(false);
   const [manageMsg, setManageMsg] = useState(null);
+  // Após devolver/transferir, esconde as cartelas não vendidas da tela
+  const [devolved, setDevolved] = useState(false);
 
   const storageKey = `last_card_count_${game.id}_${seller.id || seller.name}`;
 
@@ -335,12 +337,15 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
   };
 
   // Distribuições efetivas: SellerDistribution ou intervalo do link (URL).
-  // Sem distribuição → o vendedor não vê nenhuma cartela.
-  const effectiveDistributions = distributions.length > 0
-    ? distributions
-    : (cardRange?.from || cardRange?.to)
-      ? [{ range_from: cardRange.from, range_to: cardRange.to }]
-      : [];
+  // Após devolver/transferir (devolved=true) → sem distribuições, para que
+  // as cartelas devolvidas saiam da tela (restam apenas as já vendidas por mim).
+  const effectiveDistributions = devolved
+    ? []
+    : (distributions.length > 0
+      ? distributions
+      : (cardRange?.from || cardRange?.to)
+        ? [{ range_from: cardRange.from, range_to: cardRange.to }]
+        : []);
 
   const inDistribution = (n) =>
     effectiveDistributions.some((d) => n >= (d.range_from || 0) && n <= (d.range_to || Infinity));
@@ -494,9 +499,19 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
         action: "devolveUnsold",
         game_id: String(game.id),
         seller_id: String(seller.id),
+        range_from: cardRange?.from ?? null,
+        range_to: cardRange?.to ?? null,
       });
       queryClient.invalidateQueries({ queryKey: ["sell-distributions", game.id, seller.id] });
       queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
+      setDevolved(true);
+      // Limpa o intervalo da URL para a cartela não reaparecer ao recarregar
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("range_from");
+        url.searchParams.delete("range_to");
+        window.history.replaceState({}, "", url.toString());
+      } catch (e) {}
       setShowManage(false);
       setTransferNotFound(false);
       setTransferPhone("");
@@ -527,9 +542,18 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
         seller_id: String(seller.id),
         to_seller_id: String(target.id),
         to_seller_name: target.name,
+        range_from: cardRange?.from ?? null,
+        range_to: cardRange?.to ?? null,
       });
       queryClient.invalidateQueries({ queryKey: ["sell-distributions", game.id, seller.id] });
       queryClient.invalidateQueries({ queryKey: ["sell-cards", game.id] });
+      setDevolved(true);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("range_from");
+        url.searchParams.delete("range_to");
+        window.history.replaceState({}, "", url.toString());
+      } catch (e) {}
       setShowManage(false);
       setTransferNotFound(false);
       setTransferPhone("");
