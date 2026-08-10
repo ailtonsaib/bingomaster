@@ -85,13 +85,18 @@ const AuthenticatedApp = () => {
   }
 
   // Handle authentication errors
+  // Rotas com login próprio (sistema de chamados) ignoram o redirecionamento
+  // para o login social da plataforma e renderizam seu próprio login.
   if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+    const isTicketRoute = window.location.pathname.startsWith('/chamados');
+    if (!isTicketRoute) {
+      if (authError.type === 'user_not_registered') {
+        return <UserNotRegisteredError />;
+      } else if (authError.type === 'auth_required') {
+        // Redirect to login automatically
+        navigateToLogin();
+        return null;
+      }
     }
   }
 
