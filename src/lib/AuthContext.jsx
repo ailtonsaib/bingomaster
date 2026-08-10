@@ -19,6 +19,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
+    // Rotas com login próprio (sistema de chamados) não passam pela checagem de
+    // autenticação da plataforma — evita qualquer redirecionamento para a tela
+    // de login social (Google/Microsoft/Facebook/Apple). O chamados tem login
+    // próprio por email + senha via função ticketSystem.
+    const path = window.location.pathname;
+    if (path.startsWith('/chamados')) {
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      setIsAuthenticated(false);
+      setAuthChecked(true);
+      setAuthError(null);
+      return;
+    }
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
