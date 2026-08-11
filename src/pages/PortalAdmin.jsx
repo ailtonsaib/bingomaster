@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, Gamepad2, Wrench, History } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Check, RotateCcw, Trash2, Users, Bell, Grid3x3, Wallet, Ticket, FileText, Settings, Search, Globe, Clock, Monitor, Gamepad2, Wrench, History, Building2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
@@ -14,6 +14,7 @@ import PlanManagement from "@/components/portal/PlanManagement";
 import GameAdminPanel from "@/components/games/GameAdminPanel";
 import RevenueSummary from "@/components/portal/RevenueSummary";
 import LoginHistoryPanel from "@/components/portal/LoginHistoryPanel";
+import DiagnosticCompaniesPanel from "@/components/portal/DiagnosticCompaniesPanel";
 
 import { useToast } from "@/components/ui/use-toast";
 import OfflineSyncAlert from "@/components/bingo/OfflineSyncAlert";
@@ -171,6 +172,9 @@ export default function PortalAdmin() {
       <button onClick={() => setActiveTab("acessos")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "acessos" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
         <History className="w-4 h-4" /> Acessos
       </button>
+      <button onClick={() => setActiveTab("empresas")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "empresas" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+        <Building2 className="w-4 h-4" /> Empresas
+      </button>
     </div>
   );
 
@@ -236,6 +240,18 @@ export default function PortalAdmin() {
         <div className="max-w-5xl mx-auto px-4 py-6">
           {TabBar}
           <LoginHistoryPanel adminEmail={user.email} />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeTab === "empresas") {
+    return (
+      <div className="min-h-screen bg-background">
+        {Header}
+        <div className="max-w-5xl mx-auto px-4 py-6">
+          {TabBar}
+          <DiagnosticCompaniesPanel adminEmail={user.email} onNewGestor={() => setShowGestorForm(true)} />
         </div>
       </div>
     );

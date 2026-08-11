@@ -1057,6 +1057,45 @@ Deno.serve(async (req) => {
       return Response.json({ history: filtered });
     }
 
+    // ─── ADMIN: listar empresas cadastradas (Oficina Premium) ───
+    if (operation === 'getDiagnosticCompanies') {
+      const { admin_email } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+      const companies = await base44.asServiceRole.entities.DiagnosticCompanyConfig.list();
+      const portalUsers = await base44.asServiceRole.entities.PortalUser.list();
+      const portalMap = new Map();
+      for (const pu of portalUsers) portalMap.set(pu.email, pu);
+      const result = companies.map(c => {
+        const pu = portalMap.get(c.user_email || c.admin_email) || null;
+        return {
+          id: c.id,
+          user_email: c.user_email,
+          admin_email: c.admin_email,
+          admin_name: c.admin_name,
+          razao_social: c.razao_social,
+          nome_fantasia: c.nome_fantasia,
+          cnpj: c.cnpj,
+          city: c.city,
+          uf: c.uf,
+          phone: c.phone,
+          email: c.email,
+          logo_url: c.logo_url,
+          access_granted: c.access_granted,
+          responsible_name: c.responsible_name,
+          diagnostic_plan: pu?.diagnostic_plan || 'free',
+          portal_active: pu ? !!pu.is_active : false,
+          diagnostic_due_date: pu?.diagnostic_due_date || null,
+          diagnostic_payment_status: pu?.diagnostic_payment_status || null,
+          diagnostic_blocked_date: pu?.diagnostic_blocked_date || null,
+          created_date: c.created_date,
+        };
+      });
+      return Response.json({ companies: result });
+    }
+
     // ─── WORKSHOP: salvar usuário (criar/atualizar com senha bcrypt) ───
     if (operation === 'saveWorkshopUser') {
       const { owner_email, id, name, email: wsEmail, phone, password, role, allowed_panels, is_active, must_change_password, can_grant_discount, discount_password } = body;
