@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Building2, Search, Loader2, Plus, Wrench } from "lucide-react";
+import { Building2, Search, Loader2, Plus, Wrench, KeyRound } from "lucide-react";
+import CreateGestorLoginModal from "@/components/portal/CreateGestorLoginModal";
 
 const PLAN_LABELS = {
   free: "FREE",
@@ -42,6 +43,7 @@ export default function DiagnosticCompaniesPanel({ adminEmail, onNewGestor }) {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [loginModal, setLoginModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,9 +147,19 @@ export default function DiagnosticCompaniesPanel({ adminEmail, onNewGestor }) {
                         </td>
                         <td className="p-3 text-xs text-muted-foreground">{formatDate(c.diagnostic_due_date)}</td>
                         <td className="p-3">
-                          {c.access_granted && c.portal_active
-                            ? <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Liberado</Badge>
-                            : <Badge variant="secondary" className="text-xs">Pendente</Badge>}
+                          <div className="flex flex-col gap-1">
+                            {c.has_portal_user && c.can_access_diagnostic && c.portal_active
+                              ? <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Liberado</Badge>
+                              : <>
+                                  <Badge variant="destructive" className="text-xs">
+                                    {c.has_portal_user ? "Sem acesso à oficina" : "Sem login"}
+                                  </Badge>
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs h-7 border-cyan-300 text-cyan-700 hover:bg-cyan-50" onClick={() => setLoginModal(c)}>
+                                    <KeyRound className="w-3 h-3" /> {c.has_portal_user ? "Liberar Oficina" : "Criar Acesso"}
+                                  </Button>
+                                </>
+                            }
+                          </div>
                         </td>
                       </tr>
                     );
@@ -157,6 +169,15 @@ export default function DiagnosticCompaniesPanel({ adminEmail, onNewGestor }) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {loginModal && (
+        <CreateGestorLoginModal
+          adminEmail={adminEmail}
+          company={loginModal}
+          onClose={() => setLoginModal(null)}
+          onSaved={() => { setLoginModal(null); load(); }}
+        />
       )}
     </div>
   );

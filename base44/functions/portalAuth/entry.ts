@@ -964,7 +964,7 @@ Deno.serve(async (req) => {
 
     // ─── ADMIN: create gestor (Oficina Premium company manager) ───
     if (operation === 'createGestor') {
-      const { admin_email, gestor_name, gestor_email, diagnostic_plan, company } = body;
+      const { admin_email, gestor_name, gestor_email, diagnostic_plan, company, gestor_password } = body;
       const admin = await verifyAdmin(base44, admin_email);
       if (!admin) {
         return Response.json({ error: 'Acesso negado' }, { status: 403 });
@@ -977,8 +977,8 @@ Deno.serve(async (req) => {
       if (existing.length > 0) {
         return Response.json({ error: 'Email já cadastrado' }, { status: 409 });
       }
-      // Cria PortalUser (gestor) com senha padrão gestor123
-      const defaultPassword = 'gestor123';
+      // Cria PortalUser (gestor) com senha definida pelo admin (padrão gestor123)
+      const defaultPassword = gestor_password || 'gestor123';
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(defaultPassword, salt);
       await base44.asServiceRole.entities.PortalUser.create({
@@ -1069,7 +1069,7 @@ Deno.serve(async (req) => {
       const portalMap = new Map();
       for (const pu of portalUsers) portalMap.set(pu.email, pu);
       const result = companies.map(c => {
-        const pu = portalMap.get(c.user_email || c.admin_email) || null;
+        const pu = portalMap.get(c.admin_email) || portalMap.get(c.user_email) || null;
         return {
           id: c.id,
           user_email: c.user_email,
@@ -1085,6 +1085,8 @@ Deno.serve(async (req) => {
           logo_url: c.logo_url,
           access_granted: c.access_granted,
           responsible_name: c.responsible_name,
+          has_portal_user: !!pu,
+          can_access_diagnostic: !!pu?.can_access_diagnostic,
           diagnostic_plan: pu?.diagnostic_plan || 'free',
           portal_active: pu ? !!pu.is_active : false,
           diagnostic_due_date: pu?.diagnostic_due_date || null,
@@ -1094,6 +1096,66 @@ Deno.serve(async (req) => {
         };
       });
       return Response.json({ companies: result });
+    }
+
+    // ─── ADMIN: criar acesso de gestor para empresa existente ───
+    if (operation === 'createCompanyGestorLogin') {
+      const { admin_email, company_id, gestor_name, gestor_password, diagnostic_plan } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) {
+        return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      }
+      const company = await base44.asServiceRole.entities.DiagnosticCompanyConfig.get(company_id);
+      if (!company) {
+        return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      }
+      const gestorEmail = company.admin_email || company.user_email;
+      if (!gestorEmail) {
+        return Response.json({ error: 'Empresa sem email de gestor definido. Edite a empresa para definir o email do gestor.' }, { status: 400 });
+      }
+      const existing = await base44.asServiceRole.entities.PortalUser.filter({ email: gestorEmail });
+      if (existing.length > 0) {
+        // Já existe usuário — apenas libera o acesso à Oficina Premium
+        await base44.asServiceRole.entities.PortalUser.update(existing[0].id, {
+          can_access_diagnostic: true,
+          diagnostic_plan: diagnostic_plan || existing[0].diagnostic_plan || 'free',
+          is_active: true,
+        });
+        await base44.asServiceRole.entities.DiagnosticCompanyConfig.update(company_id, { access_granted: true });
+        return Response.json({ success: true, message: `Acesso à Oficina liberado para ${gestorEmail}.` });
+      }
+      const finalPassword = gestor_password || 'gestor123';
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(finalPassword, salt);
+      await base44.asServiceRole.entities.PortalUser.create({
+        email: gestorEmail,
+        password_hash: hash,
+        name: gestor_name || company.admin_name || company.responsible_name || 'Gestor',
+        is_admin: false,
+        can_access_bingo: false,
+        can_access_finance: false,
+        can_access_sped: false,
+        can_access_pdv: false,
+        can_access_chamados: false,
+        can_access_diagnostic: true,
+        diagnostic_plan: diagnostic_plan || 'free',
+        bingo_plan: 'free',
+        sped_plan: 'free',
+        finance_transaction_limit: 10,
+        finance_transactions_used: 0,
+        finance_full_access: false,
+        finance_release_requested: false,
+        finance_plan_price: 49.90,
+        must_change_password: true,
+        is_active: true,
+      });
+      // Marca a empresa como acesso liberado
+      await base44.asServiceRole.entities.DiagnosticCompanyConfig.update(company_id, { access_granted: true });
+      return Response.json({
+        success: true,
+        default_password: finalPassword,
+        message: `Acesso criado para ${gestorEmail}. Senha inicial: ${finalPassword}`,
+      });
     }
 
     // ─── WORKSHOP: salvar usuário (criar/atualizar com senha bcrypt) ───

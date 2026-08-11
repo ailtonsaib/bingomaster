@@ -22,6 +22,7 @@ const maskCNPJ = (v) =>
 export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
   const [gestorName, setGestorName] = useState("");
   const [gestorEmail, setGestorEmail] = useState("");
+  const [gestorPassword, setGestorPassword] = useState("gestor123");
   const [diagnosticPlan, setDiagnosticPlan] = useState("free");
   const [cnpj, setCnpj] = useState("");
   const [company, setCompany] = useState({
@@ -82,6 +83,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
         admin_email: adminEmail,
         gestor_name: gestorName,
         gestor_email: gestorEmail,
+        gestor_password: gestorPassword,
         diagnostic_plan: diagnosticPlan,
         company,
       });
@@ -108,7 +110,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 text-left">
             <p className="text-xs font-semibold text-amber-800 mb-1">Credenciais de acesso:</p>
             <p className="text-sm text-amber-700">Email: <span className="font-mono">{gestorEmail}</span></p>
-            <p className="text-sm text-amber-700">Senha: <span className="font-mono">gestor123</span></p>
+            <p className="text-sm text-amber-700">Senha: <span className="font-mono">{gestorPassword || "gestor123"}</span></p>
             <p className="text-xs text-amber-600 mt-1">Será solicitada a troca de senha no primeiro acesso.</p>
           </div>
           <Button onClick={onClose} className="w-full">Fechar</Button>
@@ -142,6 +144,11 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
                 <Label>Email do gestor</Label>
                 <Input type="email" value={gestorEmail} onChange={(e) => setGestorEmail(e.target.value)} required placeholder="gestor@email.com" />
               </div>
+            </div>
+            <div className="mt-3">
+              <Label>Senha inicial</Label>
+              <Input value={gestorPassword} onChange={(e) => setGestorPassword(e.target.value)} required placeholder="gestor123" />
+              <p className="text-xs text-muted-foreground mt-1">O gestor será solicitado a trocar a senha no primeiro acesso.</p>
             </div>
           </div>
 
@@ -236,7 +243,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
           <div className="flex items-start gap-2 p-3 rounded-lg bg-cyan-50 border border-cyan-200">
             <Info className="w-4 h-4 text-cyan-600 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-cyan-800">
-              A senha padrão será <span className="font-mono font-semibold">gestor123</span>. No primeiro
+              A senha inicial será a definida no campo acima (padrão <span className="font-mono font-semibold">gestor123</span>). No primeiro
               acesso, o gestor será solicitado a trocar a senha. Ele terá acesso apenas à empresa
               cadastrada, não poderá cadastrar novas empresas nem alterar o CNPJ, e poderá criar seus
               próprios usuários dentro da oficina.
