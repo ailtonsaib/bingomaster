@@ -447,6 +447,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
         player_phone: buyerPhone.trim(),
         seller_id: seller.id || null,
         seller_name: seller.name || null,
+        seller_phone: seller.phone || "",
         payment_status: asPending ? "pending" : "paid",
         receipt_base64: receiptBase64,
         receipt_mime: receiptMime,
@@ -499,6 +500,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
         action: "devolveUnsold",
         game_id: String(game.id),
         seller_id: String(seller.id),
+        seller_phone: seller.phone || "",
         range_from: cardRange?.from ?? null,
         range_to: cardRange?.to ?? null,
       });
@@ -540,6 +542,7 @@ function SellStep({ seller, game, cardRange, onBack, locked, onLogout, hasBuyerA
         action: "transferCards",
         game_id: String(game.id),
         seller_id: String(seller.id),
+        seller_phone: seller.phone || "",
         to_seller_id: String(target.id),
         to_seller_name: target.name,
         range_from: cardRange?.from ?? null,

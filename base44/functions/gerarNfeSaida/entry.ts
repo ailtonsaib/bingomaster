@@ -18,6 +18,10 @@ Deno.serve(async (req) => {
     if (!order) {
       return Response.json({ success: false, error: 'Pedido não encontrado.' });
     }
+    // Security: verify the order belongs to the authenticated user's company
+    if (order.user_email && order.user_email !== user.email) {
+      return Response.json({ success: false, error: 'Acesso negado: pedido não pertence à sua empresa.' });
+    }
     if (order.status === 'emitida') {
       return Response.json({ success: false, error: 'NF-e já emitida para este pedido.' });
     }

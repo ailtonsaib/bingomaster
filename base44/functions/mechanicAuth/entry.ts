@@ -86,12 +86,16 @@ Deno.serve(async (req) => {
       const mech = mechanics.find(m => m.is_active !== false) || mechanics[0];
       if (mech.is_active === false) return Response.json({ error: 'Mecânico inativo' }, { status: 403 });
       const tempPassword = generateTempPassword();
-      await base44.asServiceRole.entities.DiagnosticMechanic.update(mech.id, { password: tempPassword });
+      // Security: send the recovery email FIRST. Only persist the new password
+      // if the email is delivered successfully — otherwise an attacker could
+      // trigger resets that lock out the legitimate mechanic without them
+      // ever receiving the new credentials.
       try {
         await sendRecoveryEmail(base44, email, mech.name, tempPassword, 'Painel do Mecânico - SoftPremier');
       } catch (e) {
         return Response.json({ error: 'Falha ao enviar email de recuperação' }, { status: 500 });
       }
+      await base44.asServiceRole.entities.DiagnosticMechanic.update(mech.id, { password: tempPassword });
       return Response.json({ success: true, message: 'Senha temporária enviada para seu email' });
     }
 

@@ -413,16 +413,24 @@ Deno.serve(async (req) => {
     if (operation === 'getCompanies') {
       const { company_id, filter_user_email } = body;
 
+      // Determine if caller is admin (for cross-user access)
+      const planInfo = await getUserPlan(base44, userEmail, isWorkshopUser);
+
       if (company_id) {
         try {
           const company = await base44.asServiceRole.entities.DiagnosticCompanyConfig.get(company_id);
+          // Non-admin can only view their own company
+          if (company && !planInfo?.is_admin && company.admin_email !== userEmail && company.user_email !== userEmail) {
+            return Response.json({ companies: [] });
+          }
           return Response.json({ companies: company ? [company] : [] });
         } catch (_) {
           return Response.json({ companies: [] });
         }
       }
 
-      const userEmailFilter = filter_user_email || userEmail;
+      // Non-admin callers can only list their own companies; filter_user_email is ignored
+      const userEmailFilter = planInfo?.is_admin ? (filter_user_email || userEmail) : userEmail;
       const companies = await base44.asServiceRole.entities.DiagnosticCompanyConfig.filter({ admin_email: userEmailFilter });
       return Response.json({ companies });
     }

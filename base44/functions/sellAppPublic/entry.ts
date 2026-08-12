@@ -87,11 +87,17 @@ export default async function(req) {
         if (!body.card_id) {
           return Response.json({ error: 'card_id é obrigatório' }, { status: 400 });
         }
-        // Verify the seller is valid (public app — phone-based auth, no base44 session)
+        // Verify the seller is valid AND the caller possesses the seller's phone
+        // (public app — phone is the auth credential, proves possession)
         if (body.seller_id) {
           try {
             const sellers = await base44.asServiceRole.entities.Seller.filter({ id: String(body.seller_id), is_active: true });
             if (sellers.length === 0) {
+              return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+            }
+            const sellerPhone = (sellers[0].phone || '').replace(/\D/g, '');
+            const callerPhone = (body.seller_phone || '').replace(/\D/g, '');
+            if (!sellerPhone || callerPhone !== sellerPhone) {
               return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
             }
           } catch (_) {
@@ -139,10 +145,15 @@ export default async function(req) {
         if (!body.game_id || !body.seller_id) {
           return Response.json({ error: 'game_id e seller_id são obrigatórios' }, { status: 400 });
         }
-        // Verify the seller is valid (public app — phone-based auth, no base44 session)
+        // Verify the seller is valid AND the caller possesses the seller's phone
         try {
           const devolveSellers = await base44.asServiceRole.entities.Seller.filter({ id: String(body.seller_id), is_active: true });
           if (devolveSellers.length === 0) {
+            return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+          }
+          const devolveSellerPhone = (devolveSellers[0].phone || '').replace(/\D/g, '');
+          const devolveCallerPhone = (body.seller_phone || '').replace(/\D/g, '');
+          if (!devolveSellerPhone || devolveCallerPhone !== devolveSellerPhone) {
             return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
           }
         } catch (_) {
@@ -197,13 +208,18 @@ export default async function(req) {
         if (!body.game_id || !body.seller_id || !body.to_seller_id) {
           return Response.json({ error: 'game_id, seller_id e to_seller_id são obrigatórios' }, { status: 400 });
         }
-        // Verify both sellers are valid (public app — phone-based auth, no base44 session)
+        // Verify both sellers are valid AND the caller possesses the source seller's phone
         try {
           const [fromSellers, toSellers] = await Promise.all([
             base44.asServiceRole.entities.Seller.filter({ id: String(body.seller_id), is_active: true }),
             base44.asServiceRole.entities.Seller.filter({ id: String(body.to_seller_id), is_active: true }),
           ]);
           if (fromSellers.length === 0 || toSellers.length === 0) {
+            return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+          }
+          const fromSellerPhone = (fromSellers[0].phone || '').replace(/\D/g, '');
+          const transferCallerPhone = (body.seller_phone || '').replace(/\D/g, '');
+          if (!fromSellerPhone || transferCallerPhone !== fromSellerPhone) {
             return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
           }
         } catch (_) {

@@ -36,6 +36,12 @@ Deno.serve(async (req) => {
 
     // ─── SETUP: create admin + test user ───
     if (operation === 'setup') {
+      // Security: only allow first-time bootstrap when no admin exists yet.
+      // Once an admin account exists, this endpoint refuses to create more.
+      const existingAdmins = await base44.asServiceRole.entities.PortalUser.filter({ is_admin: true });
+      if (existingAdmins.length > 0) {
+        return Response.json({ error: 'Setup já realizado. Use o painel administrativo para gerenciar usuários.' }, { status: 403 });
+      }
       let created = [];
 
       // Admin user
