@@ -40,40 +40,65 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
     if (cnpjClean.length !== 14) return;
     setCnpjLoading(true);
     setCnpjError("");
+    // 1) Primeiro busca no banco — empresa já cadastrada
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjClean}`, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-      });
-      if (!res.ok) {
-        setCnpjError("CNPJ não encontrado na Receita.");
+      const existing = await base44.entities.DiagnosticCompanyConfig.filter({ cnpj: cnpjClean });
+      if (existing.length > 0) {
+        const c = existing[0];
+        setCompany({
+          razao_social: c.razao_social || "",
+          nome_fantasia: c.nome_fantasia || "",
+          cnpj: cnpjClean,
+          cep: c.cep || "",
+          address: c.address || "",
+          number: c.number || "",
+          district: c.district || "",
+          city: c.city || "",
+          uf: c.uf || "",
+          phone: c.phone || "",
+          email: c.email || "",
+        });
+        setCnpj(cnpjClean);
         setCnpjLoading(false);
         return;
       }
-      const dados = await res.json();
-      setCompany({
-        razao_social: dados.razao_social || "",
-        nome_fantasia: dados.nome_fantasia || "",
-        cnpj: cnpjClean,
-        cep: dados.cep || "",
-        address: dados.logradouro || "",
-        number: dados.numero || "",
-        district: dados.bairro || "",
-        city: dados.municipio || "",
-        uf: dados.uf || "",
-        phone: dados.telefone || "",
-        email: dados.email || "",
-      });
-      setCnpj(cnpjClean);
+    } catch (_) {}
+    // 2) Consulta via função backend (servidor, com fallback ReceitaWS)
+    try {
+      const res = await base44.functions.invoke("consultaCnpj", { cnpj: cnpjClean });
+      if (res.data?.success && res.data?.dados) {
+        const dados = res.data.dados;
+        setCompany({
+          razao_social: dados.razao_social || "",
+          nome_fantasia: dados.nome_fantasia || "",
+          cnpj: cnpjClean,
+          cep: dados.cep || "",
+          address: dados.logradouro || "",
+          number: dados.numero || "",
+          district: dados.bairro || "",
+          city: dados.municipio || "",
+          uf: dados.uf || "",
+          phone: dados.telefone || "",
+          email: dados.email || "",
+        });
+        setCnpj(cnpjClean);
+        setCnpjLoading(false);
+        return;
+      }
+      // 3) Falhou — libera preenchimento manual
+      setCnpjError(res.data?.error || "Não foi possível consultar o CNPJ. Preencha manualmente.");
+      setCompany(prev => ({ ...prev, cnpj: cnpjClean, razao_social: prev.razao_social }));
     } catch {
-      setCnpjError("Erro ao consultar CNPJ.");
+      setCnpjError("Erro ao consultar CNPJ. Preencha os dados manualmente.");
+      setCompany(prev => ({ ...prev, cnpj: cnpjClean }));
     }
     setCnpjLoading(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!company.razao_social) {
-      alert("Informe e consulte o CNPJ da empresa antes de salvar.");
+    if (!company.razao_social && !(cnpj.replace(/\D/g, "").length === 14)) {
+      alert("Informe o CNPJ da empresa (14 dígitos) para continuar.");
       return;
     }
     setSaving(true);
@@ -85,7 +110,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
         gestor_email: gestorEmail,
         gestor_password: gestorPassword,
         diagnostic_plan: diagnosticPlan,
-        company,
+        company: { ...company, cnpj: company.cnpj || cnpj.replace(/\D/g, "") },
       });
       setSuccess(true);
       onSaved();
@@ -180,7 +205,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
           </div>
 
           {/* Campos da empresa (auto-preenchidos, editáveis) */}
-          {company.razao_social && (
+          {(company.razao_social || cnpjError) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/30 rounded-lg p-3">
               <div className="sm:col-span-2">
                 <Label>Razão Social</Label>
@@ -251,7 +276,7 @@ export default function GestorFormModal({ adminEmail, onClose, onSaved }) {
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={saving || !company.razao_social} className="gap-2">
+            <Button type="submit" disabled={saving} className="gap-2">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
               {saving ? "Criando..." : "Cadastrar Gestor"}
             </Button>
