@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { signNFe } from '../../shared/nfeSigner.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -299,13 +300,33 @@ Deno.serve(async (req) => {
   </infNFe>
 </NFe>`;
 
+    // Assina o XML com o certificado A1 ativo (modelo NFe), se houver
+    let signedXml = nfeXml;
+    try {
+      const activeCerts = await base44.entities.DigitalCertificate.filter({ user_email: user.email, is_active: true });
+      const nfeCert = activeCerts.find((c) =>
+        c.modelos && c.modelos.includes('NFe') && c.valid_to && new Date(c.valid_to) > new Date()
+      );
+      if (nfeCert) {
+        const signed = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: nfeCert.file_uri, expires_in: 120 });
+        const pfxResp = await fetch(signed.signed_url);
+        if (pfxResp.ok) {
+          const pfxBytes = new Uint8Array(await pfxResp.arrayBuffer());
+          signedXml = signNFe(nfeXml, pfxBytes, nfeCert.password);
+          await base44.entities.DigitalCertificate.update(nfeCert.id, { last_used_at: new Date().toISOString() });
+        }
+      }
+    } catch (signErr) {
+      console.log('Falha ao assinar NF-e:', signErr.message);
+    }
+
     // Update the order with NF-e data
     await base44.entities.PDVExitOrder.update(order_id, {
       status: 'emitida',
       nfe_number: nNF,
       nfe_series: serie,
       nfe_key: chaveAcesso,
-      nfe_xml: nfeXml,
+      nfe_xml: signedXml,
       nfe_issue_date: dhEmi,
     });
 

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import forge from 'npm:node-forge@1.3.1';
+import { signNFe } from '../../shared/nfeSigner.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -138,6 +139,62 @@ Deno.serve(async (req) => {
       const certs = await base44.asServiceRole.entities.DigitalCertificate.filter({ user_email: email, is_active: true });
       const active = certs.find((c) => c.modelos && c.modelos.includes(modelo));
       return Response.json({ success: true, certificate: active || null });
+    }
+
+    // ─── SELF TEST: valida o assinador XMLDSig com um certificado de teste ───
+    if (operation === 'selfTest') {
+      const keys = forge.pki.rsa.generateKeyPair(2048);
+      const cert = forge.pki.createCertificate();
+      cert.publicKey = keys.publicKey;
+      cert.serialNumber = '01';
+      cert.validity.notBefore = new Date();
+      cert.validity.notAfter = new Date(Date.now() + 365 * 24 * 3600 * 1000);
+      const attrs = [
+        { name: 'commonName', value: 'TESTE NF-e SELF TEST' },
+        { name: 'organizationName', value: '12345678000190' },
+      ];
+      cert.setSubject(attrs);
+      cert.setIssuer(attrs);
+      cert.sign(keys.privateKey);
+
+      const p12Asn1 = forge.pkcs12.toPkcs12Asn1(keys.privateKey, [cert], 'teste123');
+      const p12Der = forge.asn1.toDer(p12Asn1).getBytes();
+      const pfxBytes = new Uint8Array(Array.from(p12Der).map((c) => c.charCodeAt(0)));
+
+      const sampleXml =
+        '<?xml version="1.0" encoding="UTF-8"?>' +
+        '<NFe xmlns="http://www.portalfiscal.inf.br/nfe">' +
+        '<infNFe Id="NFe35080912345678000190550010000000011000000012" versao="4.00">' +
+        '<ide><cUF>35</cUF><mod>55</mod><serie>1</serie><nNF>1</nNF></ide>' +
+        '</infNFe></NFe>';
+
+      const signedXml = signNFe(sampleXml, pfxBytes, 'teste123');
+
+      const hasDigest = signedXml.includes('<DigestValue>');
+      const hasSig = signedXml.includes('<SignatureValue>');
+      const hasX509 = signedXml.includes('<X509Certificate>');
+
+      let rsaOk = false;
+      try {
+        const sigMatch = signedXml.match(/<SignatureValue>([^<]+)<\/SignatureValue>/);
+        const siStart = signedXml.indexOf('<SignedInfo>');
+        const siEnd = signedXml.indexOf('</SignedInfo>') + '</SignedInfo>'.length;
+        const siInDoc = signedXml.slice(siStart, siEnd);
+        const siCanonical = siInDoc.replace('<SignedInfo>', '<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">');
+        const md = forge.md.sha256.create().update(siCanonical, 'utf8');
+        const sigBytes = forge.util.decode64(sigMatch[1]);
+        rsaOk = keys.publicKey.verify(md.digest().getBytes(), sigBytes);
+      } catch (_) { rsaOk = false; }
+
+      return Response.json({
+        success: true,
+        signRan: true,
+        digestPresent: hasDigest,
+        signaturePresent: hasSig,
+        x509Present: hasX509,
+        rsaSignatureValid: rsaOk,
+        signedXmlPreview: signedXml.slice(0, 400),
+      });
     }
 
     return Response.json({ error: 'Operação inválida' }, { status: 400 });
