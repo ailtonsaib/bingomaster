@@ -1,0 +1,147 @@
+{
+  "name": "DigitalCertificate",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do propriet\u00e1rio (escopo da empresa)"
+    },
+    "alias": {
+      "type": "string",
+      "description": "Nome amig\u00e1vel do certificado"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "A1",
+        "A3"
+      ],
+      "default": "A1",
+      "description": "Tipo: A1 (arquivo .pfx/.p12) ou A3 (token/cart\u00e3o \u2014 n\u00e3o armazenado)"
+    },
+    "file_uri": {
+      "type": "string",
+      "description": "URI do arquivo PFX no storage privado"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Nome original do arquivo enviado"
+    },
+    "password": {
+      "type": "string",
+      "description": "Senha do PFX (necess\u00e1ria para desbloquear na assinatura)"
+    },
+    "subject_dn": {
+      "type": "string",
+      "description": "Subject DN extra\u00eddo do certificado X.509"
+    },
+    "issuer_dn": {
+      "type": "string",
+      "description": "Issuer DN extra\u00eddo do certificado"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ extra\u00eddo do subject (14 d\u00edgitos)"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie do certificado"
+    },
+    "valid_from": {
+      "type": "string",
+      "description": "In\u00edcio da validade (ISO)"
+    },
+    "valid_to": {
+      "type": "string",
+      "description": "Fim da validade (ISO)"
+    },
+    "modelos": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "NFe",
+          "NFSe",
+          "NFCe"
+        ]
+      },
+      "default": [],
+      "description": "Modelos documentais autorizados a assinar com este certificado"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 o certificado ativo para os modelos selecionados"
+    },
+    "last_used_at": {
+      "type": "string",
+      "description": "Data/hora da \u00faltima utiliza\u00e7\u00e3o (ISO)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "valid",
+        "expired",
+        "revoked"
+      ],
+      "default": "valid",
+      "description": "Status do certificado: valid, expired (vencido) ou revoked"
+    }
+  },
+  "required": [
+    "user_email",
+    "alias",
+    "file_uri",
+    "password"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
