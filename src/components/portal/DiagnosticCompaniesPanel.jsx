@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Building2, Search, Loader2, Plus, Wrench, KeyRound } from "lucide-react";
+import { Building2, Search, Loader2, Plus, Wrench, KeyRound, Link2 } from "lucide-react";
 import CreateGestorLoginModal from "@/components/portal/CreateGestorLoginModal";
+import LinkCompanyToUserModal from "@/components/portal/LinkCompanyToUserModal";
 
 const PLAN_LABELS = {
   free: "FREE",
@@ -44,6 +45,7 @@ export default function DiagnosticCompaniesPanel({ adminEmail, onNewGestor }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [loginModal, setLoginModal] = useState(null);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,9 +90,14 @@ export default function DiagnosticCompaniesPanel({ adminEmail, onNewGestor }) {
               className="pl-8 w-full sm:w-72"
             />
           </div>
-          <Button variant="outline" className="gap-2 border-cyan-300 text-cyan-700 hover:bg-cyan-50" onClick={onNewGestor}>
-            <Plus className="w-4 h-4" /> Novo Gestor
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2 border-cyan-300 text-cyan-700 hover:bg-cyan-50" onClick={() => setLinkModalOpen(true)}>
+              <Link2 className="w-4 h-4" /> Vincular Empresa
+            </Button>
+            <Button variant="outline" className="gap-2 border-cyan-300 text-cyan-700 hover:bg-cyan-50" onClick={onNewGestor}>
+              <Plus className="w-4 h-4" /> Novo Gestor
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -177,6 +184,14 @@ export default function DiagnosticCompaniesPanel({ adminEmail, onNewGestor }) {
           company={loginModal}
           onClose={() => setLoginModal(null)}
           onSaved={() => { setLoginModal(null); load(); }}
+        />
+      )}
+
+      {linkModalOpen && (
+        <LinkCompanyToUserModal
+          adminEmail={adminEmail}
+          onClose={() => setLinkModalOpen(false)}
+          onSaved={() => { setLinkModalOpen(false); load(); }}
         />
       )}
     </div>

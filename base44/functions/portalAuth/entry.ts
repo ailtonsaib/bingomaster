@@ -1183,6 +1183,40 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── ADMIN: vincular empresa existente a um usuário já cadastrado ───
+    if (operation === 'linkCompanyToUser') {
+      const { admin_email, company_id, user_email, diagnostic_plan } = body;
+      const admin = await verifyAdmin(base44, admin_email);
+      if (!admin) return Response.json({ error: 'Acesso negado' }, { status: 403 });
+      if (!company_id || !user_email) {
+        return Response.json({ error: 'company_id e user_email são obrigatórios' }, { status: 400 });
+      }
+      let company = null;
+      try {
+        const companyList = await base44.asServiceRole.entities.DiagnosticCompanyConfig.filter({ id: company_id });
+        if (companyList.length > 0) company = companyList[0];
+      } catch (_) { /* id inválido/inexistente */ }
+      if (!company) return Response.json({ error: 'Empresa não encontrada' }, { status: 404 });
+      const targetUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: user_email });
+      if (targetUsers.length === 0) return Response.json({ error: 'Usuário não encontrado no portal' }, { status: 404 });
+      const target = targetUsers[0];
+      // Transfere a propriedade da empresa para o usuário (admin_email + user_email)
+      await base44.asServiceRole.entities.DiagnosticCompanyConfig.update(company_id, {
+        admin_email: user_email,
+        admin_name: target.name,
+        user_email: user_email,
+        access_granted: true,
+      });
+      // Libera o acesso à Oficina Premium no portal do usuário
+      const portalUpdate = { can_access_diagnostic: true, is_active: true };
+      if (diagnostic_plan) portalUpdate.diagnostic_plan = diagnostic_plan;
+      await base44.asServiceRole.entities.PortalUser.update(target.id, portalUpdate);
+      return Response.json({
+        success: true,
+        message: `Empresa "${company.razao_social}" vinculada a ${user_email}.`,
+      });
+    }
+
     // ─── WORKSHOP: salvar usuário (criar/atualizar com senha bcrypt) ───
     if (operation === 'saveWorkshopUser') {
       const { owner_email, id, name, email: wsEmail, phone, password, role, allowed_panels, is_active, must_change_password, can_grant_discount, discount_password } = body;
