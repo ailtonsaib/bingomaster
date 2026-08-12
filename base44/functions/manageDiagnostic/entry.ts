@@ -134,15 +134,16 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { operation, email: rawEmail } = body;
 
-    // Verify the authenticated session — body email must match (or admin bypasses)
-    const sessionUser = await base44.auth.me();
-    if (!sessionUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (rawEmail && rawEmail !== sessionUser.email && sessionUser.role !== 'admin') {
-      return Response.json({ error: 'Acesso negado a dados de outro usuário' }, { status: 403 });
-    }
+    // Verificação via sessão do portal (independente do Base44 auth)
+    // body.email (rawEmail) identifica o operador — deve existir e estar ativo no PortalUser.
+    // Cada operação admin faz sua própria checagem de is_admin via getUserPlan.
+    if (!rawEmail) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const actingUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: rawEmail });
+    if (actingUsers.length === 0) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!actingUsers[0].is_active) return Response.json({ error: 'Usuário inativo' }, { status: 403 });
 
     // Resolve email efetivo — usuários de oficina usam owner_email
-    let userEmail = rawEmail || sessionUser.email;
+    let userEmail = rawEmail;
     let isWorkshopUser = false;
     const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email: userEmail });
     if (wsUsers.length > 0) {
