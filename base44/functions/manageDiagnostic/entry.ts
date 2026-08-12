@@ -134,17 +134,21 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { operation, email: rawEmail } = body;
 
-    // Resolve email efetivo — usuários de oficina usam owner_email
-    let userEmail = rawEmail;
-    let isWorkshopUser = false;
-    if (rawEmail) {
-      const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email: rawEmail });
-      if (wsUsers.length > 0) {
-        isWorkshopUser = true;
-        userEmail = wsUsers[0].owner_email;
-      }
+    // Verify the authenticated session — body email must match (or admin bypasses)
+    const sessionUser = await base44.auth.me();
+    if (!sessionUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (rawEmail && rawEmail !== sessionUser.email && sessionUser.role !== 'admin') {
+      return Response.json({ error: 'Acesso negado a dados de outro usuário' }, { status: 403 });
     }
-    if (!userEmail) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // Resolve email efetivo — usuários de oficina usam owner_email
+    let userEmail = rawEmail || sessionUser.email;
+    let isWorkshopUser = false;
+    const wsUsers = await base44.asServiceRole.entities.WorkshopUser.filter({ email: userEmail });
+    if (wsUsers.length > 0) {
+      isWorkshopUser = true;
+      userEmail = wsUsers[0].owner_email;
+    }
 
     // ─── GET USAGE ───
     if (operation === 'getUsage') {

@@ -8,6 +8,9 @@ Deno.serve(async (req) => {
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Acesso negado — apenas administradores podem executar queries arbitrárias' }, { status: 403 });
+    }
 
     const { collection, operation, query = {}, data = {}, options = {} } = await req.json();
 

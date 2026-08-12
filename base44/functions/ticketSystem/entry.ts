@@ -159,6 +159,8 @@ Deno.serve(async (req) => {
 
     // ─── COMPANY: list ───
     if (operation === 'getCompanies') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const companies = await base44.asServiceRole.entities.SupportCompany.list();
       return Response.json({ companies });
     }
@@ -494,10 +496,14 @@ Deno.serve(async (req) => {
       return Response.json({ modules });
     }
     if (operation === 'createModule') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const m = await base44.asServiceRole.entities.TicketModule.create({ name: body.name, description: body.description || '', is_active: true });
       return Response.json({ module: m });
     }
     if (operation === 'deleteModule') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       await base44.asServiceRole.entities.TicketModule.delete(body.module_id);
       return Response.json({ success: true });
     }
@@ -508,6 +514,8 @@ Deno.serve(async (req) => {
       return Response.json({ submodules });
     }
     if (operation === 'createSubModule') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const { name, module_id } = body;
       if (!name || !module_id) return Response.json({ error: 'Nome e módulo são obrigatórios' }, { status: 400 });
       const mod = await base44.asServiceRole.entities.TicketModule.get(module_id);
@@ -516,6 +524,8 @@ Deno.serve(async (req) => {
       return Response.json({ submodule: sm });
     }
     if (operation === 'deleteSubModule') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       await base44.asServiceRole.entities.TicketSubModule.delete(body.submodule_id);
       return Response.json({ success: true });
     }
@@ -526,15 +536,21 @@ Deno.serve(async (req) => {
       return Response.json({ types });
     }
     if (operation === 'createType') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const t = await base44.asServiceRole.entities.TicketType.create({ name: body.name, description: body.description || '', is_active: true });
       return Response.json({ type: t });
     }
     if (operation === 'updateType') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const { type_id, ...updates } = body;
       const t = await base44.asServiceRole.entities.TicketType.update(type_id, updates);
       return Response.json({ type: t });
     }
     if (operation === 'deleteType') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       await base44.asServiceRole.entities.TicketType.delete(body.type_id);
       return Response.json({ success: true });
     }
@@ -545,15 +561,21 @@ Deno.serve(async (req) => {
       return Response.json({ priorities });
     }
     if (operation === 'createPriority') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const p = await base44.asServiceRole.entities.TicketPriority.create({ name: body.name, level: body.level || 1, color: body.color || 'gray', is_active: true });
       return Response.json({ priority: p });
     }
     if (operation === 'updatePriority') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       const { priority_id, ...updates } = body;
       const p = await base44.asServiceRole.entities.TicketPriority.update(priority_id, updates);
       return Response.json({ priority: p });
     }
     if (operation === 'deletePriority') {
+      const actor = await resolveUser(base44, body.actor_id);
+      if (!actor || actor.role !== 'system_admin') return Response.json({ error: 'Acesso negado' }, { status: 403 });
       await base44.asServiceRole.entities.TicketPriority.delete(body.priority_id);
       return Response.json({ success: true });
     }

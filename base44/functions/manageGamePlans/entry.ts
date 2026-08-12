@@ -46,12 +46,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unknown operation' }, { status: 400 });
     }
 
-    const { admin_email } = body;
-    if (!admin_email) return Response.json({ error: 'Admin email required' }, { status: 401 });
+    // Verify admin via authenticated session — ignore admin_email from body (spoofable)
+    const sessionUser = await base44.auth.me();
+    if (!sessionUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const adminUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: admin_email, is_admin: true, is_active: true });
+    const adminUsers = await base44.asServiceRole.entities.PortalUser.filter({ email: sessionUser.email, is_admin: true, is_active: true });
     if (adminUsers.length === 0) {
-      return Response.json({ error: 'Unauthorized' }, { status: 403 });
+      return Response.json({ error: 'Acesso negado — administrador requerido' }, { status: 403 });
     }
 
     if (operation === 'getAllConfigs') {
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
       const { unlock_id } = body;
       const updated = await base44.asServiceRole.entities.GameUnlock.update(unlock_id, {
         status: 'approved',
-        approved_by: admin_email,
+        approved_by: sessionUser.email,
         approved_at: new Date().toISOString()
       });
       return Response.json({ unlock: updated });
@@ -99,7 +100,7 @@ Deno.serve(async (req) => {
       const { unlock_id } = body;
       const updated = await base44.asServiceRole.entities.GameUnlock.update(unlock_id, {
         status: 'rejected',
-        approved_by: admin_email,
+        approved_by: sessionUser.email,
         approved_at: new Date().toISOString()
       });
       return Response.json({ unlock: updated });

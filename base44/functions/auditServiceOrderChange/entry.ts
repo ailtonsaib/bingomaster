@@ -11,6 +11,12 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: "not an update event" });
     }
 
+    // Verify the ServiceOrder exists — prevents fake audit logs from direct/unauthenticated calls
+    const orderExists = await base44.asServiceRole.entities.ServiceOrder.filter({ id: data.id });
+    if (!orderExists || orderExists.length === 0) {
+      return Response.json({ skipped: true, reason: "order not found" });
+    }
+
     const num = (v) => Number(v) || 0;
 
     // Compara campos financeiros — detecção direta de valor (não depende de changed_fields)
