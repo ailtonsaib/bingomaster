@@ -8,6 +8,17 @@ Deno.serve(async (req) => {
     const { data } = body;
     if (!data) return Response.json({ error: 'No data' }, { status: 400 });
 
+    // Automation handler (PlanRequest create event) — no user session available.
+    // Verify the PlanRequest exists to prevent fake event payloads from direct calls.
+    if (data.id) {
+      try {
+        const planRequests = await base44.asServiceRole.entities.PlanRequest.filter({ id: String(data.id) });
+        if (planRequests.length === 0) return Response.json({ skipped: true, reason: 'plan request not found' });
+      } catch (_) {
+        return Response.json({ skipped: true, reason: 'plan request not found' });
+      }
+    }
+
     const adminUser = await base44.asServiceRole.entities.User.filter({ role: 'admin' });
     const adminEmail = adminUser?.[0]?.email;
     if (!adminEmail) return Response.json({ error: 'Admin email not found' }, { status: 404 });

@@ -34,6 +34,15 @@ Deno.serve(async (req) => {
     }
     if (!order) return Response.json({ skipped: true, reason: 'order not found' });
 
+    // Automation handler (ServiceOrder update event) — no user session available.
+    // Verify the order exists in the database to prevent fake event payloads.
+    try {
+      const dbOrders = await base44.asServiceRole.entities.ServiceOrder.filter({ id: String(order.id || event?.entity_id) });
+      if (dbOrders.length === 0) return Response.json({ skipped: true, reason: 'order not found in db' });
+    } catch (_) {
+      return Response.json({ skipped: true, reason: 'order not found in db' });
+    }
+
     if (order.status !== 'concluida') {
       return Response.json({ skipped: true, reason: `status is ${order.status}, not concluida` });
     }

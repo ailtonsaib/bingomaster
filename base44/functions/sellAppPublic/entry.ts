@@ -87,6 +87,17 @@ export default async function(req) {
         if (!body.card_id) {
           return Response.json({ error: 'card_id é obrigatório' }, { status: 400 });
         }
+        // Verify the seller is valid (public app — phone-based auth, no base44 session)
+        if (body.seller_id) {
+          try {
+            const sellers = await base44.asServiceRole.entities.Seller.filter({ id: String(body.seller_id), is_active: true });
+            if (sellers.length === 0) {
+              return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+            }
+          } catch (_) {
+            return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+          }
+        }
         const updateData = {
           player_name: body.player_name,
           player_phone: body.player_phone,
@@ -127,6 +138,15 @@ export default async function(req) {
         // As cartelas já vendidas (com comprador) permanecem com o vendedor.
         if (!body.game_id || !body.seller_id) {
           return Response.json({ error: 'game_id e seller_id são obrigatórios' }, { status: 400 });
+        }
+        // Verify the seller is valid (public app — phone-based auth, no base44 session)
+        try {
+          const devolveSellers = await base44.asServiceRole.entities.Seller.filter({ id: String(body.seller_id), is_active: true });
+          if (devolveSellers.length === 0) {
+            return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+          }
+        } catch (_) {
+          return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
         }
         const gameId = String(body.game_id);
         const sellerId = String(body.seller_id);
@@ -176,6 +196,18 @@ export default async function(req) {
         // com ele (continuam visíveis via seller_id).
         if (!body.game_id || !body.seller_id || !body.to_seller_id) {
           return Response.json({ error: 'game_id, seller_id e to_seller_id são obrigatórios' }, { status: 400 });
+        }
+        // Verify both sellers are valid (public app — phone-based auth, no base44 session)
+        try {
+          const [fromSellers, toSellers] = await Promise.all([
+            base44.asServiceRole.entities.Seller.filter({ id: String(body.seller_id), is_active: true }),
+            base44.asServiceRole.entities.Seller.filter({ id: String(body.to_seller_id), is_active: true }),
+          ]);
+          if (fromSellers.length === 0 || toSellers.length === 0) {
+            return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
+          }
+        } catch (_) {
+          return Response.json({ error: 'Vendedor inválido' }, { status: 403 });
         }
         const gameId = String(body.game_id);
         const sellerId = String(body.seller_id);

@@ -8,6 +8,17 @@ Deno.serve(async (req) => {
     const cardData = body.data;
     const oldData = body.old_data;
 
+    // Automation handler (BingoCard update event) — no user session available.
+    // Verify the BingoCard exists to prevent fake event payloads from direct calls.
+    if (cardData?.id) {
+      try {
+        const cards = await base44.asServiceRole.entities.BingoCard.filter({ id: String(cardData.id) });
+        if (cards.length === 0) return Response.json({ skipped: true, reason: 'card not found' });
+      } catch (_) {
+        return Response.json({ skipped: true, reason: 'card not found' });
+      }
+    }
+
     // Detect which prize was newly awarded
     const newPrizes = cardData?.won_prizes || [];
     const oldPrizes = oldData?.won_prizes || [];
