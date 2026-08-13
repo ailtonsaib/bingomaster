@@ -1,0 +1,94 @@
+{
+  "name": "ErpBudget",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do or\u00e7amento (ex: Or\u00e7amento 2026)"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano de refer\u00eancia"
+    },
+    "month": {
+      "type": "number",
+      "default": 0,
+      "description": "M\u00eas (1-12). 0 = ano todo"
+    },
+    "category": {
+      "type": "string",
+      "description": "Categoria/conta"
+    },
+    "planned_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor planejado"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "year"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

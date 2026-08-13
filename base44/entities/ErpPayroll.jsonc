@@ -1,0 +1,112 @@
+{
+  "name": "ErpPayroll",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nome do funcion\u00e1rio"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID do funcion\u00e1rio (ErpUser) \u2014 opcional"
+    },
+    "month": {
+      "type": "number",
+      "description": "M\u00eas de compet\u00eancia (1-12)"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano de compet\u00eancia"
+    },
+    "gross_salary": {
+      "type": "number",
+      "default": 0,
+      "description": "Sal\u00e1rio bruto"
+    },
+    "discounts": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de descontos"
+    },
+    "net_salary": {
+      "type": "number",
+      "default": 0,
+      "description": "Sal\u00e1rio l\u00edquido"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "pago"
+      ],
+      "default": "pendente"
+    },
+    "payment_date": {
+      "type": "string",
+      "description": "Data de pagamento (ISO)"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "employee_name",
+    "month",
+    "year"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

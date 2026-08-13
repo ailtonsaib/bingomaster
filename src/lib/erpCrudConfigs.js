@@ -50,6 +50,18 @@ const ASSET_STATUS = [
   { value: "ativo", label: "Ativo", color: "text-emerald-700 bg-emerald-100" },
   { value: "baixado", label: "Baixado", color: "text-gray-700 bg-gray-100" },
 ];
+const MONTH_OPTS = [
+  { value: 0, label: "Ano todo" },
+  { value: 1, label: "Janeiro" }, { value: 2, label: "Fevereiro" }, { value: 3, label: "Março" },
+  { value: 4, label: "Abril" }, { value: 5, label: "Maio" }, { value: 6, label: "Junho" },
+  { value: 7, label: "Julho" }, { value: 8, label: "Agosto" }, { value: 9, label: "Setembro" },
+  { value: 10, label: "Outubro" }, { value: 11, label: "Novembro" }, { value: 12, label: "Dezembro" },
+];
+const MONTH_PAY_OPTS = MONTH_OPTS.filter(m => m.value !== 0);
+const PAYROLL_STATUS = [
+  { value: "pendente", label: "Pendente", color: "text-amber-700 bg-amber-100" },
+  { value: "pago", label: "Pago", color: "text-emerald-700 bg-emerald-100" },
+];
 
 export const ERP_CRUD_CONFIGS = {
   empresas: {
@@ -336,5 +348,47 @@ export const ERP_CRUD_CONFIGS = {
       { key: "status", label: "Status", type: "badge", options: ASSET_STATUS },
     ],
     searchKeys: ["name", "code", "location"],
+  },
+  orcamento: {
+    entityName: "ErpBudget", title: "Orçamento",
+    fields: [
+      { key: "name", label: "Nome do Orçamento", required: true, full: true },
+      { key: "year", label: "Ano", type: "number", required: true },
+      { key: "month", label: "Mês", type: "select", options: MONTH_OPTS },
+      { key: "category", label: "Categoria / Conta", full: true },
+      { key: "planned_value", label: "Valor Planejado", type: "number" },
+      { key: "is_active", label: "Ativo", type: "checkbox" },
+      { key: "notes", label: "Observações", full: true },
+    ],
+    columns: [
+      { key: "name", label: "Orçamento" }, { key: "year", label: "Ano" },
+      { key: "month", label: "Mês", type: "badge", options: MONTH_OPTS.map(o => ({ value: o.value, label: o.label, color: "text-gray-700 bg-gray-100" })) },
+      { key: "category", label: "Categoria" }, { key: "planned_value", label: "Planejado", type: "money" },
+      { key: "is_active", label: "Ativo", type: "bool" },
+    ],
+    searchKeys: ["name", "category", "year"],
+  },
+  folhaPagamento: {
+    entityName: "ErpPayroll", title: "Folha de Pagamento",
+    fields: [
+      { key: "employee_name", label: "Funcionário", required: true, full: true },
+      { key: "month", label: "Mês", type: "select", options: MONTH_PAY_OPTS, required: true },
+      { key: "year", label: "Ano", type: "number", required: true },
+      { key: "gross_salary", label: "Salário Bruto", type: "number" },
+      { key: "discounts", label: "Descontos", type: "number" },
+      { key: "net_salary", label: "Salário Líquido", type: "number" },
+      { key: "status", label: "Status", type: "select", options: PAYROLL_STATUS },
+      { key: "payment_date", label: "Data Pagamento", inputType: "date" },
+      { key: "notes", label: "Observações", full: true },
+    ],
+    columns: [
+      { key: "employee_name", label: "Funcionário" },
+      { key: "month", label: "Mês", type: "badge", options: MONTH_PAY_OPTS.map(o => ({ value: o.value, label: o.label, color: "text-gray-700 bg-gray-100" })) },
+      { key: "year", label: "Ano" },
+      { key: "gross_salary", label: "Bruto", type: "money" },
+      { key: "net_salary", label: "Líquido", type: "money" },
+      { key: "status", label: "Status", type: "badge", options: PAYROLL_STATUS },
+    ],
+    searchKeys: ["employee_name"],
   },
 };
