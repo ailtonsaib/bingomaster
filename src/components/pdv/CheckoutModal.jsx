@@ -7,6 +7,8 @@ export default function CheckoutModal({ total, companyConfig, onClose, onConfirm
   const [method, setMethod] = useState("dinheiro");
   const [amountReceived, setAmountReceived] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emitNfce, setEmitNfce] = useState(true);
+  const canEmit = !!(companyConfig?.cnpj && companyConfig?.ie && companyConfig?.ibge_code);
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
@@ -24,6 +26,7 @@ export default function CheckoutModal({ total, companyConfig, onClose, onConfirm
         payment_method: method,
         payment_amount: method === "dinheiro" ? parseFloat(amountReceived) || total : total,
         change_amount: method === "dinheiro" ? change : 0,
+        emit_nfce: canEmit && emitNfce,
       });
     } finally {
       setLoading(false);
@@ -109,6 +112,13 @@ export default function CheckoutModal({ total, companyConfig, onClose, onConfirm
               </p>
             </div>
           )}
+        </div>
+        <div className="px-6 pb-2">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={canEmit && emitNfce} disabled={!canEmit} onChange={(e) => setEmitNfce(e.target.checked)} className="w-4 h-4" />
+            <span>Emitir cupom fiscal (NFC-e)</span>
+          </label>
+          {!canEmit && <p className="text-xs text-amber-600 mt-1">Configure CNPJ, IE e IBGE da empresa para emitir NFC-e.</p>}
         </div>
         <div className="p-4 border-t flex gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose}>

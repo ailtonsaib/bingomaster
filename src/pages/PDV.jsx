@@ -20,6 +20,9 @@ import TaxAlertPanel from "@/components/pdv/TaxAlertPanel";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
 import FinancePanel from "@/components/pdv/FinancePanel";
 import ForecastReport from "@/components/pdv/ForecastReport";
+import CupomResultModal from "@/components/pdv/CupomResultModal";
+import DanfePrint from "@/components/pdv/DanfePrint";
+import { buildFiscalItem, computeTotals } from "@/lib/pdvTaxCalc";
 
 export default function PDV() {
   const navigate = useNavigate();
@@ -29,13 +32,24 @@ export default function PDV() {
   const [activeTab, setActiveTab] = useState("caixa");
   const [showCompanyConfig, setShowCompanyConfig] = useState(false);
   const [companyConfig, setCompanyConfig] = useState(null);
+  const [taxParams, setTaxParams] = useState([]);
+  const [monofasicTaxes, setMonofasicTaxes] = useState([]);
+  const [cupom, setCupom] = useState(null);
+  const [cupomOrder, setCupomOrder] = useState(null);
+  const [showDanfe, setShowDanfe] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/pdv"); return; }
     (async () => {
       try {
-        const list = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
+        const [list, taxes, monofasic] = await Promise.all([
+          base44.entities.PDVCompanyConfig.filter({ user_email: user.email }),
+          base44.entities.PDVExitTaxParameter.filter({ user_email: user.email }),
+          base44.entities.PDVMonofasicTax.filter({ user_email: user.email }),
+        ]);
         if (list.length > 0) setCompanyConfig(list[0]);
+        setTaxParams(taxes);
+        setMonofasicTaxes(monofasic);
       } catch (e) { console.error(e); }
     })();
   }, [user, navigate]);
@@ -67,6 +81,10 @@ export default function PDV() {
         product_id: product.id,
         product_name: product.name,
         barcode: product.barcode || "",
+        ncm: product.ncm || "",
+        unit: product.unit || "UN",
+        monofasic: product.monofasic === true,
+        category: product.category || "",
         quantity: 1,
         unit_price: product.price,
         total: product.price,
@@ -116,6 +134,59 @@ export default function PDV() {
         });
       } catch (e) { console.error("Erro ao atualizar estoque:", e); }
     }
+
+    // Emissão de cupom fiscal (NFC-e) imediata
+    if (payment.emit_nfce && companyConfig?.cnpj && companyConfig?.ie && companyConfig?.ibge_code) {
+      const nfce = { number: null, serie: null, key: null, protocol: null, status: null, authorized: false, error: null };
+      try {
+        const fiscalItems = cart.map(i => buildFiscalItem(i, { companyConfig, taxParams, monofasicTaxes, customer: null, defaultCfop: "5102" }));
+        const totals = computeTotals(fiscalItems);
+        const order = await base44.entities.PDVExitOrder.create({
+          user_email: user.email,
+          customer_name: "Consumidor Final",
+          order_number: `PDV-${Date.now()}`,
+          order_date: new Date().toISOString(),
+          cfop: "5102",
+          nature_operation: "Venda de mercadoria",
+          items: fiscalItems,
+          total_products: totals.total_products,
+          total_icms: totals.total_icms,
+          total_ipi: totals.total_ipi,
+          total_pis: totals.total_pis,
+          total_cofins: totals.total_cofins,
+          total_nota: totals.total_nota,
+          status: "rascunho",
+          payment_method: "0",
+          buyer_type: "consumidor_final",
+          notes: "Venda PDV — Cupom Fiscal",
+        });
+        const gen = await base44.functions.invoke("gerarNfeSaida", { order_id: order.id, modelo: "65" });
+        if (gen.data?.success) {
+          nfce.number = gen.data.nfe_number;
+          nfce.serie = gen.data.nfe_series;
+          nfce.key = gen.data.nfe_key;
+          nfce.status = "NFC-e gerada — aguardando transmissão";
+          const tr = await base44.functions.invoke("transmitirNfe", { order_id: order.id });
+          const td = tr.data || {};
+          if (td.success) {
+            nfce.authorized = true;
+            nfce.protocol = td.nProt;
+            nfce.status = `${td.cStat} - ${td.xMotivo}`;
+          } else {
+            nfce.status = "Transmissão pendente: " + (td.statusText || td.error || "erro");
+          }
+        } else {
+          nfce.error = gen.data?.error || "Erro ao gerar NFC-e";
+          nfce.status = "Falha: " + nfce.error;
+        }
+        setCupomOrder(await base44.entities.PDVExitOrder.get(order.id));
+      } catch (e) {
+        nfce.status = "Erro: " + (e?.message || e);
+        nfce.error = e?.message;
+      }
+      setCupom({ saleOk: true, nfce });
+    }
+
     setCart([]);
     setShowCheckout(false);
     setActiveTab("vendas");
@@ -236,6 +307,20 @@ export default function PDV() {
           user={user}
           onClose={() => setShowCompanyConfig(false)}
           onSaved={reloadCompanyConfig}
+        />
+      )}
+      {cupom && (
+        <CupomResultModal
+          result={cupom}
+          onClose={() => { setCupom(null); setCupomOrder(null); }}
+          onPrint={() => setShowDanfe(true)}
+        />
+      )}
+      {showDanfe && cupomOrder && (
+        <DanfePrint
+          order={cupomOrder}
+          company={companyConfig}
+          onClose={() => setShowDanfe(false)}
         />
       )}
     </div>
