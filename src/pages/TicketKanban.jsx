@@ -16,6 +16,7 @@ export default function TicketKanban() {
   const [user, setUser] = useState(getTicketUser());
   const isRequester = user?.role === "requester";
   const isAgent = user?.role === "agent";
+  const canMove = !isRequester;
   const canManage = !isRequester && !isAgent;
   const [tickets, setTickets] = useState([]);
   const [users, setUsers] = useState([]);
@@ -190,7 +191,7 @@ export default function TicketKanban() {
           />
         )}
         <div className="relative z-10">
-          <KanbanBoard tickets={filtered} onMove={canManage ? handleMove : undefined} onTicketClick={setSelectedTicket} readOnly={isRequester || isAgent} />
+          <KanbanBoard tickets={filtered} onMove={canMove ? handleMove : undefined} onTicketClick={setSelectedTicket} readOnly={isRequester} />
         </div>
       </div>
 
@@ -203,7 +204,7 @@ export default function TicketKanban() {
           ticket={selectedTicket}
           users={users}
           currentUser={user}
-          onMove={canManage ? handleMove : undefined}
+          onMove={canMove ? handleMove : undefined}
           onTransfer={canManage ? handleTransfer : undefined}
           onDelete={canManage ? handleDelete : undefined}
           onClose={() => setSelectedTicket(null)}

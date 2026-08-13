@@ -21,6 +21,7 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
 
   const isRequester = currentUser?.role === "requester";
   const isAgent = currentUser?.role === "agent";
+  const canMove = !isRequester;
   const canManage = !isRequester && !isAgent;
   const currentIdx = STATUS_FLOW.indexOf(ticket.status);
   const canForward = currentIdx < STATUS_FLOW.length - 1;
@@ -223,9 +224,9 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
           )}
 
           {/* Actions */}
-          {canManage && (
+          {((canMove && onMove) || (canManage && onDelete)) && (
             <div className="flex flex-wrap gap-2 border-t pt-4">
-              {onMove && (
+              {canMove && onMove && (
                 <>
                   <Button size="sm" variant="default" onClick={handleForward} disabled={!canForward} className="gap-1">
                     <ArrowRight className="w-4 h-4" /> Avançar
@@ -235,7 +236,7 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
                   </Button>
                 </>
               )}
-              {onDelete && (
+              {canManage && onDelete && (
                 <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir chamado?")) onDelete(ticket.id); }} className="gap-1 text-destructive ml-auto">
                   <Trash2 className="w-4 h-4" /> Excluir
                 </Button>
@@ -248,15 +249,6 @@ export default function TicketDetailModal({ ticket, users, currentUser, onMove, 
               <p className="text-xs text-muted-foreground flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5" />
                 Como cliente, você pode acompanhar o status e adicionar comentários, mas não pode movimentar, transferir ou excluir chamados.
-              </p>
-            </div>
-          )}
-
-          {isAgent && (
-            <div className="border-t pt-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5" />
-                Como atendente, você pode visualizar todos os chamados e adicionar comentários, mas não pode alterar status, transferir responsável ou excluir chamados.
               </p>
             </div>
           )}
