@@ -52,6 +52,7 @@ export default function ErpFiscalPanel({ user }) {
                 <span className="text-purple-700">CBS {r.cbs_rate}%</span>
                 <span className="text-fuchsia-700">IBS {r.ibs_rate}%</span>
                 {r.difal_enabled && <span className="text-blue-700">DIFAL (dest {r.aliq_interna_destino}% − inter {r.aliq_interestadual}%)</span>}
+                {r.st_enabled && <span className="text-amber-700">ST {r.st_base_method === "pauta" ? "Pauta" : r.st_base_method === "agregada" ? "Agregada" : `MVA ${r.mva_rate}%`} • alíq {r.icms_st_rate}%</span>}
               </div>
             ))}
           </div>

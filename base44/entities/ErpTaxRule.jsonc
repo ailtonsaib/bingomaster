@@ -139,6 +139,59 @@
       "default": 100,
       "description": "Percentual do DIFAL destinado ao estado de destino (ap\u00f3s 2019 = 100%)"
     },
+    "st_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a opera\u00e7\u00e3o aplica Substitui\u00e7\u00e3o Tribut\u00e1ria (ICMS-ST)"
+    },
+    "cst_icms_st": {
+      "type": "string",
+      "description": "CST do ICMS-ST (10, 30, 40, 41, 50, 51, 60, 70)"
+    },
+    "st_base_method": {
+      "type": "string",
+      "enum": [
+        "mva",
+        "pauta",
+        "agregada"
+      ],
+      "default": "mva",
+      "description": "Base de c\u00e1lculo do ST: mva (Margem de Valor Agregado), pauta (valor fixo por unidade) ou agregada (valor opera\u00e7\u00e3o + IPI)"
+    },
+    "mva_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Margem de Valor Agregado (%) para a base do ST"
+    },
+    "mva_ajusted_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "MVA ajustada para opera\u00e7\u00e3o interestadual (opcional)"
+    },
+    "icms_st_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota interna do ICMS-ST do estado de destino (%)"
+    },
+    "icms_st_reduction_base": {
+      "type": "number",
+      "default": 100,
+      "description": "Redu\u00e7\u00e3o da base de c\u00e1lculo do ST (%). 100 = integral"
+    },
+    "pauta_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da pauta por unidade (quando st_base_method = pauta)"
+    },
+    "pauta_unit": {
+      "type": "string",
+      "description": "Unidade da pauta (UN, KG, L, etc.)"
+    },
+    "fcp_st_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota FCP-ST (%)"
+    },
     "is_active": {
       "type": "boolean",
       "default": true

@@ -171,7 +171,7 @@ export default function ErpTaxRuleManager({ user }) {
                   <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${opBadge(r.operation_type)}`}>{r.operation_type}</span></td>
                   <td className="p-2 font-mono text-xs">{r.cfop || "—"}</td>
                   <td className="p-2 font-mono text-xs">{r.ncm || "Geral"}</td>
-                  <td className="p-2 font-mono text-xs">{r.uf || "Todas"}{r.difal_enabled ? <span className="ml-1 text-blue-600" title="Aplica DIFAL">⚡</span> : ""}</td>
+                  <td className="p-2 font-mono text-xs">{r.uf || "Todas"}{r.difal_enabled ? <span className="ml-1 text-blue-600" title="Aplica DIFAL">⚡</span> : ""}{r.st_enabled ? <span className="ml-1 text-amber-600" title="Aplica ST">ST</span> : ""}</td>
                   <td className="p-2 text-xs">{r.cst_icms} · {r.icms_rate}%</td>
                   <td className="p-2 text-xs">{r.cst_pis}/{r.cst_cofins} · {r.pis_rate}%/{r.cofins_rate}%</td>
                   <td className="p-2 text-xs">{r.cst_ipi} · {r.ipi_rate}%</td>
@@ -242,6 +242,84 @@ function DifalCalculator({ form, set }) {
   );
 }
 
+function StCalculator({ form, set }) {
+  const [base, setBase] = useState(100);
+  const [ipi, setIpi] = useState(0);
+  const [qty, setQty] = useState(1);
+  const method = form.st_base_method || "mva";
+  const mva = Number(form.mva_rate) || 0;
+  const stRate = Number(form.icms_st_rate) || 0;
+  const stRed = Number(form.icms_st_reduction_base) || 100;
+  const pauta = Number(form.pauta_value) || 0;
+  const icmsOp = Number(form.icms_rate) || 0;
+  const fcpSt = Number(form.fcp_st_rate) || 0;
+  const v = Number(base) || 0;
+  const q = Number(qty) || 0;
+  const ipiValue = v * (Number(ipi) || 0) / 100;
+  const valorOp = v + ipiValue;
+  let baseST = method === "pauta" ? pauta * q : method === "agregada" ? valorOp : valorOp * (1 + mva / 100);
+  baseST = baseST * (stRed / 100);
+  const icmsST = baseST * stRate / 100;
+  const icmsProprio = v * icmsOp / 100;
+  const icmsSTRecolher = Math.max(0, icmsST - icmsProprio);
+  const fcpSTValue = baseST * fcpSt / 100;
+  const fmt = (val) => "R$ " + (val || 0).toFixed(2).replace(".", ",");
+  const numInput = (label, key, hint) => (
+    <div>
+      <label className="text-[10px] font-medium text-gray-600">{label}</label>
+      <input type="number" step="0.01" value={form[key]} onChange={e => set(key, e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" />
+      {hint && <span className="text-[9px] text-gray-400">{hint}</span>}
+    </div>
+  );
+  return (
+    <div className="border rounded-lg p-3 border-amber-300 bg-amber-50">
+      <p className="text-sm font-semibold text-amber-800 mb-2">Substituição Tributária (ICMS-ST) — {method === "pauta" ? "Pauta" : method === "agregada" ? "Base agregada" : "MVA"}</p>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <label className="text-[10px] font-medium text-gray-600">Método da base</label>
+          <select value={method} onChange={e => set("st_base_method", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5">
+            <option value="mva">MVA (Margem de Valor Agregado)</option>
+            <option value="pauta">Pauta (valor fixo por unidade)</option>
+            <option value="agregada">Base agregada (operação + IPI)</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] font-medium text-gray-600">CST ICMS-ST</label>
+          <input type="text" value={form.cst_icms_st} onChange={e => set("cst_icms_st", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" placeholder="10, 30, 40..." />
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        {method === "mva" && numInput("MVA (%)", "mva_rate", "Margem de valor agregado")}
+        {method === "agregada" && <div className="text-[10px] text-gray-400 self-end pb-2">Base ST = valor operação + IPI (sem MVA)</div>}
+        {method === "pauta" && <><div><label className="text-[10px] font-medium text-gray-600">Valor pauta/un.</label><input type="number" step="0.01" value={form.pauta_value} onChange={e => set("pauta_value", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" /></div><div><label className="text-[10px] font-medium text-gray-600">Unidade</label><input type="text" value={form.pauta_unit} onChange={e => set("pauta_unit", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" /></div></>}
+        {numInput("Alíquota ICMS-ST (%)", "icms_st_rate", "Interna do destino")}
+        {numInput("Redução base ST (%)", "icms_st_reduction_base", "100 = integral")}
+        {numInput("FCP-ST (%)", "fcp_st_rate")}
+      </div>
+      {method === "pauta" && (
+        <div className="bg-white rounded p-2 border border-amber-200 mb-2">
+          <label className="text-xs font-medium text-gray-600 mr-2">Quantidade:</label>
+          <input type="number" step="0.01" value={qty} onChange={e => setQty(e.target.value)} className="h-8 w-24 rounded border border-input px-2 text-xs" />
+        </div>
+      )}
+      <div className="bg-white rounded p-2 border border-amber-200">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 mb-2">
+          <div><label className="text-xs font-medium text-gray-600 mr-2">Valor produto:</label><input type="number" step="0.01" value={base} onChange={e => setBase(e.target.value)} className="h-8 w-28 rounded border border-input px-2 text-xs" /></div>
+          <div><label className="text-xs font-medium text-gray-600 mr-2">IPI (%):</label><input type="number" step="0.01" value={ipi} onChange={e => setIpi(e.target.value)} className="h-8 w-20 rounded border border-input px-2 text-xs" /></div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <div className="flex justify-between"><span className="text-gray-500">Base cálculo ST:</span><b>{fmt(baseST)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">ICMS-ST (bruto):</span><b>{fmt(icmsST)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">ICMS próprio (crédito):</span><b className="text-blue-700">{fmt(icmsProprio)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">ICMS-ST a recolher:</span><b className="text-amber-800">{fmt(icmsSTRecolher)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">FCP-ST:</span><b>{fmt(fcpSTValue)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">Total ST a recolher:</span><b className="text-amber-900">{fmt(icmsSTRecolher + fcpSTValue)}</b></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
   const blank = {
     operation_id: "", operation_name: "", operation_type: "", cfop: "",
@@ -253,6 +331,7 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     cst_cbs: "00", cbs_rate: 0, cbs_reduction_base: 100,
     cst_ibs: "00", ibs_rate: 0, ibs_reduction_base: 100,
     uf: "", difal_enabled: false, aliq_interna_destino: 0, aliq_interestadual: 0, fcp_destino_rate: 0, difal_percent_destination: 100,
+    st_enabled: false, cst_icms_st: "10", st_base_method: "mva", mva_rate: 0, mva_ajusted_rate: 0, icms_st_rate: 0, icms_st_reduction_base: 100, pauta_value: 0, pauta_unit: "UN", fcp_st_rate: 0,
     is_active: true,
   };
   const [form, setForm] = useState({ ...blank, ...(rule || {}) });
@@ -269,8 +348,9 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     setSaving(true);
     const payload = { user_email: user.email, ...form };
     Object.keys(payload).forEach(k => { if (typeof payload[k] === "number") payload[k] = Number(payload[k]) || 0; });
-    ["aliq_interna_destino", "aliq_interestadual", "fcp_destino_rate", "difal_percent_destination"].forEach(k => payload[k] = Number(payload[k]) || 0);
+    ["aliq_interna_destino", "aliq_interestadual", "fcp_destino_rate", "difal_percent_destination", "mva_rate", "mva_ajusted_rate", "icms_st_rate", "icms_st_reduction_base", "pauta_value", "fcp_st_rate"].forEach(k => payload[k] = Number(payload[k]) || 0);
     payload.difal_enabled = !!payload.difal_enabled;
+    payload.st_enabled = !!payload.st_enabled;
     if (!payload.ncm) delete payload.ncm;
     if (!payload.uf) delete payload.uf;
     try {
@@ -309,6 +389,10 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
             <input type="checkbox" id="difal" checked={!!form.difal_enabled} onChange={e => set("difal_enabled", e.target.checked)} className="w-4 h-4" />
             <label htmlFor="difal" className="text-sm font-medium text-blue-800">Aplica DIFAL (interestadual a consumidor final não contribuinte)</label>
           </div>
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
+            <input type="checkbox" id="st" checked={!!form.st_enabled} onChange={e => set("st_enabled", e.target.checked)} className="w-4 h-4" />
+            <label htmlFor="st" className="text-sm font-medium text-amber-800">Aplica Substituição Tributária (ICMS-ST) — MVA ou Pauta</label>
+          </div>
           <div><label className="text-xs font-medium text-gray-600">Descrição</label>
             <Input value={form.description} onChange={e => set("description", e.target.value)} /></div>
 
@@ -333,6 +417,9 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
           ))}
           {form.difal_enabled && (
             <DifalCalculator form={form} set={set} />
+          )}
+          {form.st_enabled && (
+            <StCalculator form={form} set={set} />
           )}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Regra ativa</label>
         </div>
