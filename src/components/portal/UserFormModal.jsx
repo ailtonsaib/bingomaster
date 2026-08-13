@@ -34,6 +34,12 @@ const DIAGNOSTIC_PLANS = [
   { key: "master", label: "MASTER", desc: "Ilimitado + exclusão" },
 ];
 
+const ERP_PLANS = [
+  { key: "free", label: "FREE", desc: "50 produtos" },
+  { key: "pro", label: "PRO", desc: "Produtos ilimitados" },
+  { key: "enterprise", label: "ENTERPRISE", desc: "Multi-empresa" },
+];
+
 export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -48,6 +54,8 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
   const [canAccessPdv, setCanAccessPdv] = useState(false);
   const [canAccessDiagnostic, setCanAccessDiagnostic] = useState(false);
   const [diagnosticPlan, setDiagnosticPlan] = useState("teste");
+  const [canAccessErp, setCanAccessErp] = useState(false);
+  const [erpPlan, setErpPlan] = useState("free");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -61,6 +69,8 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
         can_access_sped: canAccessSped,
         can_access_pdv: canAccessPdv,
         can_access_diagnostic: canAccessDiagnostic,
+        can_access_erp: canAccessErp,
+        erp_plan: canAccessErp ? erpPlan : "free",
         diagnostic_plan: canAccessDiagnostic ? diagnosticPlan : "free",
         bingo_plan: canAccessBingo ? bingoPlan : "free",
         sped_plan: canAccessSped ? spedPlan : "free",
@@ -163,6 +173,25 @@ export default function UserFormModal({ adminEmail, onClose, onSaved }) {
                 className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
               >
                 {SPED_PLANS.map((p) => (
+                  <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* ERP - Indústria & Comércio */}
+          <div className="pt-2 border-t">
+            <label className="flex items-center gap-2 text-sm font-medium mb-2">
+              <input type="checkbox" checked={canAccessErp} onChange={(e) => setCanAccessErp(e.target.checked)} className="w-4 h-4" />
+              ERP — Indústria & Comércio
+            </label>
+            {canAccessErp && (
+              <select
+                value={erpPlan}
+                onChange={(e) => setErpPlan(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                {ERP_PLANS.map((p) => (
                   <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
                 ))}
               </select>

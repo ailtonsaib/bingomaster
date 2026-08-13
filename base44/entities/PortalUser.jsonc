@@ -49,6 +49,21 @@
       "default": false,
       "description": "Se tem acesso ao Diagn\u00f3stico Automotivo"
     },
+    "can_access_erp": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se tem acesso ao ERP (Ind\u00fastria + Com\u00e9rcio)"
+    },
+    "erp_plan": {
+      "type": "string",
+      "enum": [
+        "free",
+        "pro",
+        "enterprise"
+      ],
+      "default": "free",
+      "description": "Plano do ERP: free (50 produtos), pro (produtos ilimitados), enterprise (multi-empresa)"
+    },
     "diagnostic_plan": {
       "type": "string",
       "enum": [
@@ -161,7 +176,8 @@
         "chamados",
         "sped",
         "pdv",
-        "diagnostic"
+        "diagnostic",
+        "erp"
       ],
       "default": "portal",
       "description": "Aplicativo que o usu\u00e1rio est\u00e1 usando no momento"

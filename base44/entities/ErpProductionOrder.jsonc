@@ -1,0 +1,148 @@
+{
+  "name": "ErpProductionOrder",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero da ordem de produ\u00e7\u00e3o (ex: OP 001/2026)"
+    },
+    "output_product_id": {
+      "type": "string",
+      "description": "ID do produto acabado a ser produzido (ErpProduct)"
+    },
+    "output_product_name": {
+      "type": "string",
+      "description": "Nome do produto acabado (cache)"
+    },
+    "output_product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto acabado (cache)"
+    },
+    "output_quantity": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade planejada a produzir"
+    },
+    "bom_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_code": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "quantity_per_unit": {
+            "type": "number",
+            "description": "Quantidade consumida por unidade produzida"
+          },
+          "total_consumed": {
+            "type": "number",
+            "description": "Total consumido (quantity_per_unit \u00d7 produced_quantity)"
+          }
+        }
+      },
+      "default": [],
+      "description": "Estrutura de produtos (Bill of Materials) \u2014 insumos/mat\u00e9ria-prima consumidos"
+    },
+    "emission_date": {
+      "type": "string",
+      "description": "Data de emiss\u00e3o da OP (ISO)"
+    },
+    "start_date": {
+      "type": "string",
+      "description": "Data de in\u00edcio da produ\u00e7\u00e3o (ISO)"
+    },
+    "completion_date": {
+      "type": "string",
+      "description": "Data de conclus\u00e3o (ISO)"
+    },
+    "produced_quantity": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade efetivamente produzida"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "rascunho",
+        "em_producao",
+        "concluida",
+        "cancelada"
+      ],
+      "default": "rascunho",
+      "description": "Status: rascunho, em_producao, concluida (estoque atualizado), cancelada"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "order_number",
+    "output_product_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "name": "ErpPurchaseOrder",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero do pedido de compra (ex: PC 001/2026)"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor (ErpSupplier)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor (cache)"
+    },
+    "supplier_cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor (cache)"
+    },
+    "emission_date": {
+      "type": "string",
+      "description": "Data de emiss\u00e3o do pedido (ISO)"
+    },
+    "expected_date": {
+      "type": "string",
+      "description": "Data prevista de entrega (ISO)"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_code": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "ncm": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      },
+      "default": [],
+      "description": "Itens do pedido de compra"
+    },
+    "total_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do pedido"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "rascunho",
+        "enviada",
+        "recebida_parcial",
+        "recebida",
+        "cancelada"
+      ],
+      "default": "rascunho",
+      "description": "Status: rascunho, enviada (ao fornecedor), recebida_parcial, recebida (estoque entrada), cancelada"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "order_number",
+    "total_value"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
