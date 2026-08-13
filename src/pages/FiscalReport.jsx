@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, Calendar, FileText, Receipt, FileCheck2, Download,
   TrendingUp, FileBarChart, ArrowLeft, ChevronLeft, ChevronRight, Printer
 } from "lucide-react";
+import { getPortalUser } from "@/lib/portalSession";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -18,7 +20,9 @@ function inMonth(dateStr, year, month) {
   return d.getFullYear() === year && d.getMonth() === month;
 }
 
-export default function FiscalReport({ user }) {
+export default function FiscalReport() {
+  const navigate = useNavigate();
+  const user = getPortalUser();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -27,6 +31,7 @@ export default function FiscalReport({ user }) {
   const [nfseList, setNfseList] = useState([]);
 
   useEffect(() => {
+    if (!user) { navigate("/pdv"); return; }
     (async () => {
       setLoading(true);
       try {
@@ -39,7 +44,7 @@ export default function FiscalReport({ user }) {
       } catch (e) { console.error(e); }
       setLoading(false);
     })();
-  }, [user.email]);
+  }, [user, navigate]);
 
   const data = useMemo(() => {
     const issued = (arr, dateField) => arr.filter(o => o.status === "emitida" && inMonth(o[dateField], year, month));
@@ -56,6 +61,8 @@ export default function FiscalReport({ user }) {
       nfse: { docs: nfses, count: nfses.length, total: sum(nfses) },
     };
   }, [exitOrders, nfseList, year, month]);
+
+  if (!user) return null;
 
   const grandTotal = data.nfe.total + data.nfce.total + data.nfse.total;
   const totalCount = data.nfe.count + data.nfce.count + data.nfse.count;
@@ -97,6 +104,9 @@ export default function FiscalReport({ user }) {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/pdv-caixa")} className="p-1 hover:bg-gray-100 rounded">
+            <ArrowLeft className="w-5 h-5 text-gray-500" />
+          </button>
           <FileBarChart className="w-6 h-6 text-indigo-600" />
           <div>
             <h1 className="text-xl font-bold">Relatório Fiscal Mensal</h1>
