@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Trash2, X, Loader2, Handshake } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
+import ErpVendedorPicker from "@/components/erp/ErpVendedorPicker";
 import { maskCpfCnpj, maskCep, maskPhone, onlyDigits } from "@/lib/brMasks";
 
 const PARTNER_TYPE_OPTS = [
@@ -32,6 +33,9 @@ async function lookupCep(cep) {
 
 export default function ErpPartnerManager({ user }) {
   const [items, setItems] = useState([]);
+  const [vendedores, setVendedores] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -40,8 +44,13 @@ export default function ErpPartnerManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.ErpPartner.filter({ user_email: user.email }, "-created_date", 500);
-      setItems(list);
+      const [list, vends, chs, secs] = await Promise.all([
+        base44.entities.ErpPartner.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpSalesTeam.filter({ user_email: user.email, team_role: "vendedor" }, "name", 500),
+        base44.entities.ErpChannel.filter({ user_email: user.email }, "name", 200),
+        base44.entities.ErpActivitySector.filter({ user_email: user.email }, "name", 200),
+      ]);
+      setItems(list); setVendedores(vends); setChannels(chs); setSectors(secs);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -101,13 +110,13 @@ export default function ErpPartnerManager({ user }) {
       </div>
 
       {showForm && (
-        <ErpPartnerForm user={user} editing={editing} onClose={() => setShowForm(false)} onSaved={load} />
+        <ErpPartnerForm user={user} editing={editing} vendedores={vendedores} channels={channels} sectors={sectors} onClose={() => setShowForm(false)} onSaved={load} />
       )}
     </div>
   );
 }
 
-function ErpPartnerForm({ user, editing, onClose, onSaved }) {
+function ErpPartnerForm({ user, editing, vendedores, channels, sectors, onClose, onSaved }) {
   const [form, setForm] = useState({
     partner_type: editing?.partner_type || "cliente",
     document_type: editing?.document_type || "",
@@ -126,13 +135,21 @@ function ErpPartnerForm({ user, editing, onClose, onSaved }) {
     phone: editing?.phone || "",
     email: editing?.email || "",
     contact_person: editing?.contact_person || "",
+    vendedor_id: editing?.vendedor_id || "",
+    vendedor_name: editing?.vendedor_name || "",
+    channel_id: editing?.channel_id || "",
+    channel_name: editing?.channel_name || "",
+    activity_sector_id: editing?.activity_sector_id || "",
+    activity_sector_name: editing?.activity_sector_name || "",
     is_active: editing?.is_active !== false,
     notes: editing?.notes || "",
   });
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showVendedor, setShowVendedor] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const isClient = form.partner_type === "cliente" || form.partner_type === "ambos";
 
   const onDocumentChange = (v) => {
     const masked = maskCpfCnpj(v);
@@ -192,6 +209,9 @@ function ErpPartnerForm({ user, editing, onClose, onSaved }) {
     if (!form.partner_type) { alert("Selecione o tipo."); return; }
     setSaving(true);
     const payload = { user_email: user.email, ...form, document: onlyDigits(form.document), cep: onlyDigits(form.cep), phone: onlyDigits(form.phone) };
+    if (!isClient) { delete payload.vendedor_id; delete payload.vendedor_name; delete payload.channel_id; delete payload.channel_name; delete payload.activity_sector_id; delete payload.activity_sector_name; }
+    ["vendedor_id", "channel_id", "activity_sector_id"].forEach(k => { if (!payload[k]) delete payload[k]; });
+    ["vendedor_name", "channel_name", "activity_sector_name"].forEach(k => { if (!payload[k]) delete payload[k]; });
     if (!payload.document) delete payload.document;
     if (!payload.document_type) delete payload.document_type;
     ["ie", "im", "address", "number", "district", "city", "uf", "ibge_code", "email", "contact_person", "notes"].forEach(k => { if (!payload[k]) delete payload[k]; });
@@ -231,6 +251,36 @@ function ErpPartnerForm({ user, editing, onClose, onSaved }) {
 
           {msg && <p className="text-xs text-gray-500">{busy && <Loader2 className="w-3 h-3 inline animate-spin mr-1" />}{msg}</p>}
 
+          {isClient && (
+            <div className="border rounded-lg p-3 bg-emerald-50 border-emerald-200">
+              <p className="text-sm font-semibold text-emerald-800 mb-2">Dados do Cliente</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Vendedor Responsável</Label>
+                  <div className="flex gap-1 mt-1">
+                    <Input value={form.vendedor_name} readOnly placeholder="Selecione..." className="bg-white" />
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowVendedor(true)}>Escolher</Button>
+                    {form.vendedor_id && <Button type="button" variant="ghost" size="sm" onClick={() => { set("vendedor_id", ""); set("vendedor_name", ""); }}>✕</Button>}
+                  </div>
+                </div>
+                <div>
+                  <Label>Canal</Label>
+                  <select value={form.channel_id} onChange={e => { const c = channels.find(c => c.id === e.target.value); set("channel_id", e.target.value); set("channel_name", c?.name || ""); }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
+                    <option value="">Selecione...</option>
+                    {channels.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label>Ramo de Atividade</Label>
+                  <select value={form.activity_sector_id} onChange={e => { const a = sectors.find(a => a.id === e.target.value); set("activity_sector_id", e.target.value); set("activity_sector_name", a?.name || ""); }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
+                    <option value="">Selecione...</option>
+                    {sectors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2"><Label>{isCnpj ? "Razão Social *" : "Nome Completo *"}</Label><Input value={form.name} onChange={e => set("name", e.target.value)} /></div>
             {isCnpj && <div className="col-span-2"><Label>Nome Fantasia</Label><Input value={form.nome_fantasia} onChange={e => set("nome_fantasia", e.target.value)} /></div>}
@@ -257,6 +307,15 @@ function ErpPartnerForm({ user, editing, onClose, onSaved }) {
           <Button size="sm" onClick={handleSave} disabled={saving || busy}>{saving ? "Salvando..." : "Salvar Parceiro"}</Button>
         </div>
       </div>
+
+      {showVendedor && (
+        <ErpVendedorPicker
+          vendedores={vendedores}
+          selectedId={form.vendedor_id}
+          onSelect={v => { set("vendedor_id", v.id); set("vendedor_name", v.name); }}
+          onClose={() => setShowVendedor(false)}
+        />
+      )}
     </div>
   );
 }

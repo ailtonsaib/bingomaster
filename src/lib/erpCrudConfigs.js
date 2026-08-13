@@ -159,6 +159,24 @@ export const ERP_CRUD_CONFIGS = {
     ],
     searchKeys: ["name", "email", "department_name"],
   },
+  canais: {
+    entityName: "ErpChannel", title: "Cadastro de Canais de Vendas",
+    fields: [
+      { key: "name", label: "Nome do Canal", required: true, full: true },
+      { key: "description", label: "Descrição", full: true }, { key: "is_active", label: "Ativo", type: "checkbox" },
+    ],
+    columns: [{ key: "name", label: "Canal" }, { key: "description", label: "Descrição" }, { key: "is_active", label: "Ativo", type: "bool" }],
+    searchKeys: ["name", "description"],
+  },
+  ramos: {
+    entityName: "ErpActivitySector", title: "Cadastro de Ramos de Atividade",
+    fields: [
+      { key: "name", label: "Nome do Ramo", required: true, full: true },
+      { key: "code", label: "Código" }, { key: "description", label: "Descrição", full: true }, { key: "is_active", label: "Ativo", type: "checkbox" },
+    ],
+    columns: [{ key: "name", label: "Ramo" }, { key: "code", label: "Código" }, { key: "description", label: "Descrição" }, { key: "is_active", label: "Ativo", type: "bool" }],
+    searchKeys: ["name", "code", "description"],
+  },
   clientes: {
     entityName: "ErpCustomer", title: "Cadastro de Clientes",
     fields: [

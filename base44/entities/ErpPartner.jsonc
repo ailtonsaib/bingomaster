@@ -22,7 +22,7 @@
         "cpf",
         "cnpj"
       ],
-      "description": "Tipo de documento: cpf ou cnpj"
+      "description": "Tipo de documento"
     },
     "document": {
       "type": "string",
@@ -66,8 +66,7 @@
       "type": "string"
     },
     "ibge_code": {
-      "type": "string",
-      "description": "C\u00f3digo IBGE do munic\u00edpio"
+      "type": "string"
     },
     "phone": {
       "type": "string"
@@ -78,6 +77,30 @@
     "contact_person": {
       "type": "string",
       "description": "Pessoa de contato"
+    },
+    "vendedor_id": {
+      "type": "string",
+      "description": "ID do vendedor respons\u00e1vel (ErpSalesTeam) \u2014 quando cliente"
+    },
+    "vendedor_name": {
+      "type": "string",
+      "description": "Nome do vendedor (cache)"
+    },
+    "channel_id": {
+      "type": "string",
+      "description": "ID do canal (ErpChannel) \u2014 quando cliente"
+    },
+    "channel_name": {
+      "type": "string",
+      "description": "Nome do canal (cache)"
+    },
+    "activity_sector_id": {
+      "type": "string",
+      "description": "ID do ramo de atividade (ErpActivitySector) \u2014 quando cliente"
+    },
+    "activity_sector_name": {
+      "type": "string",
+      "description": "Nome do ramo (cache)"
     },
     "is_active": {
       "type": "boolean",
