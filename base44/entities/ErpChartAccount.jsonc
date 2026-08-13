@@ -1,0 +1,111 @@
+{
+  "name": "ErpChartAccount",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta (ex: 1.1.1)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da conta"
+    },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "passivo",
+        "patrimonio_liquido",
+        "receita",
+        "despesa",
+        "compensacao"
+      ],
+      "description": "Tipo: ativo, passivo, patrimonio_liquido, receita, despesa ou compensacao"
+    },
+    "nature": {
+      "type": "string",
+      "enum": [
+        "devedora",
+        "credora"
+      ],
+      "description": "Natureza da conta"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID da conta pai (agrupadora)"
+    },
+    "parent_name": {
+      "type": "string",
+      "description": "Nome da conta pai (cache)"
+    },
+    "accepts_entries": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a conta aceita lan\u00e7amentos (false = apenas agrupadora)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "code",
+    "name",
+    "account_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

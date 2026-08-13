@@ -1,0 +1,139 @@
+{
+  "name": "ErpJournalEntry",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero do lan\u00e7amento (ex: LCT 001/2026)"
+    },
+    "date": {
+      "type": "string",
+      "description": "Data do lan\u00e7amento (ISO)"
+    },
+    "history": {
+      "type": "string",
+      "description": "Hist\u00f3rico principal"
+    },
+    "document": {
+      "type": "string"
+    },
+    "cost_center_id": {
+      "type": "string",
+      "description": "ID do centro de custo (ErpCostCenter)"
+    },
+    "cost_center_name": {
+      "type": "string",
+      "description": "Nome do centro de custo (cache)"
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          },
+          "account_code": {
+            "type": "string"
+          },
+          "account_name": {
+            "type": "string"
+          },
+          "debit": {
+            "type": "number",
+            "default": 0
+          },
+          "credit": {
+            "type": "number",
+            "default": 0
+          },
+          "complement": {
+            "type": "string",
+            "description": "Hist\u00f3rico complementar"
+          }
+        }
+      },
+      "default": [],
+      "description": "Partidas do lan\u00e7amento (d\u00e9bito/cr\u00e9dito)"
+    },
+    "total_debit": {
+      "type": "number",
+      "default": 0
+    },
+    "total_credit": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "rascunho",
+        "definitivo"
+      ],
+      "default": "rascunho"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "number",
+    "date",
+    "history"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
