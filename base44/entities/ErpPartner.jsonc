@@ -1,0 +1,145 @@
+{
+  "name": "ErpPartner",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "partner_type": {
+      "type": "string",
+      "enum": [
+        "cliente",
+        "fornecedor",
+        "ambos"
+      ],
+      "default": "cliente",
+      "description": "Tipo do parceiro: cliente, fornecedor ou ambos"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "cpf",
+        "cnpj"
+      ],
+      "description": "Tipo de documento: cpf ou cnpj"
+    },
+    "document": {
+      "type": "string",
+      "description": "CPF ou CNPJ (apenas n\u00fameros)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Raz\u00e3o social (CNPJ) ou nome completo (CPF)"
+    },
+    "nome_fantasia": {
+      "type": "string",
+      "description": "Nome fantasia (CNPJ)"
+    },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual"
+    },
+    "im": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Municipal"
+    },
+    "cep": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string",
+      "description": "Logradouro"
+    },
+    "number": {
+      "type": "string"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string"
+    },
+    "ibge_code": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "Pessoa de contato"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "partner_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

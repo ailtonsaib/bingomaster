@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft } from "lucide-react";
+import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft, Handshake } from "lucide-react";
 import ErpDashboard from "@/components/erp/ErpDashboard";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpTaxRuleManager from "@/components/erp/ErpTaxRuleManager";
 import ErpUserManager from "@/components/erp/ErpUserManager";
+import ErpPartnerManager from "@/components/erp/ErpPartnerManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -17,6 +18,7 @@ const SUBTABS = [
   { id: "grupos", label: "Grupos de Estoque", icon: Boxes },
   { id: "subgrupos", label: "Sub-grupos", icon: Layers },
   { id: "usuarios", label: "Usuários", icon: Users },
+  { id: "parceiros", label: "Clientes / Fornecedores", icon: Handshake },
   { id: "operacoes", label: "Operações", icon: ArrowRightLeft },
   { id: "regras", label: "Regras Fiscais", icon: ScrollText },
 ];
@@ -49,7 +51,8 @@ export default function ErpModuleGerencial({ user }) {
       {sub === "dashboard" && (loading ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" /></div> : <ErpDashboard products={products} purchases={purchases} productions={productions} />)}
       {sub === "regras" && <ErpTaxRuleManager user={user} />}
       {sub === "usuarios" && <ErpUserManager user={user} />}
-      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
+      {sub === "parceiros" && <ErpPartnerManager user={user} />}
+      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parceiros" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
 }
