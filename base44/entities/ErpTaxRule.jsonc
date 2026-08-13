@@ -26,6 +26,10 @@
       "type": "string",
       "description": "NCM espec\u00edfico (opcional \u2014 se vazio, regra geral da opera\u00e7\u00e3o)"
     },
+    "uf": {
+      "type": "string",
+      "description": "UF de destino a que a regra se aplica (vazio = todas)"
+    },
     "description": {
       "type": "string"
     },
@@ -109,6 +113,31 @@
     "ibs_reduction_base": {
       "type": "number",
       "default": 100
+    },
+    "difal_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a opera\u00e7\u00e3o aplica DIFAL (interestadual a consumidor final n\u00e3o contribuinte)"
+    },
+    "aliq_interna_destino": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota interna do ICMS do estado de destino (%)"
+    },
+    "aliq_interestadual": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota interestadual aplicada (4%, 7% ou 12%)"
+    },
+    "fcp_destino_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota FCP do estado de destino (%)"
+    },
+    "difal_percent_destination": {
+      "type": "number",
+      "default": 100,
+      "description": "Percentual do DIFAL destinado ao estado de destino (ap\u00f3s 2019 = 100%)"
     },
     "is_active": {
       "type": "boolean",

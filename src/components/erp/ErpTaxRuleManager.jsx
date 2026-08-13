@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, ScrollText } from "lucide-react";
 
+const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 const CST_ICMS = [
   { value: "00", label: "00 - Tributada integralmente" },
   { value: "10", label: "10 - Tributada (cobrança por dentro)" },
@@ -112,7 +114,7 @@ export default function ErpTaxRuleManager({ user }) {
   useEffect(() => { load(); }, [user.email]);
 
   const filtered = rules.filter(r => {
-    const t = (r.operation_name + " " + (r.ncm || "") + " " + (r.cfop || "")).toLowerCase();
+    const t = (r.operation_name + " " + (r.ncm || "") + " " + (r.cfop || "") + " " + (r.uf || "")).toLowerCase();
     return t.includes(search.toLowerCase());
   });
 
@@ -148,6 +150,7 @@ export default function ErpTaxRuleManager({ user }) {
                 <th className="p-2 text-left">Tipo</th>
                 <th className="p-2 text-left">CFOP</th>
                 <th className="p-2 text-left">NCM</th>
+                <th className="p-2 text-left">UF</th>
                 <th className="p-2 text-left">ICMS</th>
                 <th className="p-2 text-left">PIS/COFINS</th>
                 <th className="p-2 text-left">IPI</th>
@@ -157,9 +160,9 @@ export default function ErpTaxRuleManager({ user }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={10} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-gray-400">
+                <tr><td colSpan={10} className="p-8 text-center text-gray-400">
                   <ScrollText className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma regra fiscal cadastrada.
                 </td></tr>
               ) : filtered.map(r => (
@@ -168,6 +171,7 @@ export default function ErpTaxRuleManager({ user }) {
                   <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${opBadge(r.operation_type)}`}>{r.operation_type}</span></td>
                   <td className="p-2 font-mono text-xs">{r.cfop || "—"}</td>
                   <td className="p-2 font-mono text-xs">{r.ncm || "Geral"}</td>
+                  <td className="p-2 font-mono text-xs">{r.uf || "Todas"}{r.difal_enabled ? <span className="ml-1 text-blue-600" title="Aplica DIFAL">⚡</span> : ""}</td>
                   <td className="p-2 text-xs">{r.cst_icms} · {r.icms_rate}%</td>
                   <td className="p-2 text-xs">{r.cst_pis}/{r.cst_cofins} · {r.pis_rate}%/{r.cofins_rate}%</td>
                   <td className="p-2 text-xs">{r.cst_ipi} · {r.ipi_rate}%</td>
@@ -190,6 +194,54 @@ export default function ErpTaxRuleManager({ user }) {
   );
 }
 
+function DifalCalculator({ form, set }) {
+  const [base, setBase] = useState(100);
+  const aliqInt = Number(form.aliq_interna_destino) || 0;
+  const aliqInte = Number(form.aliq_interestadual) || 0;
+  const fcpDest = Number(form.fcp_destino_rate) || 0;
+  const pctDest = Number(form.difal_percent_destination) || 100;
+  const b = Number(base) || 0;
+  const icmsOrigin = b * aliqInte / 100;
+  const difalTotal = b * (aliqInt - aliqInte) / 100;
+  const difalDest = difalTotal * pctDest / 100;
+  const difalOrigin = difalTotal - difalDest;
+  const fcpValue = b * fcpDest / 100;
+  const totalDest = difalDest + fcpValue;
+  const fmt = (v) => "R$ " + (v || 0).toFixed(2).replace(".", ",");
+  const numInput = (label, key, hint) => (
+    <div>
+      <label className="text-[10px] font-medium text-gray-600">{label}</label>
+      <input type="number" step="0.01" value={form[key]} onChange={e => set(key, e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" />
+      {hint && <span className="text-[9px] text-gray-400">{hint}</span>}
+    </div>
+  );
+  return (
+    <div className="border rounded-lg p-3 border-blue-300 bg-blue-50">
+      <p className="text-sm font-semibold text-blue-800 mb-2">DIFAL — Diferencial de Alíquota (EC 87/2015)</p>
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        {numInput("Alíq. interna destino (%)", "aliq_interna_destino", "ICMS do estado destinatário")}
+        {numInput("Alíq. interestadual (%)", "aliq_interestadual", "4%, 7% ou 12%")}
+        {numInput("FCP destino (%)", "fcp_destino_rate")}
+        {numInput("% DIFAL p/ destino", "difal_percent_destination", "Após 2019 = 100")}
+      </div>
+      <div className="bg-white rounded p-2 border border-blue-200">
+        <div className="flex items-center gap-2 mb-2">
+          <label className="text-xs font-medium text-gray-600">Valor da base para simulação:</label>
+          <input type="number" step="0.01" value={base} onChange={e => setBase(e.target.value)} className="h-8 w-32 rounded border border-input px-2 text-xs" />
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <div className="flex justify-between"><span className="text-gray-500">ICMS origem (alíq. interestadual):</span><b>{fmt(icmsOrigin)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b>{fmt(difalTotal)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">DIFAL origem:</span><b className="text-blue-700">{fmt(difalOrigin)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">DIFAL destino:</span><b className="text-emerald-700">{fmt(difalDest)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">FCP destino:</span><b>{fmt(fcpValue)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">Total destinado ao destino:</span><b className="text-emerald-800">{fmt(totalDest)}</b></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
   const blank = {
     operation_id: "", operation_name: "", operation_type: "", cfop: "",
@@ -200,6 +252,7 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     cst_ipi: "50", ipi_rate: 0, ipi_reduction_base: 100,
     cst_cbs: "00", cbs_rate: 0, cbs_reduction_base: 100,
     cst_ibs: "00", ibs_rate: 0, ibs_reduction_base: 100,
+    uf: "", difal_enabled: false, aliq_interna_destino: 0, aliq_interestadual: 0, fcp_destino_rate: 0, difal_percent_destination: 100,
     is_active: true,
   };
   const [form, setForm] = useState({ ...blank, ...(rule || {}) });
@@ -216,7 +269,10 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     setSaving(true);
     const payload = { user_email: user.email, ...form };
     Object.keys(payload).forEach(k => { if (typeof payload[k] === "number") payload[k] = Number(payload[k]) || 0; });
+    ["aliq_interna_destino", "aliq_interestadual", "fcp_destino_rate", "difal_percent_destination"].forEach(k => payload[k] = Number(payload[k]) || 0);
+    payload.difal_enabled = !!payload.difal_enabled;
     if (!payload.ncm) delete payload.ncm;
+    if (!payload.uf) delete payload.uf;
     try {
       if (rule?.id) await base44.entities.ErpTaxRule.update(rule.id, payload);
       else await base44.entities.ErpTaxRule.create(payload);
@@ -243,6 +299,15 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
             </div>
             <div><label className="text-xs font-medium text-gray-600">NCM específico (opcional)</label>
               <Input value={form.ncm} onChange={e => set("ncm", e.target.value)} placeholder="Geral se vazio" className="mt-1" /></div>
+            <div><label className="text-xs font-medium text-gray-600">UF de destino</label>
+              <select value={form.uf} onChange={e => set("uf", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
+                <option value="">Todas as UFs</option>
+                {BR_UFS.map(u => <option key={u} value={u}>{u}</option>)}
+              </select></div>
+          </div>
+          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
+            <input type="checkbox" id="difal" checked={!!form.difal_enabled} onChange={e => set("difal_enabled", e.target.checked)} className="w-4 h-4" />
+            <label htmlFor="difal" className="text-sm font-medium text-blue-800">Aplica DIFAL (interestadual a consumidor final não contribuinte)</label>
           </div>
           <div><label className="text-xs font-medium text-gray-600">Descrição</label>
             <Input value={form.description} onChange={e => set("description", e.target.value)} /></div>
@@ -266,6 +331,9 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
               </div>
             </div>
           ))}
+          {form.difal_enabled && (
+            <DifalCalculator form={form} set={set} />
+          )}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Regra ativa</label>
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">

@@ -44,13 +44,14 @@ export default function ErpFiscalPanel({ user }) {
           <div className="space-y-1">
             {opRules.map(r => (
               <div key={r.id} className="text-xs flex flex-wrap gap-x-3 gap-y-1 bg-gray-50 rounded p-1.5">
-                <span className="text-gray-500">{r.ncm ? `NCM ${r.ncm}` : "Geral"}</span>
+                <span className="text-gray-500">{r.ncm ? `NCM ${r.ncm}` : "Geral"}{r.uf ? ` • UF ${r.uf}` : ""}</span>
                 <span>ICMS {r.cst_icms}/{r.icms_rate}%</span>
                 <span>PIS {r.cst_pis}/{r.pis_rate}%</span>
                 <span>COFINS {r.cst_cofins}/{r.cofins_rate}%</span>
                 <span>IPI {r.cst_ipi}/{r.ipi_rate}%</span>
                 <span className="text-purple-700">CBS {r.cbs_rate}%</span>
                 <span className="text-fuchsia-700">IBS {r.ibs_rate}%</span>
+                {r.difal_enabled && <span className="text-blue-700">DIFAL (dest {r.aliq_interna_destino}% − inter {r.aliq_interestadual}%)</span>}
               </div>
             ))}
           </div>
