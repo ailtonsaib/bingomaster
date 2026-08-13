@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, Search, FileText, Download, Send, ChevronDown, ChevronRight, Building, AlertTriangle, CheckCircle2, Printer } from "lucide-react";
+import { Plus, Loader2, Search, FileText, Download, Send, UploadCloud, ChevronDown, ChevronRight, Building, AlertTriangle, CheckCircle2, Printer } from "lucide-react";
 import ExitOrderForm from "@/components/pdv/ExitOrderForm";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
 import DanfePrint from "@/components/pdv/DanfePrint";
@@ -15,6 +15,7 @@ export default function ExitOrderManager({ user }) {
   const [showCompanyConfig, setShowCompanyConfig] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [emitting, setEmitting] = useState(null);
+  const [transmitting, setTransmitting] = useState(null);
   const [companyConfigured, setCompanyConfigured] = useState(false);
   const [companyConfig, setCompanyConfig] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
@@ -78,6 +79,28 @@ export default function ExitOrderManager({ user }) {
       alert("Erro ao emitir NF-e:\n" + errMsg);
     }
     setEmitting(null);
+  };
+
+  const transmitNfe = async (order) => {
+    setTransmitting(order.id);
+    try {
+      const res = await base44.functions.invoke("transmitirNfe", { order_id: order.id });
+      const d = res.data || {};
+      if (d.success) {
+        alert(`NF-e autorizada!\nProtocolo: ${d.nProt}\nStatus: ${d.cStat} - ${d.xMotivo}`);
+        load();
+      } else {
+        alert(
+          `Transmissão não autorizada.\n${d.statusText || d.error || "Erro desconhecido."}` +
+          (d.rawResponse ? "\n\nResposta SEFAZ (início):\n" + d.rawResponse.slice(0, 500) : "")
+        );
+        load();
+      }
+    } catch (e) {
+      const errMsg = e?.response?.data?.error || e?.message || "Erro desconhecido.";
+      alert("Erro ao transmitir NF-e:\n" + errMsg);
+    }
+    setTransmitting(null);
   };
 
   const downloadXml = (order) => {
@@ -183,6 +206,17 @@ export default function ExitOrderManager({ user }) {
                       <Download className="w-3.5 h-3.5" /> XML
                     </Button>
                   )}
+                  {order.status === "emitida" && order.nfe_xml && !order.nfe_protocol && (
+                    <Button
+                      size="sm"
+                      onClick={() => transmitNfe(order)}
+                      disabled={transmitting === order.id}
+                      className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-700 text-xs"
+                    >
+                      {transmitting === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                      Transmitir SEFAZ
+                    </Button>
+                  )}
                   {order.status === "emitida" && (
                     <Button size="sm" variant="outline" onClick={() => setPrintOrder(order)} className="h-8 gap-1.5 text-xs">
                       <Printer className="w-3.5 h-3.5" /> DANFE
@@ -232,6 +266,12 @@ export default function ExitOrderManager({ user }) {
                   {order.nfe_key && (
                     <div className="p-3 bg-blue-50 border-t text-xs">
                       <p><b>Chave de Acesso:</b> <span className="font-mono break-all">{order.nfe_key}</span></p>
+                    </div>
+                  )}
+                  {order.nfe_protocol && (
+                    <div className="p-3 bg-emerald-50 border-t text-xs">
+                      <p><b>Protocolo SEFAZ:</b> {order.nfe_protocol}</p>
+                      <p className="text-gray-600"><b>Status:</b> {order.nfe_status}</p>
                     </div>
                   )}
                 </div>

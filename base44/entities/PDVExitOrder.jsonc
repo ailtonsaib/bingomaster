@@ -228,6 +228,22 @@
       "type": "string",
       "description": "Data de emiss\u00e3o da NF-e (ISO)"
     },
+    "nfe_protocol": {
+      "type": "string",
+      "description": "Protocolo de autoriza\u00e7\u00e3o da NF-e (nProt retornado pela SEFAZ)"
+    },
+    "nfe_status": {
+      "type": "string",
+      "description": "Status da transmiss\u00e3o na SEFAZ (cStat + xMotivo)"
+    },
+    "nfe_auth_date": {
+      "type": "string",
+      "description": "Data de autoriza\u00e7\u00e3o da NF-e (ISO, dhRecbto)"
+    },
+    "nfe_environment": {
+      "type": "string",
+      "description": "Ambiente usado na transmiss\u00e3o: 1=Produ\u00e7\u00e3o, 2=Homologa\u00e7\u00e3o"
+    },
     "payment_method": {
       "type": "string",
       "description": "Forma de pagamento (0=vista, 1=prazo)"
