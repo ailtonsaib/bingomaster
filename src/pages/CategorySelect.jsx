@@ -32,7 +32,7 @@ export default function CategorySelect() {
       iconColor: "text-[#EA580C]",
       image: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&auto=format&fit=crop&q=80",
       route: "/empresas",
-      appCount: 4,
+      appCount: 5,
     },
   ];
 

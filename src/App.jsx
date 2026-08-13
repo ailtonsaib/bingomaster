@@ -57,6 +57,8 @@ import TicketKanban from '@/pages/TicketKanban';
 import TicketAdmin from '@/pages/TicketAdmin';
 import PDVLogin from '@/pages/PDVLogin';
 import PDV from '@/pages/PDV';
+import ErpLogin from '@/pages/ErpLogin';
+import Erp from '@/pages/Erp';
 import FiscalReport from '@/pages/FiscalReport';
 import SpaceShooter from '@/pages/SpaceShooter';
 import MineSweeper from '@/pages/MineSweeper';
@@ -194,6 +196,13 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/licitacoes" element={<PublicBids />} />
         <Route path="/licitacoes/:bidId" element={<PublicBidDetail />} />
+      </Route>
+      {/* ERP — Indústria & Comércio */}
+      <Route path="/erp" element={<ErpLogin />} />
+      <Route element={<PortalGuard permission="can_access_erp" />}>
+        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+          <Route path="/erp-painel" element={<Erp />} />
+        </Route>
       </Route>
       {/* PDV — Frente de Caixa */}
       <Route path="/pdv" element={<PDVLogin />} />
