@@ -30,3 +30,26 @@ dist-ssr
 .env
 .vite
 base44/.app.jsonc
+
+# Secrets e chaves de segurança — nunca exportar para o GitHub
+*.env
+.env.local
+.env.*.local
+secrets.json
+secret.json
+credentials.json
+**/credentials.json
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+*.crt
+*.cer
+*.p7b
+serviceAccountKey.json
+google-service-account.json
+supabase-service-key.json
+storage-key.json
+firebase-adminsdk*.json
+**/service-account*.json
