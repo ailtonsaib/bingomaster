@@ -4,9 +4,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, Calendar, FileText, Receipt, FileCheck2, Download,
-  TrendingUp, FileBarChart, ArrowLeft, ChevronLeft, ChevronRight, Printer
+  TrendingUp, FileBarChart, ArrowLeft, ChevronLeft, ChevronRight, Printer, FolderArchive
 } from "lucide-react";
 import { getPortalUser } from "@/lib/portalSession";
+import XmlExportModal from "@/components/pdv/XmlExportModal";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -29,6 +30,7 @@ export default function FiscalReport() {
   const [loading, setLoading] = useState(true);
   const [exitOrders, setExitOrders] = useState([]);
   const [nfseList, setNfseList] = useState([]);
+  const [showXmlExport, setShowXmlExport] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/pdv"); return; }
@@ -114,6 +116,9 @@ export default function FiscalReport() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" onClick={() => setShowXmlExport(true)} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
+            <FolderArchive className="w-3.5 h-3.5" /> Exportar XMLs
+          </Button>
           <Button variant="outline" size="sm" onClick={exportCsv} className="gap-1.5">
             <Download className="w-3.5 h-3.5" /> CSV
           </Button>
@@ -245,6 +250,10 @@ export default function FiscalReport() {
             )}
           </div>
         </>
+      )}
+
+      {showXmlExport && (
+        <XmlExportModal user={user} month={month} year={year} onClose={() => setShowXmlExport(false)} />
       )}
     </div>
   );
