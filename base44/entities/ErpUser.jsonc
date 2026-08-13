@@ -28,16 +28,43 @@
       "default": "operador",
       "description": "Papel: admin (acesso total), operador, visualizador"
     },
+    "user_type": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "diretor",
+        "gerente",
+        "comprador"
+      ],
+      "default": "normal",
+      "description": "Tipo de usu\u00e1rio: normal, diretor, gerente ou comprador"
+    },
     "department_id": {
       "type": "string",
-      "description": "ID do departamento vinculado (opcional)"
+      "description": "ID do setor/departamento vinculado (ErpDepartment)"
     },
     "department_name": {
       "type": "string",
-      "description": "Nome do departamento (cache)"
+      "description": "Nome do setor/departamento (cache)"
     },
     "phone": {
       "type": "string"
+    },
+    "allowed_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "M\u00f3dulos do ERP que o usu\u00e1rio poder\u00e1 acessar (ids)"
+    },
+    "allowed_submodules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Sub-m\u00f3dulos que o usu\u00e1rio poder\u00e1 acessar (ids)"
     },
     "is_active": {
       "type": "boolean",

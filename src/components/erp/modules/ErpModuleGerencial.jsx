@@ -4,6 +4,7 @@ import { LayoutDashboard, Building2, Users, ScrollText, Network, GitBranch, Boxe
 import ErpDashboard from "@/components/erp/ErpDashboard";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpTaxRuleManager from "@/components/erp/ErpTaxRuleManager";
+import ErpUserManager from "@/components/erp/ErpUserManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -46,7 +47,8 @@ export default function ErpModuleGerencial({ user }) {
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="purple" />
       {sub === "dashboard" && (loading ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" /></div> : <ErpDashboard products={products} purchases={purchases} productions={productions} />)}
       {sub === "regras" && <ErpTaxRuleManager user={user} />}
-      {sub !== "dashboard" && sub !== "regras" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
+      {sub === "usuarios" && <ErpUserManager user={user} />}
+      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
 }
