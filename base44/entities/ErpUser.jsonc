@@ -1,0 +1,102 @@
+{
+  "name": "ErpUser",
+  "type": "object",
+  "properties": {
+    "owner_email": {
+      "type": "string",
+      "description": "Email do administrador da empresa (dono da conta)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome completo do usu\u00e1rio"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de login do usu\u00e1rio"
+    },
+    "password_hash": {
+      "type": "string",
+      "description": "Hash da senha"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "operador",
+        "visualizador"
+      ],
+      "default": "operador",
+      "description": "Papel: admin (acesso total), operador, visualizador"
+    },
+    "department_id": {
+      "type": "string",
+      "description": "ID do departamento vinculado (opcional)"
+    },
+    "department_name": {
+      "type": "string",
+      "description": "Nome do departamento (cache)"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "owner_email",
+    "name",
+    "email"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

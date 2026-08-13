@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, Factory, LogOut, LayoutDashboard, Package, Truck, ShoppingCart, Boxes } from "lucide-react";
+import { ArrowLeft, Factory, LogOut, LayoutDashboard, Package, Truck, ShoppingCart, Boxes, Settings } from "lucide-react";
+import ErpStructure from "@/components/erp/ErpStructure";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ErpDashboard from "@/components/erp/ErpDashboard";
 import ErpProductManager from "@/components/erp/ErpProductManager";
@@ -46,6 +47,7 @@ export default function Erp() {
     { id: "fornecedores", label: "Fornecedores", icon: Truck },
     { id: "compras", label: "Compras", icon: ShoppingCart },
     { id: "producao", label: "Produção", icon: Factory },
+    { id: "estrutura", label: "Estrutura", icon: Settings },
   ];
 
   return (
@@ -79,6 +81,7 @@ export default function Erp() {
         {activeTab === "fornecedores" && <ErpSupplierManager user={user} />}
         {activeTab === "compras" && <ErpPurchasePanel user={user} />}
         {activeTab === "producao" && <ErpProductionPanel user={user} />}
+        {activeTab === "estrutura" && <ErpStructure user={user} />}
       </div>
     </div>
   );

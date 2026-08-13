@@ -1,0 +1,132 @@
+{
+  "name": "ErpCompany",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "razao_social": {
+      "type": "string",
+      "description": "Raz\u00e3o social"
+    },
+    "nome_fantasia": {
+      "type": "string",
+      "description": "Nome fantasia"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ (apenas n\u00fameros)"
+    },
+    "ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Estadual"
+    },
+    "im": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o Municipal"
+    },
+    "cep": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string",
+      "description": "Logradouro"
+    },
+    "number": {
+      "type": "string"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro"
+    },
+    "city": {
+      "type": "string",
+      "description": "Munic\u00edpio"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF"
+    },
+    "ibge_code": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio"
+    },
+    "regime": {
+      "type": "string",
+      "enum": [
+        "simples_nacional",
+        "lucro_real",
+        "lucro_presumido"
+      ],
+      "default": "lucro_presumido",
+      "description": "Regime tribut\u00e1rio"
+    },
+    "is_main": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 a empresa matriz"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "razao_social"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

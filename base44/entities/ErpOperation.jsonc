@@ -1,0 +1,98 @@
+{
+  "name": "ErpOperation",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "entrada",
+        "saida"
+      ],
+      "default": "saida",
+      "description": "Tipo da opera\u00e7\u00e3o: entrada ou saida"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da opera\u00e7\u00e3o"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da opera\u00e7\u00e3o"
+    },
+    "cfop": {
+      "type": "string",
+      "description": "CFOP da opera\u00e7\u00e3o (ex: 5102, 1102)"
+    },
+    "nature_operation": {
+      "type": "string",
+      "description": "Natureza da opera\u00e7\u00e3o"
+    },
+    "description": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "name",
+    "cfop"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
