@@ -1,0 +1,150 @@
+{
+  "name": "SefazTransmissionLog",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "ID do pedido de sa\u00edda vinculado (PDVExitOrder)"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero interno do pedido (cache)"
+    },
+    "doc_model": {
+      "type": "string",
+      "enum": [
+        "55",
+        "65"
+      ],
+      "description": "Modelo do documento fiscal: 55 (NF-e) ou 65 (NFC-e)"
+    },
+    "nfe_number": {
+      "type": "string",
+      "description": "N\u00famero da NF-e/NFC-e"
+    },
+    "nfe_key": {
+      "type": "string",
+      "description": "Chave de acesso da NF-e"
+    },
+    "ambiente": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2"
+      ],
+      "description": "Ambiente da transmiss\u00e3o: 1=Produ\u00e7\u00e3o, 2=Homologa\u00e7\u00e3o"
+    },
+    "uf": {
+      "type": "string",
+      "description": "UF da empresa emitente"
+    },
+    "system": {
+      "type": "string",
+      "description": "Sistema receptor SEFAZ (SP, MG, SVRS, SVAN, etc.)"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "autorizada",
+        "rejeitada",
+        "denegada",
+        "processando",
+        "erro_conexao",
+        "erro_interno",
+        "validacao"
+      ],
+      "description": "Resultado da transmiss\u00e3o: autorizada, rejeitada, denegada, processando, erro_conexao (falha de rede), erro_interno (exce\u00e7\u00e3o), validacao (pr\u00e9-transmiss\u00e3o)"
+    },
+    "cstat": {
+      "type": "string",
+      "description": "C\u00f3digo de status retornado pela SEFAZ (cStat)"
+    },
+    "xmotivo": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do status retornado pela SEFAZ (xMotivo)"
+    },
+    "nprot": {
+      "type": "string",
+      "description": "Protocolo de autoriza\u00e7\u00e3o (nProt) \u2014 apenas quando autorizada"
+    },
+    "http_status": {
+      "type": "number",
+      "description": "C\u00f3digo HTTP retornado pelo webservice SEFAZ"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Mensagem de erro (falha de conex\u00e3o, erro interno ou valida\u00e7\u00e3o pr\u00e9-transmiss\u00e3o)"
+    },
+    "raw_response": {
+      "type": "string",
+      "description": "Resposta bruta da SEFAZ (truncada) para diagn\u00f3stico"
+    },
+    "duration_ms": {
+      "type": "number",
+      "default": 0,
+      "description": "Dura\u00e7\u00e3o da tentativa de transmiss\u00e3o em milissegundos"
+    },
+    "operator_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que disparou a transmiss\u00e3o"
+    }
+  },
+  "required": [
+    "user_email",
+    "result"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

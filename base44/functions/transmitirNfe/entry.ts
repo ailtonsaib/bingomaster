@@ -48,14 +48,28 @@ function getTags(text, tag) {
   return out;
 }
 
-Deno.serve(async (req) => {
+async function logTransmission(base44, payload) {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    await base44.entities.SefazTransmissionLog.create(payload);
+  } catch (e) {
+    // O log nunca deve interromper a transmissão
+    console.error('Falha ao registrar log SEFAZ:', e);
+  }
+}
+
+Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  let user = null;
+  let order_id = '';
+  let base44 = null;
+  let ufOverride, ambOverride, sysOverride;
+  try {
+    base44 = createClientFromRequest(req);
+    user = await base44.auth.me();
     if (!user) return Response.json({ success: false, error: 'Usuário não autenticado.' });
 
     const body = await req.json();
-    const { order_id, uf: ufOverride, ambiente: ambOverride, system: sysOverride } = body;
+    ({ order_id, uf: ufOverride, ambiente: ambOverride, system: sysOverride } = body);
 
     if (!order_id) return Response.json({ success: false, error: 'order_id não informado.' });
 
@@ -63,9 +77,30 @@ Deno.serve(async (req) => {
     if (!order) return Response.json({ success: false, error: 'Pedido não encontrado.' });
     if (order.user_email && order.user_email !== user.email && user.role !== 'admin')
       return Response.json({ success: false, error: 'Sem permissão sobre este pedido.' });
-    if (!order.nfe_xml) return Response.json({ success: false, error: 'NF-e ainda não gerada para este pedido.' });
-    if (!order.nfe_xml.includes('<Signature'))
+    if (!order.nfe_xml) {
+      await logTransmission(base44, {
+        user_email: order.user_email || user.email,
+        order_id, order_number: order.order_number || '',
+        doc_model: order.nfe_model || '55',
+        nfe_number: order.nfe_number || '', nfe_key: order.nfe_key || '',
+        ambiente: (ambOverride || '2').toString(),
+        result: 'validacao', error_message: 'NF-e ainda não gerada para este pedido.',
+        duration_ms: Date.now() - startedAt, operator_email: user.email,
+      });
+      return Response.json({ success: false, error: 'NF-e ainda não gerada para este pedido.' });
+    }
+    if (!order.nfe_xml.includes('<Signature')) {
+      await logTransmission(base44, {
+        user_email: order.user_email || user.email,
+        order_id, order_number: order.order_number || '',
+        doc_model: order.nfe_model || '55',
+        nfe_number: order.nfe_number || '', nfe_key: order.nfe_key || '',
+        ambiente: (ambOverride || '2').toString(),
+        result: 'validacao', error_message: 'NF-e não está assinada. Gere a NF-e com um certificado A1 ativo antes de transmitir.',
+        duration_ms: Date.now() - startedAt, operator_email: user.email,
+      });
       return Response.json({ success: false, error: 'NF-e não está assinada. Gere a NF-e com um certificado A1 ativo antes de transmitir.' });
+    }
 
     // Configuração da empresa emitente
     const configs = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
@@ -80,6 +115,16 @@ Deno.serve(async (req) => {
     const system = (sysOverride || UF_SYSTEM[uf] || 'SVRS').toUpperCase();
     const url = (ambiente === '1' ? WS.prod : WS.hom)[system];
     if (!url) return Response.json({ success: false, error: 'Webservice não mapeado para UF ' + uf + ' (sistema ' + system + ').' });
+
+    const baseLog = {
+      user_email: order.user_email || user.email,
+      order_id, order_number: order.order_number || '',
+      doc_model: order.nfe_model || '55',
+      nfe_number: order.nfe_number || '',
+      nfe_key: order.nfe_key || '',
+      ambiente, uf, system,
+      operator_email: user.email,
+    };
 
     // Extrai o bloco <NFe>...</NFe> (sem o prolog XML) para embutir no lote.
     const nfeStart = order.nfe_xml.indexOf('<NFe');
@@ -111,6 +156,13 @@ Deno.serve(async (req) => {
       httpStatus = resp.status;
       respText = await resp.text();
     } catch (e) {
+      await logTransmission(base44, {
+        ...baseLog,
+        result: 'erro_conexao',
+        error_message: 'Falha ao conectar à SEFAZ: ' + e.message,
+        http_status: httpStatus,
+        duration_ms: Date.now() - startedAt,
+      });
       return Response.json({ success: false, error: 'Falha ao conectar à SEFAZ: ' + e.message, url });
     }
 
@@ -139,6 +191,13 @@ Deno.serve(async (req) => {
         nfe_auth_date: dhRecbto,
         nfe_environment: ambiente,
       });
+      await logTransmission(base44, {
+        ...baseLog,
+        result: 'autorizada',
+        cstat: protCStat, xmotivo: protXMotivo, nprot: nProt,
+        http_status: httpStatus,
+        duration_ms: Date.now() - startedAt,
+      });
       return Response.json({
         success: true,
         authorized: true,
@@ -164,6 +223,22 @@ Deno.serve(async (req) => {
       nfe_environment: ambiente,
     });
 
+    // Classifica o resultado: denegada (cStat 110/301/302), processando (105), rejeitada (demais)
+    const resultType =
+      protCStat === '110' || protCStat === '301' || protCStat === '302' ? 'denegada'
+        : protCStat === '105' || loteCStat === '105' ? 'processando'
+        : 'rejeitada';
+
+    await logTransmission(base44, {
+      ...baseLog,
+      result: resultType,
+      cstat: protCStat || loteCStat || '',
+      xmotivo: protXMotivo || loteXMotivo || '',
+      http_status: httpStatus,
+      raw_response: respText.slice(0, 2000),
+      duration_ms: Date.now() - startedAt,
+    });
+
     return Response.json({
       success: false,
       authorized: false,
@@ -179,6 +254,14 @@ Deno.serve(async (req) => {
       rawResponse: respText.slice(0, 2000),
     });
   } catch (e) {
+    await logTransmission(base44, {
+      user_email: user?.email || '',
+      order_id: order_id || '',
+      result: 'erro_interno',
+      error_message: 'Erro interno: ' + (e && e.message ? e.message : String(e)),
+      duration_ms: Date.now() - startedAt,
+      operator_email: user?.email || '',
+    }).catch(() => {});
     return Response.json({ success: false, error: 'Erro interno: ' + (e && e.message ? e.message : String(e)) });
   }
 });
