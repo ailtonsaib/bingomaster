@@ -1,0 +1,154 @@
+{
+  "name": "ErpTechnicalSheet",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da ficha t\u00e9cnica (ex: FT 001)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto ao qual a ficha t\u00e9cnica pertence (produto acabado/em processo)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nome do produto (cache)"
+    },
+    "product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto (cache)"
+    },
+    "product_unit": {
+      "type": "string",
+      "description": "Unidade do produto (cache)"
+    },
+    "yield_quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Rendimento: quantidade produzida por um lote desta ficha"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o/observa\u00e7\u00f5es da ficha"
+    },
+    "items": {
+      "type": "array",
+      "default": [],
+      "description": "Componentes da ficha t\u00e9cnica (insumos ou subprodutos com ficha pr\u00f3pria)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_type": {
+            "type": "string",
+            "enum": [
+              "material",
+              "subproduto"
+            ],
+            "description": "material (insumo direto) ou subproduto (possui ficha t\u00e9cnica pr\u00f3pria)"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_code": {
+            "type": "string"
+          },
+          "product_unit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantidade consumida por lote (rendimento)"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Custo unit\u00e1rio (material: custo do produto; subproduto: custo do lote da subficha / rendimento)"
+          },
+          "total": {
+            "type": "number",
+            "description": "Custo total do item (quantity \u00d7 unit_cost)"
+          }
+        }
+      }
+    },
+    "total_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo total do lote (cache calculado)"
+    },
+    "unit_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo unit\u00e1rio (total_cost / yield_quantity)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "product_id",
+    "product_name",
+    "yield_quantity"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

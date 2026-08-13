@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory } from "lucide-react";
+import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpRequisitionPanel from "@/components/erp/ErpRequisitionPanel";
+import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 
 const SUBTABS = [
@@ -17,6 +18,7 @@ const SUBTABS = [
 
 export default function ErpModuleSuprimentos({ user }) {
   const [sub, setSub] = useState("almoxarifado");
+  const [manSub, setManSub] = useState("op");
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="indigo" />
@@ -24,7 +26,16 @@ export default function ErpModuleSuprimentos({ user }) {
       {sub === "compras" && <ErpPurchasePanel user={user} />}
       {sub === "solicitacao" && <ErpRequisitionPanel user={user} />}
       {sub === "tomada" && <ErpSimpleCrud key="cotacoes" user={user} {...ERP_CRUD_CONFIGS.cotacoes} />}
-      {sub === "manufatura" && <ErpProductionPanel user={user} />}
+      {sub === "manufatura" && (
+        <div className="space-y-3">
+          <SubNav sub={manSub} setSub={setManSub} tabs={[
+            { id: "op", label: "Ordens de Produção", icon: Factory },
+            { id: "ficha", label: "Ficha Técnica", icon: FileStack },
+          ]} color="indigo" />
+          {manSub === "op" && <ErpProductionPanel user={user} />}
+          {manSub === "ficha" && <ErpTechnicalSheetManager user={user} />}
+        </div>
+      )}
     </div>
   );
 }
