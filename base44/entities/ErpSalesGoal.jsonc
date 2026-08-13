@@ -1,0 +1,163 @@
+{
+  "name": "ErpSalesGoal",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do objetivo (ex: Meta 2026 Q1)"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano de refer\u00eancia"
+    },
+    "month": {
+      "type": "number",
+      "default": 0,
+      "description": "M\u00eas (1-12). 0 = ano todo"
+    },
+    "goal_type": {
+      "type": "string",
+      "enum": [
+        "valor",
+        "volume"
+      ],
+      "default": "valor",
+      "description": "Tipo da meta: valor (R$) ou volume (quantidade)"
+    },
+    "target_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta total (valor em R$ ou quantidade total)"
+    },
+    "target_unit": {
+      "type": "string",
+      "default": "UN",
+      "description": "Unidade (quando volume)"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "gerente",
+        "supervisor",
+        "vendedor"
+      ],
+      "description": "N\u00edvel do objetivo: gerente, supervisor ou vendedor"
+    },
+    "owner_id": {
+      "type": "string",
+      "description": "ID do respons\u00e1vel no n\u00edvel (ErpSalesTeam)"
+    },
+    "owner_name": {
+      "type": "string",
+      "description": "Nome do respons\u00e1vel (cache)"
+    },
+    "distributions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "description": "supervisor, vendedor ou produto"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "target_name": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number",
+            "default": 0
+          },
+          "target_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Meta em R$ (quando valor)"
+          },
+          "volume": {
+            "type": "number",
+            "default": 0,
+            "description": "Meta em quantidade (quando volume)"
+          }
+        }
+      },
+      "default": [],
+      "description": "Distribui\u00e7\u00e3o da meta: % por supervisor (n\u00edvel gerente), % por vendedor (n\u00edvel supervisor) ou % por produto (n\u00edvel vendedor)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativa",
+        "concluida",
+        "cancelada"
+      ],
+      "default": "ativa"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "goal_type",
+    "level",
+    "year",
+    "target_value"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

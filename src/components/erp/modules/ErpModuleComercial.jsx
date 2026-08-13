@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Users, ClipboardCheck, Monitor, BarChart3, Network, Tags, Briefcase, Share2 } from "lucide-react";
+import { Users, ClipboardCheck, Monitor, BarChart3, Network, Tags, Briefcase, Share2, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpSalesOrderPanel from "@/components/erp/ErpSalesOrderPanel";
 import ErpSalesReport from "@/components/erp/ErpSalesReport";
 import ErpSalesTeamManager from "@/components/erp/ErpSalesTeamManager";
+import ErpSalesGoalManager from "@/components/erp/ErpSalesGoalManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -13,6 +14,7 @@ const SUBTABS = [
   { id: "equipe", label: "Equipe de Vendas", icon: Network },
   { id: "canais", label: "Canais", icon: Tags },
   { id: "redes", label: "Redes", icon: Share2 },
+  { id: "objetivos", label: "Objetivos de Vendas", icon: Target },
   { id: "ramos", label: "Ramos de Atividade", icon: Briefcase },
   { id: "pedidos", label: "Pedidos e Faturamento", icon: ClipboardCheck },
   { id: "pdv", label: "PDV", icon: Monitor },
@@ -29,6 +31,7 @@ export default function ErpModuleComercial({ user }) {
       {sub === "equipe" && <ErpSalesTeamManager user={user} />}
       {sub === "canais" && <ErpSimpleCrud key="canais" user={user} {...ERP_CRUD_CONFIGS.canais} />}
       {sub === "redes" && <ErpSimpleCrud key="redes" user={user} {...ERP_CRUD_CONFIGS.redes} />}
+      {sub === "objetivos" && <ErpSalesGoalManager user={user} />}
       {sub === "ramos" && <ErpSimpleCrud key="ramos" user={user} {...ERP_CRUD_CONFIGS.ramos} />}
       {sub === "pedidos" && <ErpSalesOrderPanel user={user} />}
       {sub === "pdv" && (
