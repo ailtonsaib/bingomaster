@@ -1,8 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
+// Endpoints do Portal Nacional da NFS-e (Sefin Nacional / Emissor Público).
+// Produção: https://sefin.nfse.gov.br/SefinNacional
+// Produção Restrita (homologação): https://sefin.producaorestrita.nfse.gov.br/API/SefinNacional
+const ENDPOINTS: Record<string, string> = {
+  '1': 'https://sefin.nfse.gov.br/SefinNacional',
+  '2': 'https://sefin.producaorestrita.nfse.gov.br/API/SefinNacional',
+};
+
 function getTags(text: string, tag: string): string[] {
   const out: string[] = [];
-  const re = new RegExp('<' + tag + '>([^<]*)</' + tag + '>', 'g');
+  const re = new RegExp('<' + tag + '[^>]*>([^<]*)</' + tag + '>', 'g');
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) out.push(m[1]);
   return out;
@@ -21,69 +29,67 @@ Deno.serve(async (req) => {
     let nfse: any = null;
     try { const l = await base44.asServiceRole.entities.Nfse.filter({ id: nfse_id }); if (l.length) nfse = l[0]; } catch (_) { /* id inválido */ }
     if (!nfse || nfse.user_email !== email) return Response.json({ error: 'NFS-e não encontrada' }, { status: 404 });
-    if (!nfse.rps_xml) return Response.json({ error: 'RPS não gerado. Gere a NFS-e primeiro.' }, { status: 400 });
-    if (!nfse.rps_xml.includes('<Signature')) return Response.json({ error: 'RPS não está assinado. Cadastre um certificado A1 ativo com modelo NFS-e.' }, { status: 400 });
+    if (!nfse.rps_xml) return Response.json({ error: 'DPS não gerada. Gere a NFS-e primeiro.' }, { status: 400 });
+    if (!nfse.rps_xml.includes('<Signature')) return Response.json({ error: 'DPS não está assinada. Cadastre um certificado A1 ativo com modelo NFS-e.' }, { status: 400 });
 
     const cfgs = await base44.asServiceRole.entities.DiagnosticCompanyConfig.filter({ user_email: email });
     const company: any = cfgs[0];
-    if (!company || !company.nfse_webservice_url) {
-      return Response.json({ error: 'URL do webservice NFS-e da prefeitura não configurada. Defina em "Configurar NFS-e".' }, { status: 400 });
+    if (!company) return Response.json({ error: 'Empresa não configurada.' }, { status: 400 });
+    if (!company.nfse_token) {
+      return Response.json({ error: 'Token de acesso do Portal Nacional NFS-e não configurado. Obtenha no portal nfs-e.gov.br e cadastre em "Configurar NFS-e".' }, { status: 400 });
     }
 
-    // Extrai o bloco EnviarLoteRpsEnvio (sem o prolog) para o corpo SOAP.
-    const start = nfse.rps_xml.indexOf('<EnviarLoteRpsEnvio');
-    const end = nfse.rps_xml.indexOf('</EnviarLoteRpsEnvio>') + '</EnviarLoteRpsEnvio>'.length;
-    if (start === -1 || end <= start) return Response.json({ error: 'RPS XML malformado.' }, { status: 400 });
-    const loteBlock = nfse.rps_xml.slice(start, end);
+    const amb = String(company.nfse_environment || '2');
+    const base = ENDPOINTS[amb] || ENDPOINTS['2'];
+    const url = base + '/nfse';
 
-    // Envelope SOAP genérico Abrasf (RecepcionarLoteRps). Cidades variam; a URL
-    // e a action exata são definidas na configuração da prefeitura.
-    const soap =
-      '<?xml version="1.0" encoding="UTF-8"?>\n' +
-      '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">\n' +
-      '<soap:Body>\n' +
-      loteBlock + '\n' +
-      '</soap:Body>\n' +
-      '</soap:Envelope>';
-
+    let resp: Response;
     let respText = '';
     let httpStatus = 0;
     try {
-      const resp = await fetch(company.nfse_webservice_url, {
+      resp = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/xml; charset=utf-8',
-          'SOAPAction': '"http://www.abrasf.org.br/nfse.xsd/RecepcionarLoteRps"',
+          'Authorization': 'Bearer ' + company.nfse_token,
+          'Content-Type': 'application/xml',
+          'Accept': 'application/json',
         },
-        body: soap,
+        body: nfse.rps_xml,
       });
       httpStatus = resp.status;
       respText = await resp.text();
     } catch (e) {
-      return Response.json({ success: false, error: 'Falha ao conectar à prefeitura: ' + (e as Error).message });
+      return Response.json({ success: false, error: 'Falha ao conectar ao Portal Nacional NFS-e: ' + (e as Error).message });
     }
 
-    // Parse da resposta Abrasf
-    const numeroNfse = getTags(respText, 'NumeroNfse')[0] || '';
-    const protocolo = getTags(respText, 'Protocolo')[0] || '';
-    const codigos = getTags(respText, 'Codigo');
-    const mensagens = getTags(respText, 'Mensagem');
-    const sucesso = !!numeroNfse && codigos.length === 0;
+    // Resposta síncrona: pode vir em JSON ou XML.
+    let parsed: any = null;
+    const ct = resp.headers.get('content-type') || '';
+    if (ct.includes('json')) {
+      try { parsed = JSON.parse(respText); } catch (_) { parsed = null; }
+    }
+
+    const chaveAcesso = parsed?.chaveAcesso || parsed?.chave || getTags(respText, 'chaveAcesso')[0] || getTags(respText, 'ChaveAcesso')[0] || '';
+    const numero = parsed?.numero || parsed?.numeroNfse || parsed?.numeroNFS_e || getTags(respText, 'Numero')[0] || getTags(respText, 'nNFS')[0] || '';
+
+    const erros: any[] = parsed?.mensagens || parsed?.erros || parsed?.errosDetalhados || [];
+    const sucesso = (httpStatus === 200 || httpStatus === 201) && (!!chaveAcesso || !!numero) && erros.length === 0;
 
     const statusText = sucesso
-      ? 'Autorizada — NFS-e ' + numeroNfse
-      : (codigos.length ? codigos.map((c, i) => c + ': ' + (mensagens[i] || '')).join('; ') : 'Sem resposta de NFS-e (http ' + httpStatus + ')');
+      ? 'Autorizada — NFS-e ' + (numero || chaveAcesso)
+      : (erros.length ? erros.map((e: any) => `${e.codigo || e.codigoErro || 'X'}: ${e.descricao || e.mensagem || JSON.stringify(e)}`).join('; ')
+         : (parsed?.erro || parsed?.message || `Resposta ${httpStatus}`));
 
     if (sucesso) {
       await base44.asServiceRole.entities.Nfse.update(nfse_id, {
-        nfse_number: numeroNfse,
-        nfse_protocol: protocolo,
+        nfse_number: numero || chaveAcesso,
+        nfse_protocol: chaveAcesso,
         nfse_status: statusText,
         nfse_auth_date: new Date().toISOString(),
         status: 'emitida',
         nfse_xml: respText,
       });
-      return Response.json({ success: true, nfse_number: numeroNfse, protocolo, status: statusText });
+      return Response.json({ success: true, nfse_number: numero || chaveAcesso, protocolo: chaveAcesso, status: statusText });
     }
 
     await base44.asServiceRole.entities.Nfse.update(nfse_id, { nfse_status: statusText });
@@ -91,8 +97,7 @@ Deno.serve(async (req) => {
       success: false,
       statusText,
       httpStatus,
-      codigos,
-      mensagens,
+      erros,
       rawResponse: respText.slice(0, 2000),
     });
   } catch (error) {

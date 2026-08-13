@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, X, Save } from "lucide-react";
+import { Loader2, X, Save, Globe } from "lucide-react";
 
 export default function NfseConfigModal({ userEmail, onClose, onSaved }) {
   const [loading, setLoading] = useState(true);
@@ -11,8 +11,8 @@ export default function NfseConfigModal({ userEmail, onClose, onSaved }) {
   const [form, setForm] = useState({
     inscricao_municipal: "",
     ibge_code: "",
-    nfse_webservice_url: "",
     nfse_environment: "2",
+    nfse_token: "",
     nfse_serie: "1",
   });
 
@@ -24,8 +24,8 @@ export default function NfseConfigModal({ userEmail, onClose, onSaved }) {
         setForm({
           inscricao_municipal: c.inscricao_municipal || "",
           ibge_code: c.ibge_code || "",
-          nfse_webservice_url: c.nfse_webservice_url || "",
           nfse_environment: c.nfse_environment || "2",
+          nfse_token: c.nfse_token || "",
           nfse_serie: c.nfse_serie || "1",
         });
       } catch (e) { console.error(e); }
@@ -48,14 +48,16 @@ export default function NfseConfigModal({ userEmail, onClose, onSaved }) {
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-bold">Configurar NFS-e (Prefeitura)</h3>
+          <h3 className="font-bold flex items-center gap-2"><Globe className="w-5 h-5 text-indigo-600" /> Configurar NFS-e — Portal Nacional</h3>
           <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
         </div>
         {loading ? (
           <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>
         ) : (
           <div className="p-4 space-y-3">
-            <p className="text-xs text-gray-500">Dados exigidos pela prefeitura para emissão de NFS-e (padrão Abrasf). O webservice varia por município — informe a URL fornecida pela sua cidade.</p>
+            <p className="text-xs text-gray-500">
+              Emissão pelo <b>Portal Nacional da NFS-e</b> (Sefin Nacional). O token de acesso é obtido no portal <b>nfs-e.gov.br</b> (Emissor Público gov.br). O endpoint é definido automaticamente pelo ambiente.
+            </p>
             <div>
               <Label>Inscrição Municipal</Label>
               <Input value={form.inscricao_municipal} onChange={(e) => setForm({ ...form, inscricao_municipal: e.target.value })} placeholder="Número da Inscrição Municipal" />
@@ -65,19 +67,19 @@ export default function NfseConfigModal({ userEmail, onClose, onSaved }) {
               <Input value={form.ibge_code} onChange={(e) => setForm({ ...form, ibge_code: e.target.value })} placeholder="Ex: 3550308 (São Paulo)" />
             </div>
             <div>
-              <Label>URL do webservice NFS-e</Label>
-              <Input value={form.nfse_webservice_url} onChange={(e) => setForm({ ...form, nfse_webservice_url: e.target.value })} placeholder="https://... (SOAP da prefeitura)" />
+              <Label>Token de acesso (Bearer) — Portal Nacional</Label>
+              <Input value={form.nfse_token} onChange={(e) => setForm({ ...form, nfse_token: e.target.value })} placeholder="Token obtido no nfs-e.gov.br" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Ambiente</Label>
                 <select className="w-full h-9 rounded-md border px-2 text-sm" value={form.nfse_environment} onChange={(e) => setForm({ ...form, nfse_environment: e.target.value })}>
-                  <option value="2">Homologação</option>
+                  <option value="2">Homologação (Produção Restrita)</option>
                   <option value="1">Produção</option>
                 </select>
               </div>
               <div>
-                <Label>Série do RPS</Label>
+                <Label>Série do DPS</Label>
                 <Input value={form.nfse_serie} onChange={(e) => setForm({ ...form, nfse_serie: e.target.value })} />
               </div>
             </div>

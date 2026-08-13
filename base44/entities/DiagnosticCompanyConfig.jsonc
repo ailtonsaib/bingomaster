@@ -94,21 +94,21 @@
         "2"
       ],
       "default": "2",
-      "description": "Ambiente NFS-e: 1=Produ\u00e7\u00e3o, 2=Homologa\u00e7\u00e3o"
+      "description": "Ambiente NFS-e: 1=Produ\u00e7\u00e3o, 2=Homologa\u00e7\u00e3o (Produ\u00e7\u00e3o Restrita)"
     },
-    "nfse_webservice_url": {
+    "nfse_token": {
       "type": "string",
-      "description": "URL do webservice NFS-e da prefeitura (padr\u00e3o Abrasf)"
+      "description": "Token de acesso (Bearer) do Portal Nacional da NFS-e (Emissor P\u00fablico gov.br)"
     },
     "nfse_serie": {
       "type": "string",
       "default": "1",
-      "description": "S\u00e9rie do RPS para NFS-e"
+      "description": "S\u00e9rie do DPS/NFS-e nacional"
     },
     "nfse_numero_next": {
       "type": "number",
       "default": 1,
-      "description": "Pr\u00f3ximo n\u00famero de RPS/NFS-e"
+      "description": "Pr\u00f3ximo n\u00famero de DPS/NFS-e"
     }
   },
   "required": [
