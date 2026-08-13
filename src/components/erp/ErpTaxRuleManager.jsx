@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, ScrollText } from "lucide-react";
+import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem } from "@/lib/erpTaxCalc";
 
 const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -320,6 +321,39 @@ function StCalculator({ form, set }) {
   );
 }
 
+function AutoFiscalPreview({ form, operations }) {
+  const op = operations.find(o => o.id === form.operation_id);
+  const result = computeErpFiscalItem(
+    { ncm: form.ncm || "", quantity: 1, unit_price: 100, sale_price: 100 },
+    { rules: [form], operation: op, customerUF: form.uf, companyUF: "" }
+  );
+  const fmt = (v) => "R$ " + (Number(v) || 0).toFixed(2).replace(".", ",");
+  return (
+    <div className="border rounded-lg p-3 border-violet-200 bg-violet-50">
+      <p className="text-sm font-semibold text-violet-800 mb-1">
+        Resultado automático (base R$ 100,00) — UF {form.uf || "—"} • CFOP {op?.cfop || "—"}
+      </p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        <div className="flex justify-between"><span className="text-gray-500">ICMS próprio:</span><b>{fmt(result.icms_value)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">FCP:</span><b>{fmt(result.fcp_value)}</b></div>
+        {result.difal && <>
+          <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b className="text-blue-700">{fmt(result.difal.difal_total)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">DIFAL destino:</span><b className="text-emerald-700">{fmt(result.difal.difal_destination)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">DIFAL origem:</span><b>{fmt(result.difal.difal_origin)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">FCP destino:</span><b>{fmt(result.difal.fcp_destination)}</b></div>
+        </>}
+        {result.st && <>
+          <div className="flex justify-between"><span className="text-gray-500">Base ST:</span><b>{fmt(result.st.base_st)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">ICMS-ST a recolher:</span><b className="text-amber-800">{fmt(result.st.icms_st_recolher)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">FCP-ST:</span><b>{fmt(result.st.fcp_st)}</b></div>
+          <div className="flex justify-between"><span className="text-gray-500">Total ST:</span><b className="text-amber-900">{fmt(result.st.total_st)}</b></div>
+        </>}
+        {!result.difal && !result.st && <div className="text-gray-400 col-span-2">DIFAL/ST não habilitados nesta regra.</div>}
+      </div>
+    </div>
+  );
+}
+
 function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
   const blank = {
     operation_id: "", operation_name: "", operation_type: "", cfop: "",
@@ -337,6 +371,22 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
   const [form, setForm] = useState({ ...blank, ...(rule || {}) });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  // Auto-preenchimento das alíquotas do DIFAL conforme UF e operação escolhidas.
+  useEffect(() => {
+    if (form.uf && (!form.aliq_interna_destino || Number(form.aliq_interna_destino) === 0)) {
+      set("aliq_interna_destino", ICMS_INTERNAL_RATES[form.uf] || 0);
+    }
+    const op = operations.find(o => o.id === form.operation_id);
+    if (form.uf && op) {
+      const cfop = String(op.cfop || "");
+      const interestadual = cfop.startsWith("6") || cfop.startsWith("1");
+      if (interestadual && (!form.aliq_interestadual || Number(form.aliq_interestadual) === 0)) {
+        set("aliq_interestadual", interestadualRate(form.uf));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.uf, form.operation_id]);
 
   const onOp = (id) => {
     const op = operations.find(o => o.id === id);
@@ -420,6 +470,9 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
           )}
           {form.st_enabled && (
             <StCalculator form={form} set={set} />
+          )}
+          {form.operation_id && (
+            <AutoFiscalPreview form={form} operations={operations} />
           )}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Regra ativa</label>
         </div>
