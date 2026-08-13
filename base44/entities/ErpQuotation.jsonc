@@ -1,0 +1,115 @@
+{
+  "name": "ErpQuotation",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero da cota\u00e7\u00e3o/tomada de pre\u00e7o"
+    },
+    "quotation_date": {
+      "type": "string",
+      "description": "Data (ISO)"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor (ErpSupplier)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Fornecedor (cache)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Objeto cotado"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "unit": {
+      "type": "string",
+      "default": "UN"
+    },
+    "quoted_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor cotado"
+    },
+    "is_winner": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se foi a cota\u00e7\u00e3o vencedora"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aberta",
+        "fechada",
+        "cancelada"
+      ],
+      "default": "aberta"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "number",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

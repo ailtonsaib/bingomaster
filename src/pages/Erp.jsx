@@ -1,53 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { ArrowLeft, Factory, LogOut, LayoutDashboard, Package, Truck, ShoppingCart, Boxes, Settings } from "lucide-react";
-import ErpStructure from "@/components/erp/ErpStructure";
+import { ArrowLeft, Factory, LogOut, Boxes, ShoppingCart, Landmark, Settings } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
-import ErpDashboard from "@/components/erp/ErpDashboard";
-import ErpProductManager from "@/components/erp/ErpProductManager";
-import ErpSupplierManager from "@/components/erp/ErpSupplierManager";
-import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
-import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
+import ErpModuleSuprimentos from "@/components/erp/modules/ErpModuleSuprimentos";
+import ErpModuleComercial from "@/components/erp/modules/ErpModuleComercial";
+import ErpModuleAdministrativo from "@/components/erp/modules/ErpModuleAdministrativo";
+import ErpModuleGerencial from "@/components/erp/modules/ErpModuleGerencial";
 
 export default function Erp() {
   const navigate = useNavigate();
   const [user, setUser] = useState(getPortalUser());
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState([]);
-  const [purchases, setPurchases] = useState([]);
-  const [productions, setProductions] = useState([]);
+  const [activeModule, setActiveModule] = useState("suprimentos");
 
-  const loadDashboard = async () => {
-    if (!user) return;
-    try {
-      const [p, pc, op] = await Promise.all([
-        base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
-        base44.entities.ErpPurchaseOrder.filter({ user_email: user.email }, "-emission_date", 500),
-        base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-emission_date", 500),
-      ]);
-      setProducts(p); setPurchases(pc); setProductions(op);
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (!user) { navigate("/erp"); return; }
-    loadDashboard();
-  }, [user, navigate]);
-
-  if (!user) return null;
+  if (!user) { navigate("/erp"); return null; }
 
   const handleLogout = () => { clearPortalUser(); navigate("/erp"); };
 
-  const tabs = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "produtos", label: "Produtos", icon: Package },
-    { id: "fornecedores", label: "Fornecedores", icon: Truck },
-    { id: "compras", label: "Compras", icon: ShoppingCart },
-    { id: "producao", label: "Produção", icon: Factory },
-    { id: "estrutura", label: "Estrutura", icon: Settings },
+  const modules = [
+    { id: "suprimentos", label: "Suprimentos e Materiais", icon: Boxes, color: "border-indigo-500 text-indigo-600" },
+    { id: "comercial", label: "Comercial", icon: ShoppingCart, color: "border-emerald-500 text-emerald-600" },
+    { id: "administrativo", label: "Administrativo", icon: Landmark, color: "border-amber-500 text-amber-600" },
+    { id: "gerencial", label: "Gerencial", icon: Settings, color: "border-purple-500 text-purple-600" },
   ];
 
   return (
@@ -65,23 +38,21 @@ export default function Erp() {
       </header>
 
       <div className="bg-white border-b px-4 flex gap-1 flex-shrink-0 overflow-x-auto">
-        {tabs.map(t => {
-          const Icon = t.icon;
+        {modules.map(m => {
+          const Icon = m.icon;
           return (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === t.id ? "border-emerald-500 text-emerald-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-              <Icon className="w-4 h-4" /> {t.label}
+            <button key={m.id} onClick={() => setActiveModule(m.id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeModule === m.id ? m.color : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+              <Icon className="w-4 h-4" /> {m.label}
             </button>
           );
         })}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === "dashboard" && (loading ? <div className="flex justify-center py-16"><Boxes className="w-8 h-8 animate-spin text-emerald-600" /></div> : <ErpDashboard products={products} purchases={purchases} productions={productions} />)}
-        {activeTab === "produtos" && <ErpProductManager user={user} />}
-        {activeTab === "fornecedores" && <ErpSupplierManager user={user} />}
-        {activeTab === "compras" && <ErpPurchasePanel user={user} />}
-        {activeTab === "producao" && <ErpProductionPanel user={user} />}
-        {activeTab === "estrutura" && <ErpStructure user={user} />}
+        {activeModule === "suprimentos" && <ErpModuleSuprimentos user={user} />}
+        {activeModule === "comercial" && <ErpModuleComercial user={user} />}
+        {activeModule === "administrativo" && <ErpModuleAdministrativo user={user} />}
+        {activeModule === "gerencial" && <ErpModuleGerencial user={user} />}
       </div>
     </div>
   );

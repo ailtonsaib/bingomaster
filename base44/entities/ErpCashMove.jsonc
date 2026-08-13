@@ -1,0 +1,99 @@
+{
+  "name": "ErpCashMove",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "date": {
+      "type": "string",
+      "description": "Data (ISO)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "entrada",
+        "saida"
+      ],
+      "default": "saida"
+    },
+    "bank_account_id": {
+      "type": "string",
+      "description": "ID da conta banc\u00e1ria (ErpBankAccount)"
+    },
+    "bank_name": {
+      "type": "string",
+      "description": "Conta (cache)"
+    },
+    "category": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "description",
+    "amount"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

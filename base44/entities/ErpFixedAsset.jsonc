@@ -1,0 +1,104 @@
+{
+  "name": "ErpFixedAsset",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Bem patrimonial"
+    },
+    "acquisition_date": {
+      "type": "string",
+      "description": "Data de aquisi\u00e7\u00e3o (ISO)"
+    },
+    "acquisition_value": {
+      "type": "number",
+      "default": 0
+    },
+    "depreciation_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Taxa de deprecia\u00e7\u00e3o anual (%)"
+    },
+    "current_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor atual"
+    },
+    "location": {
+      "type": "string",
+      "description": "Localiza\u00e7\u00e3o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "baixado"
+      ],
+      "default": "ativo"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

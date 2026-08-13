@@ -1,0 +1,92 @@
+{
+  "name": "ErpAccountingEntry",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "date": {
+      "type": "string",
+      "description": "Data (ISO)"
+    },
+    "account_debit": {
+      "type": "string",
+      "description": "Conta d\u00e9bito"
+    },
+    "account_credit": {
+      "type": "string",
+      "description": "Conta cr\u00e9dito"
+    },
+    "description": {
+      "type": "string",
+      "description": "Hist\u00f3rico"
+    },
+    "value": {
+      "type": "number",
+      "default": 0
+    },
+    "document": {
+      "type": "string",
+      "description": "Documento"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "description",
+    "value"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
