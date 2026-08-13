@@ -7,9 +7,11 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { genOrderNumber, fmtMoney } from "@/lib/erpUtils";
 
 export default function ErpPurchaseFormModal({ user, order, products, suppliers, onClose, onSaved }) {
+  const [operations, setOperations] = useState([]);
   const [form, setForm] = useState({
     order_number: order?.order_number || genOrderNumber("PC"),
     supplier_id: order?.supplier_id || "",
+    operation_id: order?.operation_id || "",
     emission_date: order?.emission_date || new Date().toISOString().slice(0, 10),
     expected_date: order?.expected_date || "",
     notes: order?.notes || "",
@@ -17,6 +19,13 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  useEffect(() => {
+    (async () => {
+      try { setOperations(await base44.entities.ErpOperation.filter({ user_email: user.email, type: "entrada", is_active: true }, "name", 200)); }
+      catch (e) { console.error(e); }
+    })();
+  }, [user.email]);
 
   const addItem = () => setForm(prev => ({ ...prev, items: [...prev.items, { product_id: "", product_name: "", unit: "UN", quantity: 1, unit_cost: 0, total: 0 }] }));
   const removeItem = (i) => setForm(prev => ({ ...prev, items: prev.items.filter((_, idx) => idx !== i) }));
@@ -38,12 +47,16 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
     if (!form.supplier_id) { alert("Selecione um fornecedor."); return; }
     setSaving(true);
     const supplier = suppliers.find(s => s.id === form.supplier_id);
+    const operation = operations.find(o => o.id === form.operation_id);
     const payload = {
       user_email: user.email,
       order_number: form.order_number,
       supplier_id: form.supplier_id,
       supplier_name: supplier?.name || "",
       supplier_cnpj: supplier?.cnpj || "",
+      operation_id: form.operation_id || undefined,
+      operation_name: operation?.name || undefined,
+      is_patrimonio: !!operation?.is_patrimonio,
       emission_date: new Date(form.emission_date).toISOString(),
       expected_date: form.expected_date ? new Date(form.expected_date).toISOString() : undefined,
       items: form.items,
@@ -77,6 +90,13 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <Label>Operação de Entrada {operations.find(o => o.id === form.operation_id)?.is_patrimonio ? "(patrimônio)" : ""}</Label>
+            <select value={form.operation_id} onChange={e => set("operation_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <option value="">Selecione...</option>
+              {operations.map(o => <option key={o.id} value={o.id}>{o.name} — CFOP {o.cfop}{o.is_patrimonio ? " (patrimônio)" : ""}</option>)}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Emissão</Label><Input type="date" value={form.emission_date} onChange={e => set("emission_date", e.target.value)} /></div>

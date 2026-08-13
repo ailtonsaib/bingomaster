@@ -8,6 +8,7 @@ import ErpDreStructureManager from "@/components/erp/ErpDreStructureManager";
 import ErpJournalEntryManager from "@/components/erp/ErpJournalEntryManager";
 import ErpAccountingReports from "@/components/erp/ErpAccountingReports";
 import ErpAccountingSped from "@/components/erp/ErpAccountingSped";
+import ErpFixedAssetManager from "@/components/erp/ErpFixedAssetManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -40,6 +41,7 @@ export default function ErpModuleAdministrativo({ user }) {
         : sub === "movimentos" ? <ErpJournalEntryManager user={user} />
         : sub === "relatoriosContabeis" ? <ErpAccountingReports user={user} />
         : sub === "spedContabil" ? <ErpAccountingSped user={user} />
+        : sub === "patrimonial" ? <ErpFixedAssetManager user={user} />
         : <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
