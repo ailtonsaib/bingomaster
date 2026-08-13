@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { LayoutDashboard, Building2, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft } from "lucide-react";
+import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft } from "lucide-react";
 import ErpDashboard from "@/components/erp/ErpDashboard";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpTaxRuleManager from "@/components/erp/ErpTaxRuleManager";
@@ -11,6 +11,7 @@ import { SubNav } from "./ErpModuleSuprimentos";
 const SUBTABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "empresas", label: "Empresas", icon: Building2 },
+  { id: "filiais", label: "Filiais", icon: Building },
   { id: "departamentos", label: "Departamentos", icon: Network },
   { id: "setores", label: "Setores", icon: GitBranch },
   { id: "grupos", label: "Grupos de Estoque", icon: Boxes },
