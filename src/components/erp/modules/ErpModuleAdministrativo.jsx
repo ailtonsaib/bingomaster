@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { CreditCard, Banknote, Landmark, BookOpen, PieChart, Building, ScrollText, ListTree, ArrowLeftRight, BarChart3, FileText, BookCheck } from "lucide-react";
+import { CreditCard, Banknote, Landmark, BookOpen, PieChart, Building, ScrollText, ListTree, ArrowLeftRight, BarChart3, FileText, BookCheck, Layers } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpFiscalPanel from "@/components/erp/ErpFiscalPanel";
 import ErpChartAccountManager from "@/components/erp/ErpChartAccountManager";
 import ErpChartAccountReferentialManager from "@/components/erp/ErpChartAccountReferentialManager";
+import ErpDreStructureManager from "@/components/erp/ErpDreStructureManager";
 import ErpJournalEntryManager from "@/components/erp/ErpJournalEntryManager";
 import ErpAccountingReports from "@/components/erp/ErpAccountingReports";
 import ErpAccountingSped from "@/components/erp/ErpAccountingSped";
@@ -18,6 +19,7 @@ const SUBTABS = [
   { id: "planoReferencial", label: "Plano Referencial (Receita)", icon: BookCheck },
   { id: "planoContas", label: "Plano de Contas", icon: ListTree },
   { id: "movimentos", label: "Lançamentos Contábeis", icon: ArrowLeftRight },
+  { id: "estruturaDre", label: "Estrutura de DRE", icon: Layers },
   { id: "relatoriosContabeis", label: "Relatórios Contábeis", icon: BarChart3 },
   { id: "spedContabil", label: "SPED ECD", icon: FileText },
   { id: "contabilidade", label: "Contabilidade (antigo)", icon: BookOpen },
@@ -33,6 +35,7 @@ export default function ErpModuleAdministrativo({ user }) {
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="amber" />
       {sub === "fiscal" ? <ErpFiscalPanel user={user} />
         : sub === "planoReferencial" ? <ErpChartAccountReferentialManager user={user} />
+        : sub === "estruturaDre" ? <ErpDreStructureManager user={user} />
         : sub === "planoContas" ? <ErpChartAccountManager user={user} />
         : sub === "movimentos" ? <ErpJournalEntryManager user={user} />
         : sub === "relatoriosContabeis" ? <ErpAccountingReports user={user} />

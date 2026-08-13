@@ -1,0 +1,138 @@
+{
+  "name": "ErpDreStructure",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da estrutura de DRE (ex: DRE Padr\u00e3o 2026)"
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "C\u00f3digo da linha (ex: 1, 1.1, 2)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o da linha (ex: Receita Bruta de Vendas)"
+          },
+          "group_type": {
+            "type": "string",
+            "enum": [
+              "receita_bruta",
+              "deducoes",
+              "receita_liquida",
+              "custo_vendas",
+              "resultado_bruto",
+              "despesas_operacionais",
+              "resultado_operacional",
+              "financeiro",
+              "resultado_antes_tributos",
+              "tributos",
+              "resultado_final",
+              "outros"
+            ],
+            "description": "Tipo do grupo"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "soma",
+              "subtrai"
+            ],
+            "default": "soma",
+            "description": "Se a linha soma ou subtrai do resultado"
+          },
+          "totalizer": {
+            "type": "boolean",
+            "default": false,
+            "description": "Se \u00e9 uma linha totalizadora (n\u00e3o tem contas, calculada)"
+          },
+          "account_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "IDs das contas cont\u00e1beis vinculadas \u00e0 linha"
+          },
+          "account_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Nomes das contas (cache)"
+          }
+        }
+      },
+      "default": [],
+      "description": "Linhas da estrutura de DRE com suas contas cont\u00e1beis"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
