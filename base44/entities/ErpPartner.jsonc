@@ -102,6 +102,14 @@
       "type": "string",
       "description": "Nome do ramo (cache)"
     },
+    "rede_id": {
+      "type": "string",
+      "description": "ID da rede (ErpNetwork) \u2014 opcional, quando cliente"
+    },
+    "rede_name": {
+      "type": "string",
+      "description": "Nome da rede (cache)"
+    },
     "is_active": {
       "type": "boolean",
       "default": true

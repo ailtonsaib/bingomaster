@@ -159,6 +159,15 @@ export const ERP_CRUD_CONFIGS = {
     ],
     searchKeys: ["name", "email", "department_name"],
   },
+  redes: {
+    entityName: "ErpNetwork", title: "Cadastro de Redes",
+    fields: [
+      { key: "name", label: "Nome da Rede", required: true, full: true },
+      { key: "code", label: "Código" }, { key: "description", label: "Descrição", full: true }, { key: "is_active", label: "Ativa", type: "checkbox" },
+    ],
+    columns: [{ key: "name", label: "Rede" }, { key: "code", label: "Código" }, { key: "description", label: "Descrição" }, { key: "is_active", label: "Ativa", type: "bool" }],
+    searchKeys: ["name", "code", "description"],
+  },
   canais: {
     entityName: "ErpChannel", title: "Cadastro de Canais de Vendas",
     fields: [

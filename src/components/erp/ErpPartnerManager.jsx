@@ -36,6 +36,7 @@ export default function ErpPartnerManager({ user }) {
   const [vendedores, setVendedores] = useState([]);
   const [channels, setChannels] = useState([]);
   const [sectors, setSectors] = useState([]);
+  const [redes, setRedes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -44,13 +45,14 @@ export default function ErpPartnerManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [list, vends, chs, secs] = await Promise.all([
+      const [list, vends, chs, secs, rds] = await Promise.all([
         base44.entities.ErpPartner.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpSalesTeam.filter({ user_email: user.email, team_role: "vendedor" }, "name", 500),
         base44.entities.ErpChannel.filter({ user_email: user.email }, "name", 200),
         base44.entities.ErpActivitySector.filter({ user_email: user.email }, "name", 200),
+        base44.entities.ErpNetwork.filter({ user_email: user.email }, "name", 200),
       ]);
-      setItems(list); setVendedores(vends); setChannels(chs); setSectors(secs);
+      setItems(list); setVendedores(vends); setChannels(chs); setSectors(secs); setRedes(rds);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -110,13 +112,13 @@ export default function ErpPartnerManager({ user }) {
       </div>
 
       {showForm && (
-        <ErpPartnerForm user={user} editing={editing} vendedores={vendedores} channels={channels} sectors={sectors} onClose={() => setShowForm(false)} onSaved={load} />
+        <ErpPartnerForm user={user} editing={editing} vendedores={vendedores} channels={channels} sectors={sectors} redes={redes} onClose={() => setShowForm(false)} onSaved={load} />
       )}
     </div>
   );
 }
 
-function ErpPartnerForm({ user, editing, vendedores, channels, sectors, onClose, onSaved }) {
+function ErpPartnerForm({ user, editing, vendedores, channels, sectors, redes, onClose, onSaved }) {
   const [form, setForm] = useState({
     partner_type: editing?.partner_type || "cliente",
     document_type: editing?.document_type || "",
@@ -141,6 +143,8 @@ function ErpPartnerForm({ user, editing, vendedores, channels, sectors, onClose,
     channel_name: editing?.channel_name || "",
     activity_sector_id: editing?.activity_sector_id || "",
     activity_sector_name: editing?.activity_sector_name || "",
+    rede_id: editing?.rede_id || "",
+    rede_name: editing?.rede_name || "",
     is_active: editing?.is_active !== false,
     notes: editing?.notes || "",
   });
@@ -209,9 +213,9 @@ function ErpPartnerForm({ user, editing, vendedores, channels, sectors, onClose,
     if (!form.partner_type) { alert("Selecione o tipo."); return; }
     setSaving(true);
     const payload = { user_email: user.email, ...form, document: onlyDigits(form.document), cep: onlyDigits(form.cep), phone: onlyDigits(form.phone) };
-    if (!isClient) { delete payload.vendedor_id; delete payload.vendedor_name; delete payload.channel_id; delete payload.channel_name; delete payload.activity_sector_id; delete payload.activity_sector_name; }
-    ["vendedor_id", "channel_id", "activity_sector_id"].forEach(k => { if (!payload[k]) delete payload[k]; });
-    ["vendedor_name", "channel_name", "activity_sector_name"].forEach(k => { if (!payload[k]) delete payload[k]; });
+    if (!isClient) { delete payload.vendedor_id; delete payload.vendedor_name; delete payload.channel_id; delete payload.channel_name; delete payload.activity_sector_id; delete payload.activity_sector_name; delete payload.rede_id; delete payload.rede_name; }
+    ["vendedor_id", "channel_id", "activity_sector_id", "rede_id"].forEach(k => { if (!payload[k]) delete payload[k]; });
+    ["vendedor_name", "channel_name", "activity_sector_name", "rede_name"].forEach(k => { if (!payload[k]) delete payload[k]; });
     if (!payload.document) delete payload.document;
     if (!payload.document_type) delete payload.document_type;
     ["ie", "im", "address", "number", "district", "city", "uf", "ibge_code", "email", "contact_person", "notes"].forEach(k => { if (!payload[k]) delete payload[k]; });
@@ -277,6 +281,13 @@ function ErpPartnerForm({ user, editing, vendedores, channels, sectors, onClose,
                     {sectors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
+              </div>
+              <div className="mt-3">
+                <Label>Rede (opcional)</Label>
+                <select value={form.rede_id} onChange={e => { const r = redes.find(r => r.id === e.target.value); set("rede_id", e.target.value); set("rede_name", r?.name || ""); }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
+                  <option value="">Sem rede</option>
+                  {redes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
               </div>
             </div>
           )}
