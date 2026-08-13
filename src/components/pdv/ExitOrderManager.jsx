@@ -59,24 +59,25 @@ export default function ExitOrderManager({ user }) {
     return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>;
   };
 
-  const emitNfe = async (order) => {
+  const emitDocumento = async (order, modelo) => {
     if (!companyConfigured) {
-      alert("Configure os dados da empresa antes de emitir NF-e!");
+      alert("Configure os dados da empresa antes de emitir!");
       setShowCompanyConfig(true);
       return;
     }
     setEmitting(order.id);
     try {
-      const res = await base44.functions.invoke("gerarNfeSaida", { order_id: order.id });
+      const res = await base44.functions.invoke("gerarNfeSaida", { order_id: order.id, modelo });
       if (res.data?.success) {
-        alert(`NF-e gerada com sucesso!\nNúmero: ${res.data.nfe_number}\nChave: ${res.data.nfe_key}`);
+        const label = modelo === "65" ? "NFC-e" : "NF-e";
+        alert(`${label} gerada com sucesso!\nNúmero: ${res.data.nfe_number}\nChave: ${res.data.nfe_key}`);
         load();
       } else {
-        alert("Erro ao emitir NF-e:\n" + (res.data?.error || "Erro desconhecido."));
+        alert("Erro ao emitir:\n" + (res.data?.error || "Erro desconhecido."));
       }
     } catch (e) {
       const errMsg = e?.response?.data?.error || e?.message || "Erro desconhecido.";
-      alert("Erro ao emitir NF-e:\n" + errMsg);
+      alert("Erro ao emitir:\n" + errMsg);
     }
     setEmitting(null);
   };
@@ -183,7 +184,7 @@ export default function ExitOrderManager({ user }) {
                   </div>
                   {order.status === "emitida" && order.nfe_number && (
                     <div className="text-sm">
-                      <p className="text-xs text-gray-500">NF-e</p>
+                      <p className="text-xs text-gray-500">{order.nfe_model === "65" ? "NFC-e" : "NF-e"}</p>
                       <p className="font-medium text-xs">{order.nfe_number}/{order.nfe_series}</p>
                     </div>
                   )}
@@ -191,15 +192,26 @@ export default function ExitOrderManager({ user }) {
                 </div>
                 <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                   {order.status === "rascunho" && (
-                    <Button
-                      size="sm"
-                      onClick={() => emitNfe(order)}
-                      disabled={emitting === order.id}
-                      className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs"
-                    >
-                      {emitting === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      Emitir NF-e
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => emitDocumento(order, "55")}
+                        disabled={emitting === order.id}
+                        className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs"
+                      >
+                        {emitting === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        Emitir NF-e
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => emitDocumento(order, "65")}
+                        disabled={emitting === order.id}
+                        className="h-8 gap-1.5 bg-teal-600 hover:bg-teal-700 text-xs"
+                      >
+                        {emitting === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        Emitir NFC-e
+                      </Button>
+                    </>
                   )}
                   {order.status === "emitida" && order.nfe_xml && (
                     <Button size="sm" variant="outline" onClick={() => downloadXml(order)} className="h-8 gap-1.5 text-xs">

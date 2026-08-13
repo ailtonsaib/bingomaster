@@ -23,6 +23,7 @@ import CompanySelectorModal from "@/components/workshop/CompanySelectorModal";
 import ServiceOrderAuditPanel from "@/components/workshop/ServiceOrderAuditPanel";
 import WorkshopCaixaModal from "@/components/workshop/WorkshopCaixaModal";
 import CertificateManager from "@/components/workshop/CertificateManager";
+import NfsePanel from "@/components/workshop/NfsePanel";
 
 const TABS = [
   { id: "diagnostic", label: "Diagnóstico IA", icon: Stethoscope, isLink: true },
@@ -42,6 +43,7 @@ const TABS = [
   { id: "users", label: "Usuários", icon: Users },
   { id: "audit", label: "Auditoria OS", icon: ShieldCheck },
   { id: "certificates", label: "Certificados", icon: KeyRound },
+  { id: "nfse", label: "NFS-e", icon: Receipt },
 ];
 
 export default function Workshop() {
@@ -240,6 +242,7 @@ export default function Workshop() {
           {activeTab === "users" && userRole === "admin" && <UserManager userEmail={effectiveEmail} />}
           {activeTab === "audit" && userRole === "admin" && <ServiceOrderAuditPanel userEmail={effectiveEmail} />}
           {activeTab === "certificates" && userRole === "admin" && <CertificateManager userEmail={effectiveEmail} />}
+          {activeTab === "nfse" && userRole === "admin" && <NfsePanel userEmail={effectiveEmail} />}
         </div>
       </div>
 

@@ -208,6 +208,15 @@
       "default": "rascunho",
       "description": "Status do pedido: rascunho, emitida (NF-e gerada), cancelada"
     },
+    "nfe_model": {
+      "type": "string",
+      "enum": [
+        "55",
+        "65"
+      ],
+      "default": "55",
+      "description": "Modelo do documento fiscal emitido: 55 (NF-e) ou 65 (NFC-e)"
+    },
     "nfe_number": {
       "type": "string",
       "description": "N\u00famero da NF-e gerada"

@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ success: false, error: 'Usuário não autenticado.' });
 
     const body = await req.json();
-    const { order_id } = body;
+    const { order_id, modelo } = body;
 
     if (!order_id) {
       return Response.json({ success: false, error: 'ID do pedido não informado.' });
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const now = new Date();
     const aamm = String(now.getFullYear()).slice(2) + String(now.getMonth() + 1).padStart(2, '0');
     const cnpjClean = (company.cnpj || '').replace(/\D/g, '').padStart(14, '0').slice(-14);
-    const mod = '55';
+    const mod = (modelo === '65' ? '65' : '55');
     const serie = String(company.nfe_series || 1).padStart(3, '0');
     const nNF = String(company.nfe_number_next || 1).padStart(9, '0');
     const tpEmis = '1';
@@ -244,14 +244,14 @@ Deno.serve(async (req) => {
     <ide>
       <cUF>${cUF}</cUF>
       <natOp>${(order.nature_operation || 'Venda de mercadoria').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</natOp>
-      <mod>55</mod>
+      <mod>${mod}</mod>
       <serie>${serie}</serie>
       <nNF>${nNF}</nNF>
       <dhEmi>${dhEmi}</dhEmi>
       <tpNF>1</tpNF>
       <idDest>${idDest}</idDest>
       <cMunFG>${company.ibge_code}</cMunFG>
-      <tpImp>1</tpImp>
+      <tpImp>${mod === '65' ? '4' : '1'}</tpImp>
       <tpEmis>${tpEmis}</tpEmis>
       <cDV>${dv}</cDV>
       <tpAmb>${company.nfe_environment || '2'}</tpAmb>
@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
     try {
       const activeCerts = await base44.entities.DigitalCertificate.filter({ user_email: user.email, is_active: true });
       const nfeCert = activeCerts.find((c) =>
-        c.modelos && c.modelos.includes('NFe') && c.valid_to && new Date(c.valid_to) > new Date()
+        c.modelos && c.modelos.includes(mod === '65' ? 'NFCe' : 'NFe') && c.valid_to && new Date(c.valid_to) > new Date()
       );
       if (nfeCert) {
         const signed = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: nfeCert.file_uri, expires_in: 120 });
@@ -323,6 +323,7 @@ Deno.serve(async (req) => {
     // Update the order with NF-e data
     await base44.entities.PDVExitOrder.update(order_id, {
       status: 'emitida',
+      nfe_model: mod,
       nfe_number: nNF,
       nfe_series: serie,
       nfe_key: chaveAcesso,
