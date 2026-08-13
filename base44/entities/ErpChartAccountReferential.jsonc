@@ -1,0 +1,98 @@
+{
+  "name": "ErpChartAccountReferential",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta referencial (padr\u00e3o Receita/ECD)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da conta referencial"
+    },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "passivo",
+        "patrimonio_liquido",
+        "receita",
+        "despesa",
+        "compensacao"
+      ],
+      "description": "Tipo da conta"
+    },
+    "nature": {
+      "type": "string",
+      "enum": [
+        "devedora",
+        "credora"
+      ],
+      "description": "Natureza"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "code",
+    "name",
+    "account_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

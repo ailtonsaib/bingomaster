@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CreditCard, Banknote, Landmark, BookOpen, PieChart, Building, ScrollText, ListTree, ArrowLeftRight, BarChart3, FileText } from "lucide-react";
+import { CreditCard, Banknote, Landmark, BookOpen, PieChart, Building, ScrollText, ListTree, ArrowLeftRight, BarChart3, FileText, BookCheck } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpFiscalPanel from "@/components/erp/ErpFiscalPanel";
 import ErpChartAccountManager from "@/components/erp/ErpChartAccountManager";
+import ErpChartAccountReferentialManager from "@/components/erp/ErpChartAccountReferentialManager";
 import ErpJournalEntryManager from "@/components/erp/ErpJournalEntryManager";
 import ErpAccountingReports from "@/components/erp/ErpAccountingReports";
 import ErpAccountingSped from "@/components/erp/ErpAccountingSped";
@@ -14,6 +15,7 @@ const SUBTABS = [
   { id: "contasReceber", label: "Contas a Receber", icon: Banknote },
   { id: "caixaBanco", label: "Caixa e Banco", icon: Landmark },
   { id: "contasBancarias", label: "Contas Bancárias", icon: Landmark },
+  { id: "planoReferencial", label: "Plano Referencial (Receita)", icon: BookCheck },
   { id: "planoContas", label: "Plano de Contas", icon: ListTree },
   { id: "movimentos", label: "Lançamentos Contábeis", icon: ArrowLeftRight },
   { id: "relatoriosContabeis", label: "Relatórios Contábeis", icon: BarChart3 },
@@ -30,6 +32,7 @@ export default function ErpModuleAdministrativo({ user }) {
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="amber" />
       {sub === "fiscal" ? <ErpFiscalPanel user={user} />
+        : sub === "planoReferencial" ? <ErpChartAccountReferentialManager user={user} />
         : sub === "planoContas" ? <ErpChartAccountManager user={user} />
         : sub === "movimentos" ? <ErpJournalEntryManager user={user} />
         : sub === "relatoriosContabeis" ? <ErpAccountingReports user={user} />
