@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet, CalendarClock } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Receipt, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet, CalendarClock, Ticket } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -20,6 +20,7 @@ import TaxAlertPanel from "@/components/pdv/TaxAlertPanel";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
 import FinancePanel from "@/components/pdv/FinancePanel";
 import ForecastReport from "@/components/pdv/ForecastReport";
+import NfcePainel from "@/components/pdv/NfcePainel";
 import CupomResultModal from "@/components/pdv/CupomResultModal";
 import DanfePrint from "@/components/pdv/DanfePrint";
 import { buildFiscalItem, computeTotals } from "@/lib/pdvTaxCalc";
@@ -197,6 +198,7 @@ export default function PDV() {
     { id: "produtos", label: "Produtos", icon: Package },
     { id: "vendas", label: "Vendas", icon: Receipt },
     { id: "entradas", label: "Entradas", icon: FileInput },
+    { id: "nfce", label: "NFC-e", icon: Receipt },
     { id: "saidas", label: "Saídas", icon: FileOutput },
     { id: "operacoes", label: "Operações", icon: Settings },
     { id: "trib-entrada", label: "Trib. Entrada", icon: Percent },
@@ -282,6 +284,7 @@ export default function PDV() {
         {activeTab === "produtos" && <ProductManager user={user} />}
         {activeTab === "vendas" && <SalesHistory user={user} />}
         {activeTab === "entradas" && <EntryOperations user={user} />}
+        {activeTab === "nfce" && <NfcePainel user={user} />}
         {activeTab === "saidas" && <ExitOrderManager user={user} />}
     {activeTab === "operacoes" && <OperationManager user={user} />}
         {activeTab === "contatos" && <ContactManager user={user} />}
