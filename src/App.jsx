@@ -57,6 +57,7 @@ import TicketKanban from '@/pages/TicketKanban';
 import TicketAdmin from '@/pages/TicketAdmin';
 import PDVLogin from '@/pages/PDVLogin';
 import PDV from '@/pages/PDV';
+import FiscalReport from '@/pages/FiscalReport';
 import SpaceShooter from '@/pages/SpaceShooter';
 import MineSweeper from '@/pages/MineSweeper';
 import InstallInstructions from '@/pages/InstallInstructions';
@@ -199,6 +200,7 @@ const AuthenticatedApp = () => {
       <Route element={<PortalGuard permission="can_access_pdv" />}>
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
           <Route path="/pdv-caixa" element={<PDV />} />
+          <Route path="/pdv-relatorio-fiscal" element={<FiscalReport />} />
         </Route>
       </Route>
       {/* Sistema de Chamados — login próprio por CNPJ + senha */}

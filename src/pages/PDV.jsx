@@ -234,6 +234,9 @@ export default function PDV() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/pdv-relatorio-fiscal")} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+            <FileBarChart className="w-4 h-4" /> Relatório Fiscal
+          </button>
           <button onClick={() => setShowCompanyConfig(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
             <Settings className="w-4 h-4" /> Empresa
           </button>
