@@ -14,6 +14,7 @@ import ErpAccountingReports from "@/components/erp/ErpAccountingReports";
 import ErpAccountingSped from "@/components/erp/ErpAccountingSped";
 import ErpFixedAssetManager from "@/components/erp/ErpFixedAssetManager";
 import ErpFinanceReports from "@/components/erp/ErpFinanceReports";
+import ErpProductionCostPanel from "@/components/erp/ErpProductionCostPanel";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -38,7 +39,7 @@ const SUBMODULES = [
       { id: "relatoriosContabeis", label: "Relatórios Contábeis", icon: BarChart3 },
       { id: "spedContabil", label: "SPED ECD", icon: FileText },
       { id: "patrimonial", label: "Patrimonial", icon: Building },
-      { id: "custos", label: "Custos", icon: PieChart },
+      { id: "custos", label: "Custo de Produção", icon: PieChart },
       { id: "orcamento", label: "Orçamento", icon: Target },
       { id: "fiscal", label: "Fiscal", icon: ScrollText },
     ],
@@ -74,6 +75,7 @@ export default function ErpModuleAdministrativo({ user }) {
       case "relatoriosContabeis": return <ErpAccountingReports user={user} />;
       case "spedContabil": return <ErpAccountingSped user={user} />;
       case "patrimonial": return <ErpFixedAssetManager user={user} />;
+      case "custos": return <ErpProductionCostPanel user={user} />;
       case "relatoriosFinanceiro": return <ErpFinanceReports user={user} />;
       case "funcionarios": return <ErpSimpleCrud key="usuarios" user={user} {...ERP_CRUD_CONFIGS.usuarios} />;
       default: return <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />;
