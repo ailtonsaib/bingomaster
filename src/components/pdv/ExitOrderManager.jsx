@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, Search, FileText, Download, Send, UploadCloud, ChevronDown, ChevronRight, Building, AlertTriangle, CheckCircle2, Printer } from "lucide-react";
+import { Plus, Loader2, Search, FileText, Download, Send, UploadCloud, ChevronDown, ChevronRight, Building, AlertTriangle, CheckCircle2, Printer, Square, CheckSquare } from "lucide-react";
 import ExitOrderForm from "@/components/pdv/ExitOrderForm";
 import CompanyConfigModal from "@/components/pdv/CompanyConfigModal";
 import DanfePrint from "@/components/pdv/DanfePrint";
@@ -16,6 +16,8 @@ export default function ExitOrderManager({ user }) {
   const [expanded, setExpanded] = useState(null);
   const [emitting, setEmitting] = useState(null);
   const [transmitting, setTransmitting] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [batchTransmitting, setBatchTransmitting] = useState(false);
   const [companyConfigured, setCompanyConfigured] = useState(false);
   const [companyConfig, setCompanyConfig] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
@@ -104,6 +106,46 @@ export default function ExitOrderManager({ user }) {
     setTransmitting(null);
   };
 
+  const transmittable = filtered.filter(o => o.status === "emitida" && o.nfe_xml && !o.nfe_protocol);
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = transmittable.length > 0 && transmittable.every(o => selected.has(o.id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(transmittable.map(o => o.id)));
+  };
+
+  const transmitLote = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return alert("Selecione ao menos uma nota para transmitir.");
+    if (!confirm(`Transmitir ${ids.length} nota(s) à SEFAZ?`)) return;
+    setBatchTransmitting(true);
+    const ok = [], falha = [];
+    for (const id of ids) {
+      try {
+        const res = await base44.functions.invoke("transmitirNfe", { order_id: id });
+        const d = res.data || {};
+        if (d.success) ok.push(id); else falha.push({ id, msg: d.statusText || d.error || "Erro" });
+      } catch (e) {
+        falha.push({ id, msg: e?.response?.data?.error || e?.message || "Erro" });
+      }
+    }
+    setSelected(new Set());
+    setBatchTransmitting(false);
+    let msg = `Transmissão concluída.\nAutorizadas: ${ok.length}`;
+    if (falha.length) msg += `\nFalhas: ${falha.length}` + falha.slice(0, 5).map(f => `\n— ${f.msg}`).join("");
+    alert(msg);
+    load();
+  };
+
   const downloadXml = (order) => {
     if (!order.nfe_xml) return;
     const blob = new Blob([order.nfe_xml], { type: "application/xml" });
@@ -124,6 +166,16 @@ export default function ExitOrderManager({ user }) {
           <span className="text-sm text-gray-500">({orders.length})</span>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {transmittable.length > 0 && (
+            <Button
+              onClick={transmitLote}
+              disabled={batchTransmitting || selected.size === 0}
+              className="h-9 gap-1.5 bg-blue-600 hover:bg-blue-700"
+            >
+              {batchTransmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+              Transmitir SEFAZ {selected.size > 0 ? `(${selected.size})` : "(selecionar)"}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setShowCompanyConfig(true)} className="h-9 gap-1.5">
             <Building className="w-4 h-4" /> Empresa
             {companyConfigured && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
@@ -148,6 +200,21 @@ export default function ExitOrderManager({ user }) {
         <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar pedido..." className="pl-9 h-9" />
       </div>
 
+      {transmittable.length > 0 && (
+        <div className="flex items-center gap-3 text-sm bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+          <button onClick={toggleSelectAll} className="flex items-center gap-1.5 text-blue-700 font-medium">
+            {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            Selecionar todas ({transmittable.length})
+          </button>
+          {selected.size > 0 && (
+            <>
+              <span className="text-blue-600">{selected.size} selecionada(s)</span>
+              <button onClick={() => setSelected(new Set())} className="text-xs text-gray-500 hover:text-gray-700">limpar</button>
+            </>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-orange-600" /></div>
       ) : filtered.length === 0 ? (
@@ -164,6 +231,15 @@ export default function ExitOrderManager({ user }) {
                 className="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50"
                 onClick={() => setExpanded(expanded === order.id ? null : order.id)}
               >
+                {order.status === "emitida" && order.nfe_xml && !order.nfe_protocol && (
+                  <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+                    <button onClick={() => toggleSelect(order.id)} className="p-0.5" title="Selecionar nota">
+                      {selected.has(order.id)
+                        ? <CheckSquare className="w-4 h-4 text-blue-600" />
+                        : <Square className="w-4 h-4 text-gray-400 hover:text-gray-600" />}
+                    </button>
+                  </div>
+                )}
                 {expanded === order.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                 <div className="flex-1 flex flex-wrap items-center gap-4">
                   <div>
