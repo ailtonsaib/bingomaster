@@ -50,6 +50,20 @@
       "type": "string",
       "description": "Nome da conta referencial (cache)"
     },
+    "participates_production_cost": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a conta participa dos custos de produ\u00e7\u00e3o"
+    },
+    "production_cost_type": {
+      "type": "string",
+      "enum": [
+        "insumos",
+        "mao_de_obra",
+        "ggf"
+      ],
+      "description": "Tipo de custo de produ\u00e7\u00e3o: insumos, mao_de_obra (M\u00e3o de Obra) ou ggf (Gastos Gerais de Fabrica\u00e7\u00e3o)"
+    },
     "accepts_entries": {
       "type": "boolean",
       "default": true,

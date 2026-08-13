@@ -13,6 +13,11 @@ const TYPE_OPTS = [
   { value: "despesa", label: "Despesa", color: "text-amber-700 bg-amber-100", nature: "devedora" },
   { value: "compensacao", label: "Compensação", color: "text-gray-700 bg-gray-100", nature: "" },
 ];
+const PROD_COST_TYPES = [
+  { value: "insumos", label: "Insumos" },
+  { value: "mao_de_obra", label: "Mão de Obra" },
+  { value: "ggf", label: "GGF (Gastos Gerais de Fabricação)" },
+];
 
 export default function ErpChartAccountManager({ user }) {
   const [items, setItems] = useState([]);
@@ -59,6 +64,7 @@ export default function ErpChartAccountManager({ user }) {
                 <th className="p-2 text-left">Tipo</th><th className="p-2 text-left">Natureza</th>
                 <th className="p-2 text-left">Conta Pai</th>
                 <th className="p-2 text-left">Plano Referencial</th>
+                <th className="p-2 text-left">Custo Produção</th>
                 <th className="p-2 text-left">Aceita Lançto.</th><th className="p-2 text-left">Ativa</th>
                 <th className="p-2 text-right">Ações</th>
               </tr>
@@ -76,6 +82,7 @@ export default function ErpChartAccountManager({ user }) {
                     <td className="p-2 text-xs">{i.nature || "—"}</td>
                     <td className="p-2 text-xs">{i.parent_name || "—"}</td>
                     <td className="p-2 text-xs">{i.referential_code ? <span className="font-mono">{i.referential_code}</span> : "—"}{i.referential_name ? <span className="block text-gray-400">{i.referential_name}</span> : null}</td>
+                    <td className="p-2 text-xs">{i.participates_production_cost ? <span className="text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded">{(PROD_COST_TYPES.find(t => t.value === i.production_cost_type) || {}).label || i.production_cost_type}</span> : <span className="text-gray-400">Não</span>}</td>
                     <td className="p-2 text-xs">{i.accepts_entries ? "Sim" : "Não"}</td>
                     <td className="p-2 text-xs">{i.is_active ? "Sim" : "Não"}</td>
                     <td className="p-2 text-right whitespace-nowrap">
@@ -100,6 +107,8 @@ function ErpChartAccountForm({ user, editing, accounts, refItems, onClose, onSav
     account_type: editing?.account_type || "ativo", nature: editing?.nature || "devedora",
     parent_id: editing?.parent_id || "", parent_name: editing?.parent_name || "",
     referential_code: editing?.referential_code || "", referential_name: editing?.referential_name || "",
+    participates_production_cost: !!editing?.participates_production_cost,
+    production_cost_type: editing?.production_cost_type || "insumos",
     accepts_entries: editing?.accepts_entries !== false, is_active: editing?.is_active !== false,
   });
   const [refSearch, setRefSearch] = useState("");
@@ -120,6 +129,8 @@ function ErpChartAccountForm({ user, editing, accounts, refItems, onClose, onSav
       user_email: user.email, code: form.code, name: form.name,
       account_type: form.account_type, nature: form.nature,
       referential_code: form.referential_code, referential_name: form.referential_name,
+      participates_production_cost: !!form.participates_production_cost,
+      production_cost_type: form.participates_production_cost ? form.production_cost_type : undefined,
       accepts_entries: !!form.accepts_entries, is_active: !!form.is_active,
     };
     if (form.parent_id) { payload.parent_id = form.parent_id; payload.parent_name = form.parent_name; }
@@ -164,6 +175,20 @@ function ErpChartAccountForm({ user, editing, accounts, refItems, onClose, onSav
             </select>
             {form.referential_code && <p className="text-xs text-gray-500 mt-1">Vinculado: {form.referential_code} — {form.referential_name}</p>}
             {refItems.length === 0 && <p className="text-xs text-amber-600 mt-1">Importe o Plano Referencial na aba "Plano Referencial" antes de cadastrar contas.</p>}
+          </div>
+          <div className="border rounded-lg p-3 bg-gray-50">
+            <label className="flex items-center gap-2 text-sm font-medium mb-2">
+              <input type="checkbox" checked={form.participates_production_cost} onChange={e => set("participates_production_cost", e.target.checked)} className="w-4 h-4" />
+              Participa dos custos de produção
+            </label>
+            {form.participates_production_cost && (
+              <div>
+                <Label>Tipo de custo de produção *</Label>
+                <select value={form.production_cost_type} onChange={e => set("production_cost_type", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm">
+                  {PROD_COST_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.accepts_entries} onChange={e => set("accepts_entries", e.target.checked)} className="w-4 h-4" /> Aceita lançamentos</label>
