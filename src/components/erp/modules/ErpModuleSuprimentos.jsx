@@ -4,6 +4,7 @@ import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
+import ErpRequisitionPanel from "@/components/erp/ErpRequisitionPanel";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 
 const SUBTABS = [
@@ -21,7 +22,7 @@ export default function ErpModuleSuprimentos({ user }) {
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="indigo" />
       {sub === "almoxarifado" && <ErpProductManager user={user} />}
       {sub === "compras" && <ErpPurchasePanel user={user} />}
-      {sub === "solicitacao" && <ErpSimpleCrud key="requisicoes" user={user} {...ERP_CRUD_CONFIGS.requisicoes} />}
+      {sub === "solicitacao" && <ErpRequisitionPanel user={user} />}
       {sub === "tomada" && <ErpSimpleCrud key="cotacoes" user={user} {...ERP_CRUD_CONFIGS.cotacoes} />}
       {sub === "manufatura" && <ErpProductionPanel user={user} />}
     </div>

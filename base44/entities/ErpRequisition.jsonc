@@ -14,12 +14,23 @@
       "type": "string",
       "description": "Data da solicita\u00e7\u00e3o (ISO)"
     },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "compra_material",
+        "almoxarifado",
+        "servico"
+      ],
+      "default": "compra_material",
+      "description": "Tipo: compra_material (compra de material cadastrado/novo), almoxarifado (material p/ almoxarifado) ou servico (solicita\u00e7\u00e3o de servi\u00e7os)"
+    },
     "department_id": {
-      "type": "string"
+      "type": "string",
+      "description": "ID do setor/departamento solicitante (ErpDepartment)"
     },
     "department_name": {
       "type": "string",
-      "description": "Departamento solicitante (cache)"
+      "description": "Setor/Departamento solicitante (cache)"
     },
     "requested_by": {
       "type": "string",
@@ -34,9 +45,56 @@
       ],
       "default": "media"
     },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_type": {
+            "type": "string",
+            "enum": [
+              "cadastrado",
+              "novo",
+              "servico"
+            ],
+            "description": "cadastrado (produto do cadastro), novo (material n\u00e3o cadastrado) ou servico"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o do material novo ou do servi\u00e7o"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number",
+            "description": "Valor unit\u00e1rio estimado"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      },
+      "default": [],
+      "description": "Itens da solicita\u00e7\u00e3o"
+    },
+    "total_estimate": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total estimado da solicita\u00e7\u00e3o"
+    },
     "description": {
       "type": "string",
-      "description": "Itens/descri\u00e7\u00e3o da solicita\u00e7\u00e3o"
+      "description": "Descri\u00e7\u00e3o geral (opcional)"
     },
     "status": {
       "type": "string",
@@ -54,8 +112,7 @@
   },
   "required": [
     "user_email",
-    "number",
-    "description"
+    "number"
   ],
   "rls": {
     "create": {
