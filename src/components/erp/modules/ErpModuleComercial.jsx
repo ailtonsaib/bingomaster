@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Users, ClipboardCheck, Monitor, BarChart3 } from "lucide-react";
+import { Users, ClipboardCheck, Monitor, BarChart3, Network } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpSalesOrderPanel from "@/components/erp/ErpSalesOrderPanel";
 import ErpSalesReport from "@/components/erp/ErpSalesReport";
+import ErpSalesTeamManager from "@/components/erp/ErpSalesTeamManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const SUBTABS = [
   { id: "clientes", label: "Clientes", icon: Users },
+  { id: "equipe", label: "Equipe de Vendas", icon: Network },
   { id: "pedidos", label: "Pedidos e Faturamento", icon: ClipboardCheck },
   { id: "pdv", label: "PDV", icon: Monitor },
   { id: "relatorios", label: "Relatórios de Vendas", icon: BarChart3 },
@@ -21,6 +23,7 @@ export default function ErpModuleComercial({ user }) {
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="emerald" />
       {sub === "clientes" && <ErpSimpleCrud key="clientes" user={user} {...ERP_CRUD_CONFIGS.clientes} />}
+      {sub === "equipe" && <ErpSalesTeamManager user={user} />}
       {sub === "pedidos" && <ErpSalesOrderPanel user={user} />}
       {sub === "pdv" && (
         <div className="bg-white rounded-xl border p-8 text-center">

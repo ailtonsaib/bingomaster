@@ -1,0 +1,112 @@
+{
+  "name": "ErpSalesTeam",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "team_role": {
+      "type": "string",
+      "enum": [
+        "gerente",
+        "supervisor",
+        "vendedor"
+      ],
+      "description": "Fun\u00e7\u00e3o na equipe de vendas: gerente, supervisor ou vendedor"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome completo"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "commission_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Comiss\u00e3o (%)"
+    },
+    "supervisor_id": {
+      "type": "string",
+      "description": "ID do supervisor (quando vendedor)"
+    },
+    "supervisor_name": {
+      "type": "string",
+      "description": "Nome do supervisor (cache)"
+    },
+    "gerente_id": {
+      "type": "string",
+      "description": "ID do gerente (quando supervisor)"
+    },
+    "gerente_name": {
+      "type": "string",
+      "description": "Nome do gerente (cache)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "team_role"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
