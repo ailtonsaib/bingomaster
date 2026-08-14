@@ -145,7 +145,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
         else isAnalitica = false;
         const accepts_entries = isAnalitica;
         const account_type = mapAccountType(identificacaoNivel || "", code);
-        const referential_code = isAnalitica ? (pickField(r, "referencia") || pickField(r, "referential_code")) : "";
+        const referential_code = isAnalitica ? pickField(r, "referential_code") : "";
         const grauRaw = Number(pickField(r, "grau"));
         const estruturaRaw = pickField(r, "estrutura_custo");
         return {
@@ -194,7 +194,15 @@ export default function ErpChartAccountImporter({ user, onDone }) {
         await base44.entities.ErpChartAccount.bulkCreate(batch);
         done += batch.length;
       } catch (e) {
-        errors += batch.length;
+        // Falha em lote: tenta criar registro a registro para não perder contas válidas
+        for (const acc of batch) {
+          try {
+            await base44.entities.ErpChartAccount.create(acc);
+            done += 1;
+          } catch (e2) {
+            errors += 1;
+          }
+        }
       }
       setProgress({ done, total: parsedAccounts.length, errors });
     }
