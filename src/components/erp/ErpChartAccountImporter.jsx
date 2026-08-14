@@ -136,18 +136,18 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               items: {
                 type: "object",
                 properties: {
-                  referencia: { type: "string", description: "Referência numérica da conta (PLA_REFERENCIA). Pode ser vazio." },
-                  conta: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001). Obrigatório. PLA_CONTA" },
-                  descricao: { type: "string", description: "Descrição/nome da conta. Obrigatório. PLA_DESCRICAO" },
-                  nivel_superior: { type: "string", description: "Código da conta pai/nível superior. PLA_NIVEL_SUPERIOR" },
-                  identificacao_niveis: { type: "string", description: "S para sintética (agrupadora), N para analítica (aceita lançamentos). PLA_IDENTIFICACAO_NIVEIS" },
-                  tipo: { type: "string", description: "Tipo: ativo, passivo, patrimonio_liquido, receita, despesa, compensacao. PLA_TIPO" },
-                  grau: { type: "string", description: "Grau/nível hierárquico (1-5). PLA_GRAU" },
-                  funcao: { type: "string", description: "Função/encerramento. PLA_FUNCAO" },
-                  conta_orcamentaria: { type: "string", description: "S/N. PLA_CONTA_ORCAMENTARIA" },
-                  usa_centro_custo: { type: "string", description: "S/N. PLA_USA_CENTRO_CUSTO" },
-                  classificacao_ind: { type: "string", description: "Classificação industrial: insumos, mao_de_obra, ggf ou nao_aplica. PLA_CLASSIFICACAO_IND" },
-                  conta_referencia: { type: "string", description: "Código da conta referencial (Plano Referencial Receita/ECD). Vazio para sintética. PLA_CONTA_REFERENCIA" },
+                  referencia: { type: "string", description: "Referência numérica da conta. Pode ser vazio." },
+                  conta: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001). Obrigatório." },
+                  descricao: { type: "string", description: "Descrição/nome da conta. Obrigatório." },
+                  nivel_superior: { type: "string", description: "Código da conta pai/nível superior." },
+                  identificacao_niveis: { type: "string", description: "S para sintética (agrupadora), N para analítica (aceita lançamentos)." },
+                  tipo: { type: "string", description: "Tipo: ativo, passivo, patrimonio_liquido, receita, despesa, compensacao." },
+                  grau: { type: "string", description: "Grau/nível hierárquico (1-5)." },
+                  funcao: { type: "string", description: "Função/encerramento." },
+                  conta_orcamentaria: { type: "string", description: "S/N." },
+                  usa_centro_custo: { type: "string", description: "S/N." },
+                  classificacao_ind: { type: "string", description: "Classificação industrial: insumos, mao_de_obra, ggf ou nao_aplica." },
+                  conta_referencia: { type: "string", description: "Código da conta referencial (Plano Referencial Receita/ECD). Vazio para sintética." },
                 },
               },
             },
@@ -268,7 +268,6 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               <li><b>Classificação Industrial</b> — insumos, mao_de_obra, ggf ou nao_aplica.</li>
               <li><b>Referência</b> — referência numérica da conta (opcional).</li>
             </ul>
-            <p className="text-amber-700 mt-2 pt-2 border-t border-gray-200">Aceita também exportações com cabeçalhos PLA_* (PLA_CONTA, PLA_DESCRICAO, etc.).</p>
           </div>
         </div>
       )}
