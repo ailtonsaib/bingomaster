@@ -22,7 +22,7 @@ export default function ErpUserParameterManager({ user }) {
         base44.entities.ErpUserParameter.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpUser.filter({ owner_email: user.email }, "name", 500),
         base44.entities.ErpSector.filter({ user_email: user.email }, "name", 500),
-        base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 5000),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, account_type: "despesa" }, "code", 5000),
       ]);
       setParams(list); setUsers(us); setDepartments(secs); setAccounts(accs);
     } catch (e) { console.error(e); }
