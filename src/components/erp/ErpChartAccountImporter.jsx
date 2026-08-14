@@ -47,43 +47,48 @@ function mapEncerramento(v) {
   return "nao_aplica";
 }
 
-// ---- Cabeçalhos do modelo (PT) + alias PLA_* do sistema legado ----
+// ---- Cabeçalhos do modelo (igual à planilha do usuário) ----
 const HEADERS = [
-  "Referencia",
-  "Conta",
-  "Descricao",
-  "Nivel Superior",
-  "Identificacao Niveis (S/N)",
-  "Tipo",
-  "Grau",
-  "Funcao",
-  "Conta Orcamentaria (S/N)",
-  "Usa Centro Custo (S/N)",
-  "Classificacao Industrial",
-  "Conta Referencia",
+  "referencia",
+  "mascara",
+  "Descrição",
+  "Nivel Cta Superior",
+  "identificacao do nivel",
+  "grau",
+  "Tipo de Conta",
+  "Conta Orçamentária",
+  "Usa Centro de Custo",
+  "Estrutura de custo",
+  "Plano de Contas Referencial",
 ];
 
 const SAMPLE_ROWS = [
-  ["", "1.1", "ATIVO CIRCULANTE", "", "S", "ativo", 2, "nao_aplica", "N", "N", "nao_aplica", ""],
-  ["", "1.1.01", "DISPONIVEL", "1.1", "S", "ativo", 3, "nao_aplica", "N", "N", "nao_aplica", ""],
-  ["1.01.01.01.01", "1.1.01.01.0001", "CAIXA", "1.1.01.01", "N", "ativo", 5, "nao_aplica", "S", "N", "nao_aplica", "1.01.01.01.01"],
-  ["", "2.3.01.0001", "CAPITAL SOCIAL", "2.3.01", "N", "patrimonio_liquido", 5, "nao_aplica", "N", "N", "nao_aplica", "2.01.01.01.01"],
-  ["", "3.1.01.0001", "RECEITA DE VENDAS", "3.1.01", "N", "receita", 5, "nao_aplica", "N", "N", "nao_aplica", "3.01.01.01.01"],
+  ["", "1.1", "ATIVO CIRCULANTE", "", "ativo", 2, "Sintética", "N", "N", "nao_aplica", ""],
+  ["", "1.1.01", "DISPONIVEL", "1.1", "ativo", 3, "Sintética", "N", "N", "nao_aplica", ""],
+  ["1000", "1.1.01.01.0001", "CAIXA", "1.1.01.01", "ativo", 5, "Analítica", "S", "N", "direto", "1.01.01.01.01"],
+  ["", "2.3.01.0001", "CAPITAL SOCIAL", "2.3.01", "patrimonio_liquido", 5, "Analítica", "N", "N", "nao_aplica", "2.01.01.01.01"],
+  ["", "3.1.01.0001", "RECEITA DE VENDAS", "3.1.01", "receita", 5, "Analítica", "N", "N", "nao_aplica", "3.01.01.01.01"],
 ];
 
+function mapEstruturaCusto(v) {
+  const s = String(v || "").trim().toLowerCase();
+  if (s.startsWith("dir")) return "direto";
+  if (s.startsWith("ind")) return "indireto";
+  return "nao_aplica";
+}
+
 const FIELD_ALIASES = {
-  code: ["conta", "codigo", "codigo_conta"],
+  code: ["conta", "mascara", "codigo", "codigo_conta"],
   name: ["descricao", "nome", "descricao_conta"],
   referencia: ["referencia", "ref"],
-  parent_code: ["nivel_superior", "nivel_superior_conta", "conta_pai"],
-  identificacao: ["identificacao_niveis", "identificacao", "ident_niveis"],
-  tipo: ["tipo", "tipo_conta"],
+  parent_code: ["nivel_superior", "nivel_cta_superior", "nivel_superior_conta", "conta_pai"],
+  identificacao_nivel: ["identificacao_nivel", "identificacao_niveis", "identificacao_do_nivel", "identificacao", "ident_niveis"],
+  tipo_conta: ["tipo_conta", "tipo_de_conta", "tipo"],
   grau: ["grau", "nivel"],
-  funcao: ["funcao", "funcao_conta", "encerramento"],
   conta_orcamentaria: ["conta_orcamentaria", "orcamentaria"],
   usa_centro_custo: ["usa_centro_custo", "centro_custo"],
-  classificacao_ind: ["classificacao_ind", "classificacao_industrial", "class_ind"],
-  referential_code: ["conta_referencia", "conta_ref", "referencia_conta"],
+  estrutura_custo: ["estrutura_custo", "estrutura_de_custo"],
+  referential_code: ["plano_referencial", "plano_de_contas_referencial", "conta_referencia", "conta_ref", "referencia_conta"],
 };
 
 function pickField(row, canonical, fallbackKeys = []) {
@@ -136,18 +141,17 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               items: {
                 type: "object",
                 properties: {
-                  referencia: { type: "string", description: "Referência numérica da conta. Pode ser vazio." },
-                  conta: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001). Obrigatório." },
+                  referencia: { type: "string", description: "Referência numérica da conta (ex: 1000). Pode ser vazio em contas sintéticas." },
+                  conta: { type: "string", description: "Código/máscara da conta interna (ex: 1.1.01.01.0001). Obrigatório." },
                   descricao: { type: "string", description: "Descrição/nome da conta. Obrigatório." },
-                  nivel_superior: { type: "string", description: "Código da conta pai/nível superior." },
-                  identificacao_niveis: { type: "string", description: "S para sintética (agrupadora), N para analítica (aceita lançamentos)." },
-                  tipo: { type: "string", description: "Tipo: ativo, passivo, patrimonio_liquido, receita, despesa, compensacao." },
+                  nivel_superior: { type: "string", description: "Código da conta pai/nível superior (coluna 'Nivel Cta Superior')." },
+                  identificacao_nivel: { type: "string", description: "Identificação do nível = grupo/tipo da conta: ativo, passivo, despesa, receita, patrimonio_liquido, compensacao (coluna 'identificacao do nivel')." },
                   grau: { type: "string", description: "Grau/nível hierárquico (1-5)." },
-                  funcao: { type: "string", description: "Função/encerramento." },
-                  conta_orcamentaria: { type: "string", description: "S/N." },
-                  usa_centro_custo: { type: "string", description: "S/N." },
-                  classificacao_ind: { type: "string", description: "Classificação industrial: insumos, mao_de_obra, ggf ou nao_aplica." },
-                  conta_referencia: { type: "string", description: "Código da conta referencial (Plano Referencial Receita/ECD). Vazio para sintética." },
+                  tipo_conta: { type: "string", description: "Tipo de conta: Sintética (agrupadora, não aceita lançamentos) ou Analítica (aceita lançamentos). Coluna 'Tipo de Conta'." },
+                  conta_orcamentaria: { type: "string", description: "S ou N." },
+                  usa_centro_custo: { type: "string", description: "S ou N." },
+                  estrutura_custo: { type: "string", description: "Estrutura de custo: direto, indireto ou nao_aplica." },
+                  plano_referencial: { type: "string", description: "Código do Plano de Contas Referencial (Receita/ECD). Vazio para sintética." },
                 },
               },
             },
@@ -157,23 +161,21 @@ export default function ErpChartAccountImporter({ user, onDone }) {
 
       const raw = (res && res.output && res.output.accounts) ? res.output.accounts : [];
       const allAccounts = raw.map(r => {
-        const code = pickField(r, "code") || pickField(r, "code", ["conta"]);
-        const name = pickField(r, "name") || pickField(r, "name", ["descricao"]);
+        const code = pickField(r, "code");
+        const name = pickField(r, "name");
         if (!code || !name) return null;
-        const referenciaNum = pickField(r, "referencia");
-        const idn = String(pickField(r, "identificacao")).trim().toUpperCase();
-        const tipoRaw = String(pickField(r, "tipo")).trim().toLowerCase();
+        const identificacaoNivel = pickField(r, "identificacao_nivel");
+        const tipoContaRaw = String(pickField(r, "tipo_conta")).trim().toLowerCase();
         let isAnalitica;
-        if (tipoRaw.startsWith("sint")) isAnalitica = false;
-        else if (tipoRaw.startsWith("anal")) isAnalitica = true;
-        else if (idn.startsWith("S")) isAnalitica = false;
-        else if (idn.startsWith("N") || idn.startsWith("A")) isAnalitica = true;
-        else if (referenciaNum && referenciaNum !== "0") isAnalitica = true;
-        else isAnalitica = /\.\d{4}$/.test(code);
+        if (tipoContaRaw.startsWith("sint")) isAnalitica = false;
+        else if (tipoContaRaw.startsWith("anal")) isAnalitica = true;
+        else if (/\.\d{4}$/.test(code)) isAnalitica = true;
+        else isAnalitica = false;
         const accepts_entries = isAnalitica;
-        const account_type = mapAccountType(pickField(r, "tipo"), code);
+        const account_type = mapAccountType(identificacaoNivel || "", code);
         const referential_code = isAnalitica ? pickField(r, "referential_code") : "";
         const grauRaw = Number(pickField(r, "grau"));
+        const estruturaRaw = pickField(r, "estrutura_custo");
         return {
           code,
           name,
@@ -182,10 +184,11 @@ export default function ErpChartAccountImporter({ user, onDone }) {
           account_type,
           nature: inferNature(account_type),
           grau: Number.isFinite(grauRaw) && grauRaw > 0 ? grauRaw : undefined,
-          conta_encerramento: mapEncerramento(pickField(r, "funcao")),
+          conta_encerramento: "nao_aplica",
           conta_orcamentaria: toBoolSN(pickField(r, "conta_orcamentaria")),
           usa_centro_custo: toBoolSN(pickField(r, "usa_centro_custo")),
-          classificacao_industrial: mapClassInd(pickField(r, "classificacao_ind")),
+          classificacao_industrial: "nao_aplica",
+          estrutura_custo: mapEstruturaCusto(estruturaRaw),
           accepts_entries,
           referential_code,
           referential_name: "",
@@ -236,7 +239,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
             <Download className="w-5 h-5 text-emerald-600 shrink-0" />
             <div className="flex-1">
               <p className="font-medium text-sm text-emerald-800">Baixar modelo padrão</p>
-              <p className="text-xs text-emerald-700">Planilha .xlsx com 12 colunas (Referência, Conta, Descrição, Nível Superior, Identificação, Tipo, Grau, Função, Orçamentária, Centro de Custo, Classif. Industrial, Conta Referência)</p>
+              <p className="text-xs text-emerald-700">Planilha .xlsx com 11 colunas (referencia, mascara, Descrição, Nivel Cta Superior, identificacao do nivel, grau, Tipo de Conta, Conta Orçamentária, Usa Centro de Custo, Estrutura de custo, Plano de Contas Referencial)</p>
             </div>
             <Button size="sm" variant="outline" onClick={handleDownloadTemplate} disabled={generatingTemplate} className="border-emerald-400 text-emerald-700 hover:bg-emerald-100 gap-1.5">
               {generatingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -265,17 +268,16 @@ export default function ErpChartAccountImporter({ user, onDone }) {
           <div className="bg-gray-50 border rounded-lg p-3 text-xs text-gray-600 space-y-1">
             <p className="font-medium text-gray-700 mb-1">Colunas do modelo:</p>
             <ul className="list-disc list-inside space-y-0.5">
-              <li><b>Conta</b> — código da conta (ex: 1.1.01.01.0001). <b>Obrigatório.</b></li>
+              <li><b>mascara</b> — código da conta (ex: 1.1.01.01.0001). <b>Obrigatório.</b></li>
               <li><b>Descrição</b> — nome da conta. <b>Obrigatório.</b></li>
-              <li><b>Identificação Níveis</b> — S (sintética/agrupadora) ou N (analítica/aceita lançamentos).</li>
-              <li><b>Conta Referência</b> — código do Plano Referencial. <b>Vazio para sintética.</b></li>
-              <li><b>Nível Superior</b> — código da conta pai.</li>
-              <li><b>Tipo</b> — ativo, passivo, patrimonio_liquido, receita, despesa, compensacao.</li>
-              <li><b>Grau</b> — nível hierárquico (1-5).</li>
-              <li><b>Função</b> — encerramento (sim/nao/nao_aplica).</li>
-              <li><b>Conta Orçamentária / Usa Centro Custo</b> — S ou N.</li>
-              <li><b>Classificação Industrial</b> — insumos, mao_de_obra, ggf ou nao_aplica.</li>
-              <li><b>Referência</b> — referência numérica da conta (opcional).</li>
+              <li><b>identificacao do nivel</b> — grupo/tipo da conta: ativo, passivo, despesa, receita, patrimonio_liquido, compensacao.</li>
+              <li><b>Tipo de Conta</b> — Sintética (agrupadora) ou Analítica (aceita lançamentos).</li>
+              <li><b>Nivel Cta Superior</b> — código da conta pai.</li>
+              <li><b>grau</b> — nível hierárquico (1-5).</li>
+              <li><b>Conta Orçamentária / Usa Centro de Custo</b> — S ou N.</li>
+              <li><b>Estrutura de custo</b> — direto, indireto ou nao_aplica.</li>
+              <li><b>Plano de Contas Referencial</b> — código do Plano Referencial. <b>Vazio para sintética.</b></li>
+              <li><b>referencia</b> — referência numérica da conta (ex: 1000). Opcional.</li>
             </ul>
           </div>
         </div>
