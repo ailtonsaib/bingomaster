@@ -145,9 +145,23 @@ export default function ErpChartAccountImporter({ user, onDone }) {
         else isAnalitica = false;
         const accepts_entries = isAnalitica;
         const account_type = mapAccountType(identificacaoNivel || "", code);
-        const referential_code = isAnalitica ? pickField(r, "referential_code") : "";
         const grauRaw = Number(pickField(r, "grau"));
         const estruturaRaw = pickField(r, "estrutura_custo");
+        // Coluna "Estrutura de custo" pode conter classificação industrial (Insumos/Mão de Obra/GGF)
+        // ou estrutura de custo (direto/indireto). Detecta e separa.
+        const classInd = mapClassInd(estruturaRaw);
+        const isProductionCost = classInd !== "nao_aplica";
+        const estrutura_custo = isProductionCost ? "nao_aplica" : mapEstruturaCusto(estruturaRaw);
+        // Referencial: lê e valida compatibilidade com o tipo da conta.
+        // Descarta referenciais incompatíveis (ex.: despesa com referencial de ativo "1.01.01.01.01").
+        let referential_code = isAnalitica ? pickField(r, "referential_code") : "";
+        if (referential_code) {
+          const refIsAtivo = referential_code.startsWith("1.");
+          const refIsPassivo = referential_code.startsWith("2.");
+          const refIsResultado = referential_code.startsWith("3.");
+          if ((account_type === "despesa" || account_type === "receita") && (refIsAtivo || refIsPassivo)) referential_code = "";
+          if (account_type === "ativo" && refIsResultado) referential_code = "";
+        }
         return {
           code,
           name,
@@ -159,8 +173,10 @@ export default function ErpChartAccountImporter({ user, onDone }) {
           conta_encerramento: "nao_aplica",
           conta_orcamentaria: toBoolSN(pickField(r, "conta_orcamentaria")),
           usa_centro_custo: toBoolSN(pickField(r, "usa_centro_custo")),
-          classificacao_industrial: "nao_aplica",
-          estrutura_custo: mapEstruturaCusto(estruturaRaw),
+          classificacao_industrial: classInd,
+          participates_production_cost: isProductionCost,
+          production_cost_type: isProductionCost ? classInd : undefined,
+          estrutura_custo,
           accepts_entries,
           referential_code,
           referential_name: "",
@@ -255,7 +271,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               <li><b>Nivel Cta Superior</b> — código da conta pai.</li>
               <li><b>grau</b> — nível hierárquico (1-5).</li>
               <li><b>Conta Orçamentária / Usa Centro de Custo</b> — S ou N.</li>
-              <li><b>Estrutura de custo</b> — direto, indireto ou nao_aplica.</li>
+              <li><b>Estrutura de custo</b> — direto, indireto (custo) ou Insumos / Mão de Obra / GGF (classificação industrial).</li>
               <li><b>Plano de Contas Referencial</b> — código do Plano Referencial. <b>Vazio para sintética.</b></li>
               <li><b>referencia</b> — referência numérica da conta (ex: 1000). Opcional.</li>
             </ul>
@@ -276,7 +292,8 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               <thead className="bg-gray-100 sticky top-0"><tr>
                 <th className="p-2 text-left">Conta</th><th className="p-2 text-left">Descrição</th>
                 <th className="p-2 text-left">Pai</th><th className="p-2 text-left">Tipo</th>
-                <th className="p-2 text-center">Analítica</th><th className="p-2 text-left">Conta Ref.</th>
+                <th className="p-2 text-center">Analítica</th><th className="p-2 text-left">Class. Ind.</th>
+                <th className="p-2 text-left">Conta Ref.</th>
               </tr></thead>
               <tbody>
                 {parsedAccounts.map((a, i) => (
@@ -286,6 +303,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
                     <td className="p-1 font-mono text-gray-500">{a.parent_code}</td>
                     <td className="p-1 text-gray-500">{a.account_type}</td>
                     <td className="p-1 text-center">{a.accepts_entries ? "✓" : ""}</td>
+                    <td className="p-1 text-gray-500">{a.classificacao_industrial && a.classificacao_industrial !== "nao_aplica" ? a.classificacao_industrial : "—"}</td>
                     <td className="p-1 font-mono text-gray-500">{a.referential_code}</td>
                   </tr>
                 ))}
