@@ -49,34 +49,42 @@ function parseSheet(xml, sharedStrings) {
   let rowMatch;
   while ((rowMatch = rowRe.exec(xml)) !== null) {
     const rowXml = rowMatch[1];
-    const cells = [];
-    const cellRe = /<c\b[^>]*r="([A-Z]+\d+)"[^>]*?(?:\s+t="([^"]*)")?[^>]*>(?:<v>([\s\S]*?)<\/v>|<is>[\s\S]*?<\/is>)?<\/c>/g;
-    let cellMatch;
-    let maxCol = 0;
     const cellMap = {};
+    // Captura cada célula de forma robusta, tratando atributos em qualquer ordem
+    const cellRe = /<c\b([^>]*)>(?:<v>([\s\S]*?)<\/v>|<is>([\s\S]*?)<\/is>)?<\/c>/g;
+    let cellMatch;
     while ((cellMatch = cellRe.exec(rowXml)) !== null) {
-      const ref = cellMatch[1];
-      const type = cellMatch[2] || "";
-      const val = cellMatch[3] || "";
-      const colIdx = colNumber(ref);
-      let value = val;
-      if (type === "s") {
-        value = sharedStrings[parseInt(val, 10)] ?? "";
-      } else if (type === "inlineStr" || cellMap_inline(rowXml, ref)) {
-        value = extractInline(rowXml, ref);
+      const attrs = cellMatch[1] || "";
+      const v = cellMatch[2];
+      const inlineStr = cellMatch[3];
+      const refMatch = attrs.match(/\br="([A-Z]+\d+)"/);
+      const typeMatch = attrs.match(/\bt="([^"]*)"/);
+      if (!refMatch) continue;
+      const colIdx = colNumber(refMatch[1]);
+      const type = typeMatch ? typeMatch[1] : "";
+      let value = "";
+      if (type === "s" && v !== undefined) {
+        value = sharedStrings[parseInt(v, 10)] ?? "";
+      } else if (type === "inlineStr" && inlineStr !== undefined) {
+        value = extractTextFromInline(inlineStr);
+      } else if (v !== undefined) {
+        value = v;
       }
       cellMap[colIdx] = String(value ?? "");
-      if (colIdx > maxCol) maxCol = colIdx;
     }
     const row = [];
-    for (let i = 0; i <= maxCol; i++) row.push(cellMap[i] ?? "");
+    let max = 0;
+    for (const k in cellMap) { const n = Number(k); if (n > max) max = n; }
+    for (let i = 0; i <= max; i++) row.push(cellMap[i] ?? "");
     rows.push(row);
   }
   return rows;
 }
 
-function cellMap_inline() { return false; }
-function extractInline() { return ""; }
+function extractTextFromInline(xml) {
+  const texts = xml.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [];
+  return texts.map(t => t.replace(/<t[^>]*>/, "").replace(/<\/t>/, "")).join("");
+}
 
 function colNumber(ref) {
   const letters = ref.match(/^[A-Z]+/)[0];
