@@ -88,51 +88,54 @@ export default function ErpChartAccountImporter({ user, onDone }) {
     const file = e.target.files[0];
     if (!file) return;
     setFileUploading(true);
+    setLlmProcessing(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setLlmProcessing(true);
-      // Processa em lotes de páginas via LLM
-      const allAccounts = [];
-      // Processar páginas 1-15 primeiro
-      const r1 = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extraia as contas das PRIMEIRAS 15 páginas deste plano de contas (da pág 1 até pág 15).
-Para cada conta retorne o objeto com: code (código da conta ex: 1.1.01.01.0001), name (descrição interna), referential_code (código ref.), referential_name (descrição ref.), accepts_entries (true=analítica/Não; false=sintética/Sim).
-Retorne TODAS as linhas, sintéticas e analíticas. Não resuma.`,
-        file_urls: [file_url],
-        response_json_schema: {
+      // Extrator nativo de PDF com schema estruturado
+      const res = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
           type: "object",
-          properties: { accounts: { type: "array", items: { type: "object", properties: { code: {type:"string"}, name: {type:"string"}, referential_code: {type:"string"}, referential_name: {type:"string"}, accepts_entries: {type:"boolean"} } } } }
+          properties: {
+            accounts: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  code: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001)" },
+                  name: { type: "string", description: "Descrição da conta interna" },
+                  referential_code: { type: "string", description: "Código da conta referencial (ex: 1.01.01.01.01)" },
+                  referential_name: { type: "string", description: "Descrição da conta referencial" },
+                  is_sintetica: { type: "boolean", description: "true se for conta sintética (agrupadora), false se analítica" },
+                },
+              },
+            },
+          },
         },
-        model: "gemini_3_1_pro"
       });
-      if (r1.accounts) allAccounts.push(...r1.accounts);
-
-      // Processar páginas 16-31
-      const r2 = await base44.integrations.Core.InvokeLLM({
-        prompt: `Extraia as contas das ÚLTIMAS 16 páginas deste plano de contas (da pág 16 até pág 31).
-Para cada conta retorne: code (código da conta), name (descrição interna), referential_code (código ref.), referential_name (descrição ref.), accepts_entries (true=analítica; false=sintética).
-Retorne TODAS as linhas, sintéticas e analíticas.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: { accounts: { type: "array", items: { type: "object", properties: { code: {type:"string"}, name: {type:"string"}, referential_code: {type:"string"}, referential_name: {type:"string"}, accepts_entries: {type:"boolean"} } } } }
-        },
-        model: "gemini_3_1_pro"
-      });
-      if (r2.accounts) allAccounts.push(...r2.accounts);
-
-      // Enriquecer com tipos
-      const enriched = allAccounts.map(a => ({
+      const raw = (res && res.output && res.output.accounts) ? res.output.accounts : [];
+      const allAccounts = raw.map(a => ({
+        code: a.code,
+        name: a.name,
+        referential_code: a.referential_code || "",
+        referential_name: a.referential_name || "",
+        accepts_entries: a.is_sintetica === false || a.is_sintetica === undefined ? true : false,
+      }));
+      const enriched = allAccounts.filter(a => a.code && a.name).map(a => ({
         ...a,
         account_type: inferAccountType(a.code),
         nature: inferNature(inferAccountType(a.code)),
         is_active: true,
         user_email: user.email,
       }));
-      setParsedAccounts(enriched);
-      setStep("preview");
+      if (enriched.length === 0) {
+        alert("Não foi possível extrair contas do PDF. Tente colar o texto bruto manualmente.");
+      } else {
+        setParsedAccounts(enriched);
+        setStep("preview");
+      }
     } catch (err) {
-      alert("Erro ao processar o PDF: " + err.message);
+      alert("Erro ao processar o PDF: " + (err.message || "tente colar o texto bruto"));
     }
     setLlmProcessing(false);
     setFileUploading(false);
@@ -195,9 +198,15 @@ Retorne TODAS as linhas, sintéticas e analíticas.`,
               rows={8}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs font-mono"
             />
-            <Button onClick={handlePasteText} disabled={!rawText.trim()} size="sm" variant="outline" className="mt-2">
+            <Button onClick={handlePasteText} disabled={!rawText.trim() || fileUploading || llmProcessing} size="sm" variant="outline" className="mt-2">
               Processar Texto Colado
             </Button>
+            {(fileUploading || llmProcessing) && (
+              <p className="text-xs text-indigo-600 mt-2 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {fileUploading ? "Enviando PDF..." : "Extraindo contas..."}
+              </p>
+            )}
           </div>
         </div>
       )}
