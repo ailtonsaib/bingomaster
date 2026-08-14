@@ -10,8 +10,9 @@ export async function parseXlsxRows(file) {
   const sharedStringsFile = zip.file("xl/sharedStrings.xml");
   const sharedStrings = sharedStringsFile ? await parseSharedStrings(await sharedStringsFile.async("string")) : [];
 
-  // Localiza a primeira planilha
-  const sheetFile = zip.file(/^xl\/worksheets\/sheet1\.xml$/) || zip.file(/xl\/worksheets\/sheet.*\.xml/);
+  // Localiza a primeira planilha (zip.file com regex retorna array)
+  const sheetMatches = zip.file(/xl\/worksheets\/sheet.*\.xml/) || [];
+  const sheetFile = sheetMatches[0] || zip.file("xl/worksheets/sheet1.xml");
   if (!sheetFile) throw new Error("Planilha não encontrada no arquivo .xlsx");
   const sheetXml = await sheetFile.async("string");
 
