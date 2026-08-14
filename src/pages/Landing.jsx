@@ -264,7 +264,7 @@ export default function Landing({ category }) {
   const { bingoPlans, spedPlans, financePlans, chamadosPlans, diagnosticPlans, loading } = useDynamicPlans();
 
   // Filtra apps pela categoria (se informada) e exclui admin
-  const publicApps = APPS.filter((a) => !a.adminOnly && (!category || a.category === category)).map((app) => {
+  const publicApps = APPS.filter((a) => !a.adminOnly && !a.hidden && (!category || a.category === category)).map((app) => {
     if (app.id === "bingo" && bingoPlans) return { ...app, plans: bingoPlans };
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
     if (app.id === "pdv" && financePlans) return { ...app, plans: financePlans };
