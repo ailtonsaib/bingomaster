@@ -26,11 +26,11 @@
     },
     "department_id": {
       "type": "string",
-      "description": "ID do setor/departamento solicitante (ErpDepartment)"
+      "description": "ID do primeiro setor/departamento do rateio (compatibilidade)"
     },
     "department_name": {
       "type": "string",
-      "description": "Setor/Departamento solicitante (cache)"
+      "description": "Setor/Departamento solicitante (cache \u2014 resumo dos rateios)"
     },
     "requested_by": {
       "type": "string",
@@ -91,6 +91,55 @@
       "type": "number",
       "default": 0,
       "description": "Valor total estimado da solicita\u00e7\u00e3o"
+    },
+    "apportionments": {
+      "type": "array",
+      "default": [],
+      "description": "Rateio da solicita\u00e7\u00e3o por setor/conta cont\u00e1bil",
+      "items": {
+        "type": "object",
+        "properties": {
+          "department_id": {
+            "type": "string",
+            "description": "ID do setor/departamento (ErpDepartment)"
+          },
+          "department_name": {
+            "type": "string",
+            "description": "Nome do setor (cache)"
+          },
+          "account_id": {
+            "type": "string",
+            "description": "ID da conta cont\u00e1bil (ErpChartAccount)"
+          },
+          "account_code": {
+            "type": "string",
+            "description": "C\u00f3digo da conta cont\u00e1bil (cache)"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "Nome da conta cont\u00e1bil (cache)"
+          },
+          "rateio_type": {
+            "type": "string",
+            "enum": [
+              "percent",
+              "value"
+            ],
+            "default": "percent",
+            "description": "Tipo do rateio: percent (%) ou value (valor)"
+          },
+          "percent": {
+            "type": "number",
+            "default": 0,
+            "description": "Percentual do rateio (%)"
+          },
+          "value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do rateio (R$)"
+          }
+        }
+      }
     },
     "description": {
       "type": "string",

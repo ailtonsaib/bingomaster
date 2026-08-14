@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, ClipboardList, X } from "lucide-react";
+import { Plus, Search, Trash2, ClipboardList, X, AlertTriangle, PieChart } from "lucide-react";
 import { genOrderNumber, fmtMoney, fmtDate } from "@/lib/erpUtils";
 
 const STATUS = {
@@ -29,7 +29,9 @@ export default function ErpRequisitionPanel({ user }) {
   const [items, setItems] = useState([]);
   const [products, setProducts] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [myUser, setMyUser] = useState(null);
+  const [userParam, setUserParam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -40,14 +42,24 @@ export default function ErpRequisitionPanel({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [list, prods, depts, users] = await Promise.all([
+      const [list, prods, depts, users, accs] = await Promise.all([
         base44.entities.ErpRequisition.filter({ user_email: user.email }, "-request_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpDepartment.filter({ user_email: user.email }, "-created_date", 200),
         base44.entities.ErpUser.filter({ owner_email: user.email, email: user.email }),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 5000),
       ]);
-      setItems(list); setProducts(prods); setDepartments(depts);
-      setMyUser(users.length > 0 ? users[0] : null);
+      setItems(list); setProducts(prods); setDepartments(depts); setAccounts(accs);
+      const me = users.length > 0 ? users[0] : null;
+      setMyUser(me);
+      if (me) {
+        try {
+          const params = await base44.entities.ErpUserParameter.filter({ user_email: user.email, erp_user_id: me.id });
+          setUserParam(params.length > 0 ? params[0] : null);
+        } catch (e) { setUserParam(null); }
+      } else {
+        setUserParam(null);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -125,7 +137,8 @@ export default function ErpRequisitionPanel({ user }) {
 
       {showForm && (
         <ErpRequisitionForm
-          user={user} requisition={editing} products={products} departments={departments} myUser={myUser}
+          user={user} requisition={editing} products={products} departments={departments}
+          accounts={accounts} myUser={myUser} userParam={userParam}
           onClose={() => setShowForm(false)} onSaved={load}
         />
       )}
@@ -133,28 +146,43 @@ export default function ErpRequisitionPanel({ user }) {
   );
 }
 
-function ErpRequisitionForm({ user, requisition, products, departments, myUser, onClose, onSaved }) {
-  const defaultDept = myUser?.department_id || "";
-  const defaultDeptName = myUser?.department_name || "";
+function ErpRequisitionForm({ user, requisition, products, departments, accounts, myUser, userParam, onClose, onSaved }) {
+  // Departamentos e contas permitidos ao usuário (via parâmetro). Sem parâmetro => todos.
+  const allowedDepts = userParam && (userParam.allowed_department_ids || []).length > 0
+    ? departments.filter(d => userParam.allowed_department_ids.includes(d.id))
+    : departments;
+  const allowedAccounts = userParam && (userParam.allowed_account_ids || []).length > 0
+    ? accounts.filter(a => userParam.allowed_account_ids.includes(a.id))
+    : accounts;
+
+  const buildDefaultApportionments = () => {
+    // Se editando, usa os rateios existentes
+    if (requisition?.apportionments && requisition.apportionments.length > 0) return requisition.apportionments.map(a => ({ ...a }));
+    // Se só tem 1 setor e 1 conta => já traz 100% automático
+    if (allowedDepts.length === 1 && allowedAccounts.length === 1) {
+      return [{
+        department_id: allowedDepts[0].id, department_name: allowedDepts[0].name,
+        account_id: allowedAccounts[0].id, account_code: allowedAccounts[0].code, account_name: allowedAccounts[0].name,
+        rateio_type: "percent", percent: 100, value: 0,
+      }];
+    }
+    return [];
+  };
+
   const [form, setForm] = useState({
     number: requisition?.number || genOrderNumber("SC"),
     request_date: requisition?.request_date || new Date().toISOString().slice(0, 10),
     request_type: requisition?.request_type || "compra_material",
-    department_id: requisition?.department_id || defaultDept,
-    department_name: requisition?.department_name || defaultDeptName,
     requested_by: requisition?.requested_by || user.name || "",
     priority: requisition?.priority || "media",
     status: requisition?.status || "aberta",
     notes: requisition?.notes || "",
     items: requisition?.items || [],
+    apportionments: buildDefaultApportionments(),
+    rateio_type: requisition?.apportionments?.[0]?.rateio_type || "percent",
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
-
-  const onDept = (id) => {
-    const d = departments.find(d => d.id === id);
-    setForm(prev => ({ ...prev, department_id: id, department_name: d?.name || "" }));
-  };
 
   const isServico = form.request_type === "servico";
 
@@ -180,15 +208,62 @@ function ErpRequisitionForm({ user, requisition, products, departments, myUser, 
 
   const total = form.items.reduce((s, i) => s + (Number(i.total) || 0), 0);
 
+  // ---- Rateio ----
+  const addApportionment = () => setForm(prev => ({
+    ...prev,
+    apportionments: [...prev.apportionments, {
+      department_id: "", department_name: "", account_id: "", account_code: "", account_name: "",
+      rateio_type: prev.rateio_type, percent: 0, value: 0,
+    }],
+  }));
+  const removeApportionment = (i) => setForm(prev => ({ ...prev, apportionments: prev.apportionments.filter((_, idx) => idx !== i) }));
+  const updateApportionment = (i, field, value) => setForm(prev => {
+    const aps = [...prev.apportionments]; aps[i] = { ...aps[i], [field]: value };
+    if (field === "department_id") {
+      const d = allowedDepts.find(d => d.id === value);
+      aps[i].department_name = d?.name || "";
+    }
+    if (field === "account_id") {
+      const a = allowedAccounts.find(a => a.id === value);
+      aps[i].account_code = a?.code || "";
+      aps[i].account_name = a?.name || "";
+    }
+    if (field === "rateio_type") {
+      aps[i].rateio_type = value;
+      aps[i].percent = value === "percent" ? aps[i].percent : 0;
+      aps[i].value = value === "value" ? aps[i].value : 0;
+    }
+    return { ...prev, apportionments: aps };
+  });
+  const setRateioType = (rt) => setForm(prev => ({
+    ...prev,
+    rateio_type: rt,
+    apportionments: prev.apportionments.map(a => ({ ...a, rateio_type: rt, percent: rt === "percent" ? a.percent : 0, value: rt === "value" ? a.value : 0 })),
+  }));
+
+  const pctSum = form.apportionments.reduce((s, a) => s + (Number(a.percent) || 0), 0);
+  const valSum = form.apportionments.reduce((s, a) => s + (Number(a.value) || 0), 0);
+  const pctOk = form.rateio_type === "percent" && Math.abs(pctSum - 100) < 0.01;
+  const valOk = form.rateio_type === "value" && Math.abs(valSum - total) < 0.01;
+  const rateioValid = form.apportionments.length > 0 && form.apportionments.every(a => a.department_id && a.account_id) && (pctOk || valOk);
+
   const handleSave = async () => {
     if (!form.items.length) { alert("Adicione ao menos um item."); return; }
-    if (!form.department_id) { alert("Selecione o setor."); return; }
+    if (!form.apportionments.length) { alert("Informe ao menos um rateio (setor/conta contábil)."); return; }
+    if (form.apportionments.some(a => !a.department_id || !a.account_id)) { alert("Preencha setor e conta contábil em todos os rateios."); return; }
+    if (form.rateio_type === "percent" && !pctOk) { alert(`A soma dos percentuais do rateio deve ser 100% (atual: ${pctSum.toFixed(2)}%).`); return; }
+    if (form.rateio_type === "value" && !valOk) { alert(`A soma dos valores do rateio deve ser igual ao total estimado (${fmtMoney(total)}). Atual: ${fmtMoney(valSum)}.`); return; }
     setSaving(true);
+    const deptNames = form.apportionments.map(a => a.department_name).filter(Boolean);
     const payload = {
       user_email: user.email, number: form.number, request_date: new Date(form.request_date).toISOString(),
-      request_type: form.request_type, department_id: form.department_id, department_name: form.department_name,
+      request_type: form.request_type,
+      department_id: form.apportionments[0].department_id,
+      department_name: deptNames.join(", "),
       requested_by: form.requested_by || undefined, priority: form.priority, status: form.status,
-      items: form.items, total_estimate: total, notes: form.notes || undefined,
+      items: form.items, total_estimate: total,
+      apportionments: form.apportionments,
+      notes: form.notes || undefined,
     };
     try {
       if (requisition?.id) await base44.entities.ErpRequisition.update(requisition.id, payload);
@@ -215,14 +290,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, myUser, 
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><Label>Setor *</Label>
-              <select value={form.department_id} onChange={e => onDept(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                <option value="">Selecione...</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-              {myUser && <p className="text-[10px] text-gray-400 mt-0.5">Vinculado ao seu cadastro: {myUser.department_name || "—"}</p>}
-            </div>
+          <div className="grid grid-cols-2 gap-3">
             <div><Label>Solicitante</Label><Input value={form.requested_by} onChange={e => set("requested_by", e.target.value)} /></div>
             <div><Label>Prioridade</Label>
               <select value={form.priority} onChange={e => set("priority", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
@@ -230,6 +298,65 @@ function ErpRequisitionForm({ user, requisition, products, departments, myUser, 
               </select>
             </div>
           </div>
+
+          {/* Rateio Setor / Conta Contábil */}
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-2 bg-indigo-50 border-b">
+              <span className="text-sm font-semibold text-indigo-800 flex items-center gap-1.5"><PieChart className="w-4 h-4" /> Rateio (Setor / Conta Contábil)</span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-500 mr-1">Tipo:</span>
+                <button type="button" onClick={() => setRateioType("percent")} className={`px-2 py-1 rounded text-xs ${form.rateio_type === "percent" ? "bg-indigo-600 text-white" : "bg-white border border-gray-300 text-gray-600"}`}>%</button>
+                <button type="button" onClick={() => setRateioType("value")} className={`px-2 py-1 rounded text-xs ${form.rateio_type === "value" ? "bg-indigo-600 text-white" : "bg-white border border-gray-300 text-gray-600"}`}>Valor</button>
+              </div>
+            </div>
+            <div className="p-2 space-y-1.5">
+              {form.apportionments.length === 0 && (
+                <p className="text-center text-xs text-gray-400 py-2">Nenhum rateio. Clique em "Adicionar Rateio".</p>
+              )}
+              {form.apportionments.map((a, i) => (
+                <div key={i} className="grid grid-cols-12 gap-1.5 items-end">
+                  <div className="col-span-4">
+                    <Label className="text-[10px]">Setor</Label>
+                    <select value={a.department_id} onChange={e => updateApportionment(i, "department_id", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs">
+                      <option value="">Selecione...</option>
+                      {allowedDepts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-4">
+                    <Label className="text-[10px]">Conta Contábil</Label>
+                    <select value={a.account_id} onChange={e => updateApportionment(i, "account_id", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs">
+                      <option value="">Selecione...</option>
+                      {allowedAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.code} — {acc.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-3">
+                    <Label className="text-[10px]">{form.rateio_type === "percent" ? "%" : "Valor (R$)"}</Label>
+                    <Input type="number" step="0.01" value={form.rateio_type === "percent" ? a.percent : a.value}
+                      onChange={e => updateApportionment(i, form.rateio_type === "percent" ? "percent" : "value", Number(e.target.value))}
+                      className="h-8 text-xs" />
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    <button onClick={() => removeApportionment(i)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-1">
+                <Button size="sm" variant="outline" onClick={addApportionment} className="h-7 gap-1"><Plus className="w-3.5 h-3.5" /> Adicionar Rateio</Button>
+                <div className="text-xs">
+                  {form.rateio_type === "percent"
+                    ? <span className={pctOk ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>Soma: {pctSum.toFixed(2)}% {pctOk ? "✓" : "(deve ser 100%)"}</span>
+                    : <span className={valOk ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>Soma: {fmtMoney(valSum)} {valOk ? "✓" : `(deve ser ${fmtMoney(total)})`}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          {userParam && (userParam.allowed_department_ids?.length > 0 || userParam.allowed_account_ids?.length > 0) && (
+            <p className="text-[11px] text-gray-500 -mt-1">Setores e contas limitados aos seus parâmetros de usuário.</p>
+          )}
+          {userParam && userParam.allowed_department_ids?.length === 0 && userParam.allowed_account_ids?.length === 0 && (
+            <p className="text-[11px] text-amber-600 -mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Seu parâmetro está sem setores/contas liberados. Solicite ao administrador.</p>
+          )}
 
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-2 bg-gray-50 border-b">
@@ -276,7 +403,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, myUser, 
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Solicitação"}</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving || !rateioValid}>{saving ? "Salvando..." : "Salvar Solicitação"}</Button>
         </div>
       </div>
     </div>

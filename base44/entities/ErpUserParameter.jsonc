@@ -1,0 +1,120 @@
+{
+  "name": "ErpUserParameter",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "erp_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio ERP (ErpUser) ao qual o par\u00e2metro se aplica"
+    },
+    "erp_user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio (cache)"
+    },
+    "erp_user_email": {
+      "type": "string",
+      "description": "Email de login do usu\u00e1rio (cache)"
+    },
+    "allowed_department_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "IDs dos departamentos/setores que o usu\u00e1rio pode usar em solicita\u00e7\u00f5es"
+    },
+    "allowed_department_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Nomes dos departamentos permitidos (cache)"
+    },
+    "allowed_account_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "IDs das contas cont\u00e1beis (anal\u00edticas) que o usu\u00e1rio pode usar em solicita\u00e7\u00f5es"
+    },
+    "allowed_account_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "C\u00f3digos das contas cont\u00e1beis permitidas (cache)"
+    },
+    "allowed_account_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Nomes das contas cont\u00e1beis permitidas (cache)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "erp_user_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
