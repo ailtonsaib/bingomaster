@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack } from "lucide-react";
+import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpRequisitionPanel from "@/components/erp/ErpRequisitionPanel";
 import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager";
+import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 
 const SUBTABS = [
@@ -31,9 +32,11 @@ export default function ErpModuleSuprimentos({ user }) {
           <SubNav sub={manSub} setSub={setManSub} tabs={[
             { id: "op", label: "Ordens de Produção", icon: Factory },
             { id: "ficha", label: "Ficha Técnica", icon: FileStack },
+            { id: "roteiros", label: "Roteiros de Produção", icon: Workflow },
           ]} color="indigo" />
           {manSub === "op" && <ErpProductionPanel user={user} />}
           {manSub === "ficha" && <ErpTechnicalSheetManager user={user} />}
+          {manSub === "roteiros" && <ErpProductionRouteManager user={user} />}
         </div>
       )}
     </div>

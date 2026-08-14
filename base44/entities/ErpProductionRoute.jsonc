@@ -1,0 +1,127 @@
+{
+  "name": "ErpProductionRoute",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo do roteiro (ex: RT 001)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do roteiro de produ\u00e7\u00e3o"
+    },
+    "final_product_id": {
+      "type": "string",
+      "description": "ID do produto final acabado"
+    },
+    "final_product_name": {
+      "type": "string",
+      "description": "Produto final (cache)"
+    },
+    "description": {
+      "type": "string"
+    },
+    "stages": {
+      "type": "array",
+      "default": [],
+      "description": "Etapas encadeadas de produ\u00e7\u00e3o (a etapa N consome o produto da etapa N-1)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "number",
+            "description": "Ordem da etapa (1, 2, 3...)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome da etapa (ex: Xarope Simples)"
+          },
+          "output_product_id": {
+            "type": "string",
+            "description": "Produto gerado por esta etapa (intermedi\u00e1rio ou final)"
+          },
+          "output_product_name": {
+            "type": "string"
+          },
+          "ficha_tecnica_id": {
+            "type": "string",
+            "description": "Ficha t\u00e9cnica (BOM) da etapa"
+          },
+          "qty_per_final": {
+            "type": "number",
+            "default": 1,
+            "description": "Quantidade produzida nesta etapa por 1 unidade do produto final"
+          },
+          "depends_on_prev": {
+            "type": "boolean",
+            "default": false,
+            "description": "Se consome o produto da etapa anterior como insumo"
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "final_product_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
