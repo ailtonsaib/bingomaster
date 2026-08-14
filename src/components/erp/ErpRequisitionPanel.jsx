@@ -28,7 +28,7 @@ const PRIORITY = {
 export default function ErpRequisitionPanel({ user }) {
   const [items, setItems] = useState([]);
   const [products, setProducts] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [departments, setDepartments] = useState([]); // setores (ErpSector) — mesmo nome por compatibilidade
   const [accounts, setAccounts] = useState([]);
   const [myUser, setMyUser] = useState(null);
   const [userParam, setUserParam] = useState(null);
@@ -45,7 +45,7 @@ export default function ErpRequisitionPanel({ user }) {
       const [list, prods, depts, users, accs] = await Promise.all([
         base44.entities.ErpRequisition.filter({ user_email: user.email }, "-request_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
-        base44.entities.ErpDepartment.filter({ user_email: user.email }, "-created_date", 200),
+        base44.entities.ErpSector.filter({ user_email: user.email }, "name", 500),
         base44.entities.ErpUser.filter({ owner_email: user.email, email: user.email }),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 5000),
       ]);
@@ -158,12 +158,23 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
   const buildDefaultApportionments = () => {
     // Se editando, usa os rateios existentes
     if (requisition?.apportionments && requisition.apportionments.length > 0) return requisition.apportionments.map(a => ({ ...a }));
-    // Se só tem 1 setor e 1 conta => já traz 100% automático
-    if (allowedDepts.length === 1 && allowedAccounts.length === 1) {
+    // Se só tem 1 setor => já traz o setor pré-preenchido (mesmo com várias contas)
+    if (allowedDepts.length === 1 && !requisition?.id) {
+      const onlyDept = allowedDepts[0];
+      const onlyAccount = allowedAccounts.length === 1 ? allowedAccounts[0] : null;
       return [{
-        department_id: allowedDepts[0].id, department_name: allowedDepts[0].name,
-        account_id: allowedAccounts[0].id, account_code: allowedAccounts[0].code, account_name: allowedAccounts[0].name,
-        rateio_type: "percent", percent: 100, value: 0,
+        department_id: onlyDept.id, department_name: onlyDept.name,
+        account_id: onlyAccount?.id || "", account_code: onlyAccount?.code || "", account_name: onlyAccount?.name || "",
+        rateio_type: "percent", percent: onlyAccount ? 100 : 0, value: 0,
+      }];
+    }
+    // Se só tem 1 conta => já traz a conta pré-preenchida (mesmo com vários setores)
+    if (allowedAccounts.length === 1 && allowedDepts.length > 1 && !requisition?.id) {
+      const onlyAccount = allowedAccounts[0];
+      return [{
+        department_id: "", department_name: "",
+        account_id: onlyAccount.id, account_code: onlyAccount.code, account_name: onlyAccount.name,
+        rateio_type: "percent", percent: 0, value: 0,
       }];
     }
     return [];
