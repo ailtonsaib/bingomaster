@@ -124,15 +124,39 @@ function ErpUserParameterForm({ user, editing, users, departments, accounts, onC
   });
   const [saving, setSaving] = useState(false);
 
+  // Estrutura de custo (direto/indireto) dos setores selecionados — filtra as contas contábeis
+  const selectedCustoTypes = Array.from(new Set(
+    form.allowed_department_ids
+      .map(id => departments.find(d => d.id === id))
+      .filter(Boolean)
+      .map(d => d.estrutura_custo)
+      .filter(v => v === "direto" || v === "indireto")
+  ));
+  const visibleAccounts = selectedCustoTypes.length === 0
+    ? accounts
+    : accounts.filter(a => selectedCustoTypes.includes(a.estrutura_custo));
+
   const onUser = (id) => {
     const u = users.find(u => u.id === id);
     setForm(p => ({ ...p, erp_user_id: id, erp_user_name: u?.name || "", erp_user_email: u?.email || "" }));
   };
 
+  const computeCustoTypes = (deptIds) => Array.from(new Set(
+    deptIds.map(id => departments.find(d => d.id === id))
+      .filter(Boolean)
+      .map(d => d.estrutura_custo)
+      .filter(v => v === "direto" || v === "indireto")
+  ));
+
   const toggleDept = (id) => {
     setForm(p => {
       const has = p.allowed_department_ids.includes(id);
-      return { ...p, allowed_department_ids: has ? p.allowed_department_ids.filter(x => x !== id) : [...p.allowed_department_ids, id] };
+      const nextDepts = has ? p.allowed_department_ids.filter(x => x !== id) : [...p.allowed_department_ids, id];
+      // Restringe as contas selecionadas às contas visíveis conforme a nova seleção de setores
+      const tipos = computeCustoTypes(nextDepts);
+      const vis = tipos.length === 0 ? accounts : accounts.filter(a => tipos.includes(a.estrutura_custo));
+      const nextAccs = p.allowed_account_ids.filter(aid => vis.some(a => a.id === aid));
+      return { ...p, allowed_department_ids: nextDepts, allowed_account_ids: nextAccs };
     });
   };
   const toggleAcc = (id) => {
@@ -143,7 +167,7 @@ function ErpUserParameterForm({ user, editing, users, departments, accounts, onC
   };
   const selectAllDepts = () => setForm(p => ({ ...p, allowed_department_ids: departments.map(d => d.id) }));
   const clearDepts = () => setForm(p => ({ ...p, allowed_department_ids: [] }));
-  const selectAllAccs = () => setForm(p => ({ ...p, allowed_account_ids: accounts.map(a => a.id) }));
+  const selectAllAccs = () => setForm(p => ({ ...p, allowed_account_ids: visibleAccounts.map(a => a.id) }));
   const clearAccs = () => setForm(p => ({ ...p, allowed_account_ids: [] }));
 
   const handleSave = async () => {
@@ -216,10 +240,13 @@ function ErpUserParameterForm({ user, editing, users, departments, accounts, onC
                 <Button size="sm" variant="outline" onClick={selectAllAccs} className="h-7 text-xs">Todas</Button>
                 <Button size="sm" variant="outline" onClick={clearAccs} className="h-7 text-xs">Limpar</Button>
               </div>
+              {selectedCustoTypes.length > 0 && (
+                <span className="text-xs text-emerald-700">Filtrando: {selectedCustoTypes.map(t => t === "direto" ? "Direto" : "Indireto").join(" / ")}</span>
+              )}
             </div>
             <div className="max-h-52 overflow-y-auto p-2 space-y-1">
-              {accounts.length === 0 ? <p className="text-xs text-gray-400 p-2">Nenhuma conta analítica cadastrada.</p>
-              : accounts.map(a => {
+              {visibleAccounts.length === 0 ? <p className="text-xs text-gray-400 p-2">{selectedCustoTypes.length > 0 ? "Nenhuma conta com a estrutura de custo dos setores selecionados." : "Nenhuma conta analítica de despesa cadastrada."}</p>
+              : visibleAccounts.map(a => {
                 const checked = form.allowed_account_ids.includes(a.id);
                 return (
                   <button key={a.id} type="button" onClick={() => toggleAcc(a.id)} className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-xs text-left ${checked ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "bg-white border-gray-200 hover:bg-gray-50"}`}>
