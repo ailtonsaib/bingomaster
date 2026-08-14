@@ -254,14 +254,9 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
               {errors.referential_code && <p className="text-xs text-red-500 mt-0.5">{errors.referential_code}</p>}
             </Field>
 
-            <Field label="Usa Centro de Custo">
+            <Field label="Usa Centro de Custo" full>
               <Select value={form.usa_centro_custo ? "sim" : "nao"} onChange={v => set("usa_centro_custo", v === "sim")} options={SIM_NAO} />
             </Field>
-            <div className="flex items-end">
-              <Button type="button" variant="outline" size="sm" disabled={!form.usa_centro_custo} className="gap-1.5 text-indigo-700 border-indigo-300">
-                <Plus className="w-4 h-4" /> Vincular Centros de Custo
-              </Button>
-            </div>
           </div>
 
           {form.tipo === "sintetica" && (
