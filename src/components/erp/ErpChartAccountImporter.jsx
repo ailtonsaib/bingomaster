@@ -145,7 +145,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
         else isAnalitica = false;
         const accepts_entries = isAnalitica;
         const account_type = mapAccountType(identificacaoNivel || "", code);
-        const referential_code = isAnalitica ? pickField(r, "referential_code") : "";
+        const referential_code = isAnalitica ? (pickField(r, "referencia") || pickField(r, "referential_code")) : "";
         const grauRaw = Number(pickField(r, "grau"));
         const estruturaRaw = pickField(r, "estrutura_custo");
         return {
