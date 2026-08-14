@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, X, ListTree } from "lucide-react";
+import { Plus, Search, Trash2, X, ListTree, Upload } from "lucide-react";
+import ErpChartAccountImporter from "@/components/erp/ErpChartAccountImporter";
 
 const TYPE_OPTS = [
   { value: "ativo", label: "Ativo", color: "text-blue-700 bg-blue-100", nature: "devedora" },
@@ -25,6 +26,7 @@ export default function ErpChartAccountManager({ user }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
   const [editing, setEditing] = useState(null);
 
   const load = async () => {
@@ -52,8 +54,8 @@ export default function ErpChartAccountManager({ user }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conta..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
-        <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} disabled={refItems.length === 0} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Conta</Button>
-        {refItems.length === 0 && <span className="text-xs text-amber-600">Importe o Plano Referencial primeiro.</span>}
+        <Button size="sm" variant="outline" onClick={() => setShowImporter(true)} className="gap-1.5"><Upload className="w-4 h-4" /> Importar PDF</Button>
+        <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Conta</Button>
       </div>
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="overflow-x-auto">
@@ -97,6 +99,14 @@ export default function ErpChartAccountManager({ user }) {
         </div>
       </div>
       {showForm && <ErpChartAccountForm user={user} editing={editing} accounts={sorted} refItems={refItems} onClose={() => setShowForm(false)} onSaved={load} />}
+      {showImporter && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4">
+            <ErpChartAccountImporter user={user} onDone={() => { setShowImporter(false); load(); }} />
+            <Button variant="outline" size="sm" onClick={() => setShowImporter(false)} className="mt-3">Fechar</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
