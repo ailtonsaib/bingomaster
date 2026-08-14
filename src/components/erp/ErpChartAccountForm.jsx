@@ -109,6 +109,11 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
     // Unicidade code
     const dupCode = accounts.find(a => a.code === form.code.trim() && a.id !== editing?.id);
     if (dupCode) errs.code = `Código "${form.code}" já existe (${dupCode.name}).`;
+    // Unicidade de referência
+    if (form.referencia && form.referencia.trim()) {
+      const dupRef = accounts.find(a => a.referencia && String(a.referencia).trim() === form.referencia.trim() && a.id !== editing?.id);
+      if (dupRef) errs.referencia = `Referência "${form.referencia}" já existe (${dupRef.name}).`;
+    }
     // Referencial obrigatório para analítica
     if (form.tipo === "analitica" && !form.referential_code) {
       errs.referential_code = "Conta referencial é obrigatória para contas analíticas.";
@@ -171,6 +176,7 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
 
             <Field label="Referência">
               <Input value={form.referencia} onChange={e => set("referencia", e.target.value)} placeholder="1000" />
+              {errors.referencia && <p className="text-xs text-red-500 mt-0.5">{errors.referencia}</p>}
             </Field>
             <Field label="Máscara Sugerida *">
               <Input value={form.code} onChange={e => set("code", e.target.value)} placeholder="1.1.01.01.0001" />
