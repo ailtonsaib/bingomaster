@@ -8,11 +8,20 @@
     },
     "code": {
       "type": "string",
-      "description": "C\u00f3digo da conta (ex: 1.1.1)"
+      "description": "C\u00f3digo/m\u00e1scara da conta (ex: 1.1.01.01.0001) \u2014 \u00fanico por empresa"
     },
     "name": {
       "type": "string",
-      "description": "Nome da conta"
+      "description": "Descri\u00e7\u00e3o (nome) da conta"
+    },
+    "referencia": {
+      "type": "string",
+      "description": "Refer\u00eancia num\u00e9rica da conta (ex: 1000)"
+    },
+    "grau": {
+      "type": "number",
+      "default": 1,
+      "description": "Grau/n\u00edvel hier\u00e1rquico da conta (1-5)"
     },
     "account_type": {
       "type": "string",
@@ -24,7 +33,7 @@
         "despesa",
         "compensacao"
       ],
-      "description": "Tipo: ativo, passivo, patrimonio_liquido, receita, despesa ou compensacao"
+      "description": "Identifica\u00e7\u00e3o de n\u00edveis: ativo, passivo, patrimonio_liquido, receita, despesa, compensacao"
     },
     "nature": {
       "type": "string",
@@ -34,21 +43,76 @@
       ],
       "description": "Natureza da conta"
     },
+    "classificacao": {
+      "type": "string",
+      "description": "Classifica\u00e7\u00e3o da conta"
+    },
+    "conta_encerramento": {
+      "type": "string",
+      "enum": [
+        "nao_aplica",
+        "sim",
+        "nao"
+      ],
+      "default": "nao_aplica",
+      "description": "Conta de encerramento"
+    },
+    "classificacao_industrial": {
+      "type": "string",
+      "enum": [
+        "nao_aplica",
+        "insumos",
+        "mao_de_obra",
+        "ggf"
+      ],
+      "default": "nao_aplica",
+      "description": "Classifica\u00e7\u00e3o industrial (custo de produ\u00e7\u00e3o)"
+    },
+    "estrutura_custo": {
+      "type": "string",
+      "enum": [
+        "nao_aplica",
+        "direto",
+        "indireto"
+      ],
+      "default": "nao_aplica",
+      "description": "Estrutura de custo"
+    },
+    "concilia_lancamentos": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se concilia lan\u00e7amentos"
+    },
+    "conta_orcamentaria": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 conta or\u00e7ament\u00e1ria"
+    },
+    "accepts_entries": {
+      "type": "boolean",
+      "default": true,
+      "description": "Tipo: true = ANAL\u00cdTICA (aceita lan\u00e7amentos), false = SINT\u00c9TICA (agrupadora)"
+    },
     "parent_id": {
       "type": "string",
-      "description": "ID da conta pai (agrupadora)"
+      "description": "ID da conta pai (n\u00edvel superior)"
     },
-    "parent_name": {
+    "parent_code": {
       "type": "string",
-      "description": "Nome da conta pai (cache)"
+      "description": "C\u00f3digo da conta pai (n\u00edvel superior) \u2014 cache"
     },
     "referential_code": {
       "type": "string",
-      "description": "C\u00f3digo da conta referencial vinculada (Plano de Contas Referencial Receita/ECD) \u2014 obrigat\u00f3rio"
+      "description": "C\u00f3digo da conta referencial vinculada (Plano Referencial Receita/ECD) \u2014 obrigat\u00f3rio para anal\u00edticas; null para sint\u00e9ticas"
     },
     "referential_name": {
       "type": "string",
       "description": "Nome da conta referencial (cache)"
+    },
+    "usa_centro_custo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se usa centro de custo"
     },
     "participates_production_cost": {
       "type": "boolean",
@@ -62,12 +126,7 @@
         "mao_de_obra",
         "ggf"
       ],
-      "description": "Tipo de custo de produ\u00e7\u00e3o: insumos, mao_de_obra (M\u00e3o de Obra) ou ggf (Gastos Gerais de Fabrica\u00e7\u00e3o)"
-    },
-    "accepts_entries": {
-      "type": "boolean",
-      "default": true,
-      "description": "Se a conta aceita lan\u00e7amentos (false = apenas agrupadora)"
+      "description": "Tipo de custo de produ\u00e7\u00e3o: insumos, mao_de_obra ou ggf"
     },
     "is_active": {
       "type": "boolean",
@@ -78,8 +137,7 @@
     "user_email",
     "code",
     "name",
-    "account_type",
-    "referential_code"
+    "account_type"
   ],
   "rls": {
     "create": {
