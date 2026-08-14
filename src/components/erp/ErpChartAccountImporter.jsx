@@ -4,63 +4,106 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet, CheckCircle, XCircle, Loader2, AlertTriangle, Download } from "lucide-react";
 import { buildXlsxBlob, downloadBlob } from "@/lib/excelTemplate";
 
-// Mapeamento de tipo de conta pelo prefixo do código
-function inferAccountType(code) {
+// ---- Mapeamento de tipos de conta ----
+const TYPE_MAP = {
+  ativo: "ativo", at: "ativo", a: "ativo",
+  passivo: "passivo", pass: "passivo", p: "passivo",
+  patrimonio_liquido: "patrimonio_liquido", patrimonio: "patrimonio_liquido", pl: "patrimonio_liquido",
+  receita: "receita", rec: "receita", r: "receita",
+  despesa: "despesa", desp: "despesa", d: "despesa", despesas: "despesa",
+  compensacao: "compensacao", comp: "compensacao", c: "compensacao",
+};
+function mapAccountType(raw, code) {
+  const t = String(raw || "").trim().toLowerCase();
+  if (TYPE_MAP[t]) return TYPE_MAP[t];
+  // fallback por prefixo do código
   if (!code) return "ativo";
   if (code.startsWith("2.3")) return "patrimonio_liquido";
   if (code.startsWith("2.1") || code.startsWith("2.2")) return "passivo";
   if (code.startsWith("1")) return "ativo";
   if (code.startsWith("3.1.01")) return "receita";
-  if (code.startsWith("3.1.02")) return "despesa"; // deduções
   if (code.startsWith("3")) return "despesa";
   if (code.startsWith("4")) return "despesa";
   return "ativo";
 }
-
 function inferNature(account_type) {
   return (account_type === "passivo" || account_type === "patrimonio_liquido" || account_type === "receita") ? "credora" : "devedora";
 }
+function toBoolSN(v) {
+  const s = String(v || "").trim().toLowerCase();
+  return s.startsWith("s") || s === "true" || s === "sim" || s === "1";
+}
+function mapClassInd(v) {
+  const s = String(v || "").trim().toLowerCase();
+  if (s.includes("insumo")) return "insumos";
+  if (s.includes("mao") || s.includes("mão") || s.includes("obra")) return "mao_de_obra";
+  if (s === "ggf" || s.includes("geral") || s.includes("indireto")) return "ggf";
+  return "nao_aplica";
+}
+function mapEncerramento(v) {
+  const s = String(v || "").trim().toLowerCase();
+  if (s.startsWith("s") || s === "sim" || s === "true") return "sim";
+  if (s.startsWith("n") && s !== "nao_aplica") return "nao";
+  return "nao_aplica";
+}
 
-const TYPE_OPTS = [
-  { value: "ativo", label: "Ativo" },
-  { value: "passivo", label: "Passivo" },
-  { value: "patrimonio_liquido", label: "Patrimônio Líquido" },
-  { value: "receita", label: "Receita" },
-  { value: "despesa", label: "Despesa" },
-  { value: "compensacao", label: "Compensação" },
-];
-
+// ---- Cabeçalhos do modelo (PT) + alias PLA_* do sistema legado ----
 const HEADERS = [
-  "Codigo",
-  "Nome",
-  "Codigo_Referencial",
-  "Nome_Referencial",
-  "Analitica (Sim/Nao)",
-  "Tipo (ativo/passivo/patrimonio_liquido/receita/despesa/compensacao)",
-  "Natureza (devedora/credora)",
+  "Referencia",
+  "Conta",
+  "Descricao",
+  "Nivel Superior",
+  "Identificacao Niveis (S/N)",
+  "Tipo",
+  "Grau",
+  "Funcao",
+  "Conta Orcamentaria (S/N)",
+  "Usa Centro Custo (S/N)",
+  "Classificacao Industrial",
+  "Conta Referencia",
 ];
 
 const SAMPLE_ROWS = [
-  ["1", "ATIVO", "", "", "Nao", "ativo", "devedora"],
-  ["1.1", "ATIVO CIRCULANTE", "", "", "Nao", "ativo", "devedora"],
-  ["1.1.01.01.0001", "CAIXA GERAL", "1.01.01.01.01", "Caixa Matriz", "Sim", "ativo", "devedora"],
-  ["2.3.01.0001", "CAPITAL SOCIAL", "2.01.01.01.01", "Capital Social", "Sim", "patrimonio_liquido", "credora"],
-  ["3.1.01.0001", "RECEITA DE VENDAS", "3.01.01.01.01", "Receita de Vendas", "Sim", "receita", "credora"],
+  ["", "1.1", "ATIVO CIRCULANTE", "", "S", "ativo", 2, "nao_aplica", "N", "N", "nao_aplica", ""],
+  ["", "1.1.01", "DISPONIVEL", "1.1", "S", "ativo", 3, "nao_aplica", "N", "N", "nao_aplica", ""],
+  ["1.01.01.01.01", "1.1.01.01.0001", "CAIXA", "1.1.01.01", "N", "ativo", 5, "nao_aplica", "S", "N", "nao_aplica", "1.01.01.01.01"],
+  ["", "2.3.01.0001", "CAPITAL SOCIAL", "2.3.01", "N", "patrimonio_liquido", 5, "nao_aplica", "N", "N", "nao_aplica", "2.01.01.01.01"],
+  ["", "3.1.01.0001", "RECEITA DE VENDAS", "3.1.01", "N", "receita", 5, "nao_aplica", "N", "N", "nao_aplica", "3.01.01.01.01"],
 ];
 
-function normalizeKey(s) {
-  return String(s || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/[()]/g, "");
+const FIELD_ALIASES = {
+  code: ["conta", "codigo", "codigo_conta"],
+  name: ["descricao", "nome", "descricao_conta"],
+  referencia: ["referencia", "ref"],
+  parent_code: ["nivel_superior", "nivel_superior_conta", "conta_pai"],
+  identificacao: ["identificacao_niveis", "identificacao", "ident_niveis"],
+  tipo: ["tipo", "tipo_conta"],
+  grau: ["grau", "nivel"],
+  funcao: ["funcao", "funcao_conta", "encerramento"],
+  conta_orcamentaria: ["conta_orcamentaria", "orcamentaria"],
+  usa_centro_custo: ["usa_centro_custo", "centro_custo"],
+  classificacao_ind: ["classificacao_ind", "classificacao_industrial", "class_ind"],
+  referential_code: ["conta_referencia", "conta_ref", "referencia_conta"],
+};
+
+function pickField(row, canonical, fallbackKeys = []) {
+  for (const a of FIELD_ALIASES[canonical]) {
+    if (row[a] !== undefined && row[a] !== null && String(row[a]).trim() !== "") return String(row[a]).trim();
+  }
+  for (const k of fallbackKeys) {
+    if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") return String(row[k]).trim();
+  }
+  return "";
 }
 
 export default function ErpChartAccountImporter({ user, onDone }) {
-  const [step, setStep] = useState("upload"); // upload | preview | importing | done
+  const [step, setStep] = useState("upload");
   const [parsedAccounts, setParsedAccounts] = useState([]);
   const [progress, setProgress] = useState({ done: 0, total: 0, errors: 0 });
   const [fileUploading, setFileUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [generatingTemplate, setGeneratingTemplate] = useState(false);
 
-  // Baixa o modelo .xlsx preenchível
   const handleDownloadTemplate = async () => {
     setGeneratingTemplate(true);
     try {
@@ -75,6 +118,10 @@ export default function ErpChartAccountImporter({ user, onDone }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const isXls = file.name.toLowerCase().endsWith(".xls") && !file.name.toLowerCase().endsWith(".xlsx");
+    if (isXls) {
+      if (!confirm("Arquivos .xls (formato antigo) podem não ser lidos pelo extrator. Recomendado: abrir no Excel e 'Salvar Como → .xlsx'. Deseja tentar mesmo assim?")) return;
+    }
     setFileUploading(true);
     setExtracting(true);
     try {
@@ -89,13 +136,18 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               items: {
                 type: "object",
                 properties: {
-                  codigo: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001)" },
-                  nome: { type: "string", description: "Descrição/nome da conta interna" },
-                  codigo_referencial: { type: "string", description: "Código da conta referencial (ex: 1.01.01.01.01). Vazio para sintética." },
-                  nome_referencial: { type: "string", description: "Descrição da conta referencial. Vazio para sintética." },
-                  analitica: { type: "string", description: "Sim para analítica (aceita lançamentos), Nao para sintética (agrupadora)" },
-                  tipo: { type: "string", description: "ativo, passivo, patrimonio_liquido, receita, despesa ou compensacao" },
-                  natureza: { type: "string", description: "devedora ou credora" },
+                  referencia: { type: "string", description: "Referência numérica da conta (PLA_REFERENCIA). Pode ser vazio." },
+                  conta: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001). Obrigatório. PLA_CONTA" },
+                  descricao: { type: "string", description: "Descrição/nome da conta. Obrigatório. PLA_DESCRICAO" },
+                  nivel_superior: { type: "string", description: "Código da conta pai/nível superior. PLA_NIVEL_SUPERIOR" },
+                  identificacao_niveis: { type: "string", description: "S para sintética (agrupadora), N para analítica (aceita lançamentos). PLA_IDENTIFICACAO_NIVEIS" },
+                  tipo: { type: "string", description: "Tipo: ativo, passivo, patrimonio_liquido, receita, despesa, compensacao. PLA_TIPO" },
+                  grau: { type: "string", description: "Grau/nível hierárquico (1-5). PLA_GRAU" },
+                  funcao: { type: "string", description: "Função/encerramento. PLA_FUNCAO" },
+                  conta_orcamentaria: { type: "string", description: "S/N. PLA_CONTA_ORCAMENTARIA" },
+                  usa_centro_custo: { type: "string", description: "S/N. PLA_USA_CENTRO_CUSTO" },
+                  classificacao_ind: { type: "string", description: "Classificação industrial: insumos, mao_de_obra, ggf ou nao_aplica. PLA_CLASSIFICACAO_IND" },
+                  conta_referencia: { type: "string", description: "Código da conta referencial (Plano Referencial Receita/ECD). Vazio para sintética. PLA_CONTA_REFERENCIA" },
                 },
               },
             },
@@ -104,35 +156,37 @@ export default function ErpChartAccountImporter({ user, onDone }) {
       });
 
       const raw = (res && res.output && res.output.accounts) ? res.output.accounts : [];
-
-      // Tenta normalizar chaves caso o extrator devolva nomes alternativos
-      const allAccounts = raw.map(a => {
-        const code = a.codigo || a.Codigo || a.code || "";
-        const name = a.nome || a.Nome || a.name || "";
-        const referential_code = a.codigo_referencial || a.referential_code || a.Codigo_Referencial || "";
-        const referential_name = a.nome_referencial || a.referential_name || a.Nome_Referencial || "";
-        const analiticaRaw = String(a.analitica || a.Analitica || "Sim").toLowerCase();
-        const accepts_entries = !(analiticaRaw.startsWith("nao") || analiticaRaw === "false");
-        const tipoRaw = String(a.tipo || a.Tipo || "").toLowerCase();
-        let account_type = TYPE_OPTS.some(o => o.value === tipoRaw) ? tipoRaw : "";
-        if (!account_type) account_type = inferAccountType(code);
-        const naturezaRaw = String(a.natureza || a.Natureza || "").toLowerCase();
-        const nature = (naturezaRaw === "credora" || naturezaRaw === "devedora") ? naturezaRaw : inferNature(account_type);
+      const allAccounts = raw.map(r => {
+        const code = pickField(r, "code") || pickField(r, "code", ["conta"]);
+        const name = pickField(r, "name") || pickField(r, "name", ["descricao"]);
+        if (!code || !name) return null;
+        const isSintetica = String(pickField(r, "identificacao")).toUpperCase().startsWith("S");
+        const accepts_entries = !isSintetica;
+        const account_type = mapAccountType(pickField(r, "tipo"), code);
+        const referential_code = isSintetica ? "" : pickField(r, "referential_code");
+        const grauRaw = Number(pickField(r, "grau"));
         return {
-          code: String(code).trim(),
-          name: String(name).trim(),
-          referential_code: String(referential_code).trim(),
-          referential_name: String(referential_name).trim(),
+          code,
+          name,
+          referencia: pickField(r, "referencia"),
+          parent_code: pickField(r, "parent_code"),
           account_type,
-          nature,
+          nature: inferNature(account_type),
+          grau: Number.isFinite(grauRaw) && grauRaw > 0 ? grauRaw : undefined,
+          conta_encerramento: mapEncerramento(pickField(r, "funcao")),
+          conta_orcamentaria: toBoolSN(pickField(r, "conta_orcamentaria")),
+          usa_centro_custo: toBoolSN(pickField(r, "usa_centro_custo")),
+          classificacao_industrial: mapClassInd(pickField(r, "classificacao_ind")),
           accepts_entries,
+          referential_code,
+          referential_name: "",
           is_active: true,
           user_email: user.email,
         };
-      }).filter(a => a.code && a.name);
+      }).filter(Boolean);
 
       if (allAccounts.length === 0) {
-        alert("Não foi possível extrair contas do Excel. Verifique se o arquivo segue o modelo baixado.");
+        alert("Não foi possível extrair contas do Excel. Verifique se o arquivo está no formato .xlsx e segue o modelo baixado.");
       } else {
         setParsedAccounts(allAccounts);
         setStep("preview");
@@ -169,12 +223,11 @@ export default function ErpChartAccountImporter({ user, onDone }) {
 
       {step === "upload" && (
         <div className="space-y-4">
-          {/* Download do modelo */}
           <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4 flex items-center gap-3">
             <Download className="w-5 h-5 text-emerald-600 shrink-0" />
             <div className="flex-1">
               <p className="font-medium text-sm text-emerald-800">Baixar modelo padrão</p>
-              <p className="text-xs text-emerald-700">Planilha .xlsx com cabeçalhos e exemplos para preencher</p>
+              <p className="text-xs text-emerald-700">Planilha .xlsx com 12 colunas (Referência, Conta, Descrição, Nível Superior, Identificação, Tipo, Grau, Função, Orçamentária, Centro de Custo, Classif. Industrial, Conta Referência)</p>
             </div>
             <Button size="sm" variant="outline" onClick={handleDownloadTemplate} disabled={generatingTemplate} className="border-emerald-400 text-emerald-700 hover:bg-emerald-100 gap-1.5">
               {generatingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -182,16 +235,15 @@ export default function ErpChartAccountImporter({ user, onDone }) {
             </Button>
           </div>
 
-          {/* Upload da planilha preenchida */}
           <div className="border-2 border-dashed border-indigo-200 rounded-lg p-6 text-center">
             <Upload className="w-10 h-10 text-indigo-400 mx-auto mb-2" />
             <p className="font-medium text-sm mb-1">Enviar planilha preenchida</p>
-            <p className="text-xs text-gray-500 mb-3">Selecione o arquivo .xlsx gerado a partir do modelo</p>
+            <p className="text-xs text-gray-500 mb-3">Formato <b>.xlsx</b> (não .xls). Cole apenas valores, sem fórmulas.</p>
             <label className="cursor-pointer">
               <span className="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2">
                 {fileUploading || extracting ? <><Loader2 className="w-4 h-4 animate-spin" /> {extracting ? "Extraindo contas..." : "Enviando..."}</> : "Selecionar Excel"}
               </span>
-              <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} disabled={fileUploading || extracting} />
+              <input type="file" accept=".xlsx" className="hidden" onChange={handleFile} disabled={fileUploading || extracting} />
             </label>
             {(fileUploading || extracting) && (
               <p className="text-xs text-indigo-600 mt-2 flex items-center justify-center gap-1">
@@ -201,18 +253,22 @@ export default function ErpChartAccountImporter({ user, onDone }) {
             )}
           </div>
 
-          {/* Instruções do modelo */}
           <div className="bg-gray-50 border rounded-lg p-3 text-xs text-gray-600 space-y-1">
             <p className="font-medium text-gray-700 mb-1">Colunas do modelo:</p>
             <ul className="list-disc list-inside space-y-0.5">
-              <li><b>Codigo</b> — código da conta (ex: 1.1.01.01.0001). <b>Obrigatório.</b></li>
-              <li><b>Nome</b> — descrição da conta. <b>Obrigatório.</b></li>
-              <li><b>Codigo_Referencial</b> — conta do Plano Referencial (Receita/ECD). <b>Vazio para sintética.</b></li>
-              <li><b>Nome_Referencial</b> — descrição da conta referencial.</li>
-              <li><b>Analitica</b> — Sim (analítica/aceita lançamentos) ou Nao (sintética/agrupadora).</li>
-              <li><b>Tipo</b> — ativo, passivo, patrimonio_liquido, receita, despesa ou compensacao.</li>
-              <li><b>Natureza</b> — devedora ou credora.</li>
+              <li><b>Conta</b> — código da conta (ex: 1.1.01.01.0001). <b>Obrigatório.</b></li>
+              <li><b>Descrição</b> — nome da conta. <b>Obrigatório.</b></li>
+              <li><b>Identificação Níveis</b> — S (sintética/agrupadora) ou N (analítica/aceita lançamentos).</li>
+              <li><b>Conta Referência</b> — código do Plano Referencial. <b>Vazio para sintética.</b></li>
+              <li><b>Nível Superior</b> — código da conta pai.</li>
+              <li><b>Tipo</b> — ativo, passivo, patrimonio_liquido, receita, despesa, compensacao.</li>
+              <li><b>Grau</b> — nível hierárquico (1-5).</li>
+              <li><b>Função</b> — encerramento (sim/nao/nao_aplica).</li>
+              <li><b>Conta Orçamentária / Usa Centro Custo</b> — S ou N.</li>
+              <li><b>Classificação Industrial</b> — insumos, mao_de_obra, ggf ou nao_aplica.</li>
+              <li><b>Referência</b> — referência numérica da conta (opcional).</li>
             </ul>
+            <p className="text-amber-700 mt-2 pt-2 border-t border-gray-200">Aceita também exportações com cabeçalhos PLA_* (PLA_CONTA, PLA_DESCRICAO, etc.).</p>
           </div>
         </div>
       )}
@@ -228,18 +284,19 @@ export default function ErpChartAccountImporter({ user, onDone }) {
           <div className="rounded-lg border overflow-hidden max-h-80 overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-gray-100 sticky top-0"><tr>
-                <th className="p-2 text-left">Código</th><th className="p-2 text-left">Nome</th>
-                <th className="p-2 text-left">Conta Ref.</th><th className="p-2 text-left">Tipo</th>
-                <th className="p-2 text-center">Analítica</th>
+                <th className="p-2 text-left">Conta</th><th className="p-2 text-left">Descrição</th>
+                <th className="p-2 text-left">Pai</th><th className="p-2 text-left">Tipo</th>
+                <th className="p-2 text-center">Analítica</th><th className="p-2 text-left">Conta Ref.</th>
               </tr></thead>
               <tbody>
                 {parsedAccounts.map((a, i) => (
                   <tr key={i} className="border-t">
                     <td className="p-1 font-mono">{a.code}</td>
                     <td className="p-1">{a.name}</td>
-                    <td className="p-1 font-mono text-gray-500">{a.referential_code}</td>
+                    <td className="p-1 font-mono text-gray-500">{a.parent_code}</td>
                     <td className="p-1 text-gray-500">{a.account_type}</td>
                     <td className="p-1 text-center">{a.accepts_entries ? "✓" : ""}</td>
+                    <td className="p-1 font-mono text-gray-500">{a.referential_code}</td>
                   </tr>
                 ))}
               </tbody>
