@@ -109,11 +109,6 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
     // Unicidade code
     const dupCode = accounts.find(a => a.code === form.code.trim() && a.id !== editing?.id);
     if (dupCode) errs.code = `Código "${form.code}" já existe (${dupCode.name}).`;
-    // Unicidade referencial (só analítica)
-    if (form.tipo === "analitica" && form.referential_code) {
-      const dupRef = accounts.find(a => a.referential_code === form.referential_code && a.id !== editing?.id);
-      if (dupRef) errs.referential_code = `Conta referencial "${form.referential_code}" já vinculada a ${dupRef.name}.`;
-    }
     // Referencial obrigatório para analítica
     if (form.tipo === "analitica" && !form.referential_code) {
       errs.referential_code = "Conta referencial é obrigatória para contas analíticas.";
