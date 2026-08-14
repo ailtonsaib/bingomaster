@@ -70,7 +70,7 @@ export const ERP_MODULES = [
 
 export default function ErpUserManager({ user }) {
   const [items, setItems] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -79,11 +79,11 @@ export default function ErpUserManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [list, depts] = await Promise.all([
+      const [list, secs] = await Promise.all([
         base44.entities.ErpUser.filter({ owner_email: user.email }, "-created_date", 500),
-        base44.entities.ErpDepartment.filter({ user_email: user.email }, "-created_date", 200),
+        base44.entities.ErpSector.filter({ user_email: user.email }, "-created_date", 500),
       ]);
-      setItems(list); setDepartments(depts);
+      setItems(list); setSectors(secs);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -143,13 +143,13 @@ export default function ErpUserManager({ user }) {
       </div>
 
       {showForm && (
-        <ErpUserForm user={user} editing={editing} departments={departments} onClose={() => setShowForm(false)} onSaved={load} />
+        <ErpUserForm user={user} editing={editing} sectors={sectors} onClose={() => setShowForm(false)} onSaved={load} />
       )}
     </div>
   );
 }
 
-function ErpUserForm({ user, editing, departments, onClose, onSaved }) {
+function ErpUserForm({ user, editing, sectors, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: editing?.name || "",
     email: editing?.email || "",
@@ -166,7 +166,7 @@ function ErpUserForm({ user, editing, departments, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
-  const onDept = (id) => { const d = departments.find(d => d.id === id); setForm(prev => ({ ...prev, department_id: id, department_name: d?.name || "" })); };
+  const onSector = (id) => { const s = sectors.find(s => s.id === id); setForm(prev => ({ ...prev, department_id: id, department_name: s?.name || "" })); };
 
   const toggleModule = (modId) => set("allowed_modules", form.allowed_modules.includes(modId)
     ? form.allowed_modules.filter(m => m !== modId)
@@ -229,9 +229,9 @@ function ErpUserForm({ user, editing, departments, onClose, onSaved }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Setor *</Label>
-              <select value={form.department_id} onChange={e => onDept(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.department_id} onChange={e => onSector(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div><Label>Telefone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
