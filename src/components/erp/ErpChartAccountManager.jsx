@@ -34,8 +34,8 @@ export default function ErpChartAccountManager({ user }) {
     setLoading(true);
     try {
       const [acc, ref] = await Promise.all([
-        base44.entities.ErpChartAccount.filter({ user_email: user.email }, "code", 500),
-        base44.entities.ErpChartAccountReferential.filter({ user_email: user.email }, "code", 1000),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email }, "code", 5000),
+        base44.entities.ErpChartAccountReferential.filter({ user_email: user.email }, "code", 5000),
       ]);
       setItems(acc); setRefItems(ref);
     } catch (e) { console.error(e); }
