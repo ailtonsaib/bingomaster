@@ -18,13 +18,13 @@ export default function ErpUserParameterManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [list, us, depts, accs] = await Promise.all([
+      const [list, us, secs, accs] = await Promise.all([
         base44.entities.ErpUserParameter.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpUser.filter({ owner_email: user.email }, "name", 500),
-        base44.entities.ErpDepartment.filter({ user_email: user.email }, "name", 500),
+        base44.entities.ErpSector.filter({ user_email: user.email }, "name", 500),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 5000),
       ]);
-      setParams(list); setUsers(us); setDepartments(depts); setAccounts(accs);
+      setParams(list); setUsers(us); setDepartments(secs); setAccounts(accs);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
