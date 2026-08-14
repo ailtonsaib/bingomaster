@@ -8,7 +8,7 @@
     },
     "number": {
       "type": "string",
-      "description": "N\u00famero da cota\u00e7\u00e3o/tomada de pre\u00e7o"
+      "description": "N\u00famero da tomada de pre\u00e7o"
     },
     "quotation_date": {
       "type": "string",
@@ -21,14 +21,6 @@
     "requisition_number": {
       "type": "string",
       "description": "N\u00famero da solicita\u00e7\u00e3o (cache)"
-    },
-    "supplier_id": {
-      "type": "string",
-      "description": "ID do fornecedor (ErpSupplier)"
-    },
-    "supplier_name": {
-      "type": "string",
-      "description": "Fornecedor (cache)"
     },
     "description": {
       "type": "string",
@@ -47,8 +39,7 @@
               "cadastrado",
               "novo",
               "servico"
-            ],
-            "description": "cadastrado, novo ou servico"
+            ]
           },
           "product_id": {
             "type": "string"
@@ -67,7 +58,7 @@
           },
           "unit_price": {
             "type": "number",
-            "description": "Valor unit\u00e1rio cotado"
+            "description": "Valor unit\u00e1rio estimado"
           },
           "total": {
             "type": "number"
@@ -75,23 +66,68 @@
         }
       }
     },
-    "quantity": {
-      "type": "number",
-      "default": 1
+    "supplier_quotes": {
+      "type": "array",
+      "default": [],
+      "description": "Cota\u00e7\u00f5es dos fornecedores (m\u00ednimo 3 para finalizar)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "supplier_id": {
+            "type": "string"
+          },
+          "supplier_name": {
+            "type": "string"
+          },
+          "quoted_value": {
+            "type": "number",
+            "description": "Valor total cotado pelo fornecedor"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
     },
-    "unit": {
+    "suggested_supplier_id": {
       "type": "string",
-      "default": "UN"
+      "description": "ID do fornecedor com o menor pre\u00e7o (sugest\u00e3o do sistema)"
+    },
+    "suggested_supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor sugerido (cache)"
+    },
+    "suggested_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Menor valor sugerido (cache)"
+    },
+    "winner_supplier_id": {
+      "type": "string",
+      "description": "Fornecedor vencedor escolhido (pode diferir do sugerido)"
+    },
+    "winner_supplier_name": {
+      "type": "string",
+      "description": "Nome do vencedor (cache)"
+    },
+    "winner_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor do vencedor (cache)"
+    },
+    "change_reason": {
+      "type": "string",
+      "description": "Motivo da altera\u00e7\u00e3o do vencedor (obrigat\u00f3rio se diferente do sugerido)"
     },
     "quoted_value": {
       "type": "number",
       "default": 0,
-      "description": "Valor total cotado (soma dos itens ou valor avulso)"
+      "description": "Valor final da tomada (cache do vencedor)"
     },
     "is_winner": {
       "type": "boolean",
       "default": false,
-      "description": "Se foi a cota\u00e7\u00e3o vencedora"
+      "description": "Se a tomada j\u00e1 est\u00e1 finalizada com vencedor"
     },
     "status": {
       "type": "string",
