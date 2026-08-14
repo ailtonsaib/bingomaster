@@ -3,11 +3,10 @@ import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Work
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
-import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpRequisitionPanel from "@/components/erp/ErpRequisitionPanel";
+import ErpQuotationPanel from "@/components/erp/ErpQuotationPanel";
 import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager";
 import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManager";
-import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 
 const SUBTABS = [
   { id: "almoxarifado", label: "Almoxarifado", icon: Warehouse },
@@ -26,7 +25,7 @@ export default function ErpModuleSuprimentos({ user }) {
       {sub === "almoxarifado" && <ErpProductManager user={user} />}
       {sub === "compras" && <ErpPurchasePanel user={user} />}
       {sub === "solicitacao" && <ErpRequisitionPanel user={user} />}
-      {sub === "tomada" && <ErpSimpleCrud key="cotacoes" user={user} {...ERP_CRUD_CONFIGS.cotacoes} />}
+      {sub === "tomada" && <ErpQuotationPanel user={user} />}
       {sub === "manufatura" && (
         <div className="space-y-3">
           <SubNav sub={manSub} setSub={setManSub} tabs={[
