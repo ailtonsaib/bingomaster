@@ -50,6 +50,10 @@ const ASSET_STATUS = [
   { value: "ativo", label: "Ativo", color: "text-emerald-700 bg-emerald-100" },
   { value: "baixado", label: "Baixado", color: "text-gray-700 bg-gray-100" },
 ];
+const CUSTO_OPTS = [
+  { value: "direto", label: "Direto", color: "text-blue-700 bg-blue-100" },
+  { value: "indireto", label: "Indireto", color: "text-amber-700 bg-amber-100" },
+];
 const MONTH_OPTS = [
   { value: 0, label: "Ano todo" },
   { value: 1, label: "Janeiro" }, { value: 2, label: "Fevereiro" }, { value: 3, label: "Março" },
@@ -108,9 +112,11 @@ export const ERP_CRUD_CONFIGS = {
     entityName: "ErpDepartment", title: "Cadastro de Departamentos",
     fields: [
       { key: "code", label: "Código" }, { key: "name", label: "Nome", required: true, full: true },
-      { key: "description", label: "Descrição", full: true }, { key: "is_active", label: "Ativo", type: "checkbox" },
+      { key: "description", label: "Descrição", full: true },
+      { key: "calcula_custo", label: "Calcula custo", type: "checkbox" },
+      { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
-    columns: [{ key: "name", label: "Departamento" }, { key: "code", label: "Código" }, { key: "is_active", label: "Ativo", type: "bool" }],
+    columns: [{ key: "name", label: "Departamento" }, { key: "code", label: "Código" }, { key: "calcula_custo", label: "Calcula custo", type: "bool" }, { key: "is_active", label: "Ativo", type: "bool" }],
     searchKeys: ["name", "code"],
   },
   setores: {
@@ -118,9 +124,11 @@ export const ERP_CRUD_CONFIGS = {
     fields: [
       { key: "department_id", label: "Departamento", type: "entity-select", entity: "ErpDepartment", required: true, cacheKey: "department_name" },
       { key: "code", label: "Código" }, { key: "name", label: "Nome do Setor", required: true, full: true },
-      { key: "description", label: "Descrição", full: true }, { key: "is_active", label: "Ativo", type: "checkbox" },
+      { key: "description", label: "Descrição", full: true },
+      { key: "estrutura_custo", label: "Estrutura de custo", type: "select", options: CUSTO_OPTS },
+      { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
-    columns: [{ key: "department_name", label: "Departamento" }, { key: "name", label: "Setor" }, { key: "code", label: "Código" }, { key: "is_active", label: "Ativo", type: "bool" }],
+    columns: [{ key: "department_name", label: "Departamento" }, { key: "name", label: "Setor" }, { key: "code", label: "Código" }, { key: "estrutura_custo", label: "Custo", type: "badge", options: CUSTO_OPTS }, { key: "is_active", label: "Ativo", type: "bool" }],
     searchKeys: ["name", "code", "department_name"],
   },
   grupos: {

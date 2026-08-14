@@ -25,6 +25,14 @@
     "description": {
       "type": "string"
     },
+    "estrutura_custo": {
+      "type": "string",
+      "enum": [
+        "direto",
+        "indireto"
+      ],
+      "description": "Estrutura de custo do setor: direto ou indireto"
+    },
     "is_active": {
       "type": "boolean",
       "default": true

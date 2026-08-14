@@ -25,6 +25,11 @@
     "description": {
       "type": "string"
     },
+    "calcula_custo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o departamento ir\u00e1 calcular custo"
+    },
     "is_active": {
       "type": "boolean",
       "default": true
