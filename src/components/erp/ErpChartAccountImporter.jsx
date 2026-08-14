@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet, CheckCircle, XCircle, Loader2, AlertTriangle, Download } from "lucide-react";
 import { buildXlsxBlob, downloadBlob } from "@/lib/excelTemplate";
+import { parseXlsxRows } from "@/lib/excelParser";
 
 // ---- Mapeamento de tipos de conta ----
 const TYPE_MAP = {
@@ -86,7 +87,7 @@ const FIELD_ALIASES = {
   tipo_conta: ["tipo_conta", "tipo_de_conta", "tipo"],
   grau: ["grau", "nivel"],
   conta_orcamentaria: ["conta_orcamentaria", "orcamentaria"],
-  usa_centro_custo: ["usa_centro_custo", "centro_custo"],
+  usa_centro_custo: ["usa_centro_custo", "usa_centro_de_custo", "centro_custo"],
   estrutura_custo: ["estrutura_custo", "estrutura_de_custo"],
   referential_code: ["plano_referencial", "plano_de_contas_referencial", "conta_referencia", "conta_ref", "referencia_conta"],
 };
@@ -130,36 +131,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
     setFileUploading(true);
     setExtracting(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const res = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: "object",
-          properties: {
-            accounts: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  referencia: { type: "string", description: "Referência numérica da conta (ex: 1000). Pode ser vazio em contas sintéticas." },
-                  conta: { type: "string", description: "Código/máscara da conta interna (ex: 1.1.01.01.0001). Obrigatório." },
-                  descricao: { type: "string", description: "Descrição/nome da conta. Obrigatório." },
-                  nivel_superior: { type: "string", description: "Código da conta pai/nível superior (coluna 'Nivel Cta Superior')." },
-                  identificacao_nivel: { type: "string", description: "Identificação do nível = grupo/tipo da conta: ativo, passivo, despesa, receita, patrimonio_liquido, compensacao (coluna 'identificacao do nivel')." },
-                  grau: { type: "string", description: "Grau/nível hierárquico (1-5)." },
-                  tipo_conta: { type: "string", description: "Tipo de conta: Sintética (agrupadora, não aceita lançamentos) ou Analítica (aceita lançamentos). Coluna 'Tipo de Conta'." },
-                  conta_orcamentaria: { type: "string", description: "S ou N." },
-                  usa_centro_custo: { type: "string", description: "S ou N." },
-                  estrutura_custo: { type: "string", description: "Estrutura de custo: direto, indireto ou nao_aplica." },
-                  plano_referencial: { type: "string", description: "Código do Plano de Contas Referencial (Receita/ECD). Vazio para sintética." },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      const raw = (res && res.output && res.output.accounts) ? res.output.accounts : [];
+      const raw = await parseXlsxRows(file);
       const allAccounts = raw.map(r => {
         const code = pickField(r, "code");
         const name = pickField(r, "name");
@@ -198,7 +170,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
       }).filter(Boolean);
 
       if (allAccounts.length === 0) {
-        alert("Não foi possível extrair contas do Excel. Verifique se o arquivo está no formato .xlsx e segue o modelo baixado.");
+        alert("Nenhuma conta válida encontrada. Verifique se o arquivo está no formato .xlsx e contém as colunas 'mascara' e 'Descrição' preenchidas.");
       } else {
         setParsedAccounts(allAccounts);
         setStep("preview");
