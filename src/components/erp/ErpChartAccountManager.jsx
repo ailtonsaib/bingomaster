@@ -55,7 +55,7 @@ export default function ErpChartAccountManager({ user }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conta..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
-        <Button size="sm" variant="outline" onClick={() => setShowImporter(true)} className="gap-1.5"><Upload className="w-4 h-4" /> Importar PDF</Button>
+        <Button size="sm" variant="outline" onClick={() => setShowImporter(true)} className="gap-1.5"><Upload className="w-4 h-4" /> Importar Excel</Button>
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Conta</Button>
         {refItems.length === 0 && <span className="text-xs text-amber-600">Importe o Plano Referencial para vincular contas analíticas.</span>}
       </div>

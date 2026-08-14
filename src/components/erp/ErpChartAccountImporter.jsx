@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Loader2, AlertTriangle, Download } from "lucide-react";
+import { buildXlsxBlob, downloadBlob } from "@/lib/excelTemplate";
 
 // Mapeamento de tipo de conta pelo prefixo do código
 function inferAccountType(code) {
@@ -20,78 +21,64 @@ function inferNature(account_type) {
   return (account_type === "passivo" || account_type === "patrimonio_liquido" || account_type === "receita") ? "credora" : "devedora";
 }
 
-// Parser da linha do PDF (texto bruto)
-// Formato: [Ref] [Grau] [Conta] [Descrição...] [ContaRef] [DescRef...] [Sim/Não] [Função?]
-function parsePdfLine(line) {
-  line = line.trim();
-  if (!line) return null;
+const TYPE_OPTS = [
+  { value: "ativo", label: "Ativo" },
+  { value: "passivo", label: "Passivo" },
+  { value: "patrimonio_liquido", label: "Patrimônio Líquido" },
+  { value: "receita", label: "Receita" },
+  { value: "despesa", label: "Despesa" },
+  { value: "compensacao", label: "Compensação" },
+];
 
-  // Detecta linhas de conta: começam com número e têm um código de conta no formato x.x.xx
-  // Padrão: opcionalmente ref numérico, grau (1-5), código conta, descrição, código ref, descrição ref, Sim/Não
-  const re = /^(\d+)?\s*(\d)\s+([\d.]+)\s+(.+?)\s+([\d.]+)\s+(.+?)\s+(Sim|Não)\s*(.*)$/i;
-  const m = line.match(re);
-  if (m) {
-    const code = m[3];
-    const name = m[4].trim();
-    const referential_code = m[5];
-    const referential_name = m[6].trim();
-    const is_sintetica = m[7].toLowerCase() === "sim";
-    const account_type = inferAccountType(code);
-    return {
-      code, name, referential_code, referential_name,
-      account_type, nature: inferNature(account_type),
-      accepts_entries: !is_sintetica, is_active: true,
-    };
-  }
+const HEADERS = [
+  "Codigo",
+  "Nome",
+  "Codigo_Referencial",
+  "Nome_Referencial",
+  "Analitica (Sim/Nao)",
+  "Tipo (ativo/passivo/patrimonio_liquido/receita/despesa/compensacao)",
+  "Natureza (devedora/credora)",
+];
 
-  // Linha sintética sem ref (grau 1-4): " 2 1.1 ATIVO CIRCULANTE 1.01 ATIVO CIRCULANTE Sim"
-  const re2 = /^(\d)\s+([\d.]+)\s+(.+?)\s+([\d.]+)\s+(.+?)\s+(Sim|Não)\s*$/i;
-  const m2 = line.match(re2);
-  if (m2) {
-    const code = m2[2];
-    const name = m2[3].trim();
-    const referential_code = m2[4];
-    const referential_name = m2[5].trim();
-    const is_sintetica = m2[6].toLowerCase() === "sim";
-    const account_type = inferAccountType(code);
-    return {
-      code, name, referential_code, referential_name,
-      account_type, nature: inferNature(account_type),
-      accepts_entries: !is_sintetica, is_active: true,
-    };
-  }
-  return null;
-}
+const SAMPLE_ROWS = [
+  ["1", "ATIVO", "", "", "Nao", "ativo", "devedora"],
+  ["1.1", "ATIVO CIRCULANTE", "", "", "Nao", "ativo", "devedora"],
+  ["1.1.01.01.0001", "CAIXA GERAL", "1.01.01.01.01", "Caixa Matriz", "Sim", "ativo", "devedora"],
+  ["2.3.01.0001", "CAPITAL SOCIAL", "2.01.01.01.01", "Capital Social", "Sim", "patrimonio_liquido", "credora"],
+  ["3.1.01.0001", "RECEITA DE VENDAS", "3.01.01.01.01", "Receita de Vendas", "Sim", "receita", "credora"],
+];
 
-// Processa texto bruto linha a linha
-function parseRawText(text) {
-  const lines = text.split("\n");
-  const accounts = [];
-  for (const line of lines) {
-    const acc = parsePdfLine(line);
-    if (acc && acc.code && acc.name) {
-      accounts.push(acc);
-    }
-  }
-  return accounts;
+function normalizeKey(s) {
+  return String(s || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/[()]/g, "");
 }
 
 export default function ErpChartAccountImporter({ user, onDone }) {
   const [step, setStep] = useState("upload"); // upload | preview | importing | done
-  const [rawText, setRawText] = useState("");
   const [parsedAccounts, setParsedAccounts] = useState([]);
   const [progress, setProgress] = useState({ done: 0, total: 0, errors: 0 });
   const [fileUploading, setFileUploading] = useState(false);
-  const [llmProcessing, setLlmProcessing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [generatingTemplate, setGeneratingTemplate] = useState(false);
+
+  // Baixa o modelo .xlsx preenchível
+  const handleDownloadTemplate = async () => {
+    setGeneratingTemplate(true);
+    try {
+      const blob = await buildXlsxBlob(HEADERS, SAMPLE_ROWS);
+      downloadBlob(blob, "modelo_plano_de_contas.xlsx");
+    } catch (e) {
+      alert("Erro ao gerar modelo: " + (e.message || "tente novamente"));
+    }
+    setGeneratingTemplate(false);
+  };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setFileUploading(true);
-    setLlmProcessing(true);
+    setExtracting(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      // Extrator nativo de PDF com schema estruturado
       const res = await base44.integrations.Core.ExtractDataFromUploadedFile({
         file_url,
         json_schema: {
@@ -102,50 +89,59 @@ export default function ErpChartAccountImporter({ user, onDone }) {
               items: {
                 type: "object",
                 properties: {
-                  code: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001)" },
-                  name: { type: "string", description: "Descrição da conta interna" },
-                  referential_code: { type: "string", description: "Código da conta referencial (ex: 1.01.01.01.01)" },
-                  referential_name: { type: "string", description: "Descrição da conta referencial" },
-                  is_sintetica: { type: "boolean", description: "true se for conta sintética (agrupadora), false se analítica" },
+                  codigo: { type: "string", description: "Código da conta interna (ex: 1.1.01.01.0001)" },
+                  nome: { type: "string", description: "Descrição/nome da conta interna" },
+                  codigo_referencial: { type: "string", description: "Código da conta referencial (ex: 1.01.01.01.01). Vazio para sintética." },
+                  nome_referencial: { type: "string", description: "Descrição da conta referencial. Vazio para sintética." },
+                  analitica: { type: "string", description: "Sim para analítica (aceita lançamentos), Nao para sintética (agrupadora)" },
+                  tipo: { type: "string", description: "ativo, passivo, patrimonio_liquido, receita, despesa ou compensacao" },
+                  natureza: { type: "string", description: "devedora ou credora" },
                 },
               },
             },
           },
         },
       });
+
       const raw = (res && res.output && res.output.accounts) ? res.output.accounts : [];
-      const allAccounts = raw.map(a => ({
-        code: a.code,
-        name: a.name,
-        referential_code: a.referential_code || "",
-        referential_name: a.referential_name || "",
-        accepts_entries: a.is_sintetica === false || a.is_sintetica === undefined ? true : false,
-      }));
-      const enriched = allAccounts.filter(a => a.code && a.name).map(a => ({
-        ...a,
-        account_type: inferAccountType(a.code),
-        nature: inferNature(inferAccountType(a.code)),
-        is_active: true,
-        user_email: user.email,
-      }));
-      if (enriched.length === 0) {
-        alert("Não foi possível extrair contas do PDF. Tente colar o texto bruto manualmente.");
+
+      // Tenta normalizar chaves caso o extrator devolva nomes alternativos
+      const allAccounts = raw.map(a => {
+        const code = a.codigo || a.Codigo || a.code || "";
+        const name = a.nome || a.Nome || a.name || "";
+        const referential_code = a.codigo_referencial || a.referential_code || a.Codigo_Referencial || "";
+        const referential_name = a.nome_referencial || a.referential_name || a.Nome_Referencial || "";
+        const analiticaRaw = String(a.analitica || a.Analitica || "Sim").toLowerCase();
+        const accepts_entries = !(analiticaRaw.startsWith("nao") || analiticaRaw === "false");
+        const tipoRaw = String(a.tipo || a.Tipo || "").toLowerCase();
+        let account_type = TYPE_OPTS.some(o => o.value === tipoRaw) ? tipoRaw : "";
+        if (!account_type) account_type = inferAccountType(code);
+        const naturezaRaw = String(a.natureza || a.Natureza || "").toLowerCase();
+        const nature = (naturezaRaw === "credora" || naturezaRaw === "devedora") ? naturezaRaw : inferNature(account_type);
+        return {
+          code: String(code).trim(),
+          name: String(name).trim(),
+          referential_code: String(referential_code).trim(),
+          referential_name: String(referential_name).trim(),
+          account_type,
+          nature,
+          accepts_entries,
+          is_active: true,
+          user_email: user.email,
+        };
+      }).filter(a => a.code && a.name);
+
+      if (allAccounts.length === 0) {
+        alert("Não foi possível extrair contas do Excel. Verifique se o arquivo segue o modelo baixado.");
       } else {
-        setParsedAccounts(enriched);
+        setParsedAccounts(allAccounts);
         setStep("preview");
       }
     } catch (err) {
-      alert("Erro ao processar o PDF: " + (err.message || "tente colar o texto bruto"));
+      alert("Erro ao processar o Excel: " + (err.message || "tente novamente"));
     }
-    setLlmProcessing(false);
+    setExtracting(false);
     setFileUploading(false);
-  };
-
-  const handlePasteText = () => {
-    const accounts = parseRawText(rawText).map(a => ({ ...a, user_email: user.email }));
-    if (accounts.length === 0) { alert("Nenhuma conta encontrada. Verifique o formato do texto."); return; }
-    setParsedAccounts(accounts);
-    setStep("preview");
   };
 
   const handleImport = async () => {
@@ -169,44 +165,54 @@ export default function ErpChartAccountImporter({ user, onDone }) {
 
   return (
     <div className="space-y-4 bg-white rounded-xl border p-4">
-      <h2 className="font-semibold flex items-center gap-2 text-indigo-700"><FileText className="w-5 h-5" /> Importar Plano de Contas</h2>
+      <h2 className="font-semibold flex items-center gap-2 text-indigo-700"><FileSpreadsheet className="w-5 h-5" /> Importar Plano de Contas (Excel)</h2>
 
       {step === "upload" && (
         <div className="space-y-4">
-          {/* Opção 1: PDF */}
-          <div className="border-2 border-dashed border-indigo-200 rounded-lg p-6 text-center">
-            <Upload className="w-10 h-10 text-indigo-400 mx-auto mb-2" />
-            <p className="font-medium text-sm mb-1">Fazer upload do PDF</p>
-            <p className="text-xs text-gray-500 mb-3">O sistema extrai automaticamente via IA (gemini)</p>
-            <label className="cursor-pointer">
-              <span className="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700">
-                {fileUploading || llmProcessing ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {llmProcessing ? "Processando IA..." : "Enviando..."}</span> : "Selecionar PDF"}
-              </span>
-              <input type="file" accept=".pdf" className="hidden" onChange={handleFile} disabled={fileUploading || llmProcessing} />
-            </label>
+          {/* Download do modelo */}
+          <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4 flex items-center gap-3">
+            <Download className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm text-emerald-800">Baixar modelo padrão</p>
+              <p className="text-xs text-emerald-700">Planilha .xlsx com cabeçalhos e exemplos para preencher</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleDownloadTemplate} disabled={generatingTemplate} className="border-emerald-400 text-emerald-700 hover:bg-emerald-100 gap-1.5">
+              {generatingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {generatingTemplate ? "Gerando..." : "Baixar Modelo"}
+            </Button>
           </div>
 
-          <div className="flex items-center gap-2 text-gray-400 text-xs"><div className="flex-1 border-t" />ou cole o texto bruto<div className="flex-1 border-t" /></div>
-
-          {/* Opção 2: Texto bruto */}
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Cole o conteúdo do PDF (Ctrl+A / Ctrl+C no leitor de PDF)</p>
-            <textarea
-              value={rawText}
-              onChange={e => setRawText(e.target.value)}
-              placeholder={"1 1 ATIVO 1 ATIVO Sim\n2 1.1 ATIVO CIRCULANTE 1.01 ATIVO CIRCULANTE Sim\n1000 5 1.1.01.01.0001 CAIXA GERAL 1.01.01.01.01 CAIXA MATRIZ Não ..."}
-              rows={8}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs font-mono"
-            />
-            <Button onClick={handlePasteText} disabled={!rawText.trim() || fileUploading || llmProcessing} size="sm" variant="outline" className="mt-2">
-              Processar Texto Colado
-            </Button>
-            {(fileUploading || llmProcessing) && (
-              <p className="text-xs text-indigo-600 mt-2 flex items-center gap-1">
+          {/* Upload da planilha preenchida */}
+          <div className="border-2 border-dashed border-indigo-200 rounded-lg p-6 text-center">
+            <Upload className="w-10 h-10 text-indigo-400 mx-auto mb-2" />
+            <p className="font-medium text-sm mb-1">Enviar planilha preenchida</p>
+            <p className="text-xs text-gray-500 mb-3">Selecione o arquivo .xlsx gerado a partir do modelo</p>
+            <label className="cursor-pointer">
+              <span className="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2">
+                {fileUploading || extracting ? <><Loader2 className="w-4 h-4 animate-spin" /> {extracting ? "Extraindo contas..." : "Enviando..."}</> : "Selecionar Excel"}
+              </span>
+              <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} disabled={fileUploading || extracting} />
+            </label>
+            {(fileUploading || extracting) && (
+              <p className="text-xs text-indigo-600 mt-2 flex items-center justify-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                {fileUploading ? "Enviando PDF..." : "Extraindo contas..."}
+                {fileUploading ? "Enviando planilha..." : "Extraindo contas..."}
               </p>
             )}
+          </div>
+
+          {/* Instruções do modelo */}
+          <div className="bg-gray-50 border rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <p className="font-medium text-gray-700 mb-1">Colunas do modelo:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li><b>Codigo</b> — código da conta (ex: 1.1.01.01.0001). <b>Obrigatório.</b></li>
+              <li><b>Nome</b> — descrição da conta. <b>Obrigatório.</b></li>
+              <li><b>Codigo_Referencial</b> — conta do Plano Referencial (Receita/ECD). <b>Vazio para sintética.</b></li>
+              <li><b>Nome_Referencial</b> — descrição da conta referencial.</li>
+              <li><b>Analitica</b> — Sim (analítica/aceita lançamentos) ou Nao (sintética/agrupadora).</li>
+              <li><b>Tipo</b> — ativo, passivo, patrimonio_liquido, receita, despesa ou compensacao.</li>
+              <li><b>Natureza</b> — devedora ou credora.</li>
+            </ul>
           </div>
         </div>
       )}
@@ -241,7 +247,7 @@ export default function ErpChartAccountImporter({ user, onDone }) {
           </div>
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            Confira os tipos e vinculos antes de importar. Contas já existentes com o mesmo código serão duplicadas.
+            Confira os tipos e vínculos antes de importar. Contas já existentes com o mesmo código serão duplicadas.
           </div>
           <Button onClick={handleImport} className="w-full bg-emerald-600 hover:bg-emerald-700">
             Importar {parsedAccounts.length} Contas
