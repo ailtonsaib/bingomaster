@@ -160,10 +160,19 @@ export default function ErpChartAccountImporter({ user, onDone }) {
         const code = pickField(r, "code") || pickField(r, "code", ["conta"]);
         const name = pickField(r, "name") || pickField(r, "name", ["descricao"]);
         if (!code || !name) return null;
-        const isSintetica = String(pickField(r, "identificacao")).toUpperCase().startsWith("S");
-        const accepts_entries = !isSintetica;
+        const referenciaNum = pickField(r, "referencia");
+        const idn = String(pickField(r, "identificacao")).trim().toUpperCase();
+        const tipoRaw = String(pickField(r, "tipo")).trim().toLowerCase();
+        let isAnalitica;
+        if (tipoRaw.startsWith("sint")) isAnalitica = false;
+        else if (tipoRaw.startsWith("anal")) isAnalitica = true;
+        else if (idn.startsWith("S")) isAnalitica = false;
+        else if (idn.startsWith("N") || idn.startsWith("A")) isAnalitica = true;
+        else if (referenciaNum && referenciaNum !== "0") isAnalitica = true;
+        else isAnalitica = /\.\d{4}$/.test(code);
+        const accepts_entries = isAnalitica;
         const account_type = mapAccountType(pickField(r, "tipo"), code);
-        const referential_code = isSintetica ? "" : pickField(r, "referential_code");
+        const referential_code = isAnalitica ? pickField(r, "referential_code") : "";
         const grauRaw = Number(pickField(r, "grau"));
         return {
           code,
