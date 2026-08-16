@@ -209,7 +209,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
     const items = [...prev.items]; items[i] = { ...items[i], [field]: value };
     if (field === "product_id") {
       const p = products.find(p => p.id === value);
-      if (p) { items[i].product_name = p.name; items[i].unit = p.unit; items[i].unit_price = p.cost_price || p.sale_price || 0; }
+      if (p) { items[i].product_name = p.name; items[i].unit = p.unit; }
     }
     if (field === "item_type" && value === "cadastrado") { items[i].product_id = ""; items[i].product_name = ""; items[i].description = ""; }
     if (field === "item_type" && value === "novo") { items[i].product_id = ""; items[i].description = ""; }
@@ -262,8 +262,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
     if (!form.items.length) { alert("Adicione ao menos um item."); return; }
     if (!form.apportionments.length) { alert("Informe ao menos um rateio (setor/conta contábil)."); return; }
     if (form.apportionments.some(a => !a.department_id || !a.account_id)) { alert("Preencha setor e conta contábil em todos os rateios."); return; }
-    if (form.rateio_type === "percent" && !pctOk) { alert(`A soma dos percentuais do rateio deve ser 100% (atual: ${pctSum.toFixed(2)}%).`); return; }
-    if (form.rateio_type === "value" && !valOk) { alert(`A soma dos valores do rateio deve ser igual ao total estimado (${fmtMoney(total)}). Atual: ${fmtMoney(valSum)}.`); return; }
+    if (!pctOk) { alert(`A soma dos percentuais do rateio deve ser 100% (atual: ${pctSum.toFixed(2)}%).`); return; }
     setSaving(true);
     const deptNames = form.apportionments.map(a => a.department_name).filter(Boolean);
     const payload = {
@@ -316,8 +315,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
               <span className="text-sm font-semibold text-indigo-800 flex items-center gap-1.5"><PieChart className="w-4 h-4" /> Rateio (Setor / Conta Contábil)</span>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-gray-500 mr-1">Tipo:</span>
-                <button type="button" onClick={() => setRateioType("percent")} className={`px-2 py-1 rounded text-xs ${form.rateio_type === "percent" ? "bg-indigo-600 text-white" : "bg-white border border-gray-300 text-gray-600"}`}>%</button>
-                <button type="button" onClick={() => setRateioType("value")} className={`px-2 py-1 rounded text-xs ${form.rateio_type === "value" ? "bg-indigo-600 text-white" : "bg-white border border-gray-300 text-gray-600"}`}>Valor</button>
+                <span className="px-2 py-1 rounded text-xs bg-indigo-600 text-white">%</span>
               </div>
             </div>
             <div className="p-2 space-y-1.5">
@@ -341,9 +339,9 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
                     </select>
                   </div>
                   <div className="col-span-3">
-                    <Label className="text-[10px]">{form.rateio_type === "percent" ? "%" : "Valor (R$)"}</Label>
-                    <Input type="number" step="0.01" value={form.rateio_type === "percent" ? a.percent : a.value}
-                      onChange={e => updateApportionment(i, form.rateio_type === "percent" ? "percent" : "value", Number(e.target.value))}
+                    <Label className="text-[10px]">%</Label>
+                    <Input type="number" step="0.01" value={a.percent}
+                      onChange={e => updateApportionment(i, "percent", Number(e.target.value))}
                       className="h-8 text-xs" />
                   </div>
                   <div className="col-span-1 flex justify-end">
@@ -354,10 +352,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
               <div className="flex items-center justify-between pt-1">
                 <Button size="sm" variant="outline" onClick={addApportionment} className="h-7 gap-1"><Plus className="w-3.5 h-3.5" /> Adicionar Rateio</Button>
                 <div className="text-xs">
-                  {form.rateio_type === "percent"
-                    ? <span className={pctOk ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>Soma: {pctSum.toFixed(2)}% {pctOk ? "✓" : "(deve ser 100%)"}</span>
-                    : <span className={valOk ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>Soma: {fmtMoney(valSum)} {valOk ? "✓" : `(deve ser ${fmtMoney(total)})`}</span>
-                  }
+                  <span className={pctOk ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>Soma: {pctSum.toFixed(2)}% {pctOk ? "✓" : "(deve ser 100%)"}</span>
                 </div>
               </div>
             </div>
@@ -384,7 +379,7 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
                     </select>
                   </div>
                 )}
-                <div className={isServico ? "col-span-5" : "col-span-4"}><Label className="text-[10px]">{isServico ? "Serviço" : it.item_type === "cadastrado" ? "Produto" : "Material (descrição)"}</Label>
+                <div className={isServico ? "col-span-9" : "col-span-7"}><Label className="text-[10px]">{isServico ? "Serviço" : it.item_type === "cadastrado" ? "Produto" : "Material (descrição)"}</Label>
                   {(!isServico && it.item_type === "cadastrado") ? (
                     <select value={it.product_id} onChange={e => updateItem(i, "product_id", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs">
                       <option value="">Selecione...</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -395,12 +390,10 @@ function ErpRequisitionForm({ user, requisition, products, departments, accounts
                 </div>
                 <div className="col-span-1"><Label className="text-[10px]">Qtd</Label><Input type="number" step="0.01" value={it.quantity} onChange={e => updateItem(i, "quantity", e.target.value)} className="h-8 text-xs" /></div>
                 <div className="col-span-1"><Label className="text-[10px]">Un.</Label><Input value={it.unit} onChange={e => updateItem(i, "unit", e.target.value)} className="h-8 text-xs" /></div>
-                <div className="col-span-2"><Label className="text-[10px]">Vlr. unit.</Label><Input type="number" step="0.01" value={it.unit_price} onChange={e => updateItem(i, "unit_price", e.target.value)} className="h-8 text-xs" /></div>
-                <div className="col-span-2"><Label className="text-[10px]">Total</Label><p className="h-8 flex items-center font-medium">{fmtMoney(it.total)}</p></div>
                 <div className="col-span-1"><button onClick={() => removeItem(i)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button></div>
               </div>
             ))}
-            <div className="flex justify-end p-2 bg-gray-50 border-t text-sm"><span className="mr-3 text-gray-500">Total estimado:</span><b>{fmtMoney(total)}</b></div>
+            <p className="px-2 py-1.5 bg-gray-50 border-t text-xs text-gray-500">Valores não são informados na solicitação — serão definidos na Tomada de Preço.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
