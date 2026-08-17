@@ -9,7 +9,7 @@ import { PRODUCT_TYPES, UNITS } from "@/lib/erpUtils";
 const empty = {
   code: "", barcode: "", name: "", product_type: "mercadoria",
   category: "", ncm: "", unit: "UN", stock: 0, min_stock: 0,
-  cost_price: 0, sale_price: 0, is_active: true, notes: "",
+  is_active: true, notes: "",
   subgroup_id: "", subgroup_name: "",
   account_estoque_id: "", account_estoque_name: "",
   account_venda_id: "", account_venda_name: "",
@@ -54,8 +54,6 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       unit: form.unit,
       stock: Number(form.stock) || 0,
       min_stock: Number(form.min_stock) || 0,
-      cost_price: Number(form.cost_price) || 0,
-      sale_price: Number(form.sale_price) || 0,
       is_active: form.is_active,
       subgroup_id: form.subgroup_id || undefined,
       subgroup_name: form.subgroup_name || undefined,
@@ -155,10 +153,6 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
             </div>
             <div><Label>Estoque</Label><Input type="number" value={form.stock} onChange={e => set("stock", e.target.value)} /></div>
             <div><Label>Estoque mín.</Label><Input type="number" value={form.min_stock} onChange={e => set("min_stock", e.target.value)} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Preço de custo (R$)</Label><Input type="number" step="0.01" value={form.cost_price} onChange={e => set("cost_price", e.target.value)} /></div>
-            <div><Label>Preço de venda (R$)</Label><Input type="number" step="0.01" value={form.sale_price} onChange={e => set("sale_price", e.target.value)} /></div>
           </div>
           <div><Label>Observações</Label><Input value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
           <label className="flex items-center gap-2 text-sm">
