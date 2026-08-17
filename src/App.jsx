@@ -74,6 +74,7 @@ import PublicBids from '@/pages/PublicBids';
 import PublicBidDetail from '@/pages/PublicBidDetail';
 import CardValidationPanel from '@/pages/CardValidationPanel';
 import AuxiliarValidation from '@/pages/AuxiliarValidation';
+import SupplierQuote from '@/pages/SupplierQuote';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -118,6 +119,8 @@ const AuthenticatedApp = () => {
       <Route path="/auxiliar/:gameId" element={<AuxiliarValidation />} />
       {/* App do Vendedor é público — acesso apenas com o celular cadastrado */}
       <Route path="/sell" element={<SellApp />} />
+      {/* Tomada de Preço — resposta pública do fornecedor via link/token */}
+      <Route path="/cotacao/:token" element={<SupplierQuote />} />
       {/* Galaxy Blaster — jogo de ação público */}
       <Route path="/galaxy-blaster" element={<SpaceShooter />} />
       {/* Campo Minado — jogo de estratégia público */}

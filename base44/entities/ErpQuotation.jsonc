@@ -79,55 +79,91 @@
           "supplier_name": {
             "type": "string"
           },
+          "supplier_email": {
+            "type": "string",
+            "description": "Email do fornecedor (cache p/ envio)"
+          },
           "quoted_value": {
             "type": "number",
             "description": "Valor total cotado pelo fornecedor"
           },
           "notes": {
             "type": "string"
+          },
+          "quote_token": {
+            "type": "string",
+            "description": "Token \u00fanico do link p\u00fablico enviado ao fornecedor"
+          },
+          "quote_status": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "respondida"
+            ],
+            "default": "pendente"
+          },
+          "responded_at": {
+            "type": "string",
+            "description": "Data da resposta (ISO)"
+          },
+          "items": {
+            "type": "array",
+            "default": [],
+            "description": "Valores por item preenchidos pelo fornecedor no link p\u00fablico",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "unit_price": {
+                  "type": "number"
+                },
+                "total": {
+                  "type": "number"
+                }
+              }
+            }
           }
         }
       }
     },
     "suggested_supplier_id": {
-      "type": "string",
-      "description": "ID do fornecedor com o menor pre\u00e7o (sugest\u00e3o do sistema)"
+      "type": "string"
     },
     "suggested_supplier_name": {
-      "type": "string",
-      "description": "Nome do fornecedor sugerido (cache)"
+      "type": "string"
     },
     "suggested_value": {
       "type": "number",
-      "default": 0,
-      "description": "Menor valor sugerido (cache)"
+      "default": 0
     },
     "winner_supplier_id": {
-      "type": "string",
-      "description": "Fornecedor vencedor escolhido (pode diferir do sugerido)"
+      "type": "string"
     },
     "winner_supplier_name": {
-      "type": "string",
-      "description": "Nome do vencedor (cache)"
+      "type": "string"
     },
     "winner_value": {
       "type": "number",
-      "default": 0,
-      "description": "Valor do vencedor (cache)"
+      "default": 0
     },
     "change_reason": {
-      "type": "string",
-      "description": "Motivo da altera\u00e7\u00e3o do vencedor (obrigat\u00f3rio se diferente do sugerido)"
+      "type": "string"
     },
     "quoted_value": {
       "type": "number",
-      "default": 0,
-      "description": "Valor final da tomada (cache do vencedor)"
+      "default": 0
     },
     "is_winner": {
       "type": "boolean",
-      "default": false,
-      "description": "Se a tomada j\u00e1 est\u00e1 finalizada com vencedor"
+      "default": false
     },
     "status": {
       "type": "string",

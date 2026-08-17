@@ -3,8 +3,9 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, Gavel, X, ClipboardList, Link2, Unlink, Trophy, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Trash2, Gavel, X, ClipboardList, Link2, Unlink, Trophy, AlertTriangle, CheckCircle2, Send } from "lucide-react";
 import { genOrderNumber, fmtMoney, fmtDate, UNITS } from "@/lib/erpUtils";
+import ErpQuotationSendModal from "./ErpQuotationSendModal";
 
 const STATUS = {
   aberta: { label: "Aberta", color: "text-blue-700 bg-blue-100" },
@@ -22,6 +23,7 @@ export default function ErpQuotationPanel({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [finalizing, setFinalizing] = useState(null);
+  const [sending, setSending] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -96,6 +98,9 @@ export default function ErpQuotationPanel({ user }) {
                     ) : "—"}</td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></td>
                     <td className="p-2 text-right whitespace-nowrap">
+                      {o.status === "aberta" && (o.supplier_quotes || []).length > 0 && (
+                        <button onClick={() => setSending(o)} title="Enviar ao fornecedor" className="p-1 hover:bg-indigo-50 rounded"><Send className="w-4 h-4 text-indigo-600" /></button>
+                      )}
                       {o.status === "aberta" && (
                         <button onClick={() => setFinalizing(o)} title="Finalizar tomada" className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></button>
                       )}
@@ -120,6 +125,12 @@ export default function ErpQuotationPanel({ user }) {
         <FinalizeModal
           quotation={finalizing} suppliers={suppliers}
           onClose={() => setFinalizing(null)} onSaved={load}
+        />
+      )}
+      {sending && (
+        <ErpQuotationSendModal
+          quotation={sending} suppliers={suppliers}
+          onClose={() => setSending(null)} onSaved={load}
         />
       )}
     </div>
