@@ -25,7 +25,15 @@
     },
     "cfop": {
       "type": "string",
-      "description": "CFOP da opera\u00e7\u00e3o (ex: 5102, 1102)"
+      "description": "CFOP dentro do estado (in\u00edcio 1 p/ entrada, 5 p/ sa\u00edda)"
+    },
+    "cfop_fora_estado": {
+      "type": "string",
+      "description": "CFOP fora do estado (in\u00edcio 2 p/ entrada, 6 p/ sa\u00edda)"
+    },
+    "cfop_importacao_exportacao": {
+      "type": "string",
+      "description": "CFOP de importa\u00e7\u00e3o (entrada, in\u00edcio 3) ou exporta\u00e7\u00e3o (sa\u00edda, in\u00edcio 7)"
     },
     "nature_operation": {
       "type": "string",

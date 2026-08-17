@@ -7,6 +7,7 @@ import ErpTaxRuleManager from "@/components/erp/ErpTaxRuleManager";
 import ErpUserManager from "@/components/erp/ErpUserManager";
 import ErpUserParameterManager from "@/components/erp/ErpUserParameterManager";
 import ErpPartnerManager from "@/components/erp/ErpPartnerManager";
+import ErpOperationManager from "@/components/erp/ErpOperationManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -55,7 +56,8 @@ export default function ErpModuleGerencial({ user }) {
       {sub === "usuarios" && <ErpUserManager user={user} />}
       {sub === "parametros_usuario" && <ErpUserParameterManager user={user} />}
       {sub === "parceiros" && <ErpPartnerManager user={user} />}
-      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
+      {sub === "operacoes" && <ErpOperationManager user={user} />}
+      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
 }
