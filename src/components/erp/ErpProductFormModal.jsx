@@ -21,21 +21,22 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
   const [form, setForm] = useState({ ...empty, ...(product || {}) });
   const [saving, setSaving] = useState(false);
   const [subgroups, setSubgroups] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [accountsEstoque, setAccountsEstoque] = useState([]);
+  const [accountsVenda, setAccountsVenda] = useState([]);
+  const [accountsDevolucao, setAccountsDevolucao] = useState([]);
+  const [accountsTransferencia, setAccountsTransferencia] = useState([]);
 
   useEffect(() => {
     base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "-created_date", 500).then(setSubgroups).catch(() => setSubgroups([]));
-    base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "-created_date", 500).then(setAccounts).catch(() => setAccounts([]));
+    base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "estoque" }, "-created_date", 500).then(setAccountsEstoque).catch(() => setAccountsEstoque([]));
+    base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "venda" }, "-created_date", 500).then(setAccountsVenda).catch(() => setAccountsVenda([]));
+    base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "devolucao" }, "-created_date", 500).then(setAccountsDevolucao).catch(() => setAccountsDevolucao([]));
+    base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "transferencia" }, "-created_date", 500).then(setAccountsTransferencia).catch(() => setAccountsTransferencia([]));
   }, [user.email]);
 
-  const accountsEstoque = accounts.filter(a => a.tipo_gerencial === "estoque");
-  const accountsVenda = accounts.filter(a => a.tipo_gerencial === "venda");
-  const accountsDevolucao = accounts.filter(a => a.tipo_gerencial === "devolucao");
-  const accountsTransferencia = accounts.filter(a => a.tipo_gerencial === "transferencia");
-
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
-  const pickAccount = (key, id) => {
-    const o = accounts.find(a => a.id === id);
+  const pickAccount = (list, key, id) => {
+    const o = list.find(a => a.id === id);
     setForm(prev => ({ ...prev, [`${key}_id`]: id, [`${key}_name`]: o ? `${o.code} - ${o.name}` : "" }));
   };
 
@@ -116,14 +117,14 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Conta de Estoque</Label>
-              <select value={form.account_estoque_id} onChange={e => pickAccount("account_estoque", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.account_estoque_id} onChange={e => pickAccount(accountsEstoque, "account_estoque", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
                 {accountsEstoque.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
             </div>
             <div>
               <Label>Conta de Venda</Label>
-              <select value={form.account_venda_id} onChange={e => pickAccount("account_venda", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.account_venda_id} onChange={e => pickAccount(accountsVenda, "account_venda", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
                 {accountsVenda.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
@@ -132,14 +133,14 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Conta de Devolução</Label>
-              <select value={form.account_devolucao_id} onChange={e => pickAccount("account_devolucao", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.account_devolucao_id} onChange={e => pickAccount(accountsDevolucao, "account_devolucao", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
                 {accountsDevolucao.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
             </div>
             <div>
               <Label>Conta de Transferência</Label>
-              <select value={form.account_transferencia_id} onChange={e => pickAccount("account_transferencia", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.account_transferencia_id} onChange={e => pickAccount(accountsTransferencia, "account_transferencia", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
                 {accountsTransferencia.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
