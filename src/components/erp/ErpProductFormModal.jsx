@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { PRODUCT_TYPES, UNITS } from "@/lib/erpUtils";
+import ErpNcmPicker from "@/components/erp/ErpNcmPicker";
 
 const empty = {
   code: "", barcode: "", name: "", product_type: "mercadoria",
@@ -42,6 +43,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome do produto."); return; }
+    if (!form.ncm) { alert("Selecione o NCM do produto."); return; }
     setSaving(true);
     const payload = {
       user_email: user.email,
@@ -88,9 +90,10 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
             <div><Label>Nome *</Label><Input value={form.name} onChange={e => set("name", e.target.value)} /></div>
             <div><Label>Código interno</Label><Input value={form.code} onChange={e => set("code", e.target.value)} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Código de barras</Label><Input value={form.barcode} onChange={e => set("barcode", e.target.value)} /></div>
-            <div><Label>NCM</Label><Input value={form.ncm} onChange={e => set("ncm", e.target.value)} /></div>
+          <div><Label>Código de barras</Label><Input value={form.barcode} onChange={e => set("barcode", e.target.value)} /></div>
+          <div>
+            <Label>NCM *</Label>
+            <ErpNcmPicker value={form.ncm} onChange={code => set("ncm", code)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
