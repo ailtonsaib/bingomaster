@@ -7,13 +7,14 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { genOrderNumber, fmtMoney } from "@/lib/erpUtils";
 
 export default function ErpPurchaseFormModal({ user, order, products, suppliers, onClose, onSaved }) {
-  const [operations, setOperations] = useState([]);
+  const [quotations, setQuotations] = useState([]);
+  const [useQuotation, setUseQuotation] = useState(!!order?.quotation_id);
   const [form, setForm] = useState({
     order_number: order?.order_number || genOrderNumber("PC"),
     supplier_id: order?.supplier_id || "",
-    operation_id: order?.operation_id || "",
-    emission_date: order?.emission_date || new Date().toISOString().slice(0, 10),
-    expected_date: order?.expected_date || "",
+    quotation_id: order?.quotation_id || "",
+    emission_date: order?.emission_date ? new Date(order.emission_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+    expected_date: order?.expected_date ? new Date(order.expected_date).toISOString().slice(0, 10) : "",
     notes: order?.notes || "",
     items: order?.items || [],
   });
@@ -22,10 +23,32 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
 
   useEffect(() => {
     (async () => {
-      try { setOperations(await base44.entities.ErpOperation.filter({ user_email: user.email, type: "entrada", is_active: true }, "name", 200)); }
-      catch (e) { console.error(e); }
+      try {
+        // Apenas tomadas de preço fechadas
+        setQuotations(await base44.entities.ErpQuotation.filter({ user_email: user.email, status: "fechada" }, "-created_date", 200));
+      } catch (e) { console.error(e); }
     })();
   }, [user.email]);
+
+  const applyQuotation = (quotationId) => {
+    const q = quotations.find(x => x.id === quotationId);
+    if (!q) { set("quotation_id", ""); return; }
+    const items = (q.items || []).map(it => ({
+      product_id: it.product_id || "",
+      product_name: it.product_name || it.description || "",
+      ncm: "",
+      unit: it.unit || "UN",
+      quantity: Number(it.quantity) || 0,
+      unit_cost: Number(it.unit_price) || 0,
+      total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
+    }));
+    setForm(prev => ({
+      ...prev,
+      quotation_id: quotationId,
+      supplier_id: q.winner_supplier_id || prev.supplier_id,
+      items: items.length ? items : prev.items,
+    }));
+  };
 
   const addItem = () => setForm(prev => ({ ...prev, items: [...prev.items, { product_id: "", product_name: "", unit: "UN", quantity: 1, unit_cost: 0, total: 0 }] }));
   const removeItem = (i) => setForm(prev => ({ ...prev, items: prev.items.filter((_, idx) => idx !== i) }));
@@ -47,16 +70,15 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
     if (!form.supplier_id) { alert("Selecione um fornecedor."); return; }
     setSaving(true);
     const supplier = suppliers.find(s => s.id === form.supplier_id);
-    const operation = operations.find(o => o.id === form.operation_id);
+    const quotation = form.quotation_id ? quotations.find(q => q.id === form.quotation_id) : null;
     const payload = {
       user_email: user.email,
       order_number: form.order_number,
       supplier_id: form.supplier_id,
       supplier_name: supplier?.name || "",
       supplier_cnpj: supplier?.document || "",
-      operation_id: form.operation_id || undefined,
-      operation_name: operation?.name || undefined,
-      is_patrimonio: !!operation?.is_patrimonio,
+      quotation_id: form.quotation_id || undefined,
+      quotation_number: quotation?.number || undefined,
       emission_date: new Date(form.emission_date).toISOString(),
       expected_date: form.expected_date ? new Date(form.expected_date).toISOString() : undefined,
       items: form.items,
@@ -81,6 +103,20 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-4 space-y-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={useQuotation} onChange={e => { setUseQuotation(e.target.checked); if (!e.target.checked) set("quotation_id", ""); }} className="w-4 h-4" />
+            Vincular a tomada de preço
+          </label>
+          {useQuotation && (
+            <div>
+              <Label>Tomada de Preço (fechadas)</Label>
+              <select value={form.quotation_id} onChange={e => applyQuotation(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="">Selecione...</option>
+                {quotations.map(q => <option key={q.id} value={q.id}>{q.number} — {q.description}{q.winner_supplier_name ? ` (Vencedor: ${q.winner_supplier_name})` : ""}</option>)}
+              </select>
+              {quotations.length === 0 && <p className="text-xs text-gray-400 mt-1">Nenhuma tomada de preço fechada disponível.</p>}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Número</Label><Input value={form.order_number} onChange={e => set("order_number", e.target.value)} /></div>
             <div>
@@ -90,13 +126,6 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-          </div>
-          <div>
-            <Label>Operação de Entrada {operations.find(o => o.id === form.operation_id)?.is_patrimonio ? "(patrimônio)" : ""}</Label>
-            <select value={form.operation_id} onChange={e => set("operation_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-              <option value="">Selecione...</option>
-              {operations.map(o => <option key={o.id} value={o.id}>{o.name} — CFOP {o.cfop}{o.is_patrimonio ? " (patrimônio)" : ""}</option>)}
-            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Emissão</Label><Input type="date" value={form.emission_date} onChange={e => set("emission_date", e.target.value)} /></div>

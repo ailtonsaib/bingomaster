@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, ShoppingCart, ArrowDownToLine, Send } from "lucide-react";
+import { Plus, Search, Trash2, ShoppingCart, Send } from "lucide-react";
 import ErpPurchaseFormModal from "./ErpPurchaseFormModal";
 import { fmtMoney, fmtDate, PURCHASE_STATUS } from "@/lib/erpUtils";
 
@@ -14,7 +14,6 @@ export default function ErpPurchasePanel({ user }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [busy, setBusy] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -46,26 +45,6 @@ export default function ErpPurchasePanel({ user }) {
   const handleSend = async (o) => {
     await base44.entities.ErpPurchaseOrder.update(o.id, { status: "enviada" });
     load();
-  };
-
-  // Receber mercadoria — dá entrada no estoque
-  const handleReceive = async (o) => {
-    if (!confirm(`Confirmar recebimento do pedido "${o.order_number}"? O estoque será atualizado.`)) return;
-    setBusy(o.id);
-    try {
-      for (const it of (o.items || [])) {
-        if (!it.product_id) continue;
-        const prod = await base44.entities.ErpProduct.get(it.product_id);
-        const newStock = (Number(prod.stock) || 0) + (Number(it.quantity) || 0);
-        await base44.entities.ErpProduct.update(it.product_id, {
-          stock: newStock,
-          cost_price: Number(it.unit_cost) || prod.cost_price || 0,
-        });
-      }
-      await base44.entities.ErpPurchaseOrder.update(o.id, { status: "recebida" });
-      load();
-    } catch (e) { alert("Erro ao dar entrada: " + e.message); }
-    setBusy(null);
   };
 
   return (
@@ -120,11 +99,6 @@ export default function ErpPurchasePanel({ user }) {
                     <td className="p-2 text-right whitespace-nowrap">
                       {o.status === "rascunho" && (
                         <button onClick={() => handleSend(o)} title="Enviar ao fornecedor" className="p-1 hover:bg-blue-50 rounded"><Send className="w-4 h-4 text-blue-600" /></button>
-                      )}
-                      {(o.status === "enviada" || o.status === "recebida_parcial") && (
-                        <button onClick={() => handleReceive(o)} disabled={busy === o.id} title="Reber e dar entrada no estoque" className="p-1 hover:bg-emerald-50 rounded">
-                          <ArrowDownToLine className={`w-4 h-4 text-emerald-600 ${busy === o.id ? "animate-spin" : ""}`} />
-                        </button>
                       )}
                       <button onClick={() => { setEditing(o); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><span className="text-xs">✏️</span></button>
                       <button onClick={() => handleDelete(o)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>

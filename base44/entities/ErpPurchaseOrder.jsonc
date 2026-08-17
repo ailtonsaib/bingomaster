@@ -22,18 +22,26 @@
       "type": "string",
       "description": "CNPJ do fornecedor (cache)"
     },
+    "quotation_id": {
+      "type": "string",
+      "description": "ID da tomada de pre\u00e7o vinculada (ErpQuotation) \u2014 opcional"
+    },
+    "quotation_number": {
+      "type": "string",
+      "description": "N\u00famero da tomada de pre\u00e7o (cache)"
+    },
     "operation_id": {
       "type": "string",
-      "description": "ID da opera\u00e7\u00e3o de entrada (ErpOperation)"
+      "description": "ID da opera\u00e7\u00e3o de entrada (ErpOperation) \u2014 definido na movimenta\u00e7\u00e3o de entrada"
     },
     "operation_name": {
       "type": "string",
-      "description": "Nome da opera\u00e7\u00e3o (cache)"
+      "description": "Nome da opera\u00e7\u00e3o (cache) \u2014 definido na movimenta\u00e7\u00e3o de entrada"
     },
     "is_patrimonio": {
       "type": "boolean",
       "default": false,
-      "description": "Se a opera\u00e7\u00e3o gera bem patrimonial (cache da opera\u00e7\u00e3o)"
+      "description": "Se a opera\u00e7\u00e3o gera bem patrimonial (cache da opera\u00e7\u00e3o) \u2014 definido na movimenta\u00e7\u00e3o de entrada"
     },
     "emission_date": {
       "type": "string",
