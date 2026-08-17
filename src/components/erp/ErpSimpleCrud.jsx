@@ -142,8 +142,8 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const onCnpjLookup = async () => {
-    const digits = onlyDigits(form.cnpj || "");
+  const onCnpjLookup = async (cnpjValue) => {
+    const digits = onlyDigits(cnpjValue || form.cnpj || "");
     if (digits.length !== 14) { setMsg(""); return; }
     setBusy(true); setMsg("Consultando CNPJ na Receita...");
     const res = await lookupCnpj(digits);
@@ -255,8 +255,9 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
                     else if (f.mask === "cep") v = maskCep(v);
                     else if (f.mask === "phone") v = maskPhone(v);
                     set(f.key, v);
+                    if (f.lookup === "cnpj" && onlyDigits(v).length === 14) onCnpjLookup(v);
                   }}
-                  onBlur={f.lookup === "cnpj" ? onCnpjLookup : f.mask === "cep" ? onCepLookup : undefined}
+                  onBlur={f.lookup === "cnpj" ? () => onCnpjLookup() : f.mask === "cep" ? onCepLookup : undefined}
                   className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1"
                 />
               )}
