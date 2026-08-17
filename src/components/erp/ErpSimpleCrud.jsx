@@ -2,7 +2,20 @@ import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { lookupCnpj } from "@/lib/cnpjLookup";
+import { maskCpfCnpj, maskCep, maskPhone, onlyDigits } from "@/lib/brMasks";
+
+async function lookupCep(cep) {
+  const clean = onlyDigits(cep);
+  if (clean.length !== 8) return null;
+  try {
+    const resp = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+    const d = await resp.json();
+    if (d?.erro) return null;
+    return { address: d.logradouro || "", district: d.bairro || "", city: d.localidade || "", uf: d.uf || "", ibge_code: d.ibge ? String(d.ibge) : "" };
+  } catch (e) { return null; }
+}
 
 // field: { key, label, type: text|number|select|checkbox|entity-select, options?, entity?, labelKey?, cacheKey?, required?, full?, placeholder? }
 // column: { key, label, type?: text|badge|money|bool, options?(for badge) }
@@ -126,6 +139,50 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
   };
   const [form, setForm] = useState(buildInitial);
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const onCnpjLookup = async () => {
+    const digits = onlyDigits(form.cnpj || "");
+    if (digits.length !== 14) { setMsg(""); return; }
+    setBusy(true); setMsg("Consultando CNPJ na Receita...");
+    const res = await lookupCnpj(digits);
+    setBusy(false);
+    if (res?.error) { setMsg("⚠ " + res.error); return; }
+    setForm(prev => ({
+      ...prev,
+      razao_social: res.razao_social || prev.razao_social,
+      nome_fantasia: res.nome_fantasia || prev.nome_fantasia,
+      cep: res.cep ? maskCep(res.cep) : prev.cep,
+      address: res.address || prev.address,
+      number: res.number || prev.number,
+      district: res.district || prev.district,
+      city: res.city || prev.city,
+      uf: res.uf || prev.uf,
+      ibge_code: res.ibge_code || prev.ibge_code,
+      phone: res.phone ? maskPhone(res.phone) : prev.phone,
+    }));
+    setMsg("Dados preenchidos pela Receita Federal.");
+  };
+
+  const onCepLookup = async () => {
+    const digits = onlyDigits(form.cep || "");
+    if (digits.length !== 8) return;
+    setBusy(true); setMsg("Buscando endereço...");
+    const res = await lookupCep(digits);
+    setBusy(false);
+    if (!res) { setMsg("CEP não encontrado."); return; }
+    setForm(prev => ({
+      ...prev,
+      address: res.address || prev.address,
+      district: res.district || prev.district,
+      city: res.city || prev.city,
+      uf: res.uf || prev.uf,
+      ibge_code: res.ibge_code || prev.ibge_code,
+    }));
+    setMsg("Endereço preenchido pelo CEP.");
+  };
+
   const set = (k, v) => setForm(prev => {
     const next = { ...prev, [k]: v };
     const f = fields.find(ff => ff.key === k);
@@ -143,6 +200,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     // limpa campos vazios opcionais e converte números
     fields.forEach(f => {
       if (f.type === "number") payload[f.key] = Number(form[f.key]) || 0;
+      if (f.mask) payload[f.key] = onlyDigits(form[f.key]);
       if (!f.required && !String(form[f.key] ?? "").trim() && f.type !== "checkbox") delete payload[f.key];
     });
     try {
@@ -162,6 +220,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500">✕</button>
         </div>
         <div className="p-4 grid grid-cols-2 gap-3">
+          {msg && <p className="col-span-2 text-xs text-gray-500 flex items-center gap-1">{busy && <Loader2 className="w-3 h-3 animate-spin" />}{msg}</p>}
           {fields.map(f => (
             <div key={f.key} className={f.full ? "col-span-2" : ""}>
               <label className="text-xs font-medium text-gray-600">{f.label}{f.required ? " *" : ""}</label>
@@ -179,7 +238,19 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
                   {(entityOptions[f.key] || []).map(o => <option key={o.id} value={o.id}>{o[f.labelKey || "name"]}</option>)}
                 </select>
               ) : (
-                <input type={f.type === "number" ? "number" : f.inputType || "text"} value={form[f.key]} onChange={e => set(f.key, e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1" />
+                <input
+                  type={f.type === "number" ? "number" : f.inputType || "text"}
+                  value={form[f.key]}
+                  onChange={e => {
+                    let v = e.target.value;
+                    if (f.mask === "cnpj") v = maskCpfCnpj(v);
+                    else if (f.mask === "cep") v = maskCep(v);
+                    else if (f.mask === "phone") v = maskPhone(v);
+                    set(f.key, v);
+                  }}
+                  onBlur={f.lookup === "cnpj" ? onCnpjLookup : f.mask === "cep" ? onCepLookup : undefined}
+                  className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1"
+                />
               )}
             </div>
           ))}

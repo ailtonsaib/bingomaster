@@ -52,6 +52,10 @@
       "type": "string",
       "description": "C\u00f3digo IBGE do munic\u00edpio"
     },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
     "regime": {
       "type": "string",
       "enum": [
