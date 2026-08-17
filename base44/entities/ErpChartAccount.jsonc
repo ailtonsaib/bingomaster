@@ -78,6 +78,18 @@
       "default": "nao_aplica",
       "description": "Estrutura de custo"
     },
+    "tipo_gerencial": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "estoque",
+        "venda",
+        "devolucao",
+        "transferencia"
+      ],
+      "default": "normal",
+      "description": "Tipo de conta gerencial: 1-Normal, 2-Estoque, 3-Venda, 4-Devolu\u00e7\u00e3o, 5-Transfer\u00eancia"
+    },
     "concilia_lancamentos": {
       "type": "boolean",
       "default": true,

@@ -37,6 +37,13 @@ const TIPO_OPTS = [
   { value: "analitica", label: "ANALÍTICA" },
   { value: "sintetica", label: "SINTÉTICA" },
 ];
+const TIPO_GERENCIAL_OPTS = [
+  { value: "normal", label: "1 - Normal" },
+  { value: "estoque", label: "2 - Estoque" },
+  { value: "venda", label: "3 - Venda" },
+  { value: "devolucao", label: "4 - Devolução" },
+  { value: "transferencia", label: "5 - Transferência" },
+];
 
 function Field({ label, children, full }) {
   return (
@@ -67,6 +74,7 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
     conta_encerramento: editing?.conta_encerramento || "nao_aplica",
     classificacao_industrial: editing?.classificacao_industrial || "nao_aplica",
     estrutura_custo: editing?.estrutura_custo || "nao_aplica",
+    tipo_gerencial: editing?.tipo_gerencial || "normal",
     concilia_lancamentos: editing?.concilia_lancamentos ?? true,
     conta_orcamentaria: editing?.conta_orcamentaria ?? false,
     grau: editing?.grau || 1,
@@ -139,6 +147,7 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
       conta_encerramento: form.conta_encerramento,
       classificacao_industrial: form.classificacao_industrial,
       estrutura_custo: form.estrutura_custo,
+      tipo_gerencial: form.tipo_gerencial,
       concilia_lancamentos: !!form.concilia_lancamentos,
       conta_orcamentaria: !!form.conta_orcamentaria,
       accepts_entries: isAnalitica,
@@ -202,6 +211,10 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
             </Field>
             <Field label="Estrutura de Custo">
               <Select value={form.estrutura_custo} onChange={v => set("estrutura_custo", v)} options={ESTRUTURA_OPTS} />
+            </Field>
+
+            <Field label="Tipo de Conta Gerencial">
+              <Select value={form.tipo_gerencial} onChange={v => set("tipo_gerencial", v)} options={TIPO_GERENCIAL_OPTS} />
             </Field>
 
             <Field label="Concilia Lançamentos">
