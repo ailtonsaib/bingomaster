@@ -28,6 +28,11 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
     base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "-created_date", 500).then(setAccounts).catch(() => setAccounts([]));
   }, [user.email]);
 
+  const accountsEstoque = accounts.filter(a => a.tipo_gerencial === "estoque");
+  const accountsVenda = accounts.filter(a => a.tipo_gerencial === "venda");
+  const accountsDevolucao = accounts.filter(a => a.tipo_gerencial === "devolucao");
+  const accountsTransferencia = accounts.filter(a => a.tipo_gerencial === "transferencia");
+
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const pickAccount = (key, id) => {
     const o = accounts.find(a => a.id === id);
@@ -113,14 +118,14 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
               <Label>Conta de Estoque</Label>
               <select value={form.account_estoque_id} onChange={e => pickAccount("account_estoque", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                {accountsEstoque.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
             </div>
             <div>
               <Label>Conta de Venda</Label>
               <select value={form.account_venda_id} onChange={e => pickAccount("account_venda", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                {accountsVenda.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
             </div>
           </div>
@@ -129,14 +134,14 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
               <Label>Conta de Devolução</Label>
               <select value={form.account_devolucao_id} onChange={e => pickAccount("account_devolucao", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                {accountsDevolucao.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
             </div>
             <div>
               <Label>Conta de Transferência</Label>
               <select value={form.account_transferencia_id} onChange={e => pickAccount("account_transferencia", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                {accountsTransferencia.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
               </select>
             </div>
           </div>
