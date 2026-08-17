@@ -167,11 +167,16 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
       has_junta_registro: !isMei && !!res.natureza_juridica,
       abertura: res.abertura || prev.abertura,
     }));
+    // Complementa o código IBGE via ViaCEP quando a Receita não retornar
+    if (!res.ibge_code && onlyDigits(res.cep).length === 8) {
+      const cepData = await lookupCep(onlyDigits(res.cep));
+      if (cepData?.ibge_code) setForm(prev => ({ ...prev, ibge_code: cepData.ibge_code }));
+    }
     setMsg("Dados preenchidos pela Receita Federal.");
   };
 
-  const onCepLookup = async () => {
-    const digits = onlyDigits(form.cep || "");
+  const onCepLookup = async (cepValue) => {
+    const digits = onlyDigits(cepValue || form.cep || "");
     if (digits.length !== 8) return;
     setBusy(true); setMsg("Buscando endereço...");
     const res = await lookupCep(digits);
@@ -256,8 +261,9 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
                     else if (f.mask === "phone") v = maskPhone(v);
                     set(f.key, v);
                     if (f.lookup === "cnpj" && onlyDigits(v).length === 14) onCnpjLookup(v);
+                    if (f.mask === "cep" && onlyDigits(v).length === 8) onCepLookup(v);
                   }}
-                  onBlur={f.lookup === "cnpj" ? () => onCnpjLookup() : f.mask === "cep" ? onCepLookup : undefined}
+                  onBlur={f.lookup === "cnpj" ? () => onCnpjLookup() : f.mask === "cep" ? () => onCepLookup() : undefined}
                   className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1"
                 />
               )}

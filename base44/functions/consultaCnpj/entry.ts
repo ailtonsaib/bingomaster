@@ -118,6 +118,23 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: `Não foi possível consultar o CNPJ. ${ultimoErro || ''}`.trim() });
     }
 
+    // Complementa o telefone via ReceitaWS quando a BrasilAPI não retornar
+    if (!dados.telefone && dados.fonte === 'brasilapi') {
+      try {
+        const resp3 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (resp3.ok) {
+          const d3 = await resp3.json();
+          if (d3?.telefone) {
+            const tel = String(d3.telefone).split('/')[0].trim();
+            if (tel) dados.telefone = tel;
+          }
+        }
+      } catch (e) { /* best-effort: ignora falha na complementação */ }
+    }
+
     return Response.json({ success: true, dados });
   } catch (error) {
     return Response.json({ success: false, error: error.message }, { status: 500 });
