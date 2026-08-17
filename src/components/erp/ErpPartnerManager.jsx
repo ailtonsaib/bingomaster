@@ -211,6 +211,21 @@ function ErpPartnerForm({ user, editing, vendedores, channels, sectors, redes, o
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome/razão social."); return; }
     if (!form.partner_type) { alert("Selecione o tipo."); return; }
+    const docDigits = onlyDigits(form.document);
+    if (docDigits) {
+      setSaving(true);
+      try {
+        const existing = await base44.entities.ErpPartner.filter({ user_email: user.email, document: docDigits });
+        const dup = existing.find(p => p.id !== editing?.id);
+        if (dup) {
+          const tp = PARTNER_TYPE_OPTS.find(o => o.value === dup.partner_type)?.label || dup.partner_type;
+          alert(`Este CNPJ/CPF já está cadastrado!\n\nCódigo de cadastro: ${dup.id}\nNome: ${dup.name}\nTipo: ${tp}`);
+          setSaving(false);
+          return;
+        }
+      } catch (e) { /* ignora e prossegue */ }
+      setSaving(false);
+    }
     setSaving(true);
     const payload = { user_email: user.email, ...form, document: onlyDigits(form.document), cep: onlyDigits(form.cep), phone: onlyDigits(form.phone) };
     if (!isClient) { delete payload.vendedor_id; delete payload.vendedor_name; delete payload.channel_id; delete payload.channel_name; delete payload.activity_sector_id; delete payload.activity_sector_name; delete payload.rede_id; delete payload.rede_name; }
