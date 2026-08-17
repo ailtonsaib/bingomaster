@@ -26,6 +26,23 @@
       "type": "string",
       "description": "Inscri\u00e7\u00e3o Municipal"
     },
+    "cnae": {
+      "type": "string",
+      "description": "CNAE fiscal (c\u00f3digo e descri\u00e7\u00e3o)"
+    },
+    "natureza_juridica": {
+      "type": "string",
+      "description": "Natureza jur\u00eddica"
+    },
+    "has_junta_registro": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se possui registro na Junta Comercial"
+    },
+    "junta_registro_code": {
+      "type": "string",
+      "description": "C\u00f3digo de registro na Junta Comercial (NIRE)"
+    },
     "cep": {
       "type": "string"
     },

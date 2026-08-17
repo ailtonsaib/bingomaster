@@ -30,6 +30,11 @@ export async function lookupCnpj(cnpj) {
       ibge_code: d.codigo_ibge_municipio ? String(d.codigo_ibge_municipio) : "",
       phone: d.telefone || "",
       email: d.email || "",
+      cnae: d.cnae_fiscal || "",
+      cnae_descricao: d.cnae_fiscal_descricao || "",
+      natureza_juridica: d.natureza_juridica || "",
+      porte: d.porte || "",
+      matriz_filial: d.matriz_filial || "",
     };
   } catch (e) {
     const msg = e?.response?.data?.error || e?.message || "Erro ao consultar CNPJ.";

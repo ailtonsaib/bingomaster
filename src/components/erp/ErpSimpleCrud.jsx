@@ -149,6 +149,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     const res = await lookupCnpj(digits);
     setBusy(false);
     if (res?.error) { setMsg("⚠ " + res.error); return; }
+    const isMei = /MEI|MICRO EMPREENDEDOR INDIVIDUAL/i.test(`${res.porte || ""} ${res.natureza_juridica || ""}`);
     setForm(prev => ({
       ...prev,
       razao_social: res.razao_social || prev.razao_social,
@@ -161,6 +162,9 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
       uf: res.uf || prev.uf,
       ibge_code: res.ibge_code || prev.ibge_code,
       phone: res.phone ? maskPhone(res.phone) : prev.phone,
+      cnae: res.cnae ? `${res.cnae} - ${res.cnae_descricao}`.replace(/ - $/, "") : prev.cnae,
+      natureza_juridica: res.natureza_juridica || prev.natureza_juridica,
+      has_junta_registro: !isMei && !!res.natureza_juridica,
     }));
     setMsg("Dados preenchidos pela Receita Federal.");
   };
@@ -194,7 +198,10 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
   });
 
   const handleSave = async () => {
-    for (const f of fields) if (f.required && !String(form[f.key] ?? "").trim()) { alert(`Informe ${f.label}.`); return; }
+    for (const f of fields) {
+      const req = f.required || (f.requiredIf && f.requiredIf(form));
+      if (req && !String(form[f.key] ?? "").trim()) { alert(`Informe ${f.label}.`); return; }
+    }
     setSaving(true);
     const payload = { [scopeField]: user.email, ...form };
     // limpa campos vazios opcionais e converte números

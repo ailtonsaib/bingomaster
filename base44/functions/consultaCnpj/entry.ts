@@ -51,6 +51,11 @@ Deno.serve(async (req) => {
           codigo_ibge_municipio: d.codigo_ibge_municipio ? String(d.codigo_ibge_municipio) : '',
           telefone: d.telefone || '',
           email: d.email || '',
+          cnae_fiscal: d.cnae_fiscal || '',
+          cnae_fiscal_descricao: d.cnae_fiscal_descricao || '',
+          natureza_juridica: d.natureza_juridica || '',
+          porte: d.porte || '',
+          matriz_filial: d.matriz_filial || '',
           fonte: 'brasilapi'
         };
       } else if (resp1.status === 400) {
@@ -87,6 +92,11 @@ Deno.serve(async (req) => {
               codigo_ibge_municipio: '',
               telefone: d.telefone || '',
               email: d.email || '',
+              cnae_fiscal: (d.cnae_fiscal || '').split(' - ')[0] || '',
+              cnae_fiscal_descricao: (d.cnae_fiscal || '').split(' - ').slice(1).join(' - ') || '',
+              natureza_juridica: d.natureza_juridica || '',
+              porte: d.porte || '',
+              matriz_filial: d.matriz_filial || '',
               fonte: 'receitaws'
             };
           } else if (d?.status === 'ERROR') {
