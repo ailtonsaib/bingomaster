@@ -30,7 +30,7 @@ export default function ErpQuotationPanel({ user }) {
     try {
       const [list, sups] = await Promise.all([
         base44.entities.ErpQuotation.filter({ user_email: user.email }, "-quotation_date", 500),
-        base44.entities.ErpSupplier.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
       ]);
       setItems(list); setSuppliers(sups);
     } catch (e) { console.error(e); }
@@ -202,7 +202,7 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
   const removeSupplierQuote = (i) => setForm(prev => ({ ...prev, supplier_quotes: prev.supplier_quotes.filter((_, idx) => idx !== i) }));
   const updateSupplierQuote = (i, field, value) => setForm(prev => {
     const sq = [...prev.supplier_quotes]; sq[i] = { ...sq[i], [field]: value };
-    if (field === "supplier_id") { const s = suppliers.find(s => s.id === value); sq[i].supplier_name = s?.name || ""; }
+    if (field === "supplier_id") { const s = suppliers.find(s => s.id === value); sq[i].supplier_name = s?.name || ""; sq[i].supplier_email = s?.email || ""; }
     return { ...prev, supplier_quotes: sq };
   });
 

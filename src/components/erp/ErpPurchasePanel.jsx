@@ -22,7 +22,7 @@ export default function ErpPurchasePanel({ user }) {
       const [o, p, s] = await Promise.all([
         base44.entities.ErpPurchaseOrder.filter({ user_email: user.email }, "-emission_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
-        base44.entities.ErpSupplier.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
       ]);
       setOrders(o); setProducts(p); setSuppliers(s);
     } catch (e) { console.error(e); }
