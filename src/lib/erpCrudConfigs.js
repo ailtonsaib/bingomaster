@@ -103,7 +103,7 @@ export const ERP_CRUD_CONFIGS = {
   filiais: {
     entityName: "ErpBranch", title: "Cadastro de Filiais (vinculadas a uma empresa)",
     fields: [
-      { key: "company_id", label: "Empresa Matriz", type: "entity-select", entity: "ErpCompany", required: true, cacheKey: "company_name", full: true },
+      { key: "company_id", label: "Empresa Matriz", type: "entity-select", entity: "ErpCompany", labelKey: "razao_social", required: true, cacheKey: "company_name", full: true },
       { key: "razao_social", label: "Razão Social da Filial", required: true, full: true },
       { key: "nome_fantasia", label: "Nome Fantasia", full: true },
       { key: "cnpj", label: "CNPJ" }, { key: "ie", label: "Inscrição Estadual" }, { key: "im", label: "Inscrição Municipal" },
