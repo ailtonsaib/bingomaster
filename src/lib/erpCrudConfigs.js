@@ -106,7 +106,7 @@ export const ERP_CRUD_CONFIGS = {
       { key: "company_id", label: "Empresa Matriz", type: "entity-select", entity: "ErpCompany", labelKey: "razao_social", required: true, cacheKey: "company_name", full: true },
       { key: "razao_social", label: "Razão Social da Filial", required: true, full: true },
       { key: "nome_fantasia", label: "Nome Fantasia", full: true },
-      { key: "cnpj", label: "CNPJ" }, { key: "ie", label: "Inscrição Estadual" }, { key: "im", label: "Inscrição Municipal" },
+      { key: "cnpj", label: "CNPJ", mask: "cnpj", lookup: "cnpj" }, { key: "ie", label: "Inscrição Estadual" }, { key: "im", label: "Inscrição Municipal" },
       { key: "cep", label: "CEP" }, { key: "uf", label: "UF" }, { key: "city", label: "Município" }, { key: "ibge_code", label: "Cód. IBGE" },
       { key: "address", label: "Logradouro", full: true }, { key: "number", label: "Número" }, { key: "district", label: "Bairro" },
       { key: "is_active", label: "Ativa", type: "checkbox" },

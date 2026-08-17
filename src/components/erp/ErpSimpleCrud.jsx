@@ -150,25 +150,27 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     setBusy(false);
     if (res?.error) { setMsg("⚠ " + res.error); return; }
     const isMei = /MEI|MICRO EMPREENDEDOR INDIVIDUAL/i.test(`${res.porte || ""} ${res.natureza_juridica || ""}`);
-    setForm(prev => ({
-      ...prev,
-      razao_social: res.razao_social || prev.razao_social,
-      nome_fantasia: res.nome_fantasia || prev.nome_fantasia,
-      cep: res.cep ? maskCep(res.cep) : prev.cep,
-      address: res.address || prev.address,
-      number: res.number || prev.number,
-      district: res.district || prev.district,
-      city: res.city || prev.city,
-      uf: res.uf || prev.uf,
-      ibge_code: res.ibge_code || prev.ibge_code,
-      phone: res.phone ? maskPhone(res.phone) : prev.phone,
-      cnae: res.cnae ? `${res.cnae} - ${res.cnae_descricao}`.replace(/ - $/, "") : prev.cnae,
-      natureza_juridica: res.natureza_juridica || prev.natureza_juridica,
-      has_junta_registro: !isMei && !!res.natureza_juridica,
-      abertura: res.abertura || prev.abertura,
-    }));
+    const has = (k) => fields.some(ff => ff.key === k);
+    setForm(prev => {
+      const up = {};
+      if (has("razao_social")) up.razao_social = res.razao_social || prev.razao_social;
+      if (has("nome_fantasia")) up.nome_fantasia = res.nome_fantasia || prev.nome_fantasia;
+      if (has("cep")) up.cep = res.cep ? maskCep(res.cep) : prev.cep;
+      if (has("address")) up.address = res.address || prev.address;
+      if (has("number")) up.number = res.number || prev.number;
+      if (has("district")) up.district = res.district || prev.district;
+      if (has("city")) up.city = res.city || prev.city;
+      if (has("uf")) up.uf = res.uf || prev.uf;
+      if (has("ibge_code")) up.ibge_code = res.ibge_code || prev.ibge_code;
+      if (has("phone")) up.phone = res.phone ? maskPhone(res.phone) : prev.phone;
+      if (has("cnae")) up.cnae = res.cnae ? `${res.cnae} - ${res.cnae_descricao}`.replace(/ - $/, "") : prev.cnae;
+      if (has("natureza_juridica")) up.natureza_juridica = res.natureza_juridica || prev.natureza_juridica;
+      if (has("has_junta_registro")) up.has_junta_registro = !isMei && !!res.natureza_juridica;
+      if (has("abertura")) up.abertura = res.abertura || prev.abertura;
+      return { ...prev, ...up };
+    });
     // Complementa o código IBGE via ViaCEP quando a Receita não retornar
-    if (!res.ibge_code && onlyDigits(res.cep).length === 8) {
+    if (!res.ibge_code && has("ibge_code") && onlyDigits(res.cep).length === 8) {
       const cepData = await lookupCep(onlyDigits(res.cep));
       if (cepData?.ibge_code) setForm(prev => ({ ...prev, ibge_code: cepData.ibge_code }));
     }
