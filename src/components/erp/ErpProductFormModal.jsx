@@ -10,13 +10,29 @@ const empty = {
   code: "", barcode: "", name: "", product_type: "mercadoria",
   category: "", ncm: "", unit: "UN", stock: 0, min_stock: 0,
   cost_price: 0, sale_price: 0, is_active: true, notes: "",
+  subgroup_id: "", subgroup_name: "",
+  account_estoque_id: "", account_estoque_name: "",
+  account_venda_id: "", account_venda_name: "",
+  account_devolucao_id: "", account_devolucao_name: "",
+  account_transferencia_id: "", account_transferencia_name: "",
 };
 
 export default function ErpProductFormModal({ user, product, onClose, onSaved }) {
   const [form, setForm] = useState({ ...empty, ...(product || {}) });
   const [saving, setSaving] = useState(false);
+  const [subgroups, setSubgroups] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+
+  useEffect(() => {
+    base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "-created_date", 500).then(setSubgroups).catch(() => setSubgroups([]));
+    base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "-created_date", 500).then(setAccounts).catch(() => setAccounts([]));
+  }, [user.email]);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const pickAccount = (key, id) => {
+    const o = accounts.find(a => a.id === id);
+    setForm(prev => ({ ...prev, [`${key}_id`]: id, [`${key}_name`]: o ? `${o.code} - ${o.name}` : "" }));
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome do produto."); return; }
@@ -35,6 +51,16 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       cost_price: Number(form.cost_price) || 0,
       sale_price: Number(form.sale_price) || 0,
       is_active: form.is_active,
+      subgroup_id: form.subgroup_id || undefined,
+      subgroup_name: form.subgroup_name || undefined,
+      account_estoque_id: form.account_estoque_id || undefined,
+      account_estoque_name: form.account_estoque_name || undefined,
+      account_venda_id: form.account_venda_id || undefined,
+      account_venda_name: form.account_venda_name || undefined,
+      account_devolucao_id: form.account_devolucao_id || undefined,
+      account_devolucao_name: form.account_devolucao_name || undefined,
+      account_transferencia_id: form.account_transferencia_id || undefined,
+      account_transferencia_name: form.account_transferencia_name || undefined,
       notes: form.notes || undefined,
     };
     try {
@@ -70,6 +96,49 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
               </select>
             </div>
             <div><Label>Categoria</Label><Input value={form.category} onChange={e => set("category", e.target.value)} /></div>
+          </div>
+          <div>
+            <Label>Subgrupo de estoque</Label>
+            <select value={form.subgroup_id} onChange={e => {
+              const opt = subgroups.find(s => s.id === e.target.value);
+              set("subgroup_id", e.target.value);
+              set("subgroup_name", opt ? opt.name : "");
+            }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <option value="">Selecione o subgrupo...</option>
+              {subgroups.map(s => <option key={s.id} value={s.id}>{s.name}{s.group_name ? ` (${s.group_name})` : ""}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Conta de Estoque</Label>
+              <select value={form.account_estoque_id} onChange={e => pickAccount("account_estoque", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="">Selecione...</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Conta de Venda</Label>
+              <select value={form.account_venda_id} onChange={e => pickAccount("account_venda", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="">Selecione...</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Conta de Devolução</Label>
+              <select value={form.account_devolucao_id} onChange={e => pickAccount("account_devolucao", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="">Selecione...</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Conta de Transferência</Label>
+              <select value={form.account_transferencia_id} onChange={e => pickAccount("account_transferencia", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="">Selecione...</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>

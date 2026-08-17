@@ -66,6 +66,7 @@ export default function ErpProductManager({ user }) {
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
                 <th className="p-2 text-left">Produto</th>
+                <th className="p-2 text-left">Subgrupo</th>
                 <th className="p-2 text-left">Tipo</th>
                 <th className="p-2 text-right">Estoque</th>
                 <th className="p-2 text-right">Custo</th>
@@ -75,9 +76,9 @@ export default function ErpProductManager({ user }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={7} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="p-8 text-center text-gray-400">
+                <tr><td colSpan={7} className="p-8 text-center text-gray-400">
                   <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
                   Nenhum produto encontrado.
                 </td></tr>
@@ -87,6 +88,7 @@ export default function ErpProductManager({ user }) {
                     <p className="font-medium">{p.name}</p>
                     <p className="text-xs text-gray-400">{p.code || ""} {p.barcode ? `• ${p.barcode}` : ""}</p>
                   </td>
+                  <td className="p-2 text-gray-600">{p.subgroup_name || "—"}</td>
                   <td className="p-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full border ${typeColor(p.product_type)}`}>{typeLabel(p.product_type)}</span>
                   </td>

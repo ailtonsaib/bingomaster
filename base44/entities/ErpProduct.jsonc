@@ -35,6 +35,14 @@
       "type": "string",
       "description": "Categoria/grupo do produto"
     },
+    "subgroup_id": {
+      "type": "string",
+      "description": "ID do subgrupo de estoque vinculado (ErpStockSubgroup)"
+    },
+    "subgroup_name": {
+      "type": "string",
+      "description": "Nome do subgrupo (cache)"
+    },
     "ncm": {
       "type": "string",
       "description": "NCM (Nomenclatura Comum do Mercosul)"
@@ -63,6 +71,38 @@
       "type": "number",
       "default": 0,
       "description": "Pre\u00e7o de venda"
+    },
+    "account_estoque_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de estoque (ErpChartAccount)"
+    },
+    "account_estoque_name": {
+      "type": "string",
+      "description": "Nome da conta de estoque (cache)"
+    },
+    "account_venda_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de venda/receita (ErpChartAccount)"
+    },
+    "account_venda_name": {
+      "type": "string",
+      "description": "Nome da conta de venda (cache)"
+    },
+    "account_devolucao_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de devolu\u00e7\u00e3o (ErpChartAccount)"
+    },
+    "account_devolucao_name": {
+      "type": "string",
+      "description": "Nome da conta de devolu\u00e7\u00e3o (cache)"
+    },
+    "account_transferencia_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de transfer\u00eancia (ErpChartAccount)"
+    },
+    "account_transferencia_name": {
+      "type": "string",
+      "description": "Nome da conta de transfer\u00eancia (cache)"
     },
     "is_active": {
       "type": "boolean",
