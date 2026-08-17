@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
           natureza_juridica: d.natureza_juridica || '',
           porte: d.porte || '',
           matriz_filial: d.matriz_filial || '',
+          abertura: (d.data_inicio_atividade || '').slice(0, 10),
           fonte: 'brasilapi'
         };
       } else if (resp1.status === 400) {
@@ -97,6 +98,7 @@ Deno.serve(async (req) => {
               natureza_juridica: d.natureza_juridica || '',
               porte: d.porte || '',
               matriz_filial: d.matriz_filial || '',
+              abertura: (() => { const p = (d.abertura || '').split('/'); return p.length === 3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : ''; })(),
               fonte: 'receitaws'
             };
           } else if (d?.status === 'ERROR') {

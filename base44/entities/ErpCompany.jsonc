@@ -43,6 +43,47 @@
       "type": "string",
       "description": "C\u00f3digo de registro na Junta Comercial (NIRE)"
     },
+    "abertura": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de abertura da empresa"
+    },
+    "diretor_nome": {
+      "type": "string",
+      "description": "Nome do diretor"
+    },
+    "diretor_cpf": {
+      "type": "string",
+      "description": "CPF do diretor (apenas n\u00fameros)"
+    },
+    "diretor_telefone": {
+      "type": "string",
+      "description": "Telefone do diretor (apenas n\u00fameros)"
+    },
+    "diretor_email": {
+      "type": "string",
+      "description": "Email do diretor"
+    },
+    "contador_nome": {
+      "type": "string",
+      "description": "Nome do contador"
+    },
+    "contador_cpf": {
+      "type": "string",
+      "description": "CPF do contador (apenas n\u00fameros)"
+    },
+    "contador_telefone": {
+      "type": "string",
+      "description": "Telefone do contador (apenas n\u00fameros)"
+    },
+    "contador_crc": {
+      "type": "string",
+      "description": "CRC do contador"
+    },
+    "contador_email": {
+      "type": "string",
+      "description": "Email do contador"
+    },
     "cep": {
       "type": "string"
     },

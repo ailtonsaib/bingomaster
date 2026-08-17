@@ -35,6 +35,7 @@ export async function lookupCnpj(cnpj) {
       natureza_juridica: d.natureza_juridica || "",
       porte: d.porte || "",
       matriz_filial: d.matriz_filial || "",
+      abertura: d.abertura || "",
     };
   } catch (e) {
     const msg = e?.response?.data?.error || e?.message || "Erro ao consultar CNPJ.";

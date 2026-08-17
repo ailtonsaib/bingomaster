@@ -165,6 +165,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
       cnae: res.cnae ? `${res.cnae} - ${res.cnae_descricao}`.replace(/ - $/, "") : prev.cnae,
       natureza_juridica: res.natureza_juridica || prev.natureza_juridica,
       has_junta_registro: !isMei && !!res.natureza_juridica,
+      abertura: res.abertura || prev.abertura,
     }));
     setMsg("Dados preenchidos pela Receita Federal.");
   };
