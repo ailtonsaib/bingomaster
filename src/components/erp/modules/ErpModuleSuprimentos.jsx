@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow } from "lucide-react";
+import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow, Package } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
@@ -9,7 +9,7 @@ import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager"
 import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManager";
 
 const SUBTABS = [
-  { id: "almoxarifado", label: "Almoxarifado", icon: Warehouse },
+  { id: "almoxarifado", label: "Cadastro de Produtos", icon: Package },
   { id: "compras", label: "Compras", icon: ShoppingCart },
   { id: "solicitacao", label: "Solicitação", icon: ClipboardList },
   { id: "tomada", label: "Tomada de Preço", icon: Gavel },
