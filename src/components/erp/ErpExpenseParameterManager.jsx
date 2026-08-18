@@ -291,7 +291,7 @@ export default function ErpExpenseParameterManager({ user }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600">Setores Padrão ({form.default_department_ids.length})</label>
+                  <label className="text-xs font-medium text-gray-600">Departamentos Padrão ({form.default_department_ids.length})</label>
                   <div className="border rounded-md p-2 max-h-44 overflow-y-auto space-y-1 bg-white">
                     {departments.length === 0 && <p className="text-xs text-gray-400">Nenhum departamento cadastrado.</p>}
                     {departments.map(d => (
@@ -303,10 +303,10 @@ export default function ErpExpenseParameterManager({ user }) {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600">Contas Contábeis Padrão ({form.default_account_ids.length})</label>
+                  <label className="text-xs font-medium text-gray-600">Contas Contábeis de Despesas ({form.default_account_ids.length})</label>
                   <div className="border rounded-md p-2 max-h-44 overflow-y-auto space-y-1 bg-white">
-                    {accounts.length === 0 && <p className="text-xs text-gray-400">Nenhuma conta analítica cadastrada.</p>}
-                    {accounts.map(a => (
+                    {accounts.filter(a => a.account_type === "despesa").length === 0 && <p className="text-xs text-gray-400">Nenhuma conta de despesa cadastrada.</p>}
+                    {accounts.filter(a => a.account_type === "despesa").map(a => (
                       <label key={a.id} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer">
                         <input type="checkbox" checked={form.default_account_ids.includes(a.id)} onChange={() => setForm(p => ({ ...p, default_account_ids: toggle(p.default_account_ids, a.id) }))} />
                         <span className="font-mono text-xs">{a.code}</span> {a.name}
