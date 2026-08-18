@@ -59,6 +59,18 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
   const icmsValue = baseICMS * icmsRate / 100;
   const fcpValue = baseICMS * num(rule?.fcp_rate) / 100;
 
+  // PIS/COFINS — base deduz o ICMS destacado quando deduz_icms_pis_cofins = true (Tema 69 STJ)
+  const pisRate = num(rule?.pis_rate);
+  const pisRed = num(rule?.pis_reduction_base) || 100;
+  const cofinsRate = num(rule?.cofins_rate);
+  const cofinsRed = num(rule?.cofins_reduction_base) || 100;
+  const deduzIcms = !!rule?.deduz_icms_pis_cofins;
+  const baseSemIcms = deduzIcms ? Math.max(0, total - icmsValue) : total;
+  const pisBase = baseSemIcms * (pisRed / 100);
+  const cofinsBase = baseSemIcms * (cofinsRed / 100);
+  const pisValue = pisBase * pisRate / 100;
+  const cofinsValue = cofinsBase * cofinsRate / 100;
+
   const result = {
     rule_id: rule?.id || null,
     ncm: product.ncm || "",
@@ -67,6 +79,8 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
     cst_icms: rule?.cst_icms || "00",
     icms_rate: icmsRate, icms_base: baseICMS, icms_value: icmsValue,
     fcp_value: fcpValue,
+    cst_pis: rule?.cst_pis || "", pis_rate: pisRate, pis_base: pisBase, pis_value: pisValue,
+    cst_cofins: rule?.cst_cofins || "", cofins_rate: cofinsRate, cofins_base: cofinsBase, cofins_value: cofinsValue,
     ipi_rate: ipiPct, ipi_value: ipiValue,
     difal: null, st: null,
   };
@@ -127,6 +141,8 @@ export function computeErpTotals(items) {
     acc.total_icms += num(it.icms_value);
     acc.total_ipi += num(it.ipi_value);
     acc.total_fcp += num(it.fcp_value);
+    acc.total_pis += num(it.pis_value);
+    acc.total_cofins += num(it.cofins_value);
     if (it.difal) {
       acc.total_difal += num(it.difal.difal_total);
       acc.total_difal_destination += num(it.difal.difal_destination);
@@ -139,6 +155,7 @@ export function computeErpTotals(items) {
     return acc;
   }, {
     total_products: 0, total_icms: 0, total_ipi: 0, total_fcp: 0,
+    total_pis: 0, total_cofins: 0,
     total_difal: 0, total_difal_destination: 0, total_fcp_destination: 0,
     total_st: 0, total_st_recolher: 0,
   });

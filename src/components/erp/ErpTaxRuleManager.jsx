@@ -368,6 +368,10 @@ function AutoFiscalPreview({ form, operations }) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         <div className="flex justify-between"><span className="text-gray-500">ICMS próprio:</span><b>{fmt(result.icms_value)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">FCP:</span><b>{fmt(result.fcp_value)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">PIS (base):</span><b>{fmt(result.pis_base)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">PIS valor:</span><b className="text-cyan-700">{fmt(result.pis_value)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">COFINS (base):</span><b>{fmt(result.cofins_base)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">COFINS valor:</span><b className="text-teal-700">{fmt(result.cofins_value)}</b></div>
         {result.difal && <>
           <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b className="text-blue-700">{fmt(result.difal.difal_total)}</b></div>
           <div className="flex justify-between"><span className="text-gray-500">DIFAL destino:</span><b className="text-emerald-700">{fmt(result.difal.difal_destination)}</b></div>
@@ -393,6 +397,7 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     cst_icms: "00", icms_rate: 0, icms_reduction_base: 100, fcp_rate: 0,
     cst_pis: "01", pis_rate: 0, pis_reduction_base: 100,
     cst_cofins: "01", cofins_rate: 0, cofins_reduction_base: 100,
+    deduz_icms_pis_cofins: false,
     cst_ipi: "50", ipi_rate: 0, ipi_reduction_base: 100,
     cst_cbs: "00", cbs_rate: 0, cbs_reduction_base: 100,
     cst_ibs: "00", ibs_rate: 0, ibs_reduction_base: 100,
@@ -465,6 +470,7 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     ["aliq_interna_destino", "aliq_interestadual", "fcp_destino_rate", "difal_percent_destination", "mva_rate", "mva_ajusted_rate", "icms_st_rate", "icms_st_reduction_base", "pauta_value", "fcp_st_rate"].forEach(k => payload[k] = Number(payload[k]) || 0);
     payload.difal_enabled = !!payload.difal_enabled;
     payload.st_enabled = !!payload.st_enabled;
+    payload.deduz_icms_pis_cofins = !!payload.deduz_icms_pis_cofins;
     if (!payload.ncm) delete payload.ncm;
     if (!payload.uf) delete payload.uf;
     try {
@@ -529,6 +535,10 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
               </div>
             </div>
           ))}
+          <div className="flex items-center gap-2 bg-cyan-50 border border-cyan-200 rounded-lg p-2">
+            <input type="checkbox" id="deduzIcms" checked={!!form.deduz_icms_pis_cofins} onChange={e => set("deduz_icms_pis_cofins", e.target.checked)} className="w-4 h-4" />
+            <label htmlFor="deduzIcms" className="text-sm font-medium text-cyan-800">Deduz o ICMS da base de cálculo do PIS/COFINS (Tema 69 STJ)</label>
+          </div>
           {form.difal_enabled && (
             <DifalCalculator form={form} set={set} />
           )}

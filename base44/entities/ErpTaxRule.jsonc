@@ -76,6 +76,11 @@
       "type": "number",
       "default": 100
     },
+    "deduz_icms_pis_cofins": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se deduz o valor do ICMS da base de c\u00e1lculo do PIS/COFINS (Tema 69 STJ \u2014 repercuss\u00e3o geral)"
+    },
     "cst_ipi": {
       "type": "string"
     },
