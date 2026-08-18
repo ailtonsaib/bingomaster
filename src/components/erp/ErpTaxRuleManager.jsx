@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, ScrollText } from "lucide-react";
-import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem } from "@/lib/erpTaxCalc";
+import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem, num } from "@/lib/erpTaxCalc";
 
 const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -366,12 +366,18 @@ function AutoFiscalPreview({ form, operations }) {
         Resultado automático (base R$ 100,00) — UF {form.uf || "—"} • CFOP {op?.cfop || "—"}
       </p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        <div className="flex justify-between"><span className="text-gray-500">Valor produtos:</span><b>{fmt(result.total)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">IPI:</span><b className="text-indigo-700">{fmt(result.ipi_value)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">ICMS próprio:</span><b>{fmt(result.icms_value)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">FCP:</span><b>{fmt(result.fcp_value)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">PIS (base):</span><b>{fmt(result.pis_base)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">PIS valor:</span><b className="text-cyan-700">{fmt(result.pis_value)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">COFINS (base):</span><b>{fmt(result.cofins_base)}</b></div>
         <div className="flex justify-between"><span className="text-gray-500">COFINS valor:</span><b className="text-teal-700">{fmt(result.cofins_value)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">CBS (base):</span><b>{fmt(result.cbs_base)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">CBS valor:</span><b className="text-purple-700">{fmt(result.cbs_value)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">IBS (base):</span><b>{fmt(result.ibs_base)}</b></div>
+        <div className="flex justify-between"><span className="text-gray-500">IBS valor:</span><b className="text-fuchsia-700">{fmt(result.ibs_value)}</b></div>
         {result.difal && <>
           <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b className="text-blue-700">{fmt(result.difal.difal_total)}</b></div>
           <div className="flex justify-between"><span className="text-gray-500">DIFAL destino:</span><b className="text-emerald-700">{fmt(result.difal.difal_destination)}</b></div>
@@ -384,8 +390,22 @@ function AutoFiscalPreview({ form, operations }) {
           <div className="flex justify-between"><span className="text-gray-500">FCP-ST:</span><b>{fmt(result.st.fcp_st)}</b></div>
           <div className="flex justify-between"><span className="text-gray-500">Total ST:</span><b className="text-amber-900">{fmt(result.st.total_st)}</b></div>
         </>}
-        {!result.difal && !result.st && <div className="text-gray-400 col-span-2">DIFAL/ST não habilitados nesta regra.</div>}
       </div>
+      {(() => {
+        const totalImpostos =
+          num(result.ipi_value) + num(result.icms_value) + num(result.fcp_value) +
+          num(result.pis_value) + num(result.cofins_value) +
+          num(result.cbs_value) + num(result.ibs_value) +
+          (result.difal ? num(result.difal.difal_total) : 0) +
+          (result.st ? num(result.st.total_st) : 0);
+        const valorFinal = num(result.total) + totalImpostos;
+        return (
+          <div className="mt-2 pt-2 border-t border-violet-200 bg-violet-100 rounded p-2 space-y-1">
+            <div className="flex justify-between text-xs"><span className="text-violet-700 font-medium">Total de impostos:</span><b className="text-violet-900">{fmt(totalImpostos)}</b></div>
+            <div className="flex justify-between text-sm"><span className="text-violet-800 font-semibold">Valor final (produtos + impostos):</span><b className="text-violet-900">{fmt(valorFinal)}</b></div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

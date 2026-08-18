@@ -71,6 +71,16 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
   const pisValue = pisBase * pisRate / 100;
   const cofinsValue = cofinsBase * cofinsRate / 100;
 
+  // CBS/IBS — reforma tributária (base = valor da operação * redução)
+  const cbsRate = num(rule?.cbs_rate);
+  const cbsRed = num(rule?.cbs_reduction_base) || 100;
+  const ibsRate = num(rule?.ibs_rate);
+  const ibsRed = num(rule?.ibs_reduction_base) || 100;
+  const cbsBase = total * (cbsRed / 100);
+  const ibsBase = total * (ibsRed / 100);
+  const cbsValue = cbsBase * cbsRate / 100;
+  const ibsValue = ibsBase * ibsRate / 100;
+
   const result = {
     rule_id: rule?.id || null,
     ncm: product.ncm || "",
@@ -81,6 +91,8 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
     fcp_value: fcpValue,
     cst_pis: rule?.cst_pis || "", pis_rate: pisRate, pis_base: pisBase, pis_value: pisValue,
     cst_cofins: rule?.cst_cofins || "", cofins_rate: cofinsRate, cofins_base: cofinsBase, cofins_value: cofinsValue,
+    cst_cbs: rule?.cst_cbs || "", cbs_rate: cbsRate, cbs_base: cbsBase, cbs_value: cbsValue,
+    cst_ibs: rule?.cst_ibs || "", ibs_rate: ibsRate, ibs_base: ibsBase, ibs_value: ibsValue,
     ipi_rate: ipiPct, ipi_value: ipiValue,
     difal: null, st: null,
   };
@@ -143,6 +155,8 @@ export function computeErpTotals(items) {
     acc.total_fcp += num(it.fcp_value);
     acc.total_pis += num(it.pis_value);
     acc.total_cofins += num(it.cofins_value);
+    acc.total_cbs += num(it.cbs_value);
+    acc.total_ibs += num(it.ibs_value);
     if (it.difal) {
       acc.total_difal += num(it.difal.difal_total);
       acc.total_difal_destination += num(it.difal.difal_destination);
@@ -155,10 +169,12 @@ export function computeErpTotals(items) {
     return acc;
   }, {
     total_products: 0, total_icms: 0, total_ipi: 0, total_fcp: 0,
-    total_pis: 0, total_cofins: 0,
+    total_pis: 0, total_cofins: 0, total_cbs: 0, total_ibs: 0,
     total_difal: 0, total_difal_destination: 0, total_fcp_destination: 0,
     total_st: 0, total_st_recolher: 0,
   });
   t.total_nota = t.total_products + t.total_ipi;
+  t.total_impostos = t.total_icms + t.total_fcp + t.total_ipi + t.total_pis + t.total_cofins + t.total_cbs + t.total_ibs + t.total_difal + t.total_st;
+  t.total_geral = t.total_nota + t.total_impostos - t.total_ipi;
   return t;
 }
