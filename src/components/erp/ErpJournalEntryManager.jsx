@@ -109,6 +109,9 @@ function ErpJournalEntryForm({ user, editing, accounts, costCenters, nextNumber,
     if (!balanced) { alert("Lançamento não está balanceado (débito ≠ crédito)."); return; }
     const valid = lines.filter(l => l.account_id && (l.debit > 0 || l.credit > 0));
     if (valid.length < 2) { alert("Informe ao menos 2 partidas válidas."); return; }
+    // Bloqueia contas sintéticas — só é permitido lançar em contas analíticas (accepts_entries: true)
+    const sintetica = valid.find(l => !accounts.some(a => a.id === l.account_id));
+    if (sintetica) { alert("Não é permitido usar conta sintética no lançamento contábil. Selecione apenas contas analíticas do plano de contas."); return; }
     setSaving(true);
     const payload = {
       user_email: user.email, number: form.number, date: new Date(form.date).toISOString(),
