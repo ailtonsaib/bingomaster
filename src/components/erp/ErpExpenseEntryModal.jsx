@@ -6,6 +6,8 @@ import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { gerarLancamentoEntrada } from "@/lib/erpJournal";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
+import { lookupCnpj } from "@/lib/cnpjLookup";
+import ErpPartnerFormModal from "@/components/erp/ErpPartnerFormModal";
 
 const digits = (v) => String(v || "").replace(/\D/g, "");
 
@@ -29,6 +31,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   const [manualApportionments, setManualApportionments] = useState([]);
   const [retentions, setRetentions] = useState({ irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 });
   const [supplierStatus, setSupplierStatus] = useState("");
+  const [pfModal, setPfModal] = useState(null);
   const fileRef = useRef(null);
 
   const [manual, setManual] = useState({
@@ -125,14 +128,33 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
     if (!doc) return null;
     const existing = suppliers.find(s => s.document === doc);
     if (existing) return existing;
-    const created = await base44.entities.ErpPartner.create({
-      user_email: user.email, partner_type: "fornecedor",
-      document_type: doc.length <= 11 ? "cpf" : "cnpj",
-      document: doc, name: name || "Fornecedor sem nome",
-      uf: uf || undefined, address: address || undefined, city: city || undefined, is_active: true,
+    // PJ (CNPJ) — busca na Receita e cadastra completo
+    if (doc.length === 14) {
+      const data = await lookupCnpj(doc);
+      const fail = !!data.error;
+      const created = await base44.entities.ErpPartner.create({
+        user_email: user.email, partner_type: "fornecedor",
+        document_type: "cnpj", document: doc,
+        name: fail ? (name || "Fornecedor sem nome") : (data.razao_social || name || "Fornecedor sem nome"),
+        nome_fantasia: fail ? undefined : (data.nome_fantasia || undefined),
+        cep: fail ? undefined : (data.cep || undefined),
+        address: fail ? (address || undefined) : (data.address || undefined),
+        number: fail ? undefined : (data.number || undefined),
+        district: fail ? undefined : (data.district || undefined),
+        city: fail ? (city || undefined) : (data.city || undefined),
+        uf: fail ? (uf || undefined) : (data.uf || undefined),
+        ibge_code: fail ? undefined : (data.ibge_code || undefined),
+        phone: fail ? undefined : (data.phone || undefined),
+        email: fail ? undefined : (data.email || undefined),
+        is_active: true,
+      });
+      setSuppliers(p => [...p, created]);
+      return created;
+    }
+    // PF (CPF) — abre modal para cadastro manual
+    return new Promise((resolve) => {
+      setPfModal({ open: true, doc, name, uf, resolve });
     });
-    setSuppliers(p => [...p, created]);
-    return created;
   };
 
   const handleSave = async () => {
@@ -161,7 +183,8 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
       let payload;
       if (mode === "xml") {
         if (!parsed) { setSaving(false); setError("Importe um XML."); return; }
-        await ensureSupplier(parsed.supplier.name, parsed.supplier.cpf_cnpj, parsed.supplier.uf, parsed.supplier.address, parsed.supplier.city);
+        const supXml = await ensureSupplier(parsed.supplier.name, parsed.supplier.cpf_cnpj, parsed.supplier.uf, parsed.supplier.address, parsed.supplier.city);
+        if (digits(parsed.supplier.cpf_cnpj) && !supXml) { setSaving(false); setError("Cadastro do fornecedor cancelado."); return; }
         const cfop = resolveCfop(parsed.nota.model, parsed.supplier.uf);
         payload = {
           user_email: user.email,
@@ -197,9 +220,10 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
         };
       } else {
         if (!manual.nota_number.trim()) { setSaving(false); setError("Informe o número do documento."); return; }
-        if (!manual.supplier_name.trim()) { setSaving(false); setError("Informe o fornecedor."); return; }
+        if (!manual.supplier_name.trim() && !manual.supplier_cnpj.trim()) { setSaving(false); setError("Informe o fornecedor (nome ou CNPJ/CPF)."); return; }
         if (!manual.total_nota || Number(manual.total_nota) <= 0) { setSaving(false); setError("Informe o total do documento."); return; }
-        await ensureSupplier(manual.supplier_name, manual.supplier_cnpj, manual.supplier_uf);
+        const supMan = await ensureSupplier(manual.supplier_name, manual.supplier_cnpj, manual.supplier_uf);
+        if (digits(manual.supplier_cnpj) && !supMan) { setSaving(false); setError("Cadastro do fornecedor cancelado."); return; }
         const total = Number(manual.total_nota);
         const items = manualItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
           product_name: it.product_name, quantity: Number(it.quantity) || 0,
@@ -214,9 +238,9 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
           nota_number: manual.nota_number,
           issue_date: manual.issue_date ? new Date(manual.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
-          supplier_name: manual.supplier_name,
-          supplier_cnpj: manual.supplier_cnpj,
-          supplier_uf: manual.supplier_uf,
+          supplier_name: supMan?.name || manual.supplier_name,
+          supplier_cnpj: supMan?.document || manual.supplier_cnpj,
+          supplier_uf: supMan?.uf || manual.supplier_uf,
           nature_operation: manual.nature_operation || "Despesa",
           cfop: resolveCfop("NDF", manual.supplier_uf),
           total_products: items.reduce((a, it) => a + it.total, 0),
@@ -285,6 +309,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   const ready = mode === "xml" ? parsed : true;
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
@@ -477,5 +502,14 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
         </div>
       </div>
     </div>
+    {pfModal?.open && (
+      <ErpPartnerFormModal
+        user={user}
+        prefill={{ document: pfModal.doc, name: pfModal.name, uf: pfModal.uf }}
+        onClose={() => { pfModal.resolve?.(null); setPfModal(null); }}
+        onSaved={(partner) => { setSuppliers(p => [...p, partner]); pfModal.resolve?.(partner); setPfModal(null); }}
+      />
+    )}
+    </>
   );
 }
