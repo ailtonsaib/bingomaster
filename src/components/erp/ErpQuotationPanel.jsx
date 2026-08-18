@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Trash2, Gavel, X, ClipboardList, Link2, Unlink, Trophy, AlertTriangle, CheckCircle2, Send } from "lucide-react";
 import { genOrderNumber, fmtMoney, fmtDate, UNITS } from "@/lib/erpUtils";
 import ErpQuotationSendModal from "./ErpQuotationSendModal";
+import ErpApportionmentEditor from "./ErpApportionmentEditor";
 
 const STATUS = {
   aberta: { label: "Aberta", color: "text-blue-700 bg-blue-100" },
@@ -139,6 +140,8 @@ export default function ErpQuotationPanel({ user }) {
 
 function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
   const [requisitions, setRequisitions] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
   const [form, setForm] = useState({
     number: quotation?.number || genOrderNumber("TP"),
@@ -147,6 +150,7 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
     requisition_number: quotation?.requisition_number || "",
     description: quotation?.description || "",
     items: quotation?.items || [],
+    apportionments: quotation?.apportionments || [],
     supplier_quotes: quotation?.supplier_quotes || [],
     status: quotation?.status || "aberta",
     notes: quotation?.notes || "",
@@ -156,8 +160,12 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
   useEffect(() => {
     (async () => {
       try {
-        const list = await base44.entities.ErpRequisition.filter({ user_email: user.email, status: { $in: ["aberta", "aprovada"] } }, "-request_date", 200);
-        setRequisitions(list);
+        const [list, s, a] = await Promise.all([
+          base44.entities.ErpRequisition.filter({ user_email: user.email, status: { $in: ["aberta", "aprovada"] } }, "-request_date", 200),
+          base44.entities.ErpSector.filter({ user_email: user.email }, "name", 500),
+          base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 5000),
+        ]);
+        setRequisitions(list); setSetores(s); setAccounts(a);
       } catch (e) { console.error(e); }
       setLoadingReqs(false);
     })();
@@ -184,6 +192,7 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
       requisition_id: req.id,
       requisition_number: req.number,
       items: importedItems,
+      apportionments: (req.apportionments || []).map(a => ({ ...a })),
       description: prev.description || (req.department_name ? `Solicitação ${req.number} — ${req.department_name}` : `Solicitação ${req.number}`),
     }));
   };
@@ -208,6 +217,10 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!form.description) { alert("Informe o objeto cotado."); return; }
+    const pctSum = (form.apportionments || []).reduce((s, a) => s + (Number(a.percent) || 0), 0);
+    if (!form.apportionments.length) { alert("Informe ao menos um rateio (setor / conta contábil)."); return; }
+    if (form.apportionments.some(a => !a.department_id || !a.account_id)) { alert("Preencha setor e conta contábil em todos os rateios."); return; }
+    if (Math.abs(pctSum - 100) >= 0.01) { alert(`A soma dos percentuais do rateio deve ser 100% (atual: ${pctSum.toFixed(2)}%).`); return; }
     setSaving(true);
     const payload = {
       user_email: user.email,
@@ -217,6 +230,7 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
       requisition_number: form.requisition_number || undefined,
       description: form.description,
       items: form.items,
+      apportionments: form.apportionments,
       supplier_quotes: form.supplier_quotes,
       status: form.status,
       notes: form.notes || undefined,
@@ -264,6 +278,15 @@ function ErpQuotationForm({ user, quotation, suppliers, onClose, onSaved }) {
           </div>
 
           <div><Label>Objeto Cotado</Label><Input value={form.description} onChange={e => set("description", e.target.value)} placeholder="Descrição do objeto cotado" /></div>
+
+          <ErpApportionmentEditor
+            apportionments={form.apportionments}
+            onChange={(aps) => set("apportionments", aps)}
+            setores={setores}
+            accounts={accounts}
+            title={form.requisition_id ? "Rateio herdado da solicitação (setor / conta contábil)" : "Rateio obrigatório (setor / conta contábil)"}
+            accent="indigo"
+          />
 
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-2 bg-gray-50 border-b"><span className="text-sm font-semibold">Itens</span><Button size="sm" variant="outline" onClick={addItem} className="h-7 gap-1"><Plus className="w-3.5 h-3.5" /> Item</Button></div>

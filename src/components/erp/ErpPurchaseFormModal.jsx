@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Plus, Trash2 } from "lucide-react";
 import { genOrderNumber, fmtMoney } from "@/lib/erpUtils";
+import ErpApportionmentEditor from "./ErpApportionmentEditor";
 
 export default function ErpPurchaseFormModal({ user, order, products, suppliers, onClose, onSaved }) {
   const [quotations, setQuotations] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [useQuotation, setUseQuotation] = useState(!!order?.quotation_id);
   const [form, setForm] = useState({
     order_number: order?.order_number || genOrderNumber("PC"),
@@ -29,11 +32,13 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
   useEffect(() => {
     (async () => {
       try {
-        const [q, d] = await Promise.all([
+        const [q, d, s, a] = await Promise.all([
           base44.entities.ErpQuotation.filter({ user_email: user.email, status: "fechada" }, "-created_date", 200),
           base44.entities.ErpDepartment.filter({ user_email: user.email }, "name", 500),
+          base44.entities.ErpSector.filter({ user_email: user.email }, "name", 500),
+          base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 5000),
         ]);
-        setQuotations(q); setDepartments(d);
+        setQuotations(q); setDepartments(d); setSetores(s); setAccounts(a);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
@@ -50,11 +55,11 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
       unit_cost: Number(it.unit_price) || 0,
       total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
     }));
-    // Herda o rateio (setor + conta contábil) da solicitação de origem, se houver
-    let apportionments = [];
-    let requisition_id = "";
-    let requisition_number = "";
-    if (q.requisition_id) {
+    // Herda o rateio (setor + conta contábil) da tomada de preço (que veio da solicitação ou foi informado nela)
+    let apportionments = (q.apportionments || []).map(a => ({ ...a }));
+    let requisition_id = q.requisition_id || "";
+    let requisition_number = q.requisition_number || "";
+    if (!apportionments.length && q.requisition_id) {
       try {
         const req = await base44.entities.ErpRequisition.get(q.requisition_id);
         if (req) {
@@ -72,7 +77,6 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
       apportionments: apportionments.length ? apportionments : prev.apportionments,
       requisition_id: requisition_id || prev.requisition_id,
       requisition_number: requisition_number || prev.requisition_number,
-      department_id: apportionments[0]?.department_id || prev.department_id,
     }));
   };
 
@@ -94,6 +98,10 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
   const handleSave = async () => {
     if (!form.items.length) { alert("Adicione ao menos um item."); return; }
     if (!form.supplier_id) { alert("Selecione um fornecedor."); return; }
+    const pctSum = (form.apportionments || []).reduce((s, a) => s + (Number(a.percent) || 0), 0);
+    if (!form.apportionments.length) { alert("Informe ao menos um rateio (setor / conta contábil)."); return; }
+    if (form.apportionments.some(a => !a.department_id || !a.account_id)) { alert("Preencha setor e conta contábil em todos os rateios."); return; }
+    if (Math.abs(pctSum - 100) >= 0.01) { alert(`A soma dos percentuais do rateio deve ser 100% (atual: ${pctSum.toFixed(2)}%).`); return; }
     setSaving(true);
     const supplier = suppliers.find(s => s.id === form.supplier_id);
     const quotation = form.quotation_id ? quotations.find(q => q.id === form.quotation_id) : null;
@@ -166,24 +174,17 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
               {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
-          {form.apportionments.length > 0 && (
-            <div className="border rounded-lg overflow-hidden bg-emerald-50/40">
-              <div className="flex items-center justify-between p-2 bg-emerald-50 border-b">
-                <span className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5">📋 Rateio herdado da solicitação (setor / conta contábil)</span>
-                {form.requisition_number && <span className="text-[11px] text-emerald-700 font-mono">{form.requisition_number}</span>}
-              </div>
-              <div className="p-2 space-y-1">
-                {form.apportionments.map((a, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 text-xs items-center px-1 py-1 border-b last:border-0">
-                    <div className="col-span-5"><span className="text-gray-500">Setor: </span><b>{a.department_name || "—"}</b></div>
-                    <div className="col-span-5"><span className="text-gray-500">Conta: </span><b>{a.account_code ? `${a.account_code} — ` : ""}{a.account_name || "—"}</b></div>
-                    <div className="col-span-2 text-right"><span className="text-gray-500">{a.rateio_type === "value" ? "R$ " : ""}{a.rateio_type === "percent" ? `${a.percent}%` : (a.value || 0).toFixed(2)}</span></div>
-                  </div>
-                ))}
-                <p className="text-[11px] text-gray-500 px-1 pt-1">Este rateio acompanha o pedido até a entrada da nota — o lançamento contábil usará o setor e a conta contábil acima.</p>
-              </div>
-            </div>
-          )}
+          <ErpApportionmentEditor
+            apportionments={form.apportionments}
+            onChange={(aps) => set("apportionments", aps)}
+            setores={setores}
+            accounts={accounts}
+            readOnly={useQuotation}
+            title={useQuotation
+              ? (form.requisition_number ? `Rateio herdado (solicitação ${form.requisition_number})` : "Rateio herdado da tomada de preço")
+              : "Rateio obrigatório (setor / conta contábil)"}
+            accent="emerald"
+          />
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Emissão</Label><Input type="date" value={form.emission_date} onChange={e => set("emission_date", e.target.value)} /></div>
             <div><Label>Entrega prevista</Label><Input type="date" value={form.expected_date} onChange={e => set("expected_date", e.target.value)} /></div>
