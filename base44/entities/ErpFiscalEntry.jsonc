@@ -6,6 +6,15 @@
       "type": "string",
       "description": "Email do operador (escopo)"
     },
+    "entry_kind": {
+      "type": "string",
+      "enum": [
+        "nf_entrada",
+        "despesa"
+      ],
+      "default": "nf_entrada",
+      "description": "Tipo da entrada: nf_entrada (nota de entrada com controle de estoque) ou despesa (despesa/servi\u00e7o sem controle de estoque)"
+    },
     "nota_model": {
       "type": "string",
       "description": "55=NF-e, 65=NFC-e, NFSe=Nota Fiscal de Servi\u00e7o"
@@ -160,7 +169,7 @@
     "apportionments": {
       "type": "array",
       "default": [],
-      "description": "Rateio herdado da ordem de compra \u2014 usado no lan\u00e7amento cont\u00e1bil",
+      "description": "Rateio herdado da ordem de compra ou informado manualmente \u2014 usado no lan\u00e7amento cont\u00e1bil",
       "items": {
         "type": "object",
         "properties": {
@@ -207,7 +216,7 @@
         "lancada"
       ],
       "default": "pendente",
-      "description": "Status da entrada: pendente (aguarda aprova\u00e7\u00e3o), aprovada, nao_aprovada, lancada (lan\u00e7amento cont\u00e1bil gerado)"
+      "description": "Status da entrada: pendente, aprovada, nao_aprovada, lancada (lan\u00e7amento cont\u00e1bil gerado)"
     },
     "approval_status": {
       "type": "string",

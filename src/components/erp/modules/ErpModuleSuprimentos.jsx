@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow, Package, UserCheck, FileInput, ShieldCheck } from "lucide-react";
+import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow, Package, UserCheck, FileInput, ShieldCheck, Wallet, Receipt, Settings2 } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
@@ -10,6 +10,8 @@ import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManage
 import ErpApproverManager from "@/components/erp/ErpApproverManager";
 import ErpFiscalEntryPanel from "@/components/erp/ErpFiscalEntryPanel";
 import ErpFiscalApprovalPanel from "@/components/erp/ErpFiscalApprovalPanel";
+import ErpExpenseEntryPanel from "@/components/erp/ErpExpenseEntryPanel";
+import ErpExpenseParameterManager from "@/components/erp/ErpExpenseParameterManager";
 
 const SUBTABS = [
   { id: "almoxarifado", label: "Cadastro de Produtos", icon: Package },
@@ -19,12 +21,14 @@ const SUBTABS = [
   { id: "entrada_nf", label: "Entrada de NF", icon: FileInput },
   { id: "aprovacao_nf", label: "Aprovação NF x OC", icon: ShieldCheck },
   { id: "aprovadores", label: "Aprovadores", icon: UserCheck },
+  { id: "despesas", label: "Despesas", icon: Wallet },
   { id: "manufatura", label: "Manufatura", icon: Factory },
 ];
 
 export default function ErpModuleSuprimentos({ user }) {
   const [sub, setSub] = useState("almoxarifado");
   const [manSub, setManSub] = useState("op");
+  const [despesaSub, setDespesaSub] = useState("entrada");
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="indigo" />
@@ -35,6 +39,16 @@ export default function ErpModuleSuprimentos({ user }) {
       {sub === "entrada_nf" && <ErpFiscalEntryPanel user={user} onGoToProducts={() => setSub("almoxarifado")} />}
       {sub === "aprovacao_nf" && <ErpFiscalApprovalPanel user={user} />}
       {sub === "aprovadores" && <ErpApproverManager user={user} />}
+      {sub === "despesas" && (
+        <div className="space-y-3">
+          <SubNav sub={despesaSub} setSub={setDespesaSub} tabs={[
+            { id: "entrada", label: "Entrada de Despesas", icon: Receipt },
+            { id: "parametros", label: "Parâmetros de Despesas", icon: Settings2 },
+          ]} color="indigo" />
+          {despesaSub === "entrada" && <ErpExpenseEntryPanel user={user} onGoToParams={() => setDespesaSub("parametros")} />}
+          {despesaSub === "parametros" && <ErpExpenseParameterManager user={user} />}
+        </div>
+      )}
       {sub === "manufatura" && (
         <div className="space-y-3">
           <SubNav sub={manSub} setSub={setManSub} tabs={[

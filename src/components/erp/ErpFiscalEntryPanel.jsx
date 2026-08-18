@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock } from "lucide-react";
 import ErpFiscalEntryImport from "./ErpFiscalEntryImport";
-import { fmtMoney, fmtDate, genOrderNumber } from "@/lib/erpUtils";
+import { fmtMoney, fmtDate } from "@/lib/erpUtils";
+import { gerarLancamentoEntrada } from "@/lib/erpJournal";
 
 const STATUS = {
   pendente: { label: "Pendente", color: "text-amber-700 bg-amber-100" },
@@ -55,29 +56,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
       if (!passivo) { alert("Cadastre uma conta de passivo 'Fornecedores' (ou 'Contas a Pagar') para gerar o lançamento."); setBusy(null); return; }
       if (!entry.apportionments?.length) { alert("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio."); setBusy(null); return; }
 
-      const lines = [];
-      for (const ap of entry.apportionments) {
-        const val = ap.rateio_type === "value" ? ap.value : entry.total_nota * ((ap.percent || 0) / 100);
-        if (val > 0 && ap.account_id) {
-          lines.push({ account_id: ap.account_id, account_code: ap.account_code, account_name: ap.account_name, debit: val, credit: 0, complement: `Entrada NF ${entry.nota_number}` });
-        }
-      }
-      if (lines.length === 0) { alert("Rateio sem contas contábeis válidas."); setBusy(null); return; }
-      const totalDebit = lines.reduce((a, l) => a + l.debit, 0);
-      // crédito no fornecedor (ajusta diferença de arredondamento no crédito)
-      lines.push({ account_id: passivo.id, account_code: passivo.code, account_name: passivo.name, debit: 0, credit: totalDebit, complement: `NF ${entry.nota_number} - ${entry.supplier_name || ""}` });
-
-      const je = await base44.entities.ErpJournalEntry.create({
-        user_email: user.email,
-        number: genOrderNumber("LCT"),
-        date: new Date().toISOString(),
-        history: `Entrada NF ${entry.nota_number} - ${entry.supplier_name || ""} (OC ${entry.purchase_order_number || "---"})`,
-        document: entry.nota_number,
-        lines,
-        total_debit: totalDebit,
-        total_credit: totalDebit,
-        status: "definitivo",
-      });
+      const je = await gerarLancamentoEntrada(user, entry, accounts);
 
       // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
       const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
