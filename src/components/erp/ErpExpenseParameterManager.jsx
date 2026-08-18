@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, Settings2, Pencil, CheckCircle2, MapPin, Percent } from "lucide-react";
+import ErpCfopPicker from "@/components/erp/ErpCfopPicker";
 
 const empty = {
   name: "",
@@ -200,19 +201,19 @@ export default function ErpExpenseParameterManager({ user }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] font-medium text-gray-500">NF-e — Dentro do Estado</label>
-                    <input value={form.cfop_nfe_dentro} onChange={e => setForm(p => ({ ...p, cfop_nfe_dentro: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 1102, 1949" />
+                    <ErpCfopPicker value={form.cfop_nfe_dentro} onChange={v => setForm(p => ({ ...p, cfop_nfe_dentro: v }))} prefixes={["1"]} />
                   </div>
                   <div>
                     <label className="text-[11px] font-medium text-gray-500">NF-e — Fora do Estado</label>
-                    <input value={form.cfop_nfe_fora} onChange={e => setForm(p => ({ ...p, cfop_nfe_fora: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 2102, 2949" />
+                    <ErpCfopPicker value={form.cfop_nfe_fora} onChange={v => setForm(p => ({ ...p, cfop_nfe_fora: v }))} prefixes={["2"]} />
                   </div>
                   <div>
                     <label className="text-[11px] font-medium text-gray-500">NFS-e — Dentro do Estado</label>
-                    <input value={form.cfop_nfse_dentro} onChange={e => setForm(p => ({ ...p, cfop_nfse_dentro: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 1305, 1933" />
+                    <ErpCfopPicker value={form.cfop_nfse_dentro} onChange={v => setForm(p => ({ ...p, cfop_nfse_dentro: v }))} prefixes={["1"]} />
                   </div>
                   <div>
                     <label className="text-[11px] font-medium text-gray-500">NFS-e — Fora do Estado</label>
-                    <input value={form.cfop_nfse_fora} onChange={e => setForm(p => ({ ...p, cfop_nfse_fora: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 2305, 2933" />
+                    <ErpCfopPicker value={form.cfop_nfse_fora} onChange={v => setForm(p => ({ ...p, cfop_nfse_fora: v }))} prefixes={["2"]} />
                   </div>
                 </div>
               </div>
