@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Pencil, ArrowRightLeft } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, ArrowRightLeft, Download } from "lucide-react";
 import ErpOperationFormModal from "./ErpOperationFormModal";
 
 const TYPE_BADGE = {
@@ -15,6 +15,18 @@ export default function ErpOperationManager({ user }) {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const isAdmin = user?.role === "admin";
+
+  const handleImportCfop = async () => {
+    if (!confirm("Importar/atualizar a tabela de CFOPs da base da SEFAZ?")) return;
+    setImporting(true);
+    try {
+      const res = await base44.functions.invoke("populateCfop", {});
+      alert(res?.data?.message || `${res?.data?.inserted ?? 0} CFOPs importados.`);
+    } catch (e) { alert("Erro ao importar CFOPs: " + (e.message || "")); }
+    setImporting(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -45,6 +57,11 @@ export default function ErpOperationManager({ user }) {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar operação..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Operação</Button>
+        {isAdmin && (
+          <Button size="sm" variant="outline" onClick={handleImportCfop} disabled={importing} className="gap-1.5">
+            <Download className="w-4 h-4" /> {importing ? "Importando..." : "Importar CFOPs (SEFAZ)"}
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
+import ErpCfopPicker from "@/components/erp/ErpCfopPicker";
 
 const OP_TYPE_OPTS = [
   { value: "entrada", label: "Entrada" },
@@ -104,15 +105,15 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label>CFOP Dentro Estado *</Label>
-                <Input value={form.cfop} onChange={e => set("cfop", onlyDigits(e.target.value))} placeholder={`Inicia ${prefixes.cfop}`} maxLength={4} />
+                <ErpCfopPicker value={form.cfop} onChange={code => set("cfop", code)} prefixes={[prefixes.cfop]} />
               </div>
               <div>
                 <Label>CFOP Fora Estado *</Label>
-                <Input value={form.cfop_fora_estado} onChange={e => set("cfop_fora_estado", onlyDigits(e.target.value))} placeholder={`Inicia ${prefixes.cfop_fora_estado}`} maxLength={4} />
+                <ErpCfopPicker value={form.cfop_fora_estado} onChange={code => set("cfop_fora_estado", code)} prefixes={[prefixes.cfop_fora_estado]} />
               </div>
               <div>
                 <Label>{impExpLabel}</Label>
-                <Input value={form.cfop_importacao_exportacao} onChange={e => set("cfop_importacao_exportacao", onlyDigits(e.target.value))} placeholder={impExpHint} maxLength={4} />
+                <ErpCfopPicker value={form.cfop_importacao_exportacao} onChange={code => set("cfop_importacao_exportacao", code)} prefixes={[prefixes.cfop_importacao_exportacao]} />
               </div>
             </div>
           </div>
