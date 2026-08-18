@@ -24,14 +24,19 @@ export async function gerarContabilDespesa(user, entry, accounts, param) {
   return je;
 }
 
-// Gera as contas a pagar (financeiro) de uma despesa: valor líquido ao fornecedor +
+// Gera as contas a pagar (financeiro) de uma entrada/despesa: valor líquido ao fornecedor +
 // cada retenção ao seu fornecedor; ou o valor total da nota quando não há retenções.
+// opts: { prefix, category } — rótulo da descrição/categoria (padrão "Despesa").
+// Repassa entry.due_date ao vencimento de cada conta a pagar.
 // Marca entry.financeiro_gerado = true (evita duplicidade).
-export async function gerarFinanceiroDespesa(user, entry) {
+export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
+  const prefix = opts.prefix || "Despesa";
+  const category = opts.category || "Despesa";
   const retList = (entry.retentions || []).filter(r => (r.value || 0) > 0);
   const totalRetido = retList.reduce((s, r) => s + (r.value || 0), 0);
   const hasPo = !!entry.purchase_order_id;
-  const desc = `Despesa ${entry.nota_number} - ${entry.supplier_name || ""}${hasPo ? ` (OC ${entry.purchase_order_number || ""})` : ""}`;
+  const desc = `${prefix} ${entry.nota_number} - ${entry.supplier_name || ""}${hasPo ? ` (OC ${entry.purchase_order_number || ""})` : ""}`;
+  const due = entry.due_date || undefined;
   const payables = [];
   if (totalRetido > 0) {
     payables.push({
@@ -39,8 +44,9 @@ export async function gerarFinanceiroDespesa(user, entry) {
       description: desc,
       beneficiary: entry.supplier_name || "",
       amount: (entry.total_nota || 0) - totalRetido,
-      category: "Despesa",
+      category,
       status: "aberto",
+      due_date: due,
     });
     for (const r of retList) {
       payables.push({
@@ -50,6 +56,7 @@ export async function gerarFinanceiroDespesa(user, entry) {
         amount: r.value,
         category: `Retenção ${r.type}`,
         status: "aberto",
+        due_date: due,
       });
     }
   } else {
@@ -58,8 +65,9 @@ export async function gerarFinanceiroDespesa(user, entry) {
       description: desc,
       beneficiary: entry.supplier_name || "",
       amount: entry.total_nota || 0,
-      category: "Despesa",
+      category,
       status: "aberto",
+      due_date: due,
     });
   }
   await base44.entities.ErpPayable.bulkCreate(payables);

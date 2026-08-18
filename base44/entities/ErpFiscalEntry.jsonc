@@ -39,6 +39,10 @@
       "type": "string",
       "description": "Data de entrada (ISO)"
     },
+    "due_date": {
+      "type": "string",
+      "description": "Data de vencimento (financeiro/contas a pagar) (ISO)"
+    },
     "supplier_name": {
       "type": "string",
       "description": "Fornecedor/Emitente (cache)"
@@ -287,7 +291,7 @@
     "financeiro_gerado": {
       "type": "boolean",
       "default": false,
-      "description": "Se o financeiro (contas a pagar) j\u00e1 foi gerado para esta despesa"
+      "description": "Se o financeiro (contas a pagar) j\u00e1 foi gerado para esta entrada/despesa"
     },
     "notes": {
       "type": "string"

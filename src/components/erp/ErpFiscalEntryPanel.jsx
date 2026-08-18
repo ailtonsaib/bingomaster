@@ -5,6 +5,7 @@ import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle,
 import ErpFiscalEntryImport from "./ErpFiscalEntryImport";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { gerarLancamentoEntrada } from "@/lib/erpJournal";
+import { gerarFinanceiroDespesa } from "@/lib/erpDespesa";
 
 const STATUS = {
   pendente: { label: "Pendente", color: "text-amber-700 bg-amber-100" },
@@ -76,6 +77,11 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
         journal_entry_id: je.id,
         journal_entry_number: je.number,
       });
+      // Financeiro — contas a pagar com o vencimento informado na entrada
+      if (!entry.financeiro_gerado) {
+        try { await gerarFinanceiroDespesa(user, entry, { prefix: "NF", category: "NF Entrada" }); }
+        catch (e) { console.error("Falha ao gerar financeiro:", e); }
+      }
       load();
     } catch (e) { alert(e.message); }
     setBusy(null);

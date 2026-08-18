@@ -30,6 +30,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   const [paramId, setParamId] = useState("");
   const [manualApportionments, setManualApportionments] = useState([]);
   const [retentions, setRetentions] = useState({ irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 });
+  const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
   const [supplierStatus, setSupplierStatus] = useState("");
   const [pfModal, setPfModal] = useState(null);
   const fileRef = useRef(null);
@@ -195,6 +196,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
           chave_acesso: parsed.nota.chave_acesso,
           issue_date: parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
+          due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
           supplier_name: parsed.supplier.name,
           supplier_cnpj: parsed.supplier.cpf_cnpj,
           supplier_uf: parsed.supplier.uf,
@@ -238,6 +240,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
           nota_number: manual.nota_number,
           issue_date: manual.issue_date ? new Date(manual.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
+          due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
           supplier_name: supMan?.name || manual.supplier_name,
           supplier_cnpj: supMan?.document || manual.supplier_cnpj,
           supplier_uf: supMan?.uf || manual.supplier_uf,
@@ -409,6 +412,12 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
           {/* === OC e Rateio (comum) === */}
           {ready && (
             <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Vencimento (financeiro)</label>
+                  <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                </div>
+              </div>
               <div>
                 <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>
                 <select value={poId} onChange={e => setPoId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">

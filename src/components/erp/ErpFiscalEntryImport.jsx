@@ -28,6 +28,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [departments, setDepartments] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [manualApportionments, setManualApportionments] = useState([]);
+  const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
   // Vínculo por item (XML): product_id selecionado, "new" para criar novo, ou "" (auto = cria novo)
   const [itemChoices, setItemChoices] = useState([]);
   const [supplierStatus, setSupplierStatus] = useState(""); // "exists" | "will_create" | ""
@@ -208,6 +209,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           chave_acesso: parsed.nota.chave_acesso,
           issue_date: parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
+          due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
           supplier_name: parsed.supplier.name,
           supplier_cnpj: parsed.supplier.cpf_cnpj,
           supplier_uf: parsed.supplier.uf,
@@ -252,6 +254,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           chave_acesso: "",
           issue_date: manual.issue_date ? new Date(manual.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
+          due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
           supplier_name: manual.supplier_name,
           supplier_cnpj: manual.supplier_cnpj,
           supplier_uf: manual.supplier_uf,
@@ -410,6 +413,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           {/* === OC e Conferência (comum) === */}
           {(mode === "xml" ? parsed : mode === "manual") && (
             <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Vencimento (financeiro)</label>
+                  <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                </div>
+              </div>
               <div className="grid md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>
