@@ -47,7 +47,7 @@ export default function ErpApportionmentEditor({ apportionments, onChange, setor
               {readOnly
                 ? <p className="text-xs h-8 flex items-center">{a.account_code ? `${a.account_code} — ` : ""}{a.account_name || "—"}</p>
                 : <select value={a.account_id} onChange={e => update(i, "account_id", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs">
-                    <option value="">Selecione...</option>{accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.code} — {acc.name}</option>)}
+                    <option value="">Selecione...</option>{accounts.filter(acc => acc.accepts_entries !== false).map(acc => <option key={acc.id} value={acc.id}>{acc.code} — {acc.name}</option>)}
                   </select>}
             </div>
             <div className="col-span-3">
