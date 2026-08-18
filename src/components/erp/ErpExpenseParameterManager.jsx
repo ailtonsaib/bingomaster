@@ -10,7 +10,7 @@ const empty = {
   cfop_nfe_fora: "",
   cfop_nfse_dentro: "",
   cfop_nfse_fora: "",
-  default_department_ids: [],
+  default_sector_ids: [],
   default_account_ids: [],
   credora_account_id: "",
   outras_impostos_account_id: "",
@@ -24,7 +24,7 @@ const toggle = (list, id) => list.includes(id) ? list.filter(x => x !== id) : [.
 export default function ErpExpenseParameterManager({ user }) {
   const [items, setItems] = useState([]);
   const [operations, setOperations] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,11 +40,11 @@ export default function ErpExpenseParameterManager({ user }) {
       const [p, op, d, acc, s] = await Promise.all([
         base44.entities.ErpExpenseParameter.filter({ user_email: user.email }, "-created_date", 200),
         base44.entities.ErpOperation.filter({ user_email: user.email, type: "entrada", is_active: true }, "name", 200),
-        base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
+        base44.entities.ErpSector.filter({ user_email: user.email, is_active: true }, "name", 500),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
         base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
       ]);
-      setItems(p); setOperations(op); setDepartments(d); setAccounts(acc); setSuppliers(s);
+      setItems(p); setOperations(op); setSectors(d); setAccounts(acc); setSuppliers(s);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -62,7 +62,7 @@ export default function ErpExpenseParameterManager({ user }) {
       cfop_nfe_fora: p.cfop_nfe_fora || "",
       cfop_nfse_dentro: p.cfop_nfse_dentro || "",
       cfop_nfse_fora: p.cfop_nfse_fora || "",
-      default_department_ids: p.default_department_ids || [],
+      default_sector_ids: p.default_sector_ids || [],
       default_account_ids: p.default_account_ids || [],
       credora_account_id: p.credora_account_id || "",
       outras_impostos_account_id: p.outras_impostos_account_id || "",
@@ -78,7 +78,7 @@ export default function ErpExpenseParameterManager({ user }) {
     setSaving(true);
     try {
       const op = operations.find(o => o.id === form.operation_id);
-      const depNames = form.default_department_ids.map(id => departments.find(d => d.id === id)?.name).filter(Boolean);
+      const sectorNames = form.default_sector_ids.map(id => sectors.find(d => d.id === id)?.name).filter(Boolean);
       const accList = form.default_account_ids.map(id => accounts.find(a => a.id === id)).filter(Boolean);
       const credoraAcc = accounts.find(a => a.id === form.credora_account_id);
       const outrasAcc = accounts.find(a => a.id === form.outras_impostos_account_id);
@@ -100,8 +100,8 @@ export default function ErpExpenseParameterManager({ user }) {
         cfop_nfe_fora: form.cfop_nfe_fora.trim(),
         cfop_nfse_dentro: form.cfop_nfse_dentro.trim(),
         cfop_nfse_fora: form.cfop_nfse_fora.trim(),
-        default_department_ids: form.default_department_ids,
-        default_department_names: depNames,
+        default_sector_ids: form.default_sector_ids,
+        default_sector_names: sectorNames,
         default_account_ids: form.default_account_ids,
         default_account_codes: accList.map(a => a.code),
         default_account_names: accList.map(a => a.name),
@@ -161,7 +161,7 @@ export default function ErpExpenseParameterManager({ user }) {
                   <div><span className="text-gray-400">NFS-e:</span> <span className="font-mono">{p.cfop_nfse_dentro || "—"}</span> / <span className="font-mono">{p.cfop_nfse_fora || "—"}</span></div>
                 </td>
                 <td className="p-2 text-xs text-gray-600">
-                  <div>{(p.default_department_names || []).join(", ") || "—"}</div>
+                  <div>{(p.default_sector_names || []).join(", ") || "—"}</div>
                   <div className="text-gray-400">{(p.default_account_codes || []).map((c, i) => `${c} ${p.default_account_names?.[i] || ""}`).join(", ") || "—"}</div>
                 </td>
                 <td className="p-2">{p.is_active !== false ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <span className="text-xs text-gray-400">inativo</span>}</td>
@@ -291,12 +291,12 @@ export default function ErpExpenseParameterManager({ user }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600">Departamentos Padrão ({form.default_department_ids.length})</label>
+                  <label className="text-xs font-medium text-gray-600">Setores Padrão ({form.default_sector_ids.length})</label>
                   <div className="border rounded-md p-2 max-h-44 overflow-y-auto space-y-1 bg-white">
-                    {departments.length === 0 && <p className="text-xs text-gray-400">Nenhum departamento cadastrado.</p>}
-                    {departments.map(d => (
+                    {sectors.length === 0 && <p className="text-xs text-gray-400">Nenhum setor cadastrado.</p>}
+                    {sectors.map(d => (
                       <label key={d.id} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer">
-                        <input type="checkbox" checked={form.default_department_ids.includes(d.id)} onChange={() => setForm(p => ({ ...p, default_department_ids: toggle(p.default_department_ids, d.id) }))} />
+                        <input type="checkbox" checked={form.default_sector_ids.includes(d.id)} onChange={() => setForm(p => ({ ...p, default_sector_ids: toggle(p.default_sector_ids, d.id) }))} />
                         {d.name}
                       </label>
                     ))}

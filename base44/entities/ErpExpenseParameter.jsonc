@@ -34,15 +34,15 @@
       "type": "string",
       "description": "CFOP de entrada para NFS-e (servi\u00e7o) de fornecedor FORA do estado (ex: 2305, 2933)"
     },
-    "default_department_ids": {
+    "default_sector_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
       "default": [],
-      "description": "IDs dos setores/departamentos padr\u00e3o sugeridos no rateio (ErpDepartment) \u2014 permite N setores"
+      "description": "IDs dos setores padr\u00e3o sugeridos no rateio (ErpSector) \u2014 permite N setores"
     },
-    "default_department_names": {
+    "default_sector_names": {
       "type": "array",
       "items": {
         "type": "string"

@@ -21,7 +21,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [companyUf, setCompanyUf] = useState("");
   const [poId, setPoId] = useState("");
@@ -42,10 +42,10 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
     Promise.all([
       base44.entities.ErpPurchaseOrder.filter({ user_email: user.email, status: { $ne: "cancelada" } }, "-emission_date", 200),
       base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
-      base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
+      base44.entities.ErpSector.filter({ user_email: user.email, is_active: true }, "name", 500),
       base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
       base44.entities.ErpCompany.filter({ user_email: user.email, is_active: true }, "razao_social", 50),
-    ]).then(([o, s, d, acc, comps]) => { setOrders(o); setSuppliers(s); setDepartments(d); setAccounts(acc); setCompanyUf((comps.find(c => c.is_main) || comps[0] || {}).uf || ""); }).catch(() => {});
+    ]).then(([o, s, d, acc, comps]) => { setOrders(o); setSuppliers(s); setSectors(d); setAccounts(acc); setCompanyUf((comps.find(c => c.is_main) || comps[0] || {}).uf || ""); }).catch(() => {});
   }, [user.email]);
 
   useEffect(() => {
@@ -62,14 +62,14 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   useEffect(() => {
     if (poId) return;
     if (manualApportionments.length > 0) return;
-    const depIds = activeParam?.default_department_ids || [];
+    const depIds = activeParam?.default_sector_ids || [];
     const accIds = activeParam?.default_account_ids || [];
     if (depIds.length === 0 || accIds.length === 0) return;
     const combos = [];
     depIds.forEach((dId, di) => accIds.forEach((aId, ai) => {
       combos.push({
         department_id: dId,
-        department_name: activeParam.default_department_names?.[di] || "",
+        department_name: activeParam.default_sector_names?.[di] || "",
         account_id: aId,
         account_code: activeParam.default_account_codes?.[ai] || "",
         account_name: activeParam.default_account_names?.[ai] || "",
@@ -435,7 +435,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
                 <ErpApportionmentEditor
                   apportionments={manualApportionments}
                   onChange={setManualApportionments}
-                  setores={departments}
+                  setores={sectors}
                   accounts={accounts}
                   accent="indigo"
                   title="Rateio do Lançamento (Setor / Conta Contábil)"
