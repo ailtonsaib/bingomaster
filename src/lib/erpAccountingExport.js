@@ -3,6 +3,7 @@ import { jsPDF } from "jspdf";
 // Formatação numérica padrão BRL
 const BRL = (v) => (Number(v || 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const NUM = (v) => (Number(v || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDC = (mag, isDebit) => (Number(mag) || 0) ? `${BRL(mag)} ${isDebit ? "D" : "C"}` : "—";
 
 // ---------- Utilitário: download de arquivo ----------
 function downloadBlob(filename, mime, content) {
@@ -84,7 +85,9 @@ function exportPdfTable({ title, subtitle, headers, rows, totalsRow, orientation
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
     headers.forEach((h, i) => {
-      doc.text(h.label, h.money ? xMap[i] + moneyW - 1.5 : xMap[i] + 1, y + 0.5, { align: h.money ? "right" : "left" });
+      const align = h.align || (h.money ? "right" : "left");
+      const x = align === "right" ? (h.money ? xMap[i] + moneyW - 1.5 : xMap[i] + (h.width || 0) - 1) : xMap[i] + 1;
+      doc.text(h.label, x, y + 0.5, { align });
     });
     y += 6;
   };
@@ -106,7 +109,9 @@ function exportPdfTable({ title, subtitle, headers, rows, totalsRow, orientation
       // indentação por nível hierárquico
       let txt = val;
       if (!h.money && h.indent && r._level > 0) txt = "  ".repeat(r._level) + val;
-      doc.text(txt, h.money ? xMap[i] + moneyW - 1.5 : xMap[i] + 1, y + 0.5, { align: h.money ? "right" : "left" });
+      const align = h.align || (h.money ? "right" : "left");
+      const x = align === "right" ? (h.money ? xMap[i] + moneyW - 1.5 : xMap[i] + (h.width || 0) - 1) : xMap[i] + 1;
+      doc.text(txt, x, y + 0.5, { align });
     });
     y += rowH;
   }
@@ -120,9 +125,11 @@ function exportPdfTable({ title, subtitle, headers, rows, totalsRow, orientation
     doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
     headers.forEach((h, i) => {
       const raw = totalsRow[h.key];
-      if (raw === undefined || raw === null) return;
+      if (raw === undefined || raw === null || raw === "") return;
       const val = h.money ? BRL(raw) : String(raw);
-      doc.text(val, h.money ? xMap[i] + moneyW - 1.5 : xMap[i] + 1, y, { align: h.money ? "right" : "left" });
+      const align = h.align || (h.money ? "right" : "left");
+      const x = align === "right" ? (h.money ? xMap[i] + moneyW - 1.5 : xMap[i] + (h.width || 0) - 1) : xMap[i] + 1;
+      doc.text(val, x, y, { align });
     });
   }
 
@@ -141,20 +148,27 @@ function exportPdfTable({ title, subtitle, headers, rows, totalsRow, orientation
 // ===================== BALANCETE =====================
 export function exportBalancete({ rows, totals, year, companyName, format }) {
   const title = `Balancete de Verificação — ${year}`;
-  const subtitle = `${companyName ? companyName + " • " : ""}Saldo Inicial, Débito, Crédito e Saldo Final`;
+  const subtitle = `${companyName ? companyName + " • " : ""}Saldo Inicial (D/C), Débito, Crédito e Saldo Final (D/C)`;
   const headers = [
     { key: "code", label: "Código", width: 28 },
-    { key: "name", label: "Conta", width: 70, indent: true },
-    { key: "si", label: "Saldo Inicial", money: true },
+    { key: "name", label: "Conta", width: 68, indent: true },
+    { key: "siLabel", label: "Saldo Inicial", width: 34, align: "right" },
     { key: "deb", label: "Débito", money: true },
     { key: "cre", label: "Crédito", money: true },
-    { key: "sf", label: "Saldo Final", money: true },
+    { key: "sfLabel", label: "Saldo Final", width: 34, align: "right" },
   ];
-  const data = rows.map(r => ({ ...r, _level: r.level || 0, _bold: !r.analitica }));
+  const data = rows.map(r => ({
+    ...r,
+    siLabel: fmtDC(r.siMag, r.siIsDebit),
+    sfLabel: fmtDC(r.sfMag, r.sfIsDebit),
+    _level: r.level || 0,
+    _bold: !r.analitica,
+  }));
   const totalsRow = {
     code: "", name: "TOTAIS (contas analíticas)",
     deb: totals.deb, cre: totals.cre,
-    si: totals.si, sf: totals.sf,
+    siLabel: fmtDC(totals.siMag, totals.siIsDebit),
+    sfLabel: fmtDC(totals.sfMag, totals.sfIsDebit),
   };
 
   if (format === "excel") {

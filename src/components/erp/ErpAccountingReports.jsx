@@ -9,8 +9,20 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 // Nível hierárquico pela máscara do código (qtd. de pontos + 1)
 const codeLevel = (code) => (code || "").split(".").length;
 
-// Saldo com sinal conforme natureza (devedora: D-C | credora: C-D)
-const signed = (deb, cre, nature) => (nature === "credora" ? (Number(cre) || 0) - (Number(deb) || 0) : (Number(deb) || 0) - (Number(cre) || 0));
+// Cálculo de saldos no padrão balancete (D/C):
+// - Saldo Inicial: D se siDeb >= siCre, magnitude = |siDeb - siCre|
+// - Saldo Final: se SI for D -> SI + Débito - Crédito; se SI for C -> SI - Débito + Crédito
+//   O sinal do resultado define se o SF é D ou C.
+const computeSaldo = (siDeb, siCre, deb, cre) => {
+  const d = Number(siDeb) || 0, c = Number(siCre) || 0, db = Number(deb) || 0, cr = Number(cre) || 0;
+  const siIsDebit = d >= c;
+  const siMag = siIsDebit ? (d - c) : (c - d);
+  const sfRaw = siIsDebit ? (siMag + db - cr) : (siMag - db + cr);
+  const sfIsDebit = sfRaw >= 0 ? siIsDebit : !siIsDebit;
+  const sfMag = Math.abs(sfRaw);
+  return { siMag, siIsDebit, sfMag, sfIsDebit };
+};
+const fmtDC = (mag, isDebit) => (mag ? `${fmtMoney(mag)} ${isDebit ? "D" : "C"}` : "—");
 
 export default function ErpAccountingReports({ user }) {
   const [entries, setEntries] = useState([]);
@@ -41,65 +53,57 @@ export default function ErpAccountingReports({ user }) {
   const inYear = useMemo(() => entries.filter(e => { const d = new Date(e.date); return d >= yearStart && d < yearEnd; }), [entries, yearStart, yearEnd]);
   const beforeYear = useMemo(() => entries.filter(e => new Date(e.date) < yearStart), [entries, yearStart]);
 
-  // --- Saldos por conta analítica ---
-  // si = saldo inicial (antes do ano), deb/cre = movimentação no ano
+  // --- Saldos por conta analítica (componentes crus D/C) ---
+  // siDeb/siCre = acumulado antes do ano; deb/cre = movimentação no ano
   const analBalances = useMemo(() => {
-    const map = {}; // account_id -> { si, deb, cre }
-    const accById = {};
-    accounts.forEach(a => { accById[a.id] = a; map[a.id] = { si: 0, deb: 0, cre: 0 }; });
-
-    // Saldo inicial (antes do ano) — acumulado D-C e ajusta por natureza ao final
-    const raw = {};
+    const map = {};
+    accounts.forEach(a => { map[a.id] = { siDeb: 0, siCre: 0, deb: 0, cre: 0 }; });
     beforeYear.forEach(e => (e.lines || []).forEach(l => {
       if (!l.account_id) return;
-      (raw[l.account_id] ||= { deb: 0, cre: 0 });
-      raw[l.account_id].deb += Number(l.debit) || 0;
-      raw[l.account_id].cre += Number(l.credit) || 0;
+      if (!map[l.account_id]) map[l.account_id] = { siDeb: 0, siCre: 0, deb: 0, cre: 0 };
+      map[l.account_id].siDeb += Number(l.debit) || 0;
+      map[l.account_id].siCre += Number(l.credit) || 0;
     }));
-    Object.keys(raw).forEach(id => {
-      const a = accById[id];
-      const r = raw[id];
-      if (a && map[id]) map[id].si = signed(r.deb, r.cre, a.nature);
-    });
-
-    // Movimentação do ano
     inYear.forEach(e => (e.lines || []).forEach(l => {
       if (!l.account_id) return;
-      if (!map[l.account_id]) map[l.account_id] = { si: 0, deb: 0, cre: 0 };
+      if (!map[l.account_id]) map[l.account_id] = { siDeb: 0, siCre: 0, deb: 0, cre: 0 };
       map[l.account_id].deb += Number(l.debit) || 0;
       map[l.account_id].cre += Number(l.credit) || 0;
     }));
     return map;
   }, [beforeYear, inYear, accounts]);
 
-  // --- Consolidação: cada sintética = soma das analíticas descendentes ---
-  // Descendência por prefixo de código (máscara hierárquica "1.1.01.01.0001")
+  // --- Consolidação hierárquica: cada conta que possui filhas (sintética) soma
+  // os saldos das contas folha (analíticas reais) descendentes pela máscara do código.
   const consolidated = useMemo(() => {
     const sorted = [...accounts].sort((a, b) => (a.code || "").localeCompare(b.code || "", undefined, { numeric: true }));
-    // Para cada conta, soma os saldos das contas analíticas cujo código inicia com "<code>."
+    const hasChildren = (code) => sorted.some(c => c.code !== code && (c.code || "").startsWith((code || "") + "."));
+    const leaves = sorted.filter(c => !hasChildren(c.code));
     const result = sorted.map(a => {
-      const isAnalitica = !!a.accepts_entries;
-      const prefix = (a.code || "") + ".";
-      let si = 0, deb = 0, cre = 0;
+      const isGrouping = hasChildren(a.code);
+      const isAnalitica = !isGrouping;
+      let siDeb = 0, siCre = 0, deb = 0, cre = 0;
       if (isAnalitica) {
-        const b = analBalances[a.id] || { si: 0, deb: 0, cre: 0 };
-        si = b.si; deb = b.deb; cre = b.cre;
+        const b = analBalances[a.id] || { siDeb: 0, siCre: 0, deb: 0, cre: 0 };
+        siDeb = b.siDeb; siCre = b.siCre; deb = b.deb; cre = b.cre;
       } else {
-        // sintética: consolida analíticas descendentes
-        sorted.forEach(c => {
-          if (c.id === a.id) return;
-          if (!c.accepts_entries) return;
+        const prefix = (a.code || "") + ".";
+        leaves.forEach(c => {
           if ((c.code || "").startsWith(prefix)) {
-            const b = analBalances[c.id] || { si: 0, deb: 0, cre: 0 };
-            si += b.si; deb += b.deb; cre += b.cre;
+            const b = analBalances[c.id] || { siDeb: 0, siCre: 0, deb: 0, cre: 0 };
+            siDeb += b.siDeb; siCre += b.siCre; deb += b.deb; cre += b.cre;
           }
         });
       }
-      const sf = si + (a.nature === "credora" ? (cre - deb) : (deb - cre));
+      const { siMag, siIsDebit, sfMag, sfIsDebit } = computeSaldo(siDeb, siCre, deb, cre);
+      const siD = siIsDebit ? siMag : -siMag;
+      const sfD = sfIsDebit ? sfMag : -sfMag;
+      const si = a.nature === "credora" ? -siD : siD;
+      const sf = a.nature === "credora" ? -sfD : sfD;
       return {
         id: a.id, code: a.code, name: a.name, nature: a.nature, account_type: a.account_type,
         analitica: isAnalitica, level: codeLevel(a.code) - 1,
-        si, deb, cre, sf,
+        siDeb, siCre, deb, cre, siMag, siIsDebit, sfMag, sfIsDebit, si, sf,
       };
     });
     return result;
@@ -110,12 +114,12 @@ export default function ErpAccountingReports({ user }) {
   const totals = useMemo(() => {
     // Totais apenas das analíticas (sintéticas são consolidação — somá-las duplicaria)
     const a = consolidated.filter(r => r.analitica);
-    return {
-      deb: a.reduce((s, r) => s + r.deb, 0),
-      cre: a.reduce((s, r) => s + r.cre, 0),
-      si: a.reduce((s, r) => s + r.si, 0),
-      sf: a.reduce((s, r) => s + r.sf, 0),
-    };
+    const siDeb = a.reduce((s, r) => s + r.siDeb, 0);
+    const siCre = a.reduce((s, r) => s + r.siCre, 0);
+    const deb = a.reduce((s, r) => s + r.deb, 0);
+    const cre = a.reduce((s, r) => s + r.cre, 0);
+    const { siMag, siIsDebit, sfMag, sfIsDebit } = computeSaldo(siDeb, siCre, deb, cre);
+    return { deb, cre, siMag, siIsDebit, sfMag, sfIsDebit };
   }, [consolidated]);
 
   // --- DRE ---
@@ -141,7 +145,8 @@ export default function ErpAccountingReports({ user }) {
       })));
   }, [inYear, razaoAccount]);
   const razaoAcct = accounts.find(a => a.id === razaoAccount);
-  const razaoSi = razaoAcct ? (analBalances[razaoAcct.id]?.si || 0) : 0;
+  const razaoRaw = razaoAcct ? (analBalances[razaoAcct.id] || null) : null;
+  const razaoSi = razaoRaw ? (razaoAcct.nature === "credora" ? (razaoRaw.siCre - razaoRaw.siDeb) : (razaoRaw.siDeb - razaoRaw.siCre)) : 0;
   const razaoSaldo = razaoSi + razaoLines.reduce((a, l) => a + l.debit - l.credit, 0);
 
   // --- Balanço Patrimonial hierárquico consolidado ---
@@ -220,14 +225,14 @@ export default function ErpAccountingReports({ user }) {
                   <tr key={r.id} className={`border-t hover:bg-gray-50 ${!r.analitica ? "bg-gray-50/60 font-semibold" : ""}`}>
                     <td className="p-2 font-mono text-xs">{r.code}</td>
                     <td className="p-2" style={{ paddingLeft: `${8 + r.level * 14}px` }}>{r.name}</td>
-                    <td className="p-2 text-right">{r.si ? fmtMoney(r.si) : "—"}</td>
+                    <td className="p-2 text-right">{fmtDC(r.siMag, r.siIsDebit)}</td>
                     <td className="p-2 text-right">{r.deb ? fmtMoney(r.deb) : "—"}</td>
                     <td className="p-2 text-right">{r.cre ? fmtMoney(r.cre) : "—"}</td>
-                    <td className="p-2 text-right font-medium">{r.sf ? fmtMoney(r.sf) : "—"}</td>
+                    <td className="p-2 text-right font-medium">{fmtDC(r.sfMag, r.sfIsDebit)}</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr className="border-t-2 bg-gray-100 font-bold"><td colSpan={2} className="p-2">Totais (analíticas)</td><td className="p-2 text-right">{fmtMoney(totals.si)}</td><td className="p-2 text-right">{fmtMoney(totals.deb)}</td><td className="p-2 text-right">{fmtMoney(totals.cre)}</td><td className="p-2 text-right">{fmtMoney(totals.sf)}</td></tr>
+              <tfoot><tr className="border-t-2 bg-gray-100 font-bold"><td colSpan={2} className="p-2">Totais (analíticas)</td><td className="p-2 text-right">{fmtDC(totals.siMag, totals.siIsDebit)}</td><td className="p-2 text-right">{fmtMoney(totals.deb)}</td><td className="p-2 text-right">{fmtMoney(totals.cre)}</td><td className="p-2 text-right">{fmtDC(totals.sfMag, totals.sfIsDebit)}</td></tr>
                 <tr className="bg-gray-100 text-xs text-gray-600"><td colSpan={6} className="p-2">Totais das analíticas (sintéticas são consolidação dos níveis superiores). {totals.deb === totals.cre ? "✓ Débito = Crédito" : "⚠ Desequilibrado"}</td></tr>
               </tfoot>
             </table>
