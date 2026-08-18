@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, Copy, X, Receipt, Layers, Percent, Building2, MapPin, Calculator } from "lucide-react";
+import { Save, Copy, X, Receipt, Layers, Percent, Building2, MapPin, Calculator, Sparkles } from "lucide-react";
 import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem, num } from "@/lib/erpTaxCalc";
+import ErpCfopPicker from "@/components/erp/ErpCfopPicker";
+import { suggestCfop, resolveScope, cfopPrefixesFor } from "@/lib/erpCfopSuggest";
 
 const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -142,7 +144,27 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
   const [saving, setSaving] = useState(false);
   const [replicar, setReplicar] = useState(false);
   const [replicarUFs, setReplicarUFs] = useState([]);
+  const [companyUF, setCompanyUF] = useState("");
+  const [cfopEdited, setCfopEdited] = useState(!!rule?.cfop);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  useEffect(() => {
+    base44.entities.ErpCompany.filter({ user_email: user.email }, "-created_date", 50)
+      .then(list => { const c = list.find(c => c.is_main) || list[0]; if (c) setCompanyUF(c.uf || ""); })
+      .catch(() => {});
+  }, [user.email]);
+
+  // Sugere automaticamente o CFOP conforme tipo/kind da operação + UF (dentro/fora) + ST.
+  useEffect(() => {
+    if (cfopEdited) return;
+    if (!form.operation_id) return;
+    const op = operations.find(o => o.id === form.operation_id);
+    if (!op) return;
+    const scope = resolveScope(form.uf, companyUF);
+    const suggested = suggestCfop({ type: op.type, kind: op.kind, scope, stEnabled: !!form.st_enabled });
+    if (suggested) set("cfop", suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.uf, form.st_enabled, form.operation_id, companyUF, cfopEdited]);
 
   useEffect(() => {
     const op = operations.find(o => o.id === form.operation_id);
@@ -179,7 +201,7 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
     const op = operations.find(o => o.id === id);
     const newType = op?.type || "";
     setForm(prev => {
-      const next = { ...prev, operation_id: id, operation_name: op?.name || "", operation_type: newType, cfop: op?.cfop || "" };
+      const next = { ...prev, operation_id: id, operation_name: op?.name || "", operation_type: newType };
       const list = newType === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
       if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
       if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
@@ -212,9 +234,16 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
       if (rule?.id) await base44.entities.ErpTaxRule.update(rule.id, main);
       else await base44.entities.ErpTaxRule.create(main);
       if (replicar && replicarUFs.length > 0) {
+        const op = operations.find(o => o.id === form.operation_id);
         const copies = replicarUFs
           .filter(uf => uf !== (form.uf || ""))
-          .map(uf => buildPayload(uf));
+          .map(uf => {
+            const p = buildPayload(uf);
+            const scope = resolveScope(uf, companyUF);
+            const cfop = suggestCfop({ type: op?.type, kind: op?.kind, scope, stEnabled: !!form.st_enabled });
+            if (cfop) p.cfop = cfop;
+            return p;
+          });
         if (copies.length) await base44.entities.ErpTaxRule.bulkCreate(copies);
       }
       onSaved(); onClose();
@@ -223,6 +252,17 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
   };
 
   const toggleReplicateUF = (uf) => setReplicarUFs(prev => prev.includes(uf) ? prev.filter(u => u !== uf) : [...prev, uf]);
+
+  const recomputeCfop = () => {
+    const op = operations.find(o => o.id === form.operation_id);
+    if (!op) return;
+    const scope = resolveScope(form.uf, companyUF);
+    const suggested = suggestCfop({ type: op.type, kind: op.kind, scope, stEnabled: !!form.st_enabled });
+    setCfopEdited(false);
+    if (suggested) set("cfop", suggested);
+  };
+
+  const cfopPrefixes = cfopPrefixesFor(form.operation_type);
 
   const op = operations.find(o => o.id === form.operation_id);
   const destLabel = DESTINATARIO_TIPOS.find(d => d.value === form.destinatario_tipo)?.label || "";
@@ -288,6 +328,12 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                     <option value="">Todas as UFs</option>
                     {BR_UFS.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
+                </Field>
+                <Field label="CFOP (sugerido por UF + ST)">
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1"><ErpCfopPicker value={form.cfop} onChange={code => { set("cfop", code); setCfopEdited(true); }} prefixes={cfopPrefixes} /></div>
+                    <Button type="button" variant="outline" size="sm" onClick={recomputeCfop} title="Sugerir CFOP automaticamente" className="px-2"><Sparkles className="w-4 h-4 text-amber-500" /></Button>
+                  </div>
                 </Field>
                 <Field label="Descrição" full>
                   <Input value={form.description} onChange={e => set("description", e.target.value)} className="h-9 text-sm" placeholder="Observação sobre a regra" />
@@ -482,7 +528,7 @@ function AutoFiscalPreview({ form, operations }) {
         <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary text-primary-foreground"><Calculator className="w-4 h-4" /></span>
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground">Simulação fiscal</p>
-          <p className="text-[11px] text-muted-foreground">UF {form.uf || "—"} · CFOP {op?.cfop || "—"} · {form.destinatario_tipo}</p>
+          <p className="text-[11px] text-muted-foreground">UF {form.uf || "—"} · CFOP {form.cfop || "—"} · {form.destinatario_tipo}</p>
         </div>
         <div className="inline-flex gap-1 p-0.5 bg-muted rounded-md">
           <button onClick={() => setMode("forward")} className={`px-2.5 py-1 text-[11px] font-medium rounded ${mode === "forward" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Preço do produto</button>

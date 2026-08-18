@@ -15,6 +15,19 @@
       "default": "saida",
       "description": "Tipo da opera\u00e7\u00e3o: entrada ou saida"
     },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "comercializacao",
+        "industrializacao",
+        "devolucao_venda",
+        "devolucao_compra",
+        "transferencia",
+        "outra"
+      ],
+      "default": "comercializacao",
+      "description": "Natureza base da opera\u00e7\u00e3o \u2014 usada para sugerir o CFOP correto na regra fiscal (dentro/fora do estado e com/sem ST)"
+    },
     "code": {
       "type": "string",
       "description": "C\u00f3digo da opera\u00e7\u00e3o"
@@ -23,21 +36,9 @@
       "type": "string",
       "description": "Nome da opera\u00e7\u00e3o"
     },
-    "cfop": {
-      "type": "string",
-      "description": "CFOP dentro do estado (in\u00edcio 1 p/ entrada, 5 p/ sa\u00edda)"
-    },
-    "cfop_fora_estado": {
-      "type": "string",
-      "description": "CFOP fora do estado (in\u00edcio 2 p/ entrada, 6 p/ sa\u00edda)"
-    },
-    "cfop_importacao_exportacao": {
-      "type": "string",
-      "description": "CFOP de importa\u00e7\u00e3o (entrada, in\u00edcio 3) ou exporta\u00e7\u00e3o (sa\u00edda, in\u00edcio 7)"
-    },
     "nature_operation": {
       "type": "string",
-      "description": "Natureza da opera\u00e7\u00e3o"
+      "description": "Natureza da opera\u00e7\u00e3o (texto livre)"
     },
     "description": {
       "type": "string"
@@ -55,8 +56,7 @@
   "required": [
     "user_email",
     "type",
-    "name",
-    "cfop"
+    "name"
   ],
   "rls": {
     "create": {

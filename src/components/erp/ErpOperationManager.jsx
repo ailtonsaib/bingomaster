@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, Pencil, ArrowRightLeft, Download } from "lucide-react";
 import ErpOperationFormModal from "./ErpOperationFormModal";
+import { KIND_LABELS } from "@/lib/erpCfopSuggest";
 
 const TYPE_BADGE = {
   entrada: "text-blue-700 bg-blue-100",
@@ -38,7 +39,7 @@ export default function ErpOperationManager({ user }) {
   useEffect(() => { load(); }, [user.email]);
 
   const filtered = items.filter(o => {
-    const t = [o.name, o.code, o.cfop, o.cfop_fora_estado, o.cfop_importacao_exportacao, o.nature_operation].map(v => String(v ?? "")).join(" ").toLowerCase();
+    const t = [o.name, o.code, o.kind, o.nature_operation].map(v => String(v ?? "")).join(" ").toLowerCase();
     return t.includes(search.toLowerCase());
   });
 
@@ -71,10 +72,8 @@ export default function ErpOperationManager({ user }) {
               <tr>
                 <th className="p-2 text-left">Tipo</th>
                 <th className="p-2 text-left">Operação</th>
-                <th className="p-2 text-left">CFOP Dentro</th>
-                <th className="p-2 text-left">CFOP Fora</th>
-                <th className="p-2 text-left">Import./Export.</th>
-                <th className="p-2 text-left">Natureza</th>
+                <th className="p-2 text-left">Natureza base</th>
+                <th className="p-2 text-left">Natureza (texto)</th>
                 <th className="p-2 text-center">Patrim.</th>
                 <th className="p-2 text-center">Ativa</th>
                 <th className="p-2 text-right">Ações</th>
@@ -82,18 +81,16 @@ export default function ErpOperationManager({ user }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={7} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-gray-400">
+                <tr><td colSpan={7} className="p-8 text-center text-gray-400">
                   <ArrowRightLeft className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma operação cadastrada.
                 </td></tr>
               ) : filtered.map(o => (
                 <tr key={o.id} className="border-t hover:bg-gray-50">
                   <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${TYPE_BADGE[o.type] || "text-gray-700 bg-gray-100"}`}>{o.type === "entrada" ? "Entrada" : "Saída"}</span></td>
                   <td className="p-2 font-medium">{o.name}{o.code ? <span className="text-xs text-gray-400 ml-1">({o.code})</span> : ""}</td>
-                  <td className="p-2 font-mono text-xs">{o.cfop || "—"}</td>
-                  <td className="p-2 font-mono text-xs">{o.cfop_fora_estado || "—"}</td>
-                  <td className="p-2 font-mono text-xs">{o.cfop_importacao_exportacao || "—"}</td>
+                  <td className="p-2 text-xs text-gray-600">{KIND_LABELS[o.kind] || o.kind || "—"}</td>
                   <td className="p-2 text-gray-600">{o.nature_operation || "—"}</td>
                   <td className="p-2 text-center">{o.is_patrimonio ? "Sim" : "—"}</td>
                   <td className="p-2 text-center">{o.is_active !== false ? "Sim" : "Não"}</td>

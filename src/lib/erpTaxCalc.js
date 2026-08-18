@@ -18,10 +18,12 @@ export function interestadualRate(destUF) {
   return REG12.includes(destUF) ? 12 : 7;
 }
 
-// Verifica se a operação é interestadual (CFOP 1.x/6.x) ou por UFs distintas.
-export function isInterestadual(operation, companyUF, customerUF) {
-  const cfop = String(operation?.cfop || "");
-  if (cfop.startsWith("6") || cfop.startsWith("1")) return true;
+// Verifica se a operação é interestadual (CFOP 2.x/6.x) ou por UFs distintas.
+export function isInterestadual(cfopOrOperation, companyUF, customerUF) {
+  const cfop = String(
+    typeof cfopOrOperation === "string" ? cfopOrOperation : (cfopOrOperation?.cfop || "")
+  );
+  if (cfop.startsWith("6") || cfop.startsWith("2")) return true;
   if (companyUF && customerUF && companyUF !== customerUF) return true;
   return false;
 }
@@ -53,6 +55,7 @@ export function lookupErpTaxRule(rules, operationId, ncm, uf, destinatarioTipo) 
 // ipiRate: % IPI opcional (sobrescreve a regra)
 export function computeErpFiscalItem(product, { rules, operation, customerUF, companyUF, ipiRate, destinatarioTipo }) {
   const rule = lookupErpTaxRule(rules, operation?.id, product.ncm, customerUF, destinatarioTipo);
+  const cfop = String(rule?.cfop || operation?.cfop || "");
   const qty = num(product.quantity || 1);
   const unit = num(product.unit_price != null ? product.unit_price : product.sale_price || 0);
   const total = qty * unit;
@@ -90,7 +93,7 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
   const result = {
     rule_id: rule?.id || null,
     ncm: product.ncm || "",
-    cfop: operation?.cfop || "",
+    cfop: cfop,
     quantity: qty, unit_price: unit, total,
     cst_icms: rule?.cst_icms || "00",
     icms_rate: icmsRate, icms_base: baseICMS, icms_value: icmsValue,
@@ -104,7 +107,7 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
   };
 
   // DIFAL — somente em operação interestadual a consumidor final não contribuinte, com UF de destino.
-  if (rule?.difal_enabled && customerUF && isInterestadual(operation, companyUF, customerUF)) {
+  if (rule?.difal_enabled && customerUF && isInterestadual(cfop, companyUF, customerUF)) {
     const aliqInt = num(rule.aliq_interna_destino) || ICMS_INTERNAL_RATES[customerUF] || 0;
     const aliqInte = num(rule.aliq_interestadual) || interestadualRate(customerUF);
     const fcpDest = num(rule.fcp_destino_rate);
