@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, UserPlus, Wallet, Receipt } from "lucide-react";
+import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, UserPlus, Wallet, Receipt, Percent } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { gerarLancamentoEntrada } from "@/lib/erpJournal";
@@ -27,6 +27,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   const [poId, setPoId] = useState("");
   const [paramId, setParamId] = useState("");
   const [manualApportionments, setManualApportionments] = useState([]);
+  const [retentions, setRetentions] = useState({ irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 });
   const [supplierStatus, setSupplierStatus] = useState("");
   const fileRef = useRef(null);
 
@@ -90,12 +91,27 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
     setSupplierStatus(existing ? "exists" : "will_create");
   }, [parsed, mode, suppliers]);
 
+  useEffect(() => {
+    if (mode === "xml" && parsed?.retentions) {
+      setRetentions({
+        irrf: parsed.retentions.irrf || 0,
+        pis: parsed.retentions.pis || 0,
+        cofins: parsed.retentions.cofins || 0,
+        csll: parsed.retentions.csll || 0,
+        inss: parsed.retentions.inss || 0,
+        iss: parsed.retentions.iss || 0,
+      });
+    }
+  }, [parsed, mode]);
+
   const resolveCfop = (docModel, supplierUf) => {
     if (!activeParam) return "";
     const dentro = (supplierUf || "").toUpperCase() === companyUf.toUpperCase();
     if (docModel === "NFSe") return dentro ? (activeParam.cfop_nfse_dentro || activeParam.cfop_nfse_fora || "") : (activeParam.cfop_nfse_fora || activeParam.cfop_nfse_dentro || "");
     return dentro ? (activeParam.cfop_nfe_dentro || activeParam.cfop_nfe_fora || "") : (activeParam.cfop_nfe_fora || activeParam.cfop_nfe_dentro || "");
   };
+
+  const paramRetention = (type) => (activeParam?.retentions || []).find(r => r.type === type);
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
@@ -132,6 +148,14 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
     } else if (!apportionments.length) {
       setError("A ordem de compra selecionada não possui rateio (setor/conta)."); return;
     }
+    const retList = ["irrf", "pis", "cofins", "csll", "inss", "iss"].map(t => {
+      const v = Number(retentions[t] || 0);
+      const pr = paramRetention(t.toUpperCase());
+      return { type: t.toUpperCase(), value: v, partner_id: pr?.partner_id || "", partner_name: pr?.partner_name || "" };
+    }).filter(r => r.value > 0);
+    const missing = retList.find(r => !r.partner_id);
+    if (missing) { setError(`Retenção ${missing.type} sem fornecedor configurado no parâmetro.`); return; }
+    const totalRetido = retList.reduce((s, r) => s + r.value, 0);
     setSaving(true);
     try {
       let payload;
@@ -212,6 +236,8 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
         };
       }
 
+      payload.retentions = retList;
+      payload.net_value = payload.total_nota - totalRetido;
       const entry = await base44.entities.ErpFiscalEntry.create(payload);
       // Já gera o lançamento contábil (débito nas contas do rateio, crédito em Fornecedores)
       try {
@@ -223,6 +249,30 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
       } catch (e) {
         setError(`Despesa registrada, mas o lançamento contábil falhou: ${e.message}`);
         setSaving(false); onSaved?.(); onClose(); return;
+      }
+      // Financeiro: valor líquido ao fornecedor da nota + cada retenção ao seu fornecedor (quando houver retenções)
+      if (totalRetido > 0) {
+        const netValue = payload.total_nota - totalRetido;
+        const payables = [{
+          user_email: user.email,
+          description: `Despesa ${payload.nota_number} - ${payload.supplier_name || ""}${hasPo ? ` (OC ${selectedPo.order_number})` : ""}`,
+          beneficiary: payload.supplier_name || "",
+          amount: netValue,
+          category: "Despesa",
+          status: "aberto",
+        }];
+        for (const r of retList) {
+          payables.push({
+            user_email: user.email,
+            description: `Retenção ${r.type} - NF ${payload.nota_number} (${payload.supplier_name || ""})`,
+            beneficiary: r.partner_name,
+            amount: r.value,
+            category: `Retenção ${r.type}`,
+            status: "aberto",
+          });
+        }
+        try { await base44.entities.ErpPayable.bulkCreate(payables); }
+        catch (e) { setError(`Despesa e contábil gerados, mas falha ao criar contas a pagar: ${e.message}`); }
       }
       onSaved?.();
       onClose();
@@ -388,6 +438,28 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
                   accent="indigo"
                   title="Rateio do Lançamento (Setor / Conta Contábil)"
                 />
+              )}
+
+              {(mode === "manual" || parsed?.nota.model === "NFSe") && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-amber-50 px-3 py-2 border-b flex items-center gap-1.5"><Percent className="w-4 h-4 text-amber-700" /><h4 className="text-sm font-semibold">Retenções (serviço)</h4></div>
+                  <div className="p-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {["irrf", "pis", "cofins", "csll", "inss", "iss"].map(t => {
+                      const pr = paramRetention(t.toUpperCase());
+                      const val = retentions[t] || 0;
+                      return (
+                        <div key={t} className="border rounded-md p-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-gray-600 uppercase">{t}</label>
+                            {pr ? <span className="text-[10px] text-emerald-700 truncate ml-1">→ {pr.partner_name}</span> : val > 0 ? <span className="text-[10px] text-red-600">sem fornecedor</span> : null}
+                          </div>
+                          <input type="number" step="0.01" value={val} onChange={e => setRetentions(p => ({ ...p, [t]: Number(e.target.value) || 0 }))} className="w-full h-8 rounded border border-input px-2 text-right text-xs mt-1" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="px-3 pb-2 text-[11px] text-gray-500">Valores retidos (lidos do XML ou digitados). Ao lançar, gera contas a pagar: valor líquido ao fornecedor da nota e cada retenção ao seu fornecedor configurado no parâmetro.</p>
+                </div>
               )}
             </div>
           )}

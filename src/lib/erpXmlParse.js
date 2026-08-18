@@ -11,6 +11,17 @@ function num(v) {
   return parseFloat(String(v || "0").replace(",", ".")) || 0;
 }
 
+// Extrai valores de retenções (IRRF, PIS, COFINS, CSLL, INSS, ISS) de um elemento de valores.
+// `candidates` mapeia tipo -> lista de tags candidatas (em ordem de prioridade).
+function extractRetentions(valoresEl, candidates) {
+  const r = { irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 };
+  if (!valoresEl) return r;
+  for (const [type, tags] of Object.entries(candidates)) {
+    for (const t of tags) { const x = getText(valoresEl, t); if (x) { r[type] = num(x); break; } }
+  }
+  return r;
+}
+
 function parseNfe(doc) {
   const infNFe = doc.getElementsByTagName("infNFe")[0] || doc.getElementsByTagName("*:infNFe")[0];
   if (!infNFe) throw new Error("Registro infNFe não encontrado. Verifique se é um XML de NF-e válido.");
@@ -89,6 +100,7 @@ function parseNfe(doc) {
       total_cofins: num(getText(icmsTot, "vCOFINS")),
       total_nota: num(getText(icmsTot, "vNF")),
     },
+    retentions: { irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 },
     items,
   };
 }
@@ -113,6 +125,15 @@ function parseNfseNacional(doc) {
   const xTribNac = getText(inf, "xTribNac");
   const cNBS = getText(cServ, "cNBS");
   const idAttr = inf.getAttribute("Id") || "";
+
+  const retNac = extractRetentions(dpsValores, {
+    irrf: ["vIRRF"],
+    pis: ["vPISRet"],
+    cofins: ["vCOFINSRet"],
+    csll: ["vCSLLRet"],
+    inss: ["vINSSRet", "vRetCP"],
+    iss: ["vISSRet", "vISS"],
+  });
 
   return {
     model: "NFSe",
@@ -144,6 +165,7 @@ function parseNfseNacional(doc) {
       total_cofins: 0,
       total_nota: vLiq,
     },
+    retentions: retNac,
     items: [{
       product_code: cNBS,
       barcode: "",
@@ -177,6 +199,14 @@ function parseNfse(doc) {
   const valorLiquido = num(getText(inf, "ValorLiquidoNfse")) || valorServicos;
   const discriminacao = getText(servico, "Discriminacao");
   const itemLista = getText(servico, "ItemListaServico");
+  const retAbr = extractRetentions(valores, {
+    irrf: ["ValorIr", "ValorIRRFRetido"],
+    pis: ["ValorPis", "ValorPISRetido"],
+    cofins: ["ValorCofins", "ValorCOFINSRetido"],
+    csll: ["ValorCsll", "ValorCSLLRetido"],
+    inss: ["ValorInss", "ValorINSSRetido"],
+    iss: ["ValorIssRetido", "ValorIss"],
+  });
 
   return {
     model: "NFSe",
@@ -208,6 +238,7 @@ function parseNfse(doc) {
       total_cofins: 0,
       total_nota: valorLiquido,
     },
+    retentions: retAbr,
     items: [{
       product_code: itemLista,
       barcode: "",

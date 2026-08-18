@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Settings2, Pencil, CheckCircle2, MapPin } from "lucide-react";
+import { Plus, Search, Trash2, Settings2, Pencil, CheckCircle2, MapPin, Percent } from "lucide-react";
 
 const empty = {
   name: "",
@@ -12,6 +12,7 @@ const empty = {
   cfop_nfse_fora: "",
   default_department_ids: [],
   default_account_ids: [],
+  retentions: [],
   is_active: true,
 };
 
@@ -22,6 +23,7 @@ export default function ErpExpenseParameterManager({ user }) {
   const [operations, setOperations] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -32,13 +34,14 @@ export default function ErpExpenseParameterManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [p, op, d, acc] = await Promise.all([
+      const [p, op, d, acc, s] = await Promise.all([
         base44.entities.ErpExpenseParameter.filter({ user_email: user.email }, "-created_date", 200),
         base44.entities.ErpOperation.filter({ user_email: user.email, type: "entrada", is_active: true }, "name", 200),
         base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
+        base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
       ]);
-      setItems(p); setOperations(op); setDepartments(d); setAccounts(acc);
+      setItems(p); setOperations(op); setDepartments(d); setAccounts(acc); setSuppliers(s);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -58,6 +61,7 @@ export default function ErpExpenseParameterManager({ user }) {
       cfop_nfse_fora: p.cfop_nfse_fora || "",
       default_department_ids: p.default_department_ids || [],
       default_account_ids: p.default_account_ids || [],
+      retentions: (p.retentions || []).map(r => ({ type: r.type || "IRRF", partner_id: r.partner_id || "", rate: r.rate || 0 })),
       is_active: p.is_active !== false,
     });
     setShowForm(true);
@@ -70,6 +74,10 @@ export default function ErpExpenseParameterManager({ user }) {
       const op = operations.find(o => o.id === form.operation_id);
       const depNames = form.default_department_ids.map(id => departments.find(d => d.id === id)?.name).filter(Boolean);
       const accList = form.default_account_ids.map(id => accounts.find(a => a.id === id)).filter(Boolean);
+      const retentions = (form.retentions || []).filter(r => r.type && r.partner_id).map(r => {
+        const sup = suppliers.find(s => s.id === r.partner_id);
+        return { type: r.type, partner_id: r.partner_id, partner_name: sup?.name || "", rate: Number(r.rate) || 0 };
+      });
       const payload = {
         user_email: user.email,
         name: form.name.trim(),
@@ -84,6 +92,7 @@ export default function ErpExpenseParameterManager({ user }) {
         default_account_ids: form.default_account_ids,
         default_account_codes: accList.map(a => a.code),
         default_account_names: accList.map(a => a.name),
+        retentions,
         is_active: form.is_active,
       };
       if (editing) await base44.entities.ErpExpenseParameter.update(editing.id, payload);
@@ -186,6 +195,27 @@ export default function ErpExpenseParameterManager({ user }) {
                     <input value={form.cfop_nfse_fora} onChange={e => setForm(p => ({ ...p, cfop_nfse_fora: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 2305, 2933" />
                   </div>
                 </div>
+              </div>
+
+              <div className="border rounded-lg p-3 bg-amber-50/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5"><Percent className="w-3.5 h-3.5" /> Retenções de Serviço (fornecedor destinatário)</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setForm(p => ({ ...p, retentions: [...(p.retentions || []), { type: "IRRF", partner_id: "", rate: 0 }] }))} className="h-7 gap-1"><Plus className="w-3.5 h-3.5" /> Retenção</Button>
+                </div>
+                {(form.retentions || []).length === 0 && <p className="text-xs text-gray-400">Nenhuma retenção configurada.</p>}
+                {(form.retentions || []).map((r, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-center mb-1.5">
+                    <select value={r.type} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, type: e.target.value } : x) }))} className="col-span-3 h-8 rounded border border-input bg-white px-2 text-xs">
+                      {["IRRF", "PIS", "COFINS", "CSLL", "INSS", "ISS"].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select value={r.partner_id} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, partner_id: e.target.value } : x) }))} className="col-span-7 h-8 rounded border border-input bg-white px-2 text-xs">
+                      <option value="">Selecione o fornecedor...</option>
+                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <input type="number" step="0.01" value={r.rate} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, rate: Number(e.target.value) || 0 } : x) }))} className="col-span-1 h-8 rounded border border-input px-1 text-right text-xs" placeholder="%" title="Alíquota %" />
+                    <button type="button" onClick={() => setForm(p => ({ ...p, retentions: p.retentions.filter((_, idx) => idx !== i) }))} className="col-span-1 text-red-500 hover:bg-red-50 rounded p-1"><Trash2 className="w-4 h-4 mx-auto" /></button>
+                  </div>
+                ))}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

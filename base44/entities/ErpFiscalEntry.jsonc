@@ -207,6 +207,42 @@
         }
       }
     },
+    "retentions": {
+      "type": "array",
+      "default": [],
+      "description": "Reten\u00e7\u00f5es da nota (servi\u00e7o): IRRF, PIS, COFINS, CSLL, INSS, ISS \u2014 cada uma com tipo, valor e fornecedor destinat\u00e1rio",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "IRRF",
+              "PIS",
+              "COFINS",
+              "CSLL",
+              "INSS",
+              "ISS"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "default": 0
+          },
+          "partner_id": {
+            "type": "string"
+          },
+          "partner_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "net_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor l\u00edquido ao fornecedor (total_nota \u2212 soma das reten\u00e7\u00f5es)"
+    },
     "status": {
       "type": "string",
       "enum": [
