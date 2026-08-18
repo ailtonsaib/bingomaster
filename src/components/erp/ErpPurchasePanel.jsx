@@ -148,11 +148,15 @@ export default function ErpPurchasePanel({ user }) {
                     <td className="p-2 font-mono text-xs">{o.order_number}</td>
                     <td className="p-2">{o.supplier_name || "—"}</td>
                     <td className="p-2 text-gray-600">
-                      <span className="inline-flex items-center gap-1"><Building2 className="w-3 h-3 text-gray-400" />{o.department_name || "—"}</span>
-                      {o.apportionments?.length > 0 && (
-                        <div className="text-[10px] text-gray-400 mt-0.5" title={o.apportionments.map(a => `${a.department_name} • ${a.account_code || a.account_name} (${a.rateio_type === "percent" ? a.percent + "%" : "R$ " + (a.value||0).toFixed(2)})`).join(", ")}>
-                          {o.apportionments.length} rateio(s) → contab.
-                        </div>
+                      {o.apportionments?.length > 0 ? (
+                        <>
+                          <span className="inline-flex items-center gap-1"><Building2 className="w-3 h-3 text-gray-400" />{o.apportionments.map(a => a.department_name).filter(Boolean).join(", ") || "—"}</span>
+                          <div className="text-[10px] text-gray-400 mt-0.5" title={o.apportionments.map(a => `${a.account_code || a.account_name} (${a.percent || 0}%)`).join(", ")}>
+                            {o.apportionments.length} conta(s) contábil(eis)
+                          </div>
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-gray-400"><Building2 className="w-3 h-3" />{o.department_name || "—"}</span>
                       )}
                     </td>
                     <td className="p-2 text-gray-600">{fmtDate(o.emission_date)}</td>
