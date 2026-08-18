@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, Copy, X } from "lucide-react";
+import { Save, Copy, X, Receipt, Layers, Percent, Building2, MapPin, Calculator } from "lucide-react";
 import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem, num } from "@/lib/erpTaxCalc";
 
 const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -90,30 +90,34 @@ const DESTINATARIO_TIPOS = [
   { value: "pessoa_fisica", label: "Pessoa física (consumidor final — DIFAL)" },
 ];
 
-function SectionTitle({ children, color = "text-slate-700" }) {
+function SectionTitle({ icon: Icon, children }) {
   return (
-    <div className={`text-center font-semibold tracking-wide uppercase text-xs ${color} border-b border-slate-300 pb-1 mb-2`}>
-      {children}
+    <div className="flex items-center gap-2 mb-3">
+      {Icon && <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-primary/10 text-primary"><Icon className="w-3.5 h-3.5" /></span>}
+      <h4 className="text-sm font-semibold text-foreground">{children}</h4>
+      <div className="flex-1 h-px bg-border" />
     </div>
   );
 }
 function Field({ label, children, full }) {
   return (
     <div className={full ? "col-span-full" : ""}>
-      <label className="block text-[11px] font-medium text-gray-600 mb-0.5">{label}</label>
+      <label className="block text-[11px] font-medium text-muted-foreground mb-1">{label}</label>
       {children}
     </div>
   );
 }
-const numInput = "w-full h-8 rounded border border-slate-300 px-2 text-xs";
-const selInput = "w-full h-8 rounded border border-slate-300 px-2 text-xs bg-white";
+const numInput = "w-full h-9 rounded-md border border-input bg-background px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const selInput = "w-full h-9 rounded-md border border-input bg-background px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-function RadioSimNao({ label, checked, onChange }) {
+function Toggle({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2 text-xs whitespace-nowrap">
-      <span className="text-gray-600">{label}</span>
-      <button type="button" onClick={() => onChange(false)} className={`px-1.5 py-0.5 rounded border text-[10px] ${!checked ? "bg-slate-700 text-white border-slate-700" : "bg-white text-gray-600 border-slate-300"}`}>Não</button>
-      <button type="button" onClick={() => onChange(true)} className={`px-1.5 py-0.5 rounded border text-[10px] ${checked ? "bg-slate-700 text-white border-slate-700" : "bg-white text-gray-600 border-slate-300"}`}>Sim</button>
+    <label className="flex items-center gap-2 cursor-pointer select-none">
+      <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}>
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
+      </button>
+      <span className="text-xs text-muted-foreground">{label}</span>
     </label>
   );
 }
@@ -140,13 +144,11 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
   const [replicarUFs, setReplicarUFs] = useState([]);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
-  // Auto-preenchimento das alíquotas do DIFAL conforme UF/destinatário.
   useEffect(() => {
     const op = operations.find(o => o.id === form.operation_id);
     if (!op) return;
     const cfop = String(op.cfop || "");
     const interestadual = cfop.startsWith("6") || cfop.startsWith("1");
-    // Não contribuinte / pessoa física em operação interestadual -> habilita DIFAL automaticamente
     if (interestadual && (form.destinatario_tipo === "nao_contribuinte" || form.destinatario_tipo === "pessoa_fisica")) {
       setForm(prev => prev.difal_enabled ? prev : { ...prev, difal_enabled: true });
     }
@@ -159,7 +161,6 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.uf, form.operation_id, form.destinatario_tipo]);
 
-  // Corrige CST legado ao editar (conforme tipo da operação)
   useEffect(() => {
     if (!form.operation_type) return;
     const list = form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
@@ -210,7 +211,6 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
       const main = buildPayload();
       if (rule?.id) await base44.entities.ErpTaxRule.update(rule.id, main);
       else await base44.entities.ErpTaxRule.create(main);
-      // Replicar para outras UFs
       if (replicar && replicarUFs.length > 0) {
         const copies = replicarUFs
           .filter(uf => uf !== (form.uf || ""))
@@ -226,46 +226,62 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
 
   const op = operations.find(o => o.id === form.operation_id);
   const destLabel = DESTINATARIO_TIPOS.find(d => d.value === form.destinatario_tipo)?.label || "";
+  const isEdit = !!rule?.id;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#F0F0F0] rounded-xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col">
-        {/* Cabeçalho estilo SAIBWEB */}
-        <div className="bg-slate-800 text-white px-4 py-2 rounded-t-xl flex items-center justify-between">
-          <span className="text-xs font-mono">:: SoftPremier — Cadastro Parâmetro de Alíquota ::</span>
-          <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded text-white"><X className="w-4 h-4" /></button>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col overflow-hidden border border-border">
+        {/* Header */}
+        <div className="px-5 py-4 bg-gradient-to-r from-primary to-violet-600 text-primary-foreground flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/15"><Percent className="w-5 h-5" /></span>
+            <div>
+              <h3 className="font-heading font-semibold leading-tight">{isEdit ? "Editar Regra Fiscal" : "Nova Regra Fiscal"}</h3>
+              <p className="text-xs text-primary-foreground/80">Parâmetros de alíquota por operação</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/15 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
         </div>
-        {/* Info operacional em vermelho */}
-        <div className="px-4 py-1.5 bg-white border-b text-[11px] text-red-600 font-medium flex flex-wrap gap-x-4 gap-y-0.5">
-          <span>Operação: {form.operation_name ? `${op?.type === "entrada" ? "Entrada" : "Saída"} — ${form.operation_name} (${form.cfop})` : "—"}</span>
-          <span>NCM: {form.ncm || "Geral"}</span>
-          <span>UF: {form.uf || "Todas"}</span>
-          <span>Destinatário: {destLabel}</span>
+
+        {/* Info chips */}
+        <div className="px-5 py-2.5 bg-muted/50 border-b flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary"><Layers className="w-3 h-3" /> {form.operation_name ? `${op?.type === "entrada" ? "Entrada" : "Saída"} · ${form.operation_name}` : "Sem operação"} {form.cfop && `(${form.cfop})`}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800"><Receipt className="w-3 h-3" /> NCM: {form.ncm || "Geral"}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-100 text-sky-800"><MapPin className="w-3 h-3" /> {form.uf || "Todas UFs"}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"><Building2 className="w-3 h-3" /> {destLabel}</span>
         </div>
+
         {/* Tabs */}
-        <div className="flex gap-1 px-4 pt-2 bg-white border-b">
-          {["geral", "impostos"].map(t => (
-            <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 text-xs font-medium rounded-t border-b-2 ${tab === t ? "border-slate-700 text-slate-800" : "border-transparent text-gray-400"}`}>
-              {t === "geral" ? "Geral" : "Impostos"}
-            </button>
-          ))}
-          <div className="ml-auto pb-1">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5"><Save className="w-4 h-4" />{saving ? "Salvando..." : "Salvar"}</Button>
+        <div className="px-5 pt-3 bg-background">
+          <div className="inline-flex gap-1 p-1 bg-muted rounded-lg">
+            {[
+              { k: "geral", l: "Geral" },
+              { k: "impostos", l: "Impostos" },
+            ].map(t => (
+              <button key={t.k} onClick={() => setTab(t.k)} className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${tab === t.k ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                {t.l}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="overflow-y-auto p-4 space-y-3 flex-1">
+        <div className="overflow-y-auto p-5 space-y-4 flex-1">
           {tab === "geral" && (
             <>
-              <div className="grid grid-cols-3 gap-3 bg-white rounded-lg border p-3">
+              <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4">
                 <Field label="Operação *">
                   <select value={form.operation_id} onChange={e => onOp(e.target.value)} className={selInput}>
                     <option value="">Selecione...</option>
                     {operations.map(o => <option key={o.id} value={o.id}>{o.type === "entrada" ? "Entrada" : "Saída"} — {o.name} ({o.cfop})</option>)}
                   </select>
                 </Field>
+                <Field label="Tipo do destinatário *">
+                  <select value={form.destinatario_tipo} onChange={e => set("destinatario_tipo", e.target.value)} className={selInput}>
+                    {DESTINATARIO_TIPOS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </select>
+                </Field>
                 <Field label="NCM específico (opcional)">
-                  <Input value={form.ncm} onChange={e => set("ncm", e.target.value)} placeholder="Geral se vazio" className="h-8 text-xs" />
+                  <Input value={form.ncm} onChange={e => set("ncm", e.target.value)} placeholder="Geral se vazio" className="h-9 text-sm" />
                 </Field>
                 <Field label="UF de destino">
                   <select value={form.uf} onChange={e => set("uf", e.target.value)} className={selInput}>
@@ -273,36 +289,35 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                     {BR_UFS.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </Field>
-                <Field label="Tipo do destinatário *" full>
-                  <select value={form.destinatario_tipo} onChange={e => set("destinatario_tipo", e.target.value)} className={selInput}>
-                    {DESTINATARIO_TIPOS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                  </select>
-                </Field>
                 <Field label="Descrição" full>
-                  <Input value={form.description} onChange={e => set("description", e.target.value)} className="h-8 text-xs" />
+                  <Input value={form.description} onChange={e => set("description", e.target.value)} className="h-9 text-sm" placeholder="Observação sobre a regra" />
                 </Field>
-                <label className="flex items-center gap-2 text-xs col-span-3"><input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Regra ativa</label>
+                <div className="col-span-full pt-1">
+                  <Toggle label="Regra ativa" checked={!!form.is_active} onChange={v => set("is_active", v)} />
+                </div>
               </div>
 
-              {/* Replicar regra */}
-              <div className="bg-white rounded-lg border p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Copy className="w-4 h-4 text-slate-600" />
-                  <span className="text-sm font-semibold text-slate-700">Replicar esta regra</span>
-                  <RadioSimNao label="" checked={replicar} onChange={setReplicar} />
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100 text-violet-600"><Copy className="w-4 h-4" /></span>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">Replicar regra para outras UFs</p>
+                    <p className="text-[11px] text-muted-foreground">Cria cópias idênticas, uma por UF selecionada</p>
+                  </div>
+                  <Toggle label="" checked={replicar} onChange={setReplicar} />
                 </div>
                 {replicar && (
-                  <div>
-                    <p className="text-[11px] text-gray-500 mb-1.5">Selecione as UFs para criar cópias idênticas desta regra (a UF atual {form.uf || "—"} é ignorada):</p>
-                    <div className="grid grid-cols-9 gap-1">
+                  <>
+                    <p className="text-[11px] text-muted-foreground mb-2">A UF atual ({form.uf || "—"}) é ignorada:</p>
+                    <div className="grid grid-cols-9 gap-1.5">
                       {BR_UFS.map(uf => (
-                        <label key={uf} className={`flex items-center justify-center h-7 rounded border text-[11px] cursor-pointer ${replicarUFs.includes(uf) ? "bg-slate-700 text-white border-slate-700" : "bg-white text-gray-600 border-slate-300 hover:bg-slate-50"}`}>
-                          <input type="checkbox" checked={replicarUFs.includes(uf)} onChange={() => toggleReplicateUF(uf)} className="sr-only" />
+                        <button key={uf} type="button" onClick={() => toggleReplicateUF(uf)}
+                          className={`h-8 rounded-md text-[11px] font-medium border transition-all ${replicarUFs.includes(uf) ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:bg-primary/5"}`}>
                           {uf}
-                        </label>
+                        </button>
                       ))}
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             </>
@@ -310,103 +325,90 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
 
           {tab === "impostos" && (
             <>
-              {/* ICMS */}
-              <div className="bg-white rounded-lg border p-3">
-                <SectionTitle>ICMS</SectionTitle>
-                <div className="grid grid-cols-4 gap-2">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <SectionTitle icon={Percent}>ICMS</SectionTitle>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Field label="CST ICMS"><select value={form.cst_icms} onChange={e => set("cst_icms", e.target.value)} className={selInput}>{CST_ICMS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
-                  <Field label="Alíq. ICMS (%)"><input type="number" step="0.01" value={form.icms_rate} onChange={e => set("icms_rate", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. Red. Base ICMS (%)"><input type="number" step="0.01" value={form.icms_reduction_base} onChange={e => set("icms_reduction_base", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. FCP (%)"><input type="number" step="0.01" value={form.fcp_rate} onChange={e => set("fcp_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota ICMS (%)"><input type="number" step="0.01" value={form.icms_rate} onChange={e => set("icms_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Redução de Base (%)"><input type="number" step="0.01" value={form.icms_reduction_base} onChange={e => set("icms_reduction_base", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota FCP (%)"><input type="number" step="0.01" value={form.fcp_rate} onChange={e => set("fcp_rate", e.target.value)} className={numInput} /></Field>
                 </div>
               </div>
 
-              {/* ICMS ST */}
-              <div className="bg-white rounded-lg border p-3">
-                <SectionTitle>ICMS ST — Substituição Tributária</SectionTitle>
-                <div className="flex items-center gap-2 mb-2">
-                  <RadioSimNao label="Aplica ST" checked={!!form.st_enabled} onChange={v => set("st_enabled", v)} />
-                </div>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <SectionTitle icon={Layers}>ICMS-ST — Substituição Tributária</SectionTitle>
+                <div className="mb-3"><Toggle label="Aplica Substituição Tributária" checked={!!form.st_enabled} onChange={v => set("st_enabled", v)} /></div>
                 {form.st_enabled && (
-                  <>
-                    <div className="grid grid-cols-4 gap-2">
-                      <Field label="Base ST"><select value={form.st_base_method} onChange={e => set("st_base_method", e.target.value)} className={selInput}><option value="mva">MVA</option><option value="pauta">Pauta</option><option value="agregada">Agregada</option></select></Field>
-                      <Field label="CST ICMS-ST"><input type="text" value={form.cst_icms_st} onChange={e => set("cst_icms_st", e.target.value)} className={numInput} /></Field>
-                      <Field label="Alíquota IVA/MVA (%)"><input type="number" step="0.01" value={form.mva_rate} onChange={e => set("mva_rate", e.target.value)} className={numInput} /></Field>
-                      <Field label="Alíq. ICMS ST (%)"><input type="number" step="0.01" value={form.icms_st_rate} onChange={e => set("icms_st_rate", e.target.value)} className={numInput} /></Field>
-                      <Field label="Alíq. Red. Cálculo ST (%)"><input type="number" step="0.01" value={form.icms_st_reduction_base} onChange={e => set("icms_st_reduction_base", e.target.value)} className={numInput} /></Field>
-                      <Field label="Pauta ST (valor/un.)"><input type="number" step="0.01" value={form.pauta_value} onChange={e => set("pauta_value", e.target.value)} className={numInput} /></Field>
-                      <Field label="Unidade pauta"><input type="text" value={form.pauta_unit} onChange={e => set("pauta_unit", e.target.value)} className={numInput} /></Field>
-                      <Field label="Alíq. FCP-ST (%)"><input type="number" step="0.01" value={form.fcp_st_rate} onChange={e => set("fcp_st_rate", e.target.value)} className={numInput} /></Field>
-                    </div>
-                  </>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Field label="Base ST"><select value={form.st_base_method} onChange={e => set("st_base_method", e.target.value)} className={selInput}><option value="mva">MVA</option><option value="pauta">Pauta</option><option value="agregada">Agregada</option></select></Field>
+                    <Field label="CST ICMS-ST"><input type="text" value={form.cst_icms_st} onChange={e => set("cst_icms_st", e.target.value)} className={numInput} /></Field>
+                    <Field label="IVA / MVA (%)"><input type="number" step="0.01" value={form.mva_rate} onChange={e => set("mva_rate", e.target.value)} className={numInput} /></Field>
+                    <Field label="Alíquota ICMS-ST (%)"><input type="number" step="0.01" value={form.icms_st_rate} onChange={e => set("icms_st_rate", e.target.value)} className={numInput} /></Field>
+                    <Field label="Redução Base ST (%)"><input type="number" step="0.01" value={form.icms_st_reduction_base} onChange={e => set("icms_st_reduction_base", e.target.value)} className={numInput} /></Field>
+                    <Field label="Pauta (valor/un.)"><input type="number" step="0.01" value={form.pauta_value} onChange={e => set("pauta_value", e.target.value)} className={numInput} /></Field>
+                    <Field label="Unidade pauta"><input type="text" value={form.pauta_unit} onChange={e => set("pauta_unit", e.target.value)} className={numInput} /></Field>
+                    <Field label="Alíquota FCP-ST (%)"><input type="number" step="0.01" value={form.fcp_st_rate} onChange={e => set("fcp_st_rate", e.target.value)} className={numInput} /></Field>
+                  </div>
                 )}
               </div>
 
-              {/* DIFAL */}
-              <div className="bg-white rounded-lg border p-3">
-                <SectionTitle>DIFAL — Diferencial de Alíquota</SectionTitle>
-                <div className="flex items-center gap-2 mb-2">
-                  <RadioSimNao label="Aplica DIFAL" checked={!!form.difal_enabled} onChange={v => set("difal_enabled", v)} />
-                </div>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <SectionTitle icon={MapPin}>DIFAL — Diferencial de Alíquota</SectionTitle>
+                <div className="mb-3"><Toggle label="Aplica DIFAL (interestadual a consumidor final)" checked={!!form.difal_enabled} onChange={v => set("difal_enabled", v)} /></div>
                 {form.difal_enabled && (
-                  <div className="grid grid-cols-4 gap-2">
-                    <Field label="Alíq. ICMS Destino (%)"><input type="number" step="0.01" value={form.aliq_interna_destino} onChange={e => set("aliq_interna_destino", e.target.value)} className={numInput} /></Field>
-                    <Field label="Alíq. Interestadual (%)"><input type="number" step="0.01" value={form.aliq_interestadual} onChange={e => set("aliq_interestadual", e.target.value)} className={numInput} /></Field>
-                    <Field label="Alíq. FCP Destino (%)"><input type="number" step="0.01" value={form.fcp_destino_rate} onChange={e => set("fcp_destino_rate", e.target.value)} className={numInput} /></Field>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Field label="Alíq. interna destino (%)"><input type="number" step="0.01" value={form.aliq_interna_destino} onChange={e => set("aliq_interna_destino", e.target.value)} className={numInput} /></Field>
+                    <Field label="Alíq. interestadual (%)"><input type="number" step="0.01" value={form.aliq_interestadual} onChange={e => set("aliq_interestadual", e.target.value)} className={numInput} /></Field>
+                    <Field label="Alíq. FCP destino (%)"><input type="number" step="0.01" value={form.fcp_destino_rate} onChange={e => set("fcp_destino_rate", e.target.value)} className={numInput} /></Field>
                     <Field label="% DIFAL p/ destino"><input type="number" step="0.01" value={form.difal_percent_destination} onChange={e => set("difal_percent_destination", e.target.value)} className={numInput} /></Field>
                   </div>
                 )}
               </div>
 
-              {/* IPI */}
-              <div className="bg-white rounded-lg border p-3">
-                <SectionTitle>IPI</SectionTitle>
-                <div className="grid grid-cols-4 gap-2">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <SectionTitle icon={Receipt}>IPI</SectionTitle>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <Field label="CST IPI"><select value={form.cst_ipi} onChange={e => set("cst_ipi", e.target.value)} className={selInput}>{ipiList.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
-                  <Field label="Alíq. IPI (%)"><input type="number" step="0.01" value={form.ipi_rate} onChange={e => set("ipi_rate", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. Red. Base IPI (%)"><input type="number" step="0.01" value={form.ipi_reduction_base} onChange={e => set("ipi_reduction_base", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota IPI (%)"><input type="number" step="0.01" value={form.ipi_rate} onChange={e => set("ipi_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Redução de Base (%)"><input type="number" step="0.01" value={form.ipi_reduction_base} onChange={e => set("ipi_reduction_base", e.target.value)} className={numInput} /></Field>
                 </div>
               </div>
 
-              {/* PIS / COFINS */}
-              <div className="bg-white rounded-lg border p-3">
-                <SectionTitle>PIS / COFINS</SectionTitle>
-                <div className="grid grid-cols-4 gap-2">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <SectionTitle icon={Percent}>PIS / COFINS</SectionTitle>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <Field label="CST PIS"><select value={form.cst_pis} onChange={e => set("cst_pis", e.target.value)} className={selInput}>{pisCofinsList.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
-                  <Field label="Alíq. PIS (%)"><input type="number" step="0.01" value={form.pis_rate} onChange={e => set("pis_rate", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. Red. Base PIS (%)"><input type="number" step="0.01" value={form.pis_reduction_base} onChange={e => set("pis_reduction_base", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota PIS (%)"><input type="number" step="0.01" value={form.pis_rate} onChange={e => set("pis_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Redução Base PIS (%)"><input type="number" step="0.01" value={form.pis_reduction_base} onChange={e => set("pis_reduction_base", e.target.value)} className={numInput} /></Field>
                   <Field label="CST COFINS"><select value={form.cst_cofins} onChange={e => set("cst_cofins", e.target.value)} className={selInput}>{pisCofinsList.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
-                  <Field label="Alíq. COFINS (%)"><input type="number" step="0.01" value={form.cofins_rate} onChange={e => set("cofins_rate", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. Red. Base COFINS (%)"><input type="number" step="0.01" value={form.cofins_reduction_base} onChange={e => set("cofins_reduction_base", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota COFINS (%)"><input type="number" step="0.01" value={form.cofins_rate} onChange={e => set("cofins_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Redução Base COFINS (%)"><input type="number" step="0.01" value={form.cofins_reduction_base} onChange={e => set("cofins_reduction_base", e.target.value)} className={numInput} /></Field>
                 </div>
-                <div className="flex flex-wrap gap-4 mt-2">
-                  <RadioSimNao label="Deduz ICMS da base PIS/COFINS (Tema 69 STJ)" checked={!!form.deduz_icms_pis_cofins} onChange={v => set("deduz_icms_pis_cofins", v)} />
+                <div className="mt-3 pt-3 border-t border-border">
+                  <Toggle label="Deduz ICMS da base PIS/COFINS (Tema 69 STJ)" checked={!!form.deduz_icms_pis_cofins} onChange={v => set("deduz_icms_pis_cofins", v)} />
                 </div>
               </div>
 
-              {/* CBS / IBS (Reforma Tributária) */}
-              <div className="bg-white rounded-lg border p-3">
-                <SectionTitle>CBS / IBS — Reforma Tributária</SectionTitle>
-                <div className="grid grid-cols-4 gap-2">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <SectionTitle icon={Calculator}>CBS / IBS — Reforma Tributária</SectionTitle>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <Field label="CST CBS"><select value={form.cst_cbs} onChange={e => set("cst_cbs", e.target.value)} className={selInput}>{CST_CBS_IBS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
-                  <Field label="Alíq. CBS (%)"><input type="number" step="0.01" value={form.cbs_rate} onChange={e => set("cbs_rate", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. Red. Base CBS (%)"><input type="number" step="0.01" value={form.cbs_reduction_base} onChange={e => set("cbs_reduction_base", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota CBS (%)"><input type="number" step="0.01" value={form.cbs_rate} onChange={e => set("cbs_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Redução Base CBS (%)"><input type="number" step="0.01" value={form.cbs_reduction_base} onChange={e => set("cbs_reduction_base", e.target.value)} className={numInput} /></Field>
                   <Field label="CST IBS"><select value={form.cst_ibs} onChange={e => set("cst_ibs", e.target.value)} className={selInput}>{CST_CBS_IBS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>
-                  <Field label="Alíq. IBS (%)"><input type="number" step="0.01" value={form.ibs_rate} onChange={e => set("ibs_rate", e.target.value)} className={numInput} /></Field>
-                  <Field label="Alíq. Red. Base IBS (%)"><input type="number" step="0.01" value={form.ibs_reduction_base} onChange={e => set("ibs_reduction_base", e.target.value)} className={numInput} /></Field>
+                  <Field label="Alíquota IBS (%)"><input type="number" step="0.01" value={form.ibs_rate} onChange={e => set("ibs_rate", e.target.value)} className={numInput} /></Field>
+                  <Field label="Redução Base IBS (%)"><input type="number" step="0.01" value={form.ibs_reduction_base} onChange={e => set("ibs_reduction_base", e.target.value)} className={numInput} /></Field>
                 </div>
               </div>
 
-              {/* Preview automático */}
               {form.operation_id && <AutoFiscalPreview form={form} operations={operations} />}
             </>
           )}
         </div>
 
-        <div className="p-3 border-t bg-white flex gap-2 justify-end rounded-b-xl">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5"><Save className="w-4 h-4" />{saving ? "Salvando..." : "Salvar Regra"}</Button>
+        <div className="p-4 border-t bg-card flex gap-2 justify-end">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving} className="gap-2"><Save className="w-4 h-4" />{saving ? "Salvando..." : "Salvar Regra"}</Button>
         </div>
       </div>
     </div>
@@ -427,24 +429,33 @@ function AutoFiscalPreview({ form, operations }) {
     (result.difal ? num(result.difal.difal_total) : 0) +
     (result.st ? num(result.st.total_st) : 0);
   const valorFinal = num(result.total) + totalImpostos;
+  const Row = ({ label, value, color }) => (
+    <div className="flex justify-between"><span className="text-muted-foreground">{label}</span><b className={color}>{fmt(value)}</b></div>
+  );
   return (
-    <div className="border rounded-lg p-3 border-violet-200 bg-violet-50">
-      <p className="text-sm font-semibold text-violet-800 mb-1">Resultado automático (base R$ 100,00) — UF {form.uf || "—"} • CFOP {op?.cfop || "—"} • {form.destinatario_tipo}</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <div className="flex justify-between"><span className="text-gray-500">Valor produtos:</span><b>{fmt(result.total)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">IPI:</span><b className="text-indigo-700">{fmt(result.ipi_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">ICMS próprio:</span><b>{fmt(result.icms_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">FCP:</span><b>{fmt(result.fcp_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">PIS valor:</span><b className="text-cyan-700">{fmt(result.pis_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">COFINS valor:</span><b className="text-teal-700">{fmt(result.cofins_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">CBS valor:</span><b className="text-purple-700">{fmt(result.cbs_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">IBS valor:</span><b className="text-fuchsia-700">{fmt(result.ibs_value)}</b></div>
-        {result.difal && <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b className="text-blue-700">{fmt(result.difal.difal_total)}</b></div>}
-        {result.st && <div className="flex justify-between"><span className="text-gray-500">Total ST:</span><b className="text-amber-900">{fmt(result.st.total_st)}</b></div>}
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary text-primary-foreground"><Calculator className="w-4 h-4" /></span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Simulação (base R$ 100,00)</p>
+          <p className="text-[11px] text-muted-foreground">UF {form.uf || "—"} · CFOP {op?.cfop || "—"} · {form.destinatario_tipo}</p>
+        </div>
       </div>
-      <div className="mt-2 pt-2 border-t border-violet-200 bg-violet-100 rounded p-2 space-y-1">
-        <div className="flex justify-between text-xs"><span className="text-violet-700 font-medium">Total de impostos:</span><b className="text-violet-900">{fmt(totalImpostos)}</b></div>
-        <div className="flex justify-between text-sm"><span className="text-violet-800 font-semibold">Valor final (produtos + impostos):</span><b className="text-violet-900">{fmt(valorFinal)}</b></div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs mb-3">
+        <Row label="Valor produtos" value={result.total} />
+        <Row label="IPI" value={result.ipi_value} color="text-indigo-600" />
+        <Row label="ICMS próprio" value={result.icms_value} />
+        <Row label="FCP" value={result.fcp_value} />
+        <Row label="PIS" value={result.pis_value} color="text-cyan-600" />
+        <Row label="COFINS" value={result.cofins_value} color="text-teal-600" />
+        <Row label="CBS" value={result.cbs_value} color="text-purple-600" />
+        <Row label="IBS" value={result.ibs_value} color="text-fuchsia-600" />
+        {result.difal && <Row label="DIFAL total" value={result.difal.difal_total} color="text-blue-600" />}
+        {result.st && <Row label="Total ST" value={result.st.total_st} color="text-amber-700" />}
+      </div>
+      <div className="rounded-lg bg-primary/10 p-3 space-y-1">
+        <div className="flex justify-between text-xs"><span className="text-primary/80 font-medium">Total de impostos</span><b className="text-primary">{fmt(totalImpostos)}</b></div>
+        <div className="flex justify-between text-sm"><span className="font-semibold text-foreground">Valor final (produtos + impostos)</span><b className="text-primary">{fmt(valorFinal)}</b></div>
       </div>
     </div>
   );
