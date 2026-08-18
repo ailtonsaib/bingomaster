@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, Link2, UserPlus, Package } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
+import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
 
 const digits = (v) => String(v || "").replace(/\D/g, "");
 
@@ -24,6 +25,9 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [links, setLinks] = useState([]);
   const [poId, setPoId] = useState("");
   const [opId, setOpId] = useState("");
+  const [departments, setDepartments] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [manualApportionments, setManualApportionments] = useState([]);
   // Vínculo por item (XML): product_id selecionado, "new" para criar novo, ou "" (auto = cria novo)
   const [itemChoices, setItemChoices] = useState([]);
   const [supplierStatus, setSupplierStatus] = useState(""); // "exists" | "will_create" | ""
@@ -43,7 +47,9 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
       base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
       base44.entities.ErpProductSupplier.filter({ user_email: user.email }, "-created_date", 500),
-    ]).then(([o, op, s, p, l]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); }).catch(() => {});
+      base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
+      base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 500),
+    ]).then(([o, op, s, p, l, d, acc]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); }).catch(() => {});
   }, [user.email]);
 
   const selectedPo = orders.find(o => o.id === poId);
@@ -150,9 +156,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
 
   const handleSave = async () => {
     setError("");
-    if (!poId) { setError("Selecione a ordem de compra."); return; }
+    const hasPo = !!poId;
     const po = selectedPo;
     const op = operations.find(o => o.id === opId);
+    // Entrada sem OC: exige rateio (setor + conta) preenchido e soma 100%
+    if (!hasPo) {
+      const aps = manualApportionments.filter(a => a.department_id && a.account_id);
+      if (aps.length === 0) { setError("Informe o setor e a conta contábil do rateio — entrada sem ordem de compra."); return; }
+      const pctSum = aps.reduce((s, a) => s + (Number(a.percent) || 0), 0);
+      if (Math.abs(pctSum - 100) > 0.01) { setError(`A soma do rateio (${pctSum.toFixed(2)}%) deve ser 100%.`); return; }
+    }
     setSaving(true);
     try {
       // 1. Garante o fornecedor (XML ou manual)
@@ -185,7 +198,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           }
           resolvedItems.push({ ...it, product_id: product?.id || undefined, product_code: product?.code || it.product_code });
         }
-        const valueDiff = parsed.totals.total_nota - (po.total_value || 0);
+        const valueDiff = parsed.totals.total_nota - (po?.total_value || 0);
         const valuesMatch = Math.abs(valueDiff) < 0.01;
         payload = {
           user_email: user.email,
@@ -207,16 +220,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_pis: parsed.totals.total_pis,
           total_cofins: parsed.totals.total_cofins,
           items: resolvedItems,
-          purchase_order_id: po.id,
-          purchase_order_number: po.order_number,
-          po_total_value: po.total_value || 0,
-          value_diff: valueDiff,
-          values_match: valuesMatch,
+          purchase_order_id: hasPo ? po.id : undefined,
+          purchase_order_number: hasPo ? po.order_number : undefined,
+          po_total_value: hasPo ? (po.total_value || 0) : 0,
+          value_diff: hasPo ? valueDiff : 0,
+          values_match: hasPo ? valuesMatch : true,
           operation_id: op?.id || undefined,
           operation_name: op?.name || undefined,
-          apportionments: po.apportionments || [],
-          status: valuesMatch ? "aprovada" : "pendente",
-          approval_status: valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
+          apportionments: hasPo ? (po.apportionments || []) : manualApportionments,
+          status: !hasPo || valuesMatch ? "aprovada" : "pendente",
+          approval_status: !hasPo || valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
         };
       } else {
         if (!manual.nota_number.trim()) { setSaving(false); setError("Informe o número do documento."); return; }
@@ -229,7 +242,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
           ncm: "", cfop: "", unit: "UN",
         }));
-        const valueDiff = total - (po.total_value || 0);
+        const valueDiff = total - (po?.total_value || 0);
         const valuesMatch = Math.abs(valueDiff) < 0.01;
         payload = {
           user_email: user.email,
@@ -248,16 +261,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_nota: total,
           total_icms: 0, total_ipi: 0, total_pis: 0, total_cofins: 0,
           items,
-          purchase_order_id: po.id,
-          purchase_order_number: po.order_number,
-          po_total_value: po.total_value || 0,
-          value_diff: valueDiff,
-          values_match: valuesMatch,
+          purchase_order_id: hasPo ? po.id : undefined,
+          purchase_order_number: hasPo ? po.order_number : undefined,
+          po_total_value: hasPo ? (po.total_value || 0) : 0,
+          value_diff: hasPo ? valueDiff : 0,
+          values_match: hasPo ? valuesMatch : true,
           operation_id: op?.id || undefined,
           operation_name: op?.name || undefined,
-          apportionments: po.apportionments || [],
-          status: valuesMatch ? "aprovada" : "pendente",
-          approval_status: valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
+          apportionments: hasPo ? (po.apportionments || []) : manualApportionments,
+          status: !hasPo || valuesMatch ? "aprovada" : "pendente",
+          approval_status: !hasPo || valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
         };
       }
 
@@ -399,11 +412,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             <div className="space-y-3">
               <div className="grid md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600">Ordem de Compra *</label>
+                  <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>
                   <select value={poId} onChange={e => setPoId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                    <option value="">Selecione...</option>
+                    <option value="">Sem ordem de compra (despesa/serviço)</option>
                     {orders.map(o => <option key={o.id} value={o.id}>{o.order_number} — {o.supplier_name || "—"} ({fmtMoney(o.total_value)})</option>)}
                   </select>
+                  {!poId && <p className="text-[11px] text-amber-600 mt-1">Entrada avulsa: informe abaixo o setor e a conta contábil para o lançamento.</p>}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600">Operação de Entrada (opcional)</label>
@@ -428,6 +442,23 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   <p className={`text-xs mt-2 ${match ? "text-emerald-700" : "text-amber-700"}`}>
                     {match ? "Valores conferem — a entrada será aprovada automaticamente e poderá ser lançada." : "Valores divergem — a entrada ficará aguardando aprovação do administrador."}
                   </p>
+                </div>
+              )}
+
+              {!poId && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Entrada sem ordem de compra — despesa/serviço sem controle de estoque. Informe o rateio (setor + conta contábil) para o lançamento contábil.
+                  </div>
+                  <ErpApportionmentEditor
+                    apportionments={manualApportionments}
+                    onChange={setManualApportionments}
+                    setores={departments}
+                    accounts={accounts}
+                    accent="amber"
+                    title="Rateio do Lançamento (Setor / Conta Contábil)"
+                  />
                 </div>
               )}
             </div>
