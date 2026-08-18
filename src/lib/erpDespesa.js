@@ -74,3 +74,41 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
   await base44.entities.ErpFiscalEntry.update(entry.id, { financeiro_gerado: true });
   return payables.length;
 }
+
+// Lança uma entrada de NF (ErpFiscalEntry entry_kind=nf_entrada): gera o movimento
+// contábil (lançamento), atualiza o estoque dos itens e gera o financeiro (contas a
+// pagar) com o vencimento informado. Reutilizado pelo painel ("Atualizar Lançamento")
+// e pelo modal de entrada (lançamento automático quando a entrada já vem aprovada).
+export async function lancarEntradaNF(user, entry, accounts) {
+  const passivo = accounts.find(a => a.account_type === "passivo" && /fornecedor|contas a pagar/i.test(a.name));
+  if (!passivo) throw new Error("Cadastre uma conta de passivo 'Fornecedores' (ou 'Contas a Pagar') para gerar o lançamento.");
+  if (!entry.apportionments?.length) throw new Error("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio ou informe o rateio.");
+
+  const je = await gerarLancamentoEntrada(user, entry, accounts);
+
+  // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
+  const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
+  const byId = new Map(products.map(p => [p.id, p]));
+  for (const it of entry.items || []) {
+    const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
+    if (prod) {
+      await base44.entities.ErpProduct.update(prod.id, {
+        stock: (prod.stock || 0) + (it.quantity || 0),
+        cost_price: it.unit_price || prod.cost_price,
+      });
+    }
+  }
+
+  await base44.entities.ErpFiscalEntry.update(entry.id, {
+    status: "lancada",
+    journal_entry_id: je.id,
+    journal_entry_number: je.number,
+  });
+
+  // Financeiro — contas a pagar com o vencimento informado na entrada
+  if (!entry.financeiro_gerado) {
+    try { await gerarFinanceiroDespesa(user, entry, { prefix: "NF", category: "NF Entrada" }); }
+    catch (e) { console.error("Falha ao gerar financeiro:", e); }
+  }
+  return je;
+}

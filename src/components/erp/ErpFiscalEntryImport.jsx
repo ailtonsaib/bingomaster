@@ -5,6 +5,7 @@ import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToL
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
+import { lancarEntradaNF } from "@/lib/erpDespesa";
 
 const digits = (v) => String(v || "").replace(/\D/g, "");
 
@@ -277,7 +278,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         };
       }
 
-      await base44.entities.ErpFiscalEntry.create(payload);
+      const entry = await base44.entities.ErpFiscalEntry.create(payload);
+      // Lançamento automático (movimento contábil + estoque + financeiro) quando a
+      // entrada já vem aprovada (sem OC ou valores conferem). Caso contrário segue
+      // aguardando aprovação do admin no painel.
+      if (payload.status === "aprovada") {
+        try { await lancarEntradaNF(user, entry, accounts); }
+        catch (e) { console.error("Falha ao gerar lançamento contábil automático:", e); }
+      }
       onSaved?.();
       onClose();
       if (newProductsCount > 0 && onGoToProducts) {

@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock } from "lucide-react";
 import ErpFiscalEntryImport from "./ErpFiscalEntryImport";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
-import { gerarLancamentoEntrada } from "@/lib/erpJournal";
-import { gerarFinanceiroDespesa } from "@/lib/erpDespesa";
+import { lancarEntradaNF } from "@/lib/erpDespesa";
 
 const STATUS = {
   pendente: { label: "Pendente", color: "text-amber-700 bg-amber-100" },
@@ -52,36 +51,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
   const handleLancar = async (entry) => {
     setBusy(entry.id);
     try {
-      // Conta de passivo "Fornecedores" / "Contas a Pagar"
-      const passivo = accounts.find(a => a.account_type === "passivo" && /fornecedor|contas a pagar/i.test(a.name));
-      if (!passivo) { alert("Cadastre uma conta de passivo 'Fornecedores' (ou 'Contas a Pagar') para gerar o lançamento."); setBusy(null); return; }
-      if (!entry.apportionments?.length) { alert("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio."); setBusy(null); return; }
-
-      const je = await gerarLancamentoEntrada(user, entry, accounts);
-
-      // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
-      const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
-      const byId = new Map(products.map(p => [p.id, p]));
-      for (const it of entry.items || []) {
-        const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
-        if (prod) {
-          await base44.entities.ErpProduct.update(prod.id, {
-            stock: (prod.stock || 0) + (it.quantity || 0),
-            cost_price: it.unit_price || prod.cost_price,
-          });
-        }
-      }
-
-      await base44.entities.ErpFiscalEntry.update(entry.id, {
-        status: "lancada",
-        journal_entry_id: je.id,
-        journal_entry_number: je.number,
-      });
-      // Financeiro — contas a pagar com o vencimento informado na entrada
-      if (!entry.financeiro_gerado) {
-        try { await gerarFinanceiroDespesa(user, entry, { prefix: "NF", category: "NF Entrada" }); }
-        catch (e) { console.error("Falha ao gerar financeiro:", e); }
-      }
+      await lancarEntradaNF(user, entry, accounts);
       load();
     } catch (e) { alert(e.message); }
     setBusy(null);
