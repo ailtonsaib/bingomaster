@@ -136,7 +136,7 @@ export default function ErpFiscalEntryPanel({ user }) {
                   <tr key={i.id} className="border-t hover:bg-gray-50">
                     <td className="p-2">
                       <div className="font-mono text-xs">{i.nota_number}</div>
-                      <div className="text-[10px] text-gray-400">{i.nota_model === "NFSe" ? "NFS-e" : `NF-e ${i.nota_model}`} • {fmtDate(i.issue_date)}</div>
+                      <div className="text-[10px] text-gray-400">{i.nota_model === "NFSe" ? "NFS-e" : i.nota_model === "NDF" ? "Doc. Não Fiscal" : `NF-e ${i.nota_model}`} • {fmtDate(i.issue_date)}</div>
                     </td>
                     <td className="p-2">{i.supplier_name || "—"}</td>
                     <td className="p-2 font-mono text-xs">{i.purchase_order_number || "—"}</td>
