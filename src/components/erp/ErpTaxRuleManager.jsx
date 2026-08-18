@@ -1,129 +1,19 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, ScrollText } from "lucide-react";
-import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem, num } from "@/lib/erpTaxCalc";
+import ErpTaxRuleForm from "@/components/erp/ErpTaxRuleForm";
 
-const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
-
-const CST_ICMS = [
-  { value: "00", label: "00 - Tributada integralmente" },
-  { value: "10", label: "10 - Tributada (cobrança por dentro)" },
-  { value: "20", label: "20 - Com redução de base" },
-  { value: "30", label: "30 - Isenta/não trib. e cobrança por substituição" },
-  { value: "40", label: "40 - Isenta" },
-  { value: "41", label: "41 - Não tributada" },
-  { value: "50", label: "50 - Suspensão" },
-  { value: "51", label: "51 - Diferimento" },
-  { value: "60", label: "60 - Cobrado anteriormente" },
-  { value: "70", label: "70 - Redução base e substituição" },
-  { value: "90", label: "90 - Outros" },
-];
-// CST PIS/COFINS — Saídas (Tabela 4.3.2)
-const CST_PIS_COFINS_SAIDA = [
-  { value: "01", label: "01 - Operação Tributável c/ Alíquota Básica" },
-  { value: "02", label: "02 - Operação Tributável c/ Alíquota Diferenciada" },
-  { value: "03", label: "03 - Operação Tributável c/ Alíquota por Unidade de Medida" },
-  { value: "04", label: "04 - Operação Tributável Monofásica (Combustíveis)" },
-  { value: "05", label: "05 - Operação Tributável por Substituição Tributária" },
-  { value: "06", label: "06 - Operação Tributável a Alíquota Zero" },
-  { value: "07", label: "07 - Operação Isenta da Contribuição" },
-  { value: "08", label: "08 - Operação sem Incidência da Contribuição" },
-  { value: "09", label: "09 - Operação c/ Suspensão da Contribuição" },
-  { value: "49", label: "49 - Outras Operações de Saída" },
-];
-// CST PIS/COFINS — Entradas (Tabela 4.3.1)
-const CST_PIS_COFINS_ENTRADA = [
-  { value: "50", label: "50 - Crédito - Vinc. Exclusivamente a Receita Tributada Mercado Interno" },
-  { value: "51", label: "51 - Crédito - Vinc. Exclusivamente a Receita Não Tributada Mercado Interno" },
-  { value: "52", label: "52 - Crédito - Vinc. Exclusivamente a Receita de Exportação" },
-  { value: "53", label: "53 - Crédito - Vinc. a Receitas Tributadas e Não Tributadas Mercado Interno" },
-  { value: "54", label: "54 - Crédito - Vinc. a Receitas Tributadas Mercado Interno e Exportação" },
-  { value: "55", label: "55 - Crédito - Vinc. a Receitas Não Tributadas Mercado Interno e Exportação" },
-  { value: "56", label: "56 - Crédito - Vinc. a Receitas Trib./Não Trib. Mercado Interno e Exportação" },
-  { value: "60", label: "60 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita Tributada MI" },
-  { value: "61", label: "61 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita Não Tributada MI" },
-  { value: "62", label: "62 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita de Exportação" },
-  { value: "63", label: "63 - Crédito Presumido - Aquis. Vinc. a Receitas Trib. e Não Trib. Mercado Interno" },
-  { value: "64", label: "64 - Crédito Presumido - Aquis. Vinc. a Receitas Trib. MI e Exportação" },
-  { value: "65", label: "65 - Crédito Presumido - Aquis. Vinc. a Receitas Não Trib. MI e Exportação" },
-  { value: "66", label: "66 - Crédito Presumido - Aquis. Vinc. a Receitas Trib./Não Trib. MI e Export." },
-  { value: "67", label: "67 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita Tributada MI" },
-  { value: "70", label: "70 - Operação de Aquisição sem Direito a Crédito" },
-  { value: "71", label: "71 - Operação de Aquisição com Isenção" },
-  { value: "72", label: "72 - Operação de Aquisição com Suspensão" },
-  { value: "73", label: "73 - Operação de Aquisição a Alíquota Zero" },
-  { value: "74", label: "74 - Operação de Aquisição sem Incidência" },
-  { value: "75", label: "75 - Operação de Aquisição por Substituição Tributária" },
-  { value: "98", label: "98 - Outras Operações de Entrada" },
-  { value: "99", label: "99 - Outras Operações" },
-];
-const CST_PIS_COFINS_DEFAULT = CST_PIS_COFINS_SAIDA;
-// CST IPI — Entradas (Tabela 4.2.1)
-const CST_IPI_ENTRADA = [
-  { value: "00", label: "00 - Entrada com Recuperação de Crédito" },
-  { value: "01", label: "01 - Entrada Tributada com Alíquota Zero" },
-  { value: "02", label: "02 - Entrada Isenta" },
-  { value: "03", label: "03 - Entrada Não-Tributada" },
-  { value: "04", label: "04 - Entrada Imune" },
-  { value: "05", label: "05 - Entrada com Suspensão" },
-  { value: "49", label: "49 - Outras Entradas" },
-];
-// CST IPI — Saídas (Tabela 4.2.2)
-const CST_IPI_SAIDA = [
-  { value: "50", label: "50 - Saída Tributada" },
-  { value: "51", label: "51 - Saída Tributada com Alíquota Zero" },
-  { value: "52", label: "52 - Saída Isenta" },
-  { value: "53", label: "53 - Saída Não-Tributada" },
-  { value: "54", label: "54 - Saída Imune" },
-  { value: "55", label: "55 - Saída com Suspensão" },
-  { value: "99", label: "99 - Outras Saídas" },
-];
-const CST_IPI_DEFAULT = CST_IPI_SAIDA;
-const CST_CBS_IBS = [
-  { value: "00", label: "00 - Tributada" },
-  { value: "01", label: "01 - Monofásica" },
-  { value: "02", label: "02 - Isenta" },
-  { value: "03", label: "03 - Não tributada" },
-  { value: "04", label: "04 - Imune" },
-  { value: "05", label: "05 - Suspensão" },
-  { value: "90", label: "90 - Outros" },
-];
-
-const TAX_GROUPS = [
-  { key: "icms", label: "ICMS", color: "border-indigo-200 bg-indigo-50", fields: [
-    { key: "cst_icms", label: "CST", options: CST_ICMS },
-    { key: "icms_rate", label: "Alíquota (%)", num: true },
-    { key: "icms_reduction_base", label: "Base (%)", num: true },
-    { key: "fcp_rate", label: "FCP (%)", num: true },
-  ] },
-  { key: "pis", label: "PIS", color: "border-cyan-200 bg-cyan-50", fields: [
-    { key: "cst_pis", label: "CST", options: CST_PIS_COFINS_DEFAULT, dynamic: "pis_cofins" },
-    { key: "pis_rate", label: "Alíquota (%)", num: true },
-    { key: "pis_reduction_base", label: "Base (%)", num: true },
-  ] },
-  { key: "cofins", label: "COFINS", color: "border-teal-200 bg-teal-50", fields: [
-    { key: "cst_cofins", label: "CST", options: CST_PIS_COFINS_DEFAULT, dynamic: "pis_cofins" },
-    { key: "cofins_rate", label: "Alíquota (%)", num: true },
-    { key: "cofins_reduction_base", label: "Base (%)", num: true },
-  ] },
-  { key: "ipi", label: "IPI", color: "border-amber-200 bg-amber-50", fields: [
-    { key: "cst_ipi", label: "CST", options: CST_IPI_DEFAULT, dynamic: "ipi" },
-    { key: "ipi_rate", label: "Alíquota (%)", num: true },
-    { key: "ipi_reduction_base", label: "Base (%)", num: true },
-  ] },
-  { key: "cbs", label: "CBS (Reforma Tributária)", color: "border-purple-200 bg-purple-50", fields: [
-    { key: "cst_cbs", label: "CST", options: CST_CBS_IBS },
-    { key: "cbs_rate", label: "Alíquota (%)", num: true },
-    { key: "cbs_reduction_base", label: "Base (%)", num: true },
-  ] },
-  { key: "ibs", label: "IBS (Reforma Tributária)", color: "border-fuchsia-200 bg-fuchsia-50", fields: [
-    { key: "cst_ibs", label: "CST", options: CST_CBS_IBS },
-    { key: "ibs_rate", label: "Alíquota (%)", num: true },
-    { key: "ibs_reduction_base", label: "Base (%)", num: true },
-  ] },
-];
+const DEST_BADGE = {
+  contribuinte: "text-emerald-700 bg-emerald-100",
+  nao_contribuinte: "text-blue-700 bg-blue-100",
+  pessoa_fisica: "text-purple-700 bg-purple-100",
+};
+const DEST_LABEL = {
+  contribuinte: "Contribuinte",
+  nao_contribuinte: "Não contribuinte",
+  pessoa_fisica: "Pessoa física",
+};
 
 export default function ErpTaxRuleManager({ user }) {
   const [rules, setRules] = useState([]);
@@ -147,7 +37,7 @@ export default function ErpTaxRuleManager({ user }) {
   useEffect(() => { load(); }, [user.email]);
 
   const filtered = rules.filter(r => {
-    const t = (r.operation_name + " " + (r.ncm || "") + " " + (r.cfop || "") + " " + (r.uf || "")).toLowerCase();
+    const t = (r.operation_name + " " + (r.ncm || "") + " " + (r.cfop || "") + " " + (r.uf || "") + " " + (r.destinatario_tipo || "")).toLowerCase();
     return t.includes(search.toLowerCase());
   });
 
@@ -164,12 +54,12 @@ export default function ErpTaxRuleManager({ user }) {
   return (
     <div className="space-y-3">
       <div><h2 className="font-semibold text-base">Regras Fiscais por Operação</h2>
-        <p className="text-xs text-gray-500">ICMS, PIS, COFINS, IPI, CBS e IBS — conforme legislação brasileira</p>
+        <p className="text-xs text-gray-500">ICMS, PIS, COFINS, IPI, CBS e IBS — por operação, UF, NCM e tipo de destinatário</p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por operação, CFOP ou NCM..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por operação, CFOP, NCM ou destinatário..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Regra</Button>
       </div>
@@ -184,6 +74,7 @@ export default function ErpTaxRuleManager({ user }) {
                 <th className="p-2 text-left">CFOP</th>
                 <th className="p-2 text-left">NCM</th>
                 <th className="p-2 text-left">UF</th>
+                <th className="p-2 text-left">Destinatário</th>
                 <th className="p-2 text-left">ICMS</th>
                 <th className="p-2 text-left">PIS/COFINS</th>
                 <th className="p-2 text-left">IPI</th>
@@ -193,9 +84,9 @@ export default function ErpTaxRuleManager({ user }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={11} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={10} className="p-8 text-center text-gray-400">
+                <tr><td colSpan={11} className="p-8 text-center text-gray-400">
                   <ScrollText className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma regra fiscal cadastrada.
                 </td></tr>
               ) : filtered.map(r => (
@@ -205,6 +96,7 @@ export default function ErpTaxRuleManager({ user }) {
                   <td className="p-2 font-mono text-xs">{r.cfop || "—"}</td>
                   <td className="p-2 font-mono text-xs">{r.ncm || "Geral"}</td>
                   <td className="p-2 font-mono text-xs">{r.uf || "Todas"}{r.difal_enabled ? <span className="ml-1 text-blue-600" title="Aplica DIFAL">⚡</span> : ""}{r.st_enabled ? <span className="ml-1 text-amber-600" title="Aplica ST">ST</span> : ""}</td>
+                  <td className="p-2"><span className={`text-[10px] px-2 py-0.5 rounded-full ${DEST_BADGE[r.destinatario_tipo] || "text-gray-600 bg-gray-100"}`}>{DEST_LABEL[r.destinatario_tipo] || "—"}</span></td>
                   <td className="p-2 text-xs">{r.cst_icms} · {r.icms_rate}%</td>
                   <td className="p-2 text-xs">{r.cst_pis}/{r.cst_cofins} · {r.pis_rate}%/{r.cofins_rate}%</td>
                   <td className="p-2 text-xs">{r.cst_ipi} · {r.ipi_rate}%</td>
@@ -223,358 +115,6 @@ export default function ErpTaxRuleManager({ user }) {
       {showForm && (
         <ErpTaxRuleForm user={user} rule={editing} operations={operations} onClose={() => setShowForm(false)} onSaved={load} />
       )}
-    </div>
-  );
-}
-
-function DifalCalculator({ form, set }) {
-  const [base, setBase] = useState(100);
-  const aliqInt = Number(form.aliq_interna_destino) || 0;
-  const aliqInte = Number(form.aliq_interestadual) || 0;
-  const fcpDest = Number(form.fcp_destino_rate) || 0;
-  const pctDest = Number(form.difal_percent_destination) || 100;
-  const b = Number(base) || 0;
-  const icmsOrigin = b * aliqInte / 100;
-  const difalTotal = b * (aliqInt - aliqInte) / 100;
-  const difalDest = difalTotal * pctDest / 100;
-  const difalOrigin = difalTotal - difalDest;
-  const fcpValue = b * fcpDest / 100;
-  const totalDest = difalDest + fcpValue;
-  const fmt = (v) => "R$ " + (v || 0).toFixed(2).replace(".", ",");
-  const numInput = (label, key, hint) => (
-    <div>
-      <label className="text-[10px] font-medium text-gray-600">{label}</label>
-      <input type="number" step="0.01" value={form[key]} onChange={e => set(key, e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" />
-      {hint && <span className="text-[9px] text-gray-400">{hint}</span>}
-    </div>
-  );
-  return (
-    <div className="border rounded-lg p-3 border-blue-300 bg-blue-50">
-      <p className="text-sm font-semibold text-blue-800 mb-2">DIFAL — Diferencial de Alíquota (EC 87/2015)</p>
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        {numInput("Alíq. interna destino (%)", "aliq_interna_destino", "ICMS do estado destinatário")}
-        {numInput("Alíq. interestadual (%)", "aliq_interestadual", "4%, 7% ou 12%")}
-        {numInput("FCP destino (%)", "fcp_destino_rate")}
-        {numInput("% DIFAL p/ destino", "difal_percent_destination", "Após 2019 = 100")}
-      </div>
-      <div className="bg-white rounded p-2 border border-blue-200">
-        <div className="flex items-center gap-2 mb-2">
-          <label className="text-xs font-medium text-gray-600">Valor da base para simulação:</label>
-          <input type="number" step="0.01" value={base} onChange={e => setBase(e.target.value)} className="h-8 w-32 rounded border border-input px-2 text-xs" />
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <div className="flex justify-between"><span className="text-gray-500">ICMS origem (alíq. interestadual):</span><b>{fmt(icmsOrigin)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b>{fmt(difalTotal)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">DIFAL origem:</span><b className="text-blue-700">{fmt(difalOrigin)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">DIFAL destino:</span><b className="text-emerald-700">{fmt(difalDest)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">FCP destino:</span><b>{fmt(fcpValue)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">Total destinado ao destino:</span><b className="text-emerald-800">{fmt(totalDest)}</b></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StCalculator({ form, set }) {
-  const [base, setBase] = useState(100);
-  const [ipi, setIpi] = useState(0);
-  const [qty, setQty] = useState(1);
-  const method = form.st_base_method || "mva";
-  const mva = Number(form.mva_rate) || 0;
-  const stRate = Number(form.icms_st_rate) || 0;
-  const stRed = Number(form.icms_st_reduction_base) || 100;
-  const pauta = Number(form.pauta_value) || 0;
-  const icmsOp = Number(form.icms_rate) || 0;
-  const fcpSt = Number(form.fcp_st_rate) || 0;
-  const v = Number(base) || 0;
-  const q = Number(qty) || 0;
-  const ipiValue = v * (Number(ipi) || 0) / 100;
-  const valorOp = v + ipiValue;
-  let baseST = method === "pauta" ? pauta * q : method === "agregada" ? valorOp : valorOp * (1 + mva / 100);
-  baseST = baseST * (stRed / 100);
-  const icmsST = baseST * stRate / 100;
-  const icmsProprio = v * icmsOp / 100;
-  const icmsSTRecolher = Math.max(0, icmsST - icmsProprio);
-  const fcpSTValue = baseST * fcpSt / 100;
-  const fmt = (val) => "R$ " + (val || 0).toFixed(2).replace(".", ",");
-  const numInput = (label, key, hint) => (
-    <div>
-      <label className="text-[10px] font-medium text-gray-600">{label}</label>
-      <input type="number" step="0.01" value={form[key]} onChange={e => set(key, e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" />
-      {hint && <span className="text-[9px] text-gray-400">{hint}</span>}
-    </div>
-  );
-  return (
-    <div className="border rounded-lg p-3 border-amber-300 bg-amber-50">
-      <p className="text-sm font-semibold text-amber-800 mb-2">Substituição Tributária (ICMS-ST) — {method === "pauta" ? "Pauta" : method === "agregada" ? "Base agregada" : "MVA"}</p>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div>
-          <label className="text-[10px] font-medium text-gray-600">Método da base</label>
-          <select value={method} onChange={e => set("st_base_method", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5">
-            <option value="mva">MVA (Margem de Valor Agregado)</option>
-            <option value="pauta">Pauta (valor fixo por unidade)</option>
-            <option value="agregada">Base agregada (operação + IPI)</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] font-medium text-gray-600">CST ICMS-ST</label>
-          <input type="text" value={form.cst_icms_st} onChange={e => set("cst_icms_st", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" placeholder="10, 30, 40..." />
-        </div>
-      </div>
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        {method === "mva" && numInput("MVA (%)", "mva_rate", "Margem de valor agregado")}
-        {method === "agregada" && <div className="text-[10px] text-gray-400 self-end pb-2">Base ST = valor operação + IPI (sem MVA)</div>}
-        {method === "pauta" && <><div><label className="text-[10px] font-medium text-gray-600">Valor pauta/un.</label><input type="number" step="0.01" value={form.pauta_value} onChange={e => set("pauta_value", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" /></div><div><label className="text-[10px] font-medium text-gray-600">Unidade</label><input type="text" value={form.pauta_unit} onChange={e => set("pauta_unit", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" /></div></>}
-        {numInput("Alíquota ICMS-ST (%)", "icms_st_rate", "Interna do destino")}
-        {numInput("Redução base ST (%)", "icms_st_reduction_base", "100 = integral")}
-        {numInput("FCP-ST (%)", "fcp_st_rate")}
-      </div>
-      {method === "pauta" && (
-        <div className="bg-white rounded p-2 border border-amber-200 mb-2">
-          <label className="text-xs font-medium text-gray-600 mr-2">Quantidade:</label>
-          <input type="number" step="0.01" value={qty} onChange={e => setQty(e.target.value)} className="h-8 w-24 rounded border border-input px-2 text-xs" />
-        </div>
-      )}
-      <div className="bg-white rounded p-2 border border-amber-200">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1 mb-2">
-          <div><label className="text-xs font-medium text-gray-600 mr-2">Valor produto:</label><input type="number" step="0.01" value={base} onChange={e => setBase(e.target.value)} className="h-8 w-28 rounded border border-input px-2 text-xs" /></div>
-          <div><label className="text-xs font-medium text-gray-600 mr-2">IPI (%):</label><input type="number" step="0.01" value={ipi} onChange={e => setIpi(e.target.value)} className="h-8 w-20 rounded border border-input px-2 text-xs" /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <div className="flex justify-between"><span className="text-gray-500">Base cálculo ST:</span><b>{fmt(baseST)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">ICMS-ST (bruto):</span><b>{fmt(icmsST)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">ICMS próprio (crédito):</span><b className="text-blue-700">{fmt(icmsProprio)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">ICMS-ST a recolher:</span><b className="text-amber-800">{fmt(icmsSTRecolher)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">FCP-ST:</span><b>{fmt(fcpSTValue)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">Total ST a recolher:</span><b className="text-amber-900">{fmt(icmsSTRecolher + fcpSTValue)}</b></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AutoFiscalPreview({ form, operations }) {
-  const op = operations.find(o => o.id === form.operation_id);
-  const result = computeErpFiscalItem(
-    { ncm: form.ncm || "", quantity: 1, unit_price: 100, sale_price: 100 },
-    { rules: [form], operation: op, customerUF: form.uf, companyUF: "" }
-  );
-  const fmt = (v) => "R$ " + (Number(v) || 0).toFixed(2).replace(".", ",");
-  return (
-    <div className="border rounded-lg p-3 border-violet-200 bg-violet-50">
-      <p className="text-sm font-semibold text-violet-800 mb-1">
-        Resultado automático (base R$ 100,00) — UF {form.uf || "—"} • CFOP {op?.cfop || "—"}
-      </p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <div className="flex justify-between"><span className="text-gray-500">Valor produtos:</span><b>{fmt(result.total)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">IPI:</span><b className="text-indigo-700">{fmt(result.ipi_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">ICMS próprio:</span><b>{fmt(result.icms_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">FCP:</span><b>{fmt(result.fcp_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">PIS (base):</span><b>{fmt(result.pis_base)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">PIS valor:</span><b className="text-cyan-700">{fmt(result.pis_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">COFINS (base):</span><b>{fmt(result.cofins_base)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">COFINS valor:</span><b className="text-teal-700">{fmt(result.cofins_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">CBS (base):</span><b>{fmt(result.cbs_base)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">CBS valor:</span><b className="text-purple-700">{fmt(result.cbs_value)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">IBS (base):</span><b>{fmt(result.ibs_base)}</b></div>
-        <div className="flex justify-between"><span className="text-gray-500">IBS valor:</span><b className="text-fuchsia-700">{fmt(result.ibs_value)}</b></div>
-        {result.difal && <>
-          <div className="flex justify-between"><span className="text-gray-500">DIFAL total:</span><b className="text-blue-700">{fmt(result.difal.difal_total)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">DIFAL destino:</span><b className="text-emerald-700">{fmt(result.difal.difal_destination)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">DIFAL origem:</span><b>{fmt(result.difal.difal_origin)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">FCP destino:</span><b>{fmt(result.difal.fcp_destination)}</b></div>
-        </>}
-        {result.st && <>
-          <div className="flex justify-between"><span className="text-gray-500">Base ST:</span><b>{fmt(result.st.base_st)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">ICMS-ST a recolher:</span><b className="text-amber-800">{fmt(result.st.icms_st_recolher)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">FCP-ST:</span><b>{fmt(result.st.fcp_st)}</b></div>
-          <div className="flex justify-between"><span className="text-gray-500">Total ST:</span><b className="text-amber-900">{fmt(result.st.total_st)}</b></div>
-        </>}
-      </div>
-      {(() => {
-        const totalImpostos =
-          num(result.ipi_value) + num(result.icms_value) + num(result.fcp_value) +
-          num(result.pis_value) + num(result.cofins_value) +
-          num(result.cbs_value) + num(result.ibs_value) +
-          (result.difal ? num(result.difal.difal_total) : 0) +
-          (result.st ? num(result.st.total_st) : 0);
-        const valorFinal = num(result.total) + totalImpostos;
-        return (
-          <div className="mt-2 pt-2 border-t border-violet-200 bg-violet-100 rounded p-2 space-y-1">
-            <div className="flex justify-between text-xs"><span className="text-violet-700 font-medium">Total de impostos:</span><b className="text-violet-900">{fmt(totalImpostos)}</b></div>
-            <div className="flex justify-between text-sm"><span className="text-violet-800 font-semibold">Valor final (produtos + impostos):</span><b className="text-violet-900">{fmt(valorFinal)}</b></div>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
-  const blank = {
-    operation_id: "", operation_name: "", operation_type: "", cfop: "",
-    ncm: "", description: "",
-    cst_icms: "00", icms_rate: 0, icms_reduction_base: 100, fcp_rate: 0,
-    cst_pis: "01", pis_rate: 0, pis_reduction_base: 100,
-    cst_cofins: "01", cofins_rate: 0, cofins_reduction_base: 100,
-    deduz_icms_pis_cofins: false,
-    cst_ipi: "50", ipi_rate: 0, ipi_reduction_base: 100,
-    cst_cbs: "00", cbs_rate: 0, cbs_reduction_base: 100,
-    cst_ibs: "00", ibs_rate: 0, ibs_reduction_base: 100,
-    uf: "", difal_enabled: false, aliq_interna_destino: 0, aliq_interestadual: 0, fcp_destino_rate: 0, difal_percent_destination: 100,
-    st_enabled: false, cst_icms_st: "10", st_base_method: "mva", mva_rate: 0, mva_ajusted_rate: 0, icms_st_rate: 0, icms_st_reduction_base: 100, pauta_value: 0, pauta_unit: "UN", fcp_st_rate: 0,
-    is_active: true,
-  };
-  const [form, setForm] = useState({ ...blank, ...(rule || {}) });
-  const [saving, setSaving] = useState(false);
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
-
-  // Auto-preenchimento das alíquotas do DIFAL conforme UF e operação escolhidas.
-  useEffect(() => {
-    if (form.uf && (!form.aliq_interna_destino || Number(form.aliq_interna_destino) === 0)) {
-      set("aliq_interna_destino", ICMS_INTERNAL_RATES[form.uf] || 0);
-    }
-    const op = operations.find(o => o.id === form.operation_id);
-    if (form.uf && op) {
-      const cfop = String(op.cfop || "");
-      const interestadual = cfop.startsWith("6") || cfop.startsWith("1");
-      if (interestadual && (!form.aliq_interestadual || Number(form.aliq_interestadual) === 0)) {
-        set("aliq_interestadual", interestadualRate(form.uf));
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.uf, form.operation_id]);
-
-  // Corrige CST de PIS/COFINS legado ao editar regra existente (conforme tipo da operação)
-  useEffect(() => {
-    if (!form.operation_type) return;
-    const list = form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
-    const listIpi = form.operation_type === "entrada" ? CST_IPI_ENTRADA : CST_IPI_SAIDA;
-    setForm(prev => {
-      const next = { ...prev };
-      if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
-      if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
-      if (!listIpi.some(o => o.value === next.cst_ipi)) next.cst_ipi = listIpi[0]?.value || "";
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const onOp = (id) => {
-    const op = operations.find(o => o.id === id);
-    const newType = op?.type || "";
-    setForm(prev => {
-      const next = { ...prev, operation_id: id, operation_name: op?.name || "", operation_type: newType, cfop: op?.cfop || "" };
-      // Reseta CST de PIS/COFINS se o atual não pertencer à tabela do novo tipo
-      const list = newType === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
-      if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
-      if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
-      const listIpi = newType === "entrada" ? CST_IPI_ENTRADA : CST_IPI_SAIDA;
-      if (!listIpi.some(o => o.value === next.cst_ipi)) next.cst_ipi = listIpi[0]?.value || "";
-      return next;
-    });
-  };
-
-  const dynamicOptions = (type) => {
-    if (type === "pis_cofins") return form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
-    if (type === "ipi") return form.operation_type === "entrada" ? CST_IPI_ENTRADA : CST_IPI_SAIDA;
-    return null;
-  };
-  const cstOptionsFor = (g) => g.fields[0].dynamic ? dynamicOptions(g.fields[0].dynamic) : g.fields[0].options;
-
-  const handleSave = async () => {
-    if (!form.operation_id) { alert("Selecione uma operação."); return; }
-    setSaving(true);
-    const payload = { user_email: user.email, ...form };
-    Object.keys(payload).forEach(k => { if (typeof payload[k] === "number") payload[k] = Number(payload[k]) || 0; });
-    ["aliq_interna_destino", "aliq_interestadual", "fcp_destino_rate", "difal_percent_destination", "mva_rate", "mva_ajusted_rate", "icms_st_rate", "icms_st_reduction_base", "pauta_value", "fcp_st_rate"].forEach(k => payload[k] = Number(payload[k]) || 0);
-    payload.difal_enabled = !!payload.difal_enabled;
-    payload.st_enabled = !!payload.st_enabled;
-    payload.deduz_icms_pis_cofins = !!payload.deduz_icms_pis_cofins;
-    if (!payload.ncm) delete payload.ncm;
-    if (!payload.uf) delete payload.uf;
-    try {
-      if (rule?.id) await base44.entities.ErpTaxRule.update(rule.id, payload);
-      else await base44.entities.ErpTaxRule.create(payload);
-      onSaved(); onClose();
-    } catch (e) { alert(e.message); }
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
-          <h2 className="font-bold">{rule ? "Editar Regra Fiscal" : "Nova Regra Fiscal"}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500">✕</button>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-gray-600">Operação *</label>
-              <select value={form.operation_id} onChange={e => onOp(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
-                <option value="">Selecione...</option>
-                {operations.map(o => <option key={o.id} value={o.id}>{o.type === "entrada" ? "Entrada" : "Saída"} — {o.name} ({o.cfop})</option>)}
-              </select>
-            </div>
-            <div><label className="text-xs font-medium text-gray-600">NCM específico (opcional)</label>
-              <Input value={form.ncm} onChange={e => set("ncm", e.target.value)} placeholder="Geral se vazio" className="mt-1" /></div>
-            <div><label className="text-xs font-medium text-gray-600">UF de destino</label>
-              <select value={form.uf} onChange={e => set("uf", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
-                <option value="">Todas as UFs</option>
-                {BR_UFS.map(u => <option key={u} value={u}>{u}</option>)}
-              </select></div>
-          </div>
-          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
-            <input type="checkbox" id="difal" checked={!!form.difal_enabled} onChange={e => set("difal_enabled", e.target.checked)} className="w-4 h-4" />
-            <label htmlFor="difal" className="text-sm font-medium text-blue-800">Aplica DIFAL (interestadual a consumidor final não contribuinte)</label>
-          </div>
-          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
-            <input type="checkbox" id="st" checked={!!form.st_enabled} onChange={e => set("st_enabled", e.target.checked)} className="w-4 h-4" />
-            <label htmlFor="st" className="text-sm font-medium text-amber-800">Aplica Substituição Tributária (ICMS-ST) — MVA ou Pauta</label>
-          </div>
-          <div><label className="text-xs font-medium text-gray-600">Descrição</label>
-            <Input value={form.description} onChange={e => set("description", e.target.value)} /></div>
-
-          {TAX_GROUPS.map(g => (
-            <div key={g.key} className={`border rounded-lg p-3 ${g.color}`}>
-              <p className="text-sm font-semibold mb-2">{g.label}</p>
-              <div className="grid grid-cols-4 gap-2">
-                <div className={g.fields[0].dynamic ? "col-span-2" : ""}>
-                  <label className="text-[10px] font-medium text-gray-600">CST</label>
-                  <select value={form[g.fields[0].key]} onChange={e => set(g.fields[0].key, e.target.value)} className="w-full h-8 rounded border border-input px-1 text-xs mt-0.5">
-                    {cstOptionsFor(g).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                {g.fields.slice(1).map(f => (
-                  <div key={f.key}>
-                    <label className="text-[10px] font-medium text-gray-600">{f.label}</label>
-                    <input type="number" step="0.01" value={form[f.key]} onChange={e => set(f.key, e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs mt-0.5" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div className="flex items-center gap-2 bg-cyan-50 border border-cyan-200 rounded-lg p-2">
-            <input type="checkbox" id="deduzIcms" checked={!!form.deduz_icms_pis_cofins} onChange={e => set("deduz_icms_pis_cofins", e.target.checked)} className="w-4 h-4" />
-            <label htmlFor="deduzIcms" className="text-sm font-medium text-cyan-800">Deduz o ICMS da base de cálculo do PIS/COFINS (Tema 69 STJ)</label>
-          </div>
-          {form.difal_enabled && (
-            <DifalCalculator form={form} set={set} />
-          )}
-          {form.st_enabled && (
-            <StCalculator form={form} set={set} />
-          )}
-          {form.operation_id && (
-            <AutoFiscalPreview form={form} operations={operations} />
-          )}
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Regra ativa</label>
-        </div>
-        <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Regra"}</Button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -26,12 +26,18 @@ export function isInterestadual(operation, companyUF, customerUF) {
   return false;
 }
 
-// Seleciona a regra fiscal mais específica para a operação/NCM/UF.
-export function lookupErpTaxRule(rules, operationId, ncm, uf) {
+// Seleciona a regra fiscal mais específica para a operação/NCM/UF/destinatário.
+export function lookupErpTaxRule(rules, operationId, ncm, uf, destinatarioTipo) {
   if (!rules?.length || !operationId) return null;
   const active = rules.filter(r => r.operation_id === operationId && r.is_active !== false);
   if (!active.length) return null;
+  const hasDest = destinatarioTipo ? active.some(r => r.destinatario_tipo === destinatarioTipo) : false;
+  const byDest = hasDest ? (r) => r.destinatario_tipo === destinatarioTipo : () => true;
   return (
+    active.find(r => r.ncm === ncm && r.uf === uf && byDest(r)) ||
+    active.find(r => r.ncm === ncm && !r.uf && byDest(r)) ||
+    active.find(r => !r.ncm && r.uf === uf && byDest(r)) ||
+    active.find(r => !r.ncm && !r.uf && byDest(r)) ||
     active.find(r => r.ncm === ncm && r.uf === uf) ||
     active.find(r => r.ncm === ncm && !r.uf) ||
     active.find(r => !r.ncm && r.uf === uf) ||
@@ -45,8 +51,8 @@ export function lookupErpTaxRule(rules, operationId, ncm, uf) {
 // rules: lista de ErpTaxRule do operador
 // customerUF, companyUF: siglas
 // ipiRate: % IPI opcional (sobrescreve a regra)
-export function computeErpFiscalItem(product, { rules, operation, customerUF, companyUF, ipiRate }) {
-  const rule = lookupErpTaxRule(rules, operation?.id, product.ncm, customerUF);
+export function computeErpFiscalItem(product, { rules, operation, customerUF, companyUF, ipiRate, destinatarioTipo }) {
+  const rule = lookupErpTaxRule(rules, operation?.id, product.ncm, customerUF, destinatarioTipo);
   const qty = num(product.quantity || 1);
   const unit = num(product.unit_price != null ? product.unit_price : product.sale_price || 0);
   const total = qty * unit;

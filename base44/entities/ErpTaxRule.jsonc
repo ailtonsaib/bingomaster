@@ -30,6 +30,16 @@
       "type": "string",
       "description": "UF de destino a que a regra se aplica (vazio = todas)"
     },
+    "destinatario_tipo": {
+      "type": "string",
+      "enum": [
+        "contribuinte",
+        "nao_contribuinte",
+        "pessoa_fisica"
+      ],
+      "default": "contribuinte",
+      "description": "Tipo do destinat\u00e1rio: contribuinte (ICMS normal), nao_contribuinte (aplica DIFAL interestadual), pessoa_fisica (consumidor final \u2014 DIFAL + cobran\u00e7a por dentro)"
+    },
     "description": {
       "type": "string"
     },
