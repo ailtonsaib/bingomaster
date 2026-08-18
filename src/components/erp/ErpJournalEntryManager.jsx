@@ -20,7 +20,7 @@ export default function ErpJournalEntryManager({ user }) {
     setLoading(true);
     try {
       const [j, a, c] = await Promise.all([
-        base44.entities.ErpJournalEntry.filter({ user_email: user.email }, "-date,-created_date", 500),
+        base44.entities.ErpJournalEntry.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
         base44.entities.ErpCostCenter.filter({ user_email: user.email }, "code", 200),
       ]);
