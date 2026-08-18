@@ -60,22 +60,27 @@ const CST_PIS_COFINS_ENTRADA = [
   { value: "99", label: "99 - Outras Operações" },
 ];
 const CST_PIS_COFINS_DEFAULT = CST_PIS_COFINS_SAIDA;
-const CST_IPI = [
-  { value: "00", label: "00 - Entrada c/ recuperação" },
-  { value: "01", label: "01 - Entrada tributada alíq. zero" },
-  { value: "02", label: "02 - Entrada isenta" },
-  { value: "03", label: "03 - Entrada não tributada" },
-  { value: "04", label: "04 - Entrada imune" },
-  { value: "05", label: "05 - Entrada c/ suspensão" },
-  { value: "49", label: "49 - Outras entradas" },
-  { value: "50", label: "50 - Saída tributada" },
-  { value: "51", label: "51 - Saída trib. alíq. zero" },
-  { value: "52", label: "52 - Saída isenta" },
-  { value: "53", label: "53 - Saída não tributada" },
-  { value: "54", label: "54 - Saída imune" },
-  { value: "55", label: "55 - Saída c/ suspensão" },
-  { value: "99", label: "99 - Outras saídas" },
+// CST IPI — Entradas (Tabela 4.2.1)
+const CST_IPI_ENTRADA = [
+  { value: "00", label: "00 - Entrada com Recuperação de Crédito" },
+  { value: "01", label: "01 - Entrada Tributada com Alíquota Zero" },
+  { value: "02", label: "02 - Entrada Isenta" },
+  { value: "03", label: "03 - Entrada Não-Tributada" },
+  { value: "04", label: "04 - Entrada Imune" },
+  { value: "05", label: "05 - Entrada com Suspensão" },
+  { value: "49", label: "49 - Outras Entradas" },
 ];
+// CST IPI — Saídas (Tabela 4.2.2)
+const CST_IPI_SAIDA = [
+  { value: "50", label: "50 - Saída Tributada" },
+  { value: "51", label: "51 - Saída Tributada com Alíquota Zero" },
+  { value: "52", label: "52 - Saída Isenta" },
+  { value: "53", label: "53 - Saída Não-Tributada" },
+  { value: "54", label: "54 - Saída Imune" },
+  { value: "55", label: "55 - Saída com Suspensão" },
+  { value: "99", label: "99 - Outras Saídas" },
+];
+const CST_IPI_DEFAULT = CST_IPI_SAIDA;
 const CST_CBS_IBS = [
   { value: "00", label: "00 - Tributada" },
   { value: "01", label: "01 - Monofásica" },
@@ -104,7 +109,7 @@ const TAX_GROUPS = [
     { key: "cofins_reduction_base", label: "Base (%)", num: true },
   ] },
   { key: "ipi", label: "IPI", color: "border-amber-200 bg-amber-50", fields: [
-    { key: "cst_ipi", label: "CST", options: CST_IPI },
+    { key: "cst_ipi", label: "CST", options: CST_IPI_DEFAULT, dynamic: "ipi" },
     { key: "ipi_rate", label: "Alíquota (%)", num: true },
     { key: "ipi_reduction_base", label: "Base (%)", num: true },
   ] },
@@ -419,10 +424,12 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
   useEffect(() => {
     if (!form.operation_type) return;
     const list = form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
+    const listIpi = form.operation_type === "entrada" ? CST_IPI_ENTRADA : CST_IPI_SAIDA;
     setForm(prev => {
       const next = { ...prev };
       if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
       if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
+      if (!listIpi.some(o => o.value === next.cst_ipi)) next.cst_ipi = listIpi[0]?.value || "";
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -437,12 +444,18 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
       const list = newType === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
       if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
       if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
+      const listIpi = newType === "entrada" ? CST_IPI_ENTRADA : CST_IPI_SAIDA;
+      if (!listIpi.some(o => o.value === next.cst_ipi)) next.cst_ipi = listIpi[0]?.value || "";
       return next;
     });
   };
 
-  const pisCofinsOptions = form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
-  const cstOptionsFor = (g) => g.fields[0].dynamic === "pis_cofins" ? pisCofinsOptions : g.fields[0].options;
+  const dynamicOptions = (type) => {
+    if (type === "pis_cofins") return form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
+    if (type === "ipi") return form.operation_type === "entrada" ? CST_IPI_ENTRADA : CST_IPI_SAIDA;
+    return null;
+  };
+  const cstOptionsFor = (g) => g.fields[0].dynamic ? dynamicOptions(g.fields[0].dynamic) : g.fields[0].options;
 
   const handleSave = async () => {
     if (!form.operation_id) { alert("Selecione uma operação."); return; }
@@ -501,7 +514,7 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
             <div key={g.key} className={`border rounded-lg p-3 ${g.color}`}>
               <p className="text-sm font-semibold mb-2">{g.label}</p>
               <div className="grid grid-cols-4 gap-2">
-                <div className={g.fields[0].dynamic === "pis_cofins" ? "col-span-2" : ""}>
+                <div className={g.fields[0].dynamic ? "col-span-2" : ""}>
                   <label className="text-[10px] font-medium text-gray-600">CST</label>
                   <select value={form[g.fields[0].key]} onChange={e => set(g.fields[0].key, e.target.value)} className="w-full h-8 rounded border border-input px-1 text-xs mt-0.5">
                     {cstOptionsFor(g).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
