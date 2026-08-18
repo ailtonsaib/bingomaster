@@ -30,6 +30,55 @@
       "type": "string",
       "description": "N\u00famero da tomada de pre\u00e7o (cache)"
     },
+    "requisition_id": {
+      "type": "string",
+      "description": "ID da solicita\u00e7\u00e3o de origem (ErpRequisition) \u2014 tra\u00e7a o rateio at\u00e9 a entrada da nota"
+    },
+    "requisition_number": {
+      "type": "string",
+      "description": "N\u00famero da solicita\u00e7\u00e3o de origem (cache)"
+    },
+    "apportionments": {
+      "type": "array",
+      "default": [],
+      "description": "Rateio (setor + conta cont\u00e1bil) herdado da solicita\u00e7\u00e3o \u2014 acompanha o pedido at\u00e9 a entrada da nota para o lan\u00e7amento cont\u00e1bil",
+      "items": {
+        "type": "object",
+        "properties": {
+          "department_id": {
+            "type": "string"
+          },
+          "department_name": {
+            "type": "string"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "account_code": {
+            "type": "string"
+          },
+          "account_name": {
+            "type": "string"
+          },
+          "rateio_type": {
+            "type": "string",
+            "enum": [
+              "percent",
+              "value"
+            ],
+            "default": "percent"
+          },
+          "percent": {
+            "type": "number",
+            "default": 0
+          },
+          "value": {
+            "type": "number",
+            "default": 0
+          }
+        }
+      }
+    },
     "operation_id": {
       "type": "string",
       "description": "ID da opera\u00e7\u00e3o de entrada (ErpOperation) \u2014 definido na movimenta\u00e7\u00e3o de entrada"

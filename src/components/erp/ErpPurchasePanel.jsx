@@ -147,7 +147,14 @@ export default function ErpPurchasePanel({ user }) {
                   <tr key={o.id} className="border-t hover:bg-gray-50">
                     <td className="p-2 font-mono text-xs">{o.order_number}</td>
                     <td className="p-2">{o.supplier_name || "—"}</td>
-                    <td className="p-2 text-gray-600"><span className="inline-flex items-center gap-1"><Building2 className="w-3 h-3 text-gray-400" />{o.department_name || "—"}</span></td>
+                    <td className="p-2 text-gray-600">
+                      <span className="inline-flex items-center gap-1"><Building2 className="w-3 h-3 text-gray-400" />{o.department_name || "—"}</span>
+                      {o.apportionments?.length > 0 && (
+                        <div className="text-[10px] text-gray-400 mt-0.5" title={o.apportionments.map(a => `${a.department_name} • ${a.account_code || a.account_name} (${a.rateio_type === "percent" ? a.percent + "%" : "R$ " + (a.value||0).toFixed(2)})`).join(", ")}>
+                          {o.apportionments.length} rateio(s) → contab.
+                        </div>
+                      )}
+                    </td>
                     <td className="p-2 text-gray-600">{fmtDate(o.emission_date)}</td>
                     <td className="p-2 text-right font-medium">{fmtMoney(o.total_value)}</td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></td>

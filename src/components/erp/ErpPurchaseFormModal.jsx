@@ -15,6 +15,9 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
     supplier_id: order?.supplier_id || "",
     quotation_id: order?.quotation_id || "",
     department_id: order?.department_id || "",
+    requisition_id: order?.requisition_id || "",
+    requisition_number: order?.requisition_number || "",
+    apportionments: order?.apportionments || [],
     emission_date: order?.emission_date ? new Date(order.emission_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     expected_date: order?.expected_date ? new Date(order.expected_date).toISOString().slice(0, 10) : "",
     notes: order?.notes || "",
@@ -35,7 +38,7 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
     })();
   }, [user.email]);
 
-  const applyQuotation = (quotationId) => {
+  const applyQuotation = async (quotationId) => {
     const q = quotations.find(x => x.id === quotationId);
     if (!q) { set("quotation_id", ""); return; }
     const items = (q.items || []).map(it => ({
@@ -47,11 +50,29 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
       unit_cost: Number(it.unit_price) || 0,
       total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
     }));
+    // Herda o rateio (setor + conta contábil) da solicitação de origem, se houver
+    let apportionments = [];
+    let requisition_id = "";
+    let requisition_number = "";
+    if (q.requisition_id) {
+      try {
+        const req = await base44.entities.ErpRequisition.get(q.requisition_id);
+        if (req) {
+          apportionments = (req.apportionments || []).map(a => ({ ...a }));
+          requisition_id = req.id;
+          requisition_number = req.number;
+        }
+      } catch (e) { console.error(e); }
+    }
     setForm(prev => ({
       ...prev,
       quotation_id: quotationId,
       supplier_id: q.winner_supplier_id || prev.supplier_id,
       items: items.length ? items : prev.items,
+      apportionments: apportionments.length ? apportionments : prev.apportionments,
+      requisition_id: requisition_id || prev.requisition_id,
+      requisition_number: requisition_number || prev.requisition_number,
+      department_id: apportionments[0]?.department_id || prev.department_id,
     }));
   };
 
@@ -87,6 +108,9 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
       department_name: dept?.name || undefined,
       quotation_id: form.quotation_id || undefined,
       quotation_number: quotation?.number || undefined,
+      requisition_id: form.requisition_id || undefined,
+      requisition_number: form.requisition_number || undefined,
+      apportionments: form.apportionments || [],
       emission_date: new Date(form.emission_date).toISOString(),
       expected_date: form.expected_date ? new Date(form.expected_date).toISOString() : undefined,
       items: form.items,
@@ -142,6 +166,24 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
               {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
+          {form.apportionments.length > 0 && (
+            <div className="border rounded-lg overflow-hidden bg-emerald-50/40">
+              <div className="flex items-center justify-between p-2 bg-emerald-50 border-b">
+                <span className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5">📋 Rateio herdado da solicitação (setor / conta contábil)</span>
+                {form.requisition_number && <span className="text-[11px] text-emerald-700 font-mono">{form.requisition_number}</span>}
+              </div>
+              <div className="p-2 space-y-1">
+                {form.apportionments.map((a, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 text-xs items-center px-1 py-1 border-b last:border-0">
+                    <div className="col-span-5"><span className="text-gray-500">Setor: </span><b>{a.department_name || "—"}</b></div>
+                    <div className="col-span-5"><span className="text-gray-500">Conta: </span><b>{a.account_code ? `${a.account_code} — ` : ""}{a.account_name || "—"}</b></div>
+                    <div className="col-span-2 text-right"><span className="text-gray-500">{a.rateio_type === "value" ? "R$ " : ""}{a.rateio_type === "percent" ? `${a.percent}%` : (a.value || 0).toFixed(2)}</span></div>
+                  </div>
+                ))}
+                <p className="text-[11px] text-gray-500 px-1 pt-1">Este rateio acompanha o pedido até a entrada da nota — o lançamento contábil usará o setor e a conta contábil acima.</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Emissão</Label><Input type="date" value={form.emission_date} onChange={e => set("emission_date", e.target.value)} /></div>
             <div><Label>Entrega prevista</Label><Input type="date" value={form.expected_date} onChange={e => set("expected_date", e.target.value)} /></div>
