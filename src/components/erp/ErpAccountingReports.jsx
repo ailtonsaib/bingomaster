@@ -1,13 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { BarChart3, Loader2 } from "lucide-react";
+import { Loader2, FileSpreadsheet, FileText } from "lucide-react";
+import { exportBalancete, exportBalanco } from "@/lib/erpAccountingExport";
 
 const fmtMoney = (v) => "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// Nível hierárquico pela máscara do código (qtd. de pontos + 1)
+const codeLevel = (code) => (code || "").split(".").length;
+
+// Saldo com sinal conforme natureza (devedora: D-C | credora: C-D)
+const signed = (deb, cre, nature) => (nature === "credora" ? (Number(cre) || 0) - (Number(deb) || 0) : (Number(deb) || 0) - (Number(cre) || 0));
+
 export default function ErpAccountingReports({ user }) {
   const [entries, setEntries] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("balancete");
   const [year, setYear] = useState(new Date().getFullYear());
@@ -16,33 +24,101 @@ export default function ErpAccountingReports({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [j, a] = await Promise.all([
-        base44.entities.ErpJournalEntry.filter({ user_email: user.email, status: "definitivo" }, "date", 1000),
-        base44.entities.ErpChartAccount.filter({ user_email: user.email }, "code", 500),
+      const [j, a, comps] = await Promise.all([
+        base44.entities.ErpJournalEntry.filter({ user_email: user.email, status: "definitivo" }, "date", 5000),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email }, "code", 5000),
+        base44.entities.ErpCompany.filter({ user_email: user.email }, "-created_date", 5),
       ]);
       setEntries(j); setAccounts(a);
+      setCompany(comps.length > 0 ? comps[0] : null);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user.email]);
 
-  const inYear = useMemo(() => entries.filter(e => new Date(e.date).getFullYear() === Number(year)), [entries, year]);
+  const yearStart = new Date(Number(year), 0, 1);
+  const yearEnd = new Date(Number(year) + 1, 0, 1);
+  const inYear = useMemo(() => entries.filter(e => { const d = new Date(e.date); return d >= yearStart && d < yearEnd; }), [entries, yearStart, yearEnd]);
+  const beforeYear = useMemo(() => entries.filter(e => new Date(e.date) < yearStart), [entries, yearStart]);
 
-  // Balancete: soma por conta
-  const balancete = useMemo(() => {
-    const map = {};
-    accounts.forEach(a => { map[a.id] = { code: a.code, name: a.name, nature: a.nature, debit: 0, credit: 0 }; });
-    inYear.forEach(e => (e.lines || []).forEach(l => {
-      if (!map[l.account_id]) map[l.account_id] = { code: l.account_code, name: l.account_name, nature: "", debit: 0, credit: 0 };
-      map[l.account_id].debit += Number(l.debit) || 0;
-      map[l.account_id].credit += Number(l.credit) || 0;
+  // --- Saldos por conta analítica ---
+  // si = saldo inicial (antes do ano), deb/cre = movimentação no ano
+  const analBalances = useMemo(() => {
+    const map = {}; // account_id -> { si, deb, cre }
+    const accById = {};
+    accounts.forEach(a => { accById[a.id] = a; map[a.id] = { si: 0, deb: 0, cre: 0 }; });
+
+    // Saldo inicial (antes do ano) — acumulado D-C e ajusta por natureza ao final
+    const raw = {};
+    beforeYear.forEach(e => (e.lines || []).forEach(l => {
+      if (!l.account_id) return;
+      (raw[l.account_id] ||= { deb: 0, cre: 0 });
+      raw[l.account_id].deb += Number(l.debit) || 0;
+      raw[l.account_id].cre += Number(l.credit) || 0;
     }));
-    return Object.values(map).filter(r => r.debit || r.credit || true).sort((a, b) => (a.code || "").localeCompare(b.code || "", undefined, { numeric: true }));
-  }, [inYear, accounts]);
+    Object.keys(raw).forEach(id => {
+      const a = accById[id];
+      const r = raw[id];
+      if (a && map[id]) map[id].si = signed(r.deb, r.cre, a.nature);
+    });
 
-  const totals = balancete.reduce((a, r) => ({ debit: a.debit + r.debit, credit: a.credit + r.credit }), { debit: 0, credit: 0 });
+    // Movimentação do ano
+    inYear.forEach(e => (e.lines || []).forEach(l => {
+      if (!l.account_id) return;
+      if (!map[l.account_id]) map[l.account_id] = { si: 0, deb: 0, cre: 0 };
+      map[l.account_id].deb += Number(l.debit) || 0;
+      map[l.account_id].cre += Number(l.credit) || 0;
+    }));
+    return map;
+  }, [beforeYear, inYear, accounts]);
 
-  // DRE
+  // --- Consolidação: cada sintética = soma das analíticas descendentes ---
+  // Descendência por prefixo de código (máscara hierárquica "1.1.01.01.0001")
+  const consolidated = useMemo(() => {
+    const sorted = [...accounts].sort((a, b) => (a.code || "").localeCompare(b.code || "", undefined, { numeric: true }));
+    // Para cada conta, soma os saldos das contas analíticas cujo código inicia com "<code>."
+    const result = sorted.map(a => {
+      const isAnalitica = !!a.accepts_entries;
+      const prefix = (a.code || "") + ".";
+      let si = 0, deb = 0, cre = 0;
+      if (isAnalitica) {
+        const b = analBalances[a.id] || { si: 0, deb: 0, cre: 0 };
+        si = b.si; deb = b.deb; cre = b.cre;
+      } else {
+        // sintética: consolida analíticas descendentes
+        sorted.forEach(c => {
+          if (c.id === a.id) return;
+          if (!c.accepts_entries) return;
+          if ((c.code || "").startsWith(prefix)) {
+            const b = analBalances[c.id] || { si: 0, deb: 0, cre: 0 };
+            si += b.si; deb += b.deb; cre += b.cre;
+          }
+        });
+      }
+      const sf = si + (a.nature === "credora" ? (cre - deb) : (deb - cre));
+      return {
+        id: a.id, code: a.code, name: a.name, nature: a.nature, account_type: a.account_type,
+        analitica: isAnalitica, level: codeLevel(a.code) - 1,
+        si, deb, cre, sf,
+      };
+    });
+    return result;
+  }, [accounts, analBalances]);
+
+  // --- Balancete: todas as contas (sintéticas + analíticas) consolidadas ---
+  const balancete = consolidated;
+  const totals = useMemo(() => {
+    // Totais apenas das analíticas (sintéticas são consolidação — somá-las duplicaria)
+    const a = consolidated.filter(r => r.analitica);
+    return {
+      deb: a.reduce((s, r) => s + r.deb, 0),
+      cre: a.reduce((s, r) => s + r.cre, 0),
+      si: a.reduce((s, r) => s + r.si, 0),
+      sf: a.reduce((s, r) => s + r.sf, 0),
+    };
+  }, [consolidated]);
+
+  // --- DRE ---
   const dre = useMemo(() => {
     const sum = (type) => inYear.flatMap(e => e.lines || []).reduce((acc, l) => {
       const a = accounts.find(a => a.id === l.account_id);
@@ -54,7 +130,7 @@ export default function ErpAccountingReports({ user }) {
     return { receitas, despesas, resultado: receitas - despesas };
   }, [inYear, accounts]);
 
-  // Razão
+  // --- Razão ---
   const razaoLines = useMemo(() => {
     if (!razaoAccount) return [];
     return inYear.filter(e => (e.lines || []).some(l => l.account_id === razaoAccount))
@@ -65,15 +141,34 @@ export default function ErpAccountingReports({ user }) {
       })));
   }, [inYear, razaoAccount]);
   const razaoAcct = accounts.find(a => a.id === razaoAccount);
-  const razaoSaldo = razaoLines.reduce((a, l) => a + l.debit - l.credit, 0);
+  const razaoSi = razaoAcct ? (analBalances[razaoAcct.id]?.si || 0) : 0;
+  const razaoSaldo = razaoSi + razaoLines.reduce((a, l) => a + l.debit - l.credit, 0);
 
-  // Balanço Patrimonial
+  // --- Balanço Patrimonial hierárquico consolidado ---
   const balanco = useMemo(() => {
-    const grp = (type) => balancete.filter(r => { const a = accounts.find(a => a.code === r.code); return a && a.account_type === type; }).reduce((s, r) => s + (r.debit - r.credit), 0);
-    return { ativo: grp("ativo"), passivo: grp("passivo"), pl: grp("patrimonio_liquido") };
-  }, [balancete, accounts]);
+    const buildGroup = (id, label) => {
+      const accs = consolidated.filter(r => r.account_type === id).sort((a, b) => (a.code || "").localeCompare(b.code || "", undefined, { numeric: true }));
+      // saldo da conta conforme natureza para balanço
+      const items = accs.map(a => ({
+        ...a, saldo: a.sf, level: a.level, analitica: a.analitica,
+      }));
+      // Total do grupo = soma das contas de nível superior (topo), que já consolidam os descendentes.
+      // Se não houver contas de nível 0, soma as analíticas.
+      const topItems = items.filter(r => r.level === 0);
+      const total = topItems.length > 0
+        ? topItems.reduce((s, r) => s + r.sf, 0)
+        : items.filter(r => r.analitica).reduce((s, r) => s + r.sf, 0);
+      return { id, label, accounts: items, total };
+    };
+    const ativo = buildGroup("ativo", "Ativo");
+    const passivo = buildGroup("passivo", "Passivo");
+    const pl = buildGroup("patrimonio_liquido", "Patrimônio Líquido");
+    return { ativo, passivo, pl };
+  }, [consolidated]);
 
   if (loading) return <div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
+
+  const companyName = company?.razao_social || "";
 
   const TABS = [
     { id: "balancete", label: "Balancete de Verificação" },
@@ -81,6 +176,13 @@ export default function ErpAccountingReports({ user }) {
     { id: "dre", label: "DRE" },
     { id: "balanco", label: "Balanço Patrimonial" },
   ];
+
+  const ExportButtons = ({ onPdf, onXls }) => (
+    <div className="flex items-center gap-2">
+      <button onClick={onXls} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700"><FileSpreadsheet className="w-4 h-4" /> Excel</button>
+      <button onClick={onPdf} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-rose-600 text-white text-xs font-medium hover:bg-rose-700"><FileText className="w-4 h-4" /> PDF</button>
+    </div>
+  );
 
   return (
     <div className="space-y-3">
@@ -91,6 +193,18 @@ export default function ErpAccountingReports({ user }) {
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-gray-500">Ano:</span>
           <input type="number" value={year} onChange={e => setYear(e.target.value)} className="h-8 w-20 rounded-md border border-input px-2 text-sm" />
+          {tab === "balancete" && (
+            <ExportButtons
+              onPdf={() => exportBalancete({ rows: balancete, totals, year, companyName, format: "pdf" })}
+              onXls={() => exportBalancete({ rows: balancete, totals, year, companyName, format: "excel" })}
+            />
+          )}
+          {tab === "balanco" && (
+            <ExportButtons
+              onPdf={() => exportBalanco({ groups: [balanco.ativo, balanco.passivo, balanco.pl], year, companyName, format: "pdf" })}
+              onXls={() => exportBalanco({ groups: [balanco.ativo, balanco.passivo, balanco.pl], year, companyName, format: "excel" })}
+            />
+          )}
         </div>
       </div>
 
@@ -98,21 +212,24 @@ export default function ErpAccountingReports({ user }) {
         <div className="bg-white rounded-xl border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 text-gray-500 text-xs"><tr><th className="p-2 text-left">Código</th><th className="p-2 text-left">Conta</th><th className="p-2 text-right">Débito</th><th className="p-2 text-right">Crédito</th><th className="p-2 text-right">Saldo</th></tr></thead>
+              <thead className="bg-gray-100 text-gray-500 text-xs">
+                <tr><th className="p-2 text-left">Código</th><th className="p-2 text-left">Conta</th><th className="p-2 text-right">Saldo Inicial</th><th className="p-2 text-right">Débito</th><th className="p-2 text-right">Crédito</th><th className="p-2 text-right">Saldo Final</th></tr>
+              </thead>
               <tbody>
-                {balancete.map(r => {
-                  const saldo = (r.nature === "credora" ? r.credit - r.debit : r.debit - r.credit);
-                  return (
-                    <tr key={r.code} className="border-t hover:bg-gray-50">
-                      <td className="p-2 font-mono">{r.code}</td><td className="p-2">{r.name}</td>
-                      <td className="p-2 text-right">{r.debit ? fmtMoney(r.debit) : "—"}</td>
-                      <td className="p-2 text-right">{r.credit ? fmtMoney(r.credit) : "—"}</td>
-                      <td className="p-2 text-right font-medium">{saldo ? fmtMoney(saldo) : "—"}</td>
-                    </tr>
-                  );
-                })}
+                {balancete.map(r => (
+                  <tr key={r.id} className={`border-t hover:bg-gray-50 ${!r.analitica ? "bg-gray-50/60 font-semibold" : ""}`}>
+                    <td className="p-2 font-mono text-xs">{r.code}</td>
+                    <td className="p-2" style={{ paddingLeft: `${8 + r.level * 14}px` }}>{r.name}</td>
+                    <td className="p-2 text-right">{r.si ? fmtMoney(r.si) : "—"}</td>
+                    <td className="p-2 text-right">{r.deb ? fmtMoney(r.deb) : "—"}</td>
+                    <td className="p-2 text-right">{r.cre ? fmtMoney(r.cre) : "—"}</td>
+                    <td className="p-2 text-right font-medium">{r.sf ? fmtMoney(r.sf) : "—"}</td>
+                  </tr>
+                ))}
               </tbody>
-              <tfoot><tr className="border-t-2 bg-gray-50 font-bold"><td colSpan={2} className="p-2">Totais</td><td className="p-2 text-right">{fmtMoney(totals.debit)}</td><td className="p-2 text-right">{fmtMoney(totals.credit)}</td><td className="p-2 text-right">{totals.debit === totals.credit ? "✓ Igual" : "Desequilibrado"}</td></tr></tfoot>
+              <tfoot><tr className="border-t-2 bg-gray-100 font-bold"><td colSpan={2} className="p-2">Totais (analíticas)</td><td className="p-2 text-right">{fmtMoney(totals.si)}</td><td className="p-2 text-right">{fmtMoney(totals.deb)}</td><td className="p-2 text-right">{fmtMoney(totals.cre)}</td><td className="p-2 text-right">{fmtMoney(totals.sf)}</td></tr>
+                <tr className="bg-gray-100 text-xs text-gray-600"><td colSpan={6} className="p-2">Totais das analíticas (sintéticas são consolidação dos níveis superiores). {totals.deb === totals.cre ? "✓ Débito = Crédito" : "⚠ Desequilibrado"}</td></tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -124,7 +241,7 @@ export default function ErpAccountingReports({ user }) {
             <span className="text-sm text-gray-500">Conta:</span>
             <select value={razaoAccount} onChange={e => setRazaoAccount(e.target.value)} className="h-9 rounded-md border border-input bg-white px-3 text-sm">
               <option value="">Selecione uma conta...</option>
-              {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+              {accounts.filter(a => a.accepts_entries).map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
             </select>
           </div>
           {razaoAccount && (
@@ -132,7 +249,7 @@ export default function ErpAccountingReports({ user }) {
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 text-gray-500 text-xs"><tr><th className="p-2 text-left">Data</th><th className="p-2 text-left">Lançamento</th><th className="p-2 text-left">Histórico</th><th className="p-2 text-right">Débito</th><th className="p-2 text-right">Crédito</th><th className="p-2 text-right">Saldo</th></tr></thead>
                 <tbody>
-                  {(() => { let s = 0; return razaoLines.map((l, i) => { s += l.debit - l.credit; return (
+                  {(() => { let s = razaoSi; return razaoLines.map((l, i) => { s += l.debit - l.credit; return (
                     <tr key={i} className="border-t"><td className="p-2 text-xs">{(l.date || "").slice(0, 10)}</td><td className="p-2 font-mono text-xs">{l.number}</td><td className="p-2">{l.history}</td><td className="p-2 text-right">{l.debit ? fmtMoney(l.debit) : "—"}</td><td className="p-2 text-right">{l.credit ? fmtMoney(l.credit) : "—"}</td><td className="p-2 text-right font-medium">{fmtMoney(s)}</td></tr>
                   ); }); })()}
                 </tbody>
@@ -156,9 +273,39 @@ export default function ErpAccountingReports({ user }) {
       )}
 
       {tab === "balanco" && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-xl border p-4"><h3 className="font-semibold mb-2 text-blue-700">Ativo</h3><p className="text-2xl font-bold">{fmtMoney(balanco.ativo)}</p></div>
-          <div className="bg-white rounded-xl border p-4"><h3 className="font-semibold mb-2 text-red-700">Passivo + Patrimônio Líquido</h3><p className="text-2xl font-bold">{fmtMoney(balanco.passivo + balanco.pl)}</p><p className="text-xs text-gray-500 mt-1">Passivo: {fmtMoney(balanco.passivo)} · PL: {fmtMoney(balanco.pl)}</p></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { ...balanco.ativo, color: "text-blue-700", bg: "bg-blue-50" },
+            { ...balanco.passivo, color: "text-red-700", bg: "bg-red-50" },
+            { ...balanco.pl, color: "text-purple-700", bg: "bg-purple-50" },
+          ].map(g => (
+            <div key={g.id} className="bg-white rounded-xl border overflow-hidden">
+              <div className={`flex items-center justify-between p-3 border-b ${g.bg}`}>
+                <h3 className={`font-semibold ${g.color}`}>{g.label}</h3>
+                <span className={`font-bold ${g.color}`}>{fmtMoney(g.total)}</span>
+              </div>
+              <div className="overflow-x-auto max-h-[60vh]">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-100 text-gray-500 sticky top-0"><tr><th className="p-2 text-left">Código</th><th className="p-2 text-left">Conta</th><th className="p-2 text-right">Saldo</th></tr></thead>
+                  <tbody>
+                    {g.accounts.map(a => (
+                      <tr key={a.id} className={`border-t ${!a.analitica ? "bg-gray-50/70 font-semibold" : "hover:bg-gray-50"}`}>
+                        <td className="p-2 font-mono">{a.code}</td>
+                        <td className="p-2" style={{ paddingLeft: `${8 + a.level * 14}px` }}>{a.name}</td>
+                        <td className="p-2 text-right font-medium">{a.saldo ? fmtMoney(a.saldo) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+          <div className="md:col-span-2 bg-white rounded-xl border p-4 flex items-center justify-between">
+            <span className="font-semibold text-gray-700">Ativo = Passivo + Patrimônio Líquido</span>
+            <span className={`font-bold ${balanco.ativo.total === balanco.passivo.total + balanco.pl.total ? "text-emerald-600" : "text-amber-600"}`}>
+              {fmtMoney(balanco.ativo.total)} = {fmtMoney(balanco.passivo.total + balanco.pl.total)}
+            </span>
+          </div>
         </div>
       )}
     </div>
