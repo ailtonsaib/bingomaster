@@ -20,19 +20,46 @@ const CST_ICMS = [
   { value: "70", label: "70 - Redução base e substituição" },
   { value: "90", label: "90 - Outros" },
 ];
-const CST_PIS_COFINS = [
-  { value: "01", label: "01 - Tributável" },
-  { value: "02", label: "02 - Tributável alíq. diferenciada" },
-  { value: "04", label: "04 - Tributável monofásica" },
-  { value: "05", label: "05 - Tributável por substituição" },
-  { value: "06", label: "06 - Alíquota zero" },
-  { value: "07", label: "07 - Isenta" },
-  { value: "08", label: "08 - Sem incidência" },
-  { value: "09", label: "09 - Suspensão" },
-  { value: "49", label: "49 - Outras saídas" },
-  { value: "98", label: "98 - Outras entradas" },
-  { value: "99", label: "99 - Outras" },
+// CST PIS/COFINS — Saídas (Tabela 4.3.2)
+const CST_PIS_COFINS_SAIDA = [
+  { value: "01", label: "01 - Operação Tributável c/ Alíquota Básica" },
+  { value: "02", label: "02 - Operação Tributável c/ Alíquota Diferenciada" },
+  { value: "03", label: "03 - Operação Tributável c/ Alíquota por Unidade de Medida" },
+  { value: "04", label: "04 - Operação Tributável Monofásica (Combustíveis)" },
+  { value: "05", label: "05 - Operação Tributável por Substituição Tributária" },
+  { value: "06", label: "06 - Operação Tributável a Alíquota Zero" },
+  { value: "07", label: "07 - Operação Isenta da Contribuição" },
+  { value: "08", label: "08 - Operação sem Incidência da Contribuição" },
+  { value: "09", label: "09 - Operação c/ Suspensão da Contribuição" },
+  { value: "49", label: "49 - Outras Operações de Saída" },
 ];
+// CST PIS/COFINS — Entradas (Tabela 4.3.1)
+const CST_PIS_COFINS_ENTRADA = [
+  { value: "50", label: "50 - Crédito - Vinc. Exclusivamente a Receita Tributada Mercado Interno" },
+  { value: "51", label: "51 - Crédito - Vinc. Exclusivamente a Receita Não Tributada Mercado Interno" },
+  { value: "52", label: "52 - Crédito - Vinc. Exclusivamente a Receita de Exportação" },
+  { value: "53", label: "53 - Crédito - Vinc. a Receitas Tributadas e Não Tributadas Mercado Interno" },
+  { value: "54", label: "54 - Crédito - Vinc. a Receitas Tributadas Mercado Interno e Exportação" },
+  { value: "55", label: "55 - Crédito - Vinc. a Receitas Não Tributadas Mercado Interno e Exportação" },
+  { value: "56", label: "56 - Crédito - Vinc. a Receitas Trib./Não Trib. Mercado Interno e Exportação" },
+  { value: "60", label: "60 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita Tributada MI" },
+  { value: "61", label: "61 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita Não Tributada MI" },
+  { value: "62", label: "62 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita de Exportação" },
+  { value: "63", label: "63 - Crédito Presumido - Aquis. Vinc. a Receitas Trib. e Não Trib. Mercado Interno" },
+  { value: "64", label: "64 - Crédito Presumido - Aquis. Vinc. a Receitas Trib. MI e Exportação" },
+  { value: "65", label: "65 - Crédito Presumido - Aquis. Vinc. a Receitas Não Trib. MI e Exportação" },
+  { value: "66", label: "66 - Crédito Presumido - Aquis. Vinc. a Receitas Trib./Não Trib. MI e Export." },
+  { value: "67", label: "67 - Crédito Presumido - Aquisição Vinc. Exclusiv. a Receita Tributada MI" },
+  { value: "70", label: "70 - Operação de Aquisição sem Direito a Crédito" },
+  { value: "71", label: "71 - Operação de Aquisição com Isenção" },
+  { value: "72", label: "72 - Operação de Aquisição com Suspensão" },
+  { value: "73", label: "73 - Operação de Aquisição a Alíquota Zero" },
+  { value: "74", label: "74 - Operação de Aquisição sem Incidência" },
+  { value: "75", label: "75 - Operação de Aquisição por Substituição Tributária" },
+  { value: "98", label: "98 - Outras Operações de Entrada" },
+  { value: "99", label: "99 - Outras Operações" },
+];
+const CST_PIS_COFINS_DEFAULT = CST_PIS_COFINS_SAIDA;
 const CST_IPI = [
   { value: "00", label: "00 - Entrada c/ recuperação" },
   { value: "01", label: "01 - Entrada tributada alíq. zero" },
@@ -67,12 +94,12 @@ const TAX_GROUPS = [
     { key: "fcp_rate", label: "FCP (%)", num: true },
   ] },
   { key: "pis", label: "PIS", color: "border-cyan-200 bg-cyan-50", fields: [
-    { key: "cst_pis", label: "CST", options: CST_PIS_COFINS },
+    { key: "cst_pis", label: "CST", options: CST_PIS_COFINS_DEFAULT, dynamic: "pis_cofins" },
     { key: "pis_rate", label: "Alíquota (%)", num: true },
     { key: "pis_reduction_base", label: "Base (%)", num: true },
   ] },
   { key: "cofins", label: "COFINS", color: "border-teal-200 bg-teal-50", fields: [
-    { key: "cst_cofins", label: "CST", options: CST_PIS_COFINS },
+    { key: "cst_cofins", label: "CST", options: CST_PIS_COFINS_DEFAULT, dynamic: "pis_cofins" },
     { key: "cofins_rate", label: "Alíquota (%)", num: true },
     { key: "cofins_reduction_base", label: "Base (%)", num: true },
   ] },
@@ -388,10 +415,34 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.uf, form.operation_id]);
 
+  // Corrige CST de PIS/COFINS legado ao editar regra existente (conforme tipo da operação)
+  useEffect(() => {
+    if (!form.operation_type) return;
+    const list = form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
+    setForm(prev => {
+      const next = { ...prev };
+      if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
+      if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onOp = (id) => {
     const op = operations.find(o => o.id === id);
-    setForm(prev => ({ ...prev, operation_id: id, operation_name: op?.name || "", operation_type: op?.type || "", cfop: op?.cfop || "" }));
+    const newType = op?.type || "";
+    setForm(prev => {
+      const next = { ...prev, operation_id: id, operation_name: op?.name || "", operation_type: newType, cfop: op?.cfop || "" };
+      // Reseta CST de PIS/COFINS se o atual não pertencer à tabela do novo tipo
+      const list = newType === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
+      if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
+      if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
+      return next;
+    });
   };
+
+  const pisCofinsOptions = form.operation_type === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
+  const cstOptionsFor = (g) => g.fields[0].dynamic === "pis_cofins" ? pisCofinsOptions : g.fields[0].options;
 
   const handleSave = async () => {
     if (!form.operation_id) { alert("Selecione uma operação."); return; }
@@ -450,10 +501,10 @@ function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
             <div key={g.key} className={`border rounded-lg p-3 ${g.color}`}>
               <p className="text-sm font-semibold mb-2">{g.label}</p>
               <div className="grid grid-cols-4 gap-2">
-                <div>
+                <div className={g.fields[0].dynamic === "pis_cofins" ? "col-span-2" : ""}>
                   <label className="text-[10px] font-medium text-gray-600">CST</label>
                   <select value={form[g.fields[0].key]} onChange={e => set(g.fields[0].key, e.target.value)} className="w-full h-8 rounded border border-input px-1 text-xs mt-0.5">
-                    {g.fields[0].options.map(o => <option key={o.value} value={o.value}>{o.value}</option>)}
+                    {cstOptionsFor(g).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 {g.fields.slice(1).map(f => (
