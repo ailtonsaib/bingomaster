@@ -74,10 +74,64 @@
       "default": [],
       "description": "Nomes das contas padr\u00e3o (cache)"
     },
+    "credora_account_id": {
+      "type": "string",
+      "description": "ID da conta credora principal (Fornecedores / Contas a Pagar / Impostos a Pagar) \u2014 creditada pelo valor l\u00edquido da nota"
+    },
+    "credora_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta credora (cache)"
+    },
+    "credora_account_name": {
+      "type": "string",
+      "description": "Nome da conta credora (cache)"
+    },
+    "outras_impostos_account_id": {
+      "type": "string",
+      "description": "ID da conta de 'Outras de Impostos' (despesa) onde caem os impostos sem cr\u00e9dito configurado"
+    },
+    "outras_impostos_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de outras impostos (cache)"
+    },
+    "outras_impostos_account_name": {
+      "type": "string",
+      "description": "Nome da conta de outras impostos (cache)"
+    },
+    "credit_accounts": {
+      "type": "array",
+      "default": [],
+      "description": "Cr\u00e9ditos de impostos recuper\u00e1veis (ICMS, PIS, COFINS) \u2014 conta de d\u00e9bito (a recuperar) para cada tipo configurado",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ICMS",
+              "PIS",
+              "COFINS"
+            ]
+          },
+          "account_id": {
+            "type": "string",
+            "description": "ID da conta de cr\u00e9dito (a recuperar) (ErpChartAccount)"
+          },
+          "account_code": {
+            "type": "string",
+            "description": "C\u00f3digo da conta (cache)"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "Nome da conta (cache)"
+          }
+        }
+      }
+    },
     "retentions": {
       "type": "array",
       "default": [],
-      "description": "Reten\u00e7\u00f5es de servi\u00e7o (IRRF, PIS, COFINS, CSLL, INSS, ISS) \u2014 cada uma com o fornecedor destinat\u00e1rio do valor retido",
+      "description": "Reten\u00e7\u00f5es de servi\u00e7o (IRRF, PIS, COFINS, CSLL, INSS, ISS) \u2014 cada uma com o fornecedor destinat\u00e1rio e a conta credora (impostos a pagar)",
       "items": {
         "type": "object",
         "properties": {
@@ -99,6 +153,18 @@
           "partner_name": {
             "type": "string",
             "description": "Nome do fornecedor (cache)"
+          },
+          "account_id": {
+            "type": "string",
+            "description": "ID da conta credora da reten\u00e7\u00e3o (Impostos a Pagar) (ErpChartAccount)"
+          },
+          "account_code": {
+            "type": "string",
+            "description": "C\u00f3digo da conta da reten\u00e7\u00e3o (cache)"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "Nome da conta da reten\u00e7\u00e3o (cache)"
           },
           "rate": {
             "type": "number",

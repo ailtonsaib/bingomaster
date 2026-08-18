@@ -151,7 +151,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
     const retList = ["irrf", "pis", "cofins", "csll", "inss", "iss"].map(t => {
       const v = Number(retentions[t] || 0);
       const pr = paramRetention(t.toUpperCase());
-      return { type: t.toUpperCase(), value: v, partner_id: pr?.partner_id || "", partner_name: pr?.partner_name || "" };
+      return { type: t.toUpperCase(), value: v, partner_id: pr?.partner_id || "", partner_name: pr?.partner_name || "", account_id: pr?.account_id || "", account_name: pr?.account_name || "", account_code: pr?.account_code || "" };
     }).filter(r => r.value > 0);
     const missing = retList.find(r => !r.partner_id);
     if (missing) { setError(`Retenção ${missing.type} sem fornecedor configurado no parâmetro.`); return; }
@@ -241,9 +241,11 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
       const entry = await base44.entities.ErpFiscalEntry.create(payload);
       // Já gera o lançamento contábil (débito nas contas do rateio, crédito em Fornecedores)
       try {
-        const je = await gerarLancamentoEntrada(user, { ...entry, apportionments }, accounts, {
+        const je = await gerarLancamentoEntrada(user, { ...entry, apportionments, retentions: retList }, accounts, {
           history: `Despesa ${entry.nota_number} - ${entry.supplier_name || ""}${hasPo ? ` (OC ${selectedPo.order_number})` : ""}`,
           complement: `Despesa ${entry.nota_number}`,
+          param: activeParam,
+          retentions: retList,
         });
         await base44.entities.ErpFiscalEntry.update(entry.id, { journal_entry_id: je.id, journal_entry_number: je.number });
       } catch (e) {

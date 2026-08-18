@@ -12,6 +12,9 @@ const empty = {
   cfop_nfse_fora: "",
   default_department_ids: [],
   default_account_ids: [],
+  credora_account_id: "",
+  outras_impostos_account_id: "",
+  credit_accounts: [],
   retentions: [],
   is_active: true,
 };
@@ -61,7 +64,10 @@ export default function ErpExpenseParameterManager({ user }) {
       cfop_nfse_fora: p.cfop_nfse_fora || "",
       default_department_ids: p.default_department_ids || [],
       default_account_ids: p.default_account_ids || [],
-      retentions: (p.retentions || []).map(r => ({ type: r.type || "IRRF", partner_id: r.partner_id || "", rate: r.rate || 0 })),
+      credora_account_id: p.credora_account_id || "",
+      outras_impostos_account_id: p.outras_impostos_account_id || "",
+      credit_accounts: (p.credit_accounts || []).map(c => ({ type: c.type, account_id: c.account_id || "" })),
+      retentions: (p.retentions || []).map(r => ({ type: r.type || "IRRF", partner_id: r.partner_id || "", account_id: r.account_id || "", rate: r.rate || 0 })),
       is_active: p.is_active !== false,
     });
     setShowForm(true);
@@ -74,9 +80,16 @@ export default function ErpExpenseParameterManager({ user }) {
       const op = operations.find(o => o.id === form.operation_id);
       const depNames = form.default_department_ids.map(id => departments.find(d => d.id === id)?.name).filter(Boolean);
       const accList = form.default_account_ids.map(id => accounts.find(a => a.id === id)).filter(Boolean);
+      const credoraAcc = accounts.find(a => a.id === form.credora_account_id);
+      const outrasAcc = accounts.find(a => a.id === form.outras_impostos_account_id);
+      const credit_accounts = (form.credit_accounts || []).filter(c => c.type && c.account_id).map(c => {
+        const a = accounts.find(x => x.id === c.account_id);
+        return { type: c.type, account_id: c.account_id, account_name: a?.name || "", account_code: a?.code || "" };
+      });
       const retentions = (form.retentions || []).filter(r => r.type && r.partner_id).map(r => {
         const sup = suppliers.find(s => s.id === r.partner_id);
-        return { type: r.type, partner_id: r.partner_id, partner_name: sup?.name || "", rate: Number(r.rate) || 0 };
+        const a = accounts.find(x => x.id === r.account_id);
+        return { type: r.type, partner_id: r.partner_id, partner_name: sup?.name || "", account_id: r.account_id || "", account_name: a?.name || "", account_code: a?.code || "", rate: Number(r.rate) || 0 };
       });
       const payload = {
         user_email: user.email,
@@ -92,6 +105,13 @@ export default function ErpExpenseParameterManager({ user }) {
         default_account_ids: form.default_account_ids,
         default_account_codes: accList.map(a => a.code),
         default_account_names: accList.map(a => a.name),
+        credora_account_id: form.credora_account_id || undefined,
+        credora_account_code: credoraAcc?.code || undefined,
+        credora_account_name: credoraAcc?.name || undefined,
+        outras_impostos_account_id: form.outras_impostos_account_id || undefined,
+        outras_impostos_account_code: outrasAcc?.code || undefined,
+        outras_impostos_account_name: outrasAcc?.name || undefined,
+        credit_accounts,
         retentions,
         is_active: form.is_active,
       };
@@ -197,23 +217,74 @@ export default function ErpExpenseParameterManager({ user }) {
                 </div>
               </div>
 
+              <div className="border rounded-lg p-3 bg-emerald-50/40">
+                <div className="text-xs font-semibold text-emerald-800 mb-2">Contabilização (contas do lançamento)</div>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">Conta Credora (Fornecedores / Impostos a Pagar)</label>
+                    <select value={form.credora_account_id} onChange={e => setForm(p => ({ ...p, credora_account_id: e.target.value }))} className="w-full h-8 rounded border border-input bg-white px-2 text-xs">
+                      <option value="">Auto (passivo Fornecedores)</option>
+                      {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">Outras de Impostos (sem crédito)</label>
+                    <select value={form.outras_impostos_account_id} onChange={e => setForm(p => ({ ...p, outras_impostos_account_id: e.target.value }))} className="w-full h-8 rounded border border-input bg-white px-2 text-xs">
+                      <option value="">— (cai na despesa) —</option>
+                      {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="text-[11px] font-medium text-gray-500 mb-1">Créditos de Impostos (a recuperar) — débito</div>
+                <div className="space-y-1.5">
+                  {["ICMS", "PIS", "COFINS"].map(type => {
+                    const cur = (form.credit_accounts || []).find(c => c.type === type);
+                    return (
+                      <div key={type} className="flex items-center gap-2">
+                        <span className="text-xs font-medium w-14">{type}</span>
+                        <select value={cur?.account_id || ""} onChange={e => {
+                          const v = e.target.value;
+                          setForm(p => {
+                            let list = (p.credit_accounts || []).filter(c => c.type !== type);
+                            if (v) list = [...list, { type, account_id: v }];
+                            return { ...p, credit_accounts: list };
+                          });
+                        }} className="flex-1 h-8 rounded border border-input bg-white px-2 text-xs">
+                          <option value="">— sem crédito (vai para outras/despesa) —</option>
+                          {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">Sem crédito configurado, o imposto da nota vai para "Outras de Impostos" (se definida) ou permanece na despesa (rateio).</p>
+              </div>
+
               <div className="border rounded-lg p-3 bg-amber-50/40">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5"><Percent className="w-3.5 h-3.5" /> Retenções de Serviço (fornecedor destinatário)</span>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setForm(p => ({ ...p, retentions: [...(p.retentions || []), { type: "IRRF", partner_id: "", rate: 0 }] }))} className="h-7 gap-1"><Plus className="w-3.5 h-3.5" /> Retenção</Button>
+                  <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5"><Percent className="w-3.5 h-3.5" /> Retenções de Serviço (fornecedor + conta credora)</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setForm(p => ({ ...p, retentions: [...(p.retentions || []), { type: "IRRF", partner_id: "", account_id: "", rate: 0 }] }))} className="h-7 gap-1"><Plus className="w-3.5 h-3.5" /> Retenção</Button>
                 </div>
                 {(form.retentions || []).length === 0 && <p className="text-xs text-gray-400">Nenhuma retenção configurada.</p>}
                 {(form.retentions || []).map((r, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 items-center mb-1.5">
-                    <select value={r.type} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, type: e.target.value } : x) }))} className="col-span-3 h-8 rounded border border-input bg-white px-2 text-xs">
-                      {["IRRF", "PIS", "COFINS", "CSLL", "INSS", "ISS"].map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <select value={r.partner_id} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, partner_id: e.target.value } : x) }))} className="col-span-7 h-8 rounded border border-input bg-white px-2 text-xs">
-                      <option value="">Selecione o fornecedor...</option>
-                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                    <input type="number" step="0.01" value={r.rate} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, rate: Number(e.target.value) || 0 } : x) }))} className="col-span-1 h-8 rounded border border-input px-1 text-right text-xs" placeholder="%" title="Alíquota %" />
-                    <button type="button" onClick={() => setForm(p => ({ ...p, retentions: p.retentions.filter((_, idx) => idx !== i) }))} className="col-span-1 text-red-500 hover:bg-red-50 rounded p-1"><Trash2 className="w-4 h-4 mx-auto" /></button>
+                  <div key={i} className="border rounded-md p-2 mb-1.5 space-y-1.5 bg-white">
+                    <div className="grid grid-cols-12 gap-2 items-center">
+                      <select value={r.type} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, type: e.target.value } : x) }))} className="col-span-3 h-8 rounded border border-input bg-white px-2 text-xs">
+                        {["IRRF", "PIS", "COFINS", "CSLL", "INSS", "ISS"].map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <select value={r.partner_id} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, partner_id: e.target.value } : x) }))} className="col-span-8 h-8 rounded border border-input bg-white px-2 text-xs">
+                        <option value="">Selecione o fornecedor...</option>
+                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                      <button type="button" onClick={() => setForm(p => ({ ...p, retentions: p.retentions.filter((_, idx) => idx !== i) }))} className="col-span-1 text-red-500 hover:bg-red-50 rounded p-1"><Trash2 className="w-4 h-4 mx-auto" /></button>
+                    </div>
+                    <div className="grid grid-cols-12 gap-2 items-center">
+                      <select value={r.account_id} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, account_id: e.target.value } : x) }))} className="col-span-10 h-8 rounded border border-input bg-white px-2 text-xs">
+                        <option value="">Conta credora da retenção (Impostos a Pagar)...</option>
+                        {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                      </select>
+                      <input type="number" step="0.01" value={r.rate} onChange={e => setForm(p => ({ ...p, retentions: p.retentions.map((x, idx) => idx === i ? { ...x, rate: Number(e.target.value) || 0 } : x) }))} className="col-span-2 h-8 rounded border border-input px-1 text-right text-xs" placeholder="%" title="Alíquota %" />
+                    </div>
                   </div>
                 ))}
               </div>
