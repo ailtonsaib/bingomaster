@@ -88,7 +88,14 @@ export default function ErpQuotationPanel({ user }) {
                     <td className="p-2 font-mono text-xs">{o.number}</td>
                     <td className="p-2 text-gray-600">{fmtDate(o.quotation_date)}</td>
                     <td className="p-2 font-mono text-xs text-indigo-600">{o.requisition_number || "—"}</td>
-                    <td className="p-2 max-w-[260px] truncate" title={o.description}>{o.description || "—"}</td>
+                    <td className="p-2 max-w-[260px]">
+                      <div className="truncate" title={o.description}>{o.description || "—"}</div>
+                      {o.apportionments?.length > 0 && (
+                        <div className="text-[10px] text-gray-400 mt-0.5" title={o.apportionments.map(a => `${a.department_name} • ${a.account_code || a.account_name} (${a.percent || 0}%)`).join(", ")}>
+                          Setor: {o.apportionments.map(a => a.department_name).filter(Boolean).join(", ")} · {o.apportionments.length} conta(s)
+                        </div>
+                      )}
+                    </td>
                     <td className="p-2 text-right">
                       <span className={nSup >= MIN_SUPPLIERS ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>{nSup}</span>
                       <span className="text-gray-400 text-xs">/{MIN_SUPPLIERS}</span>
