@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2 } from "lucide-react";
+import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, Link2, UserPlus, Package } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 
-// Modal de entrada de documento (NF-e/NFS-e por XML ou digitação manual p/ documento não fiscal).
-// Se o total fechar com a OC → aprovada automaticamente (pode lançar). Se divergir → aguarda aprovação.
-export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
+const digits = (v) => String(v || "").replace(/\D/g, "");
+
+// Modal de entrada de documento (NF-e/NFS-e por XML ou digitação manual).
+// XML: cadastra o fornecedor automaticamente se não existir, e vincula cada item
+// ao produto meu através do código do fornecedor (cProd). Se não houver vínculo
+// e o usuário não informar um produto destino, cria o produto e o vínculo.
+export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToProducts }) {
   const [mode, setMode] = useState("xml");
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState(null);
@@ -15,11 +19,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState([]);
   const [operations, setOperations] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [links, setLinks] = useState([]);
   const [poId, setPoId] = useState("");
   const [opId, setOpId] = useState("");
+  // Vínculo por item (XML): product_id selecionado, "new" para criar novo, ou "" (auto = cria novo)
+  const [itemChoices, setItemChoices] = useState([]);
+  const [supplierStatus, setSupplierStatus] = useState(""); // "exists" | "will_create" | ""
   const fileRef = useRef(null);
 
-  // Digitação manual (documento não fiscal)
   const [manual, setManual] = useState({
     nota_number: "", supplier_name: "", supplier_cnpj: "", supplier_uf: "",
     issue_date: new Date().toISOString().slice(0, 10), nature_operation: "", cfop: "", total_nota: "",
@@ -31,13 +40,32 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
     Promise.all([
       base44.entities.ErpPurchaseOrder.filter({ user_email: user.email, status: { $ne: "cancelada" } }, "-emission_date", 200),
       base44.entities.ErpOperation.filter({ user_email: user.email, type: "entrada", is_active: true }, "name", 200),
-    ]).then(([o, op]) => { setOrders(o); setOperations(op); }).catch(() => {});
+      base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
+      base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
+      base44.entities.ErpProductSupplier.filter({ user_email: user.email }, "-created_date", 500),
+    ]).then(([o, op, s, p, l]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); }).catch(() => {});
   }, [user.email]);
 
   const selectedPo = orders.find(o => o.id === poId);
   const nfTotal = mode === "xml" ? parsed?.totals.total_nota : Number(manual.total_nota || 0);
   const diff = selectedPo ? nfTotal - (selectedPo.total_value || 0) : 0;
   const match = selectedPo ? Math.abs(diff) < 0.01 : false;
+
+  // Resolve fornecedor e vínculos por item quando o XML é parseado
+  useEffect(() => {
+    if (mode !== "xml" || !parsed) { setSupplierStatus(""); setItemChoices([]); return; }
+    const doc = digits(parsed.supplier.cpf_cnpj);
+    const existing = suppliers.find(s => s.document === doc);
+    setSupplierStatus(existing ? "exists" : "will_create");
+    // Pré-vincula itens que já tenham link (supplier_document + supplier_product_code)
+    const docLinks = links.filter(l => digits(l.supplier_document) === doc);
+    setItemChoices(parsed.items.map(it => {
+      const lk = docLinks.find(l => l.supplier_product_code === it.product_code);
+      return lk?.product_id || "new";
+    }));
+  }, [parsed, mode, suppliers, links]);
+
+  const supplierDoc = parsed ? digits(parsed.supplier.cpf_cnpj) : digits(manual.supplier_cnpj);
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
@@ -46,96 +74,200 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
     setParsing(false);
   };
 
+  // Cria/atualiza fornecedor a partir do documento; retorna o registro ErpPartner
+  const ensureSupplier = async (name, docRaw, uf, address, city) => {
+    const doc = digits(docRaw);
+    if (!doc) return null;
+    const existing = suppliers.find(s => s.document === doc);
+    if (existing) return existing;
+    const created = await base44.entities.ErpPartner.create({
+      user_email: user.email,
+      partner_type: "fornecedor",
+      document_type: doc.length <= 11 ? "cpf" : "cnpj",
+      document: doc,
+      name: name || "Fornecedor sem nome",
+      uf: uf || undefined,
+      address: address || undefined,
+      city: city || undefined,
+      is_active: true,
+    });
+    setSuppliers(p => [...p, created]);
+    return created;
+  };
+
+  // Cria um novo produto a partir do item da NF
+  const createProductFromItem = async (it) => {
+    const code = it.product_code || `NF${Date.now().toString().slice(-6)}`;
+    const barcode = it.barcode && /^\d+$/.test(it.barcode) ? it.barcode : undefined;
+    const created = await base44.entities.ErpProduct.create({
+      user_email: user.email,
+      code, barcode,
+      name: it.product_name || "Produto sem descrição",
+      product_type: "mercadoria",
+      ncm: it.ncm || undefined,
+      unit: it.unit || "UN",
+      cost_price: it.unit_price || 0,
+      sale_price: 0,
+      is_active: true,
+      notes: "Cadastrado automaticamente na entrada de NF — ajuste categoria e contas.",
+    });
+    setProducts(p => [...p, created]);
+    return created;
+  };
+
+  // Cria/atualiza o vínculo fornecedor↔produto (cProd)
+  const ensureLink = async (supplier, product, item) => {
+    const doc = digits(supplier.document);
+    const existing = links.find(l => digits(l.supplier_document) === doc && l.product_id === product.id);
+    if (existing) {
+      const updated = await base44.entities.ErpProductSupplier.update(existing.id, {
+        supplier_product_code: item.product_code || existing.supplier_product_code,
+        supplier_product_name: item.product_name || existing.supplier_product_name,
+        unit: item.unit || existing.unit,
+        last_unit_cost: item.unit_price || existing.last_unit_cost,
+        last_purchased_date: new Date().toISOString(),
+      });
+      setLinks(p => p.map(l => l.id === updated.id ? updated : l));
+      return updated;
+    }
+    const created = await base44.entities.ErpProductSupplier.create({
+      user_email: user.email,
+      product_id: product.id,
+      product_code: product.code,
+      product_name: product.name,
+      supplier_id: supplier.id,
+      supplier_name: supplier.name,
+      supplier_document: supplier.document,
+      supplier_product_code: item.product_code || "",
+      supplier_product_name: item.product_name || "",
+      unit: item.unit || "UN",
+      last_unit_cost: item.unit_price || 0,
+      last_purchased_date: new Date().toISOString(),
+    });
+    setLinks(p => [...p, created]);
+    return created;
+  };
+
   const handleSave = async () => {
     setError("");
     if (!poId) { setError("Selecione a ordem de compra."); return; }
     const po = selectedPo;
     const op = operations.find(o => o.id === opId);
-
-    let payload;
-    if (mode === "xml") {
-      if (!parsed) { setError("Importe um XML."); return; }
-      const valueDiff = parsed.totals.total_nota - (po.total_value || 0);
-      const valuesMatch = Math.abs(valueDiff) < 0.01;
-      payload = {
-        user_email: user.email,
-        nota_model: parsed.nota.model,
-        nota_number: parsed.nota.number,
-        nota_series: parsed.nota.series,
-        chave_acesso: parsed.nota.chave_acesso,
-        issue_date: parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toISOString() : new Date().toISOString(),
-        entry_date: new Date().toISOString(),
-        supplier_name: parsed.supplier.name,
-        supplier_cnpj: parsed.supplier.cpf_cnpj,
-        supplier_uf: parsed.supplier.uf,
-        nature_operation: parsed.nota.nature_operation,
-        cfop: parsed.nota.cfop,
-        total_products: parsed.totals.total_products,
-        total_nota: parsed.totals.total_nota,
-        total_icms: parsed.totals.total_icms,
-        total_ipi: parsed.totals.total_ipi,
-        total_pis: parsed.totals.total_pis,
-        total_cofins: parsed.totals.total_cofins,
-        items: parsed.items,
-        purchase_order_id: po.id,
-        purchase_order_number: po.order_number,
-        po_total_value: po.total_value || 0,
-        value_diff: valueDiff,
-        values_match: valuesMatch,
-        operation_id: op?.id || undefined,
-        operation_name: op?.name || undefined,
-        apportionments: po.apportionments || [],
-        status: valuesMatch ? "aprovada" : "pendente",
-        approval_status: valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
-      };
-    } else {
-      if (!manual.nota_number.trim()) { setError("Informe o número do documento."); return; }
-      if (!manual.supplier_name.trim()) { setError("Informe o fornecedor."); return; }
-      if (!manual.total_nota || Number(manual.total_nota) <= 0) { setError("Informe o total do documento."); return; }
-      const total = Number(manual.total_nota);
-      const items = manualItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
-        product_name: it.product_name, quantity: Number(it.quantity) || 0,
-        unit_price: Number(it.unit_price) || 0,
-        total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
-        ncm: "", cfop: "", unit: "UN",
-      }));
-      const valueDiff = total - (po.total_value || 0);
-      const valuesMatch = Math.abs(valueDiff) < 0.01;
-      payload = {
-        user_email: user.email,
-        nota_model: "NDF",
-        nota_number: manual.nota_number,
-        nota_series: "",
-        chave_acesso: "",
-        issue_date: manual.issue_date ? new Date(manual.issue_date).toISOString() : new Date().toISOString(),
-        entry_date: new Date().toISOString(),
-        supplier_name: manual.supplier_name,
-        supplier_cnpj: manual.supplier_cnpj,
-        supplier_uf: manual.supplier_uf,
-        nature_operation: manual.nature_operation || "Documento Não Fiscal",
-        cfop: manual.cfop,
-        total_products: items.reduce((a, it) => a + it.total, 0),
-        total_nota: total,
-        total_icms: 0, total_ipi: 0, total_pis: 0, total_cofins: 0,
-        items,
-        purchase_order_id: po.id,
-        purchase_order_number: po.order_number,
-        po_total_value: po.total_value || 0,
-        value_diff: valueDiff,
-        values_match: valuesMatch,
-        operation_id: op?.id || undefined,
-        operation_name: op?.name || undefined,
-        apportionments: po.apportionments || [],
-        status: valuesMatch ? "aprovada" : "pendente",
-        approval_status: valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
-      };
-    }
-
     setSaving(true);
     try {
+      // 1. Garante o fornecedor (XML ou manual)
+      let supplier = null;
+      if (mode === "xml" && parsed) {
+        supplier = await ensureSupplier(parsed.supplier.name, parsed.supplier.cpf_cnpj, parsed.supplier.uf, parsed.supplier.address, parsed.supplier.city);
+      } else if (mode === "manual" && manual.supplier_name.trim()) {
+        supplier = await ensureSupplier(manual.supplier_name, manual.supplier_cnpj, manual.supplier_uf);
+      }
+
+      let payload;
+      let newProductsCount = 0;
+
+      if (mode === "xml") {
+        if (!parsed) { setSaving(false); setError("Importe um XML."); return; }
+        // 2. Resolve cada item → produto meu + vínculo
+        const resolvedItems = [];
+        for (let i = 0; i < parsed.items.length; i++) {
+          const it = parsed.items[i];
+          const choice = itemChoices[i] || "new";
+          let product = null;
+          if (choice === "new") {
+            product = await createProductFromItem(it);
+            newProductsCount++;
+          } else {
+            product = products.find(p => p.id === choice) || null;
+          }
+          if (supplier && product) {
+            await ensureLink(supplier, product, it);
+          }
+          resolvedItems.push({ ...it, product_id: product?.id || undefined, product_code: product?.code || it.product_code });
+        }
+        const valueDiff = parsed.totals.total_nota - (po.total_value || 0);
+        const valuesMatch = Math.abs(valueDiff) < 0.01;
+        payload = {
+          user_email: user.email,
+          nota_model: parsed.nota.model,
+          nota_number: parsed.nota.number,
+          nota_series: parsed.nota.series,
+          chave_acesso: parsed.nota.chave_acesso,
+          issue_date: parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toISOString() : new Date().toISOString(),
+          entry_date: new Date().toISOString(),
+          supplier_name: parsed.supplier.name,
+          supplier_cnpj: parsed.supplier.cpf_cnpj,
+          supplier_uf: parsed.supplier.uf,
+          nature_operation: parsed.nota.nature_operation,
+          cfop: parsed.nota.cfop,
+          total_products: parsed.totals.total_products,
+          total_nota: parsed.totals.total_nota,
+          total_icms: parsed.totals.total_icms,
+          total_ipi: parsed.totals.total_ipi,
+          total_pis: parsed.totals.total_pis,
+          total_cofins: parsed.totals.total_cofins,
+          items: resolvedItems,
+          purchase_order_id: po.id,
+          purchase_order_number: po.order_number,
+          po_total_value: po.total_value || 0,
+          value_diff: valueDiff,
+          values_match: valuesMatch,
+          operation_id: op?.id || undefined,
+          operation_name: op?.name || undefined,
+          apportionments: po.apportionments || [],
+          status: valuesMatch ? "aprovada" : "pendente",
+          approval_status: valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
+        };
+      } else {
+        if (!manual.nota_number.trim()) { setSaving(false); setError("Informe o número do documento."); return; }
+        if (!manual.supplier_name.trim()) { setSaving(false); setError("Informe o fornecedor."); return; }
+        if (!manual.total_nota || Number(manual.total_nota) <= 0) { setSaving(false); setError("Informe o total do documento."); return; }
+        const total = Number(manual.total_nota);
+        const items = manualItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
+          product_name: it.product_name, quantity: Number(it.quantity) || 0,
+          unit_price: Number(it.unit_price) || 0,
+          total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
+          ncm: "", cfop: "", unit: "UN",
+        }));
+        const valueDiff = total - (po.total_value || 0);
+        const valuesMatch = Math.abs(valueDiff) < 0.01;
+        payload = {
+          user_email: user.email,
+          nota_model: "NDF",
+          nota_number: manual.nota_number,
+          nota_series: "",
+          chave_acesso: "",
+          issue_date: manual.issue_date ? new Date(manual.issue_date).toISOString() : new Date().toISOString(),
+          entry_date: new Date().toISOString(),
+          supplier_name: manual.supplier_name,
+          supplier_cnpj: manual.supplier_cnpj,
+          supplier_uf: manual.supplier_uf,
+          nature_operation: manual.nature_operation || "Documento Não Fiscal",
+          cfop: manual.cfop,
+          total_products: items.reduce((a, it) => a + it.total, 0),
+          total_nota: total,
+          total_icms: 0, total_ipi: 0, total_pis: 0, total_cofins: 0,
+          items,
+          purchase_order_id: po.id,
+          purchase_order_number: po.order_number,
+          po_total_value: po.total_value || 0,
+          value_diff: valueDiff,
+          values_match: valuesMatch,
+          operation_id: op?.id || undefined,
+          operation_name: op?.name || undefined,
+          apportionments: po.apportionments || [],
+          status: valuesMatch ? "aprovada" : "pendente",
+          approval_status: valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
+        };
+      }
+
       await base44.entities.ErpFiscalEntry.create(payload);
       onSaved?.();
       onClose();
+      if (newProductsCount > 0 && onGoToProducts) {
+        alert(`${newProductsCount} produto(s) cadastrado(s) automaticamente a partir da NF. Abrindo o Cadastro de Produtos para ajustes.`);
+        onGoToProducts();
+      }
     } catch (e) { setError(e.message); }
     setSaving(false);
   };
@@ -149,7 +281,6 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Alternância XML / Manual */}
           <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
             <button onClick={() => { setMode("xml"); setError(""); }} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${mode === "xml" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500"}`}><FileText className="w-4 h-4" /> Importar XML</button>
             <button onClick={() => { setMode("manual"); setError(""); }} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${mode === "manual" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500"}`}><Keyboard className="w-4 h-4" /> Digitação Manual</button>
@@ -171,6 +302,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
 
           {mode === "xml" && parsed && (
             <div className="space-y-4">
+              {/* Status do fornecedor */}
+              <div className={`rounded-lg p-2.5 border flex items-center gap-2 text-xs ${supplierStatus === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierStatus === "will_create" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
+                {supplierStatus === "exists" ? <CheckCircle2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                {supplierStatus === "exists" ? `Fornecedor já cadastrado: ${parsed.supplier.name}` : supplierStatus === "will_create" ? `Fornecedor não cadastrado — será criado automaticamente: ${parsed.supplier.name} (CNPJ ${parsed.supplier.cpf_cnpj})` : "Analisando fornecedor..."}
+              </div>
+
               <div className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="w-4 h-4 text-emerald-600" /><h4 className="text-sm font-semibold">Dados da Nota ({parsed.nota.model === "NFSe" ? "NFS-e" : `NF-e mod ${parsed.nota.model}`})</h4></div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -183,18 +320,40 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
                   <div><span className="text-gray-500">UF:</span> {parsed.supplier.uf}</div>
                 </div>
               </div>
+
+              {/* Itens com vínculo de produto destino */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 border-b"><h4 className="text-sm font-semibold">Itens ({parsed.items.length})</h4></div>
-                <div className="overflow-x-auto max-h-48">
+                <div className="bg-gray-50 px-3 py-2 border-b flex items-center gap-2"><Link2 className="w-4 h-4 text-indigo-600" /><h4 className="text-sm font-semibold">Itens ({parsed.items.length}) — Vínculo de Produto</h4></div>
+                <div className="overflow-x-auto max-h-64">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 border-b sticky top-0"><tr><th className="p-2 text-left">Produto/Serviço</th><th className="p-2 text-center">NCM</th><th className="p-2 text-center">CFOP</th><th className="p-2 text-right">Qtd</th><th className="p-2 text-right">V. Unit.</th><th className="p-2 text-right">Total</th></tr></thead>
+                    <thead className="bg-gray-50 border-b sticky top-0"><tr><th className="p-2 text-left">Produto do Fornecedor (cProd)</th><th className="p-2 text-left w-56">Produto Meu (destino)</th><th className="p-2 text-right">Qtd</th><th className="p-2 text-right">Total</th></tr></thead>
                     <tbody>
-                      {parsed.items.map((it, i) => (
-                        <tr key={i} className="border-b"><td className="p-2">{it.product_name}</td><td className="p-2 text-center font-mono">{it.ncm}</td><td className="p-2 text-center">{it.cfop}</td><td className="p-2 text-right">{it.quantity}</td><td className="p-2 text-right">{it.unit_price.toFixed(2)}</td><td className="p-2 text-right font-medium">{it.total.toFixed(2)}</td></tr>
-                      ))}
+                      {parsed.items.map((it, i) => {
+                        const choice = itemChoices[i] || "new";
+                        const matched = choice !== "new" && choice !== "";
+                        return (
+                          <tr key={i} className="border-b">
+                            <td className="p-2">
+                              <div className="font-mono text-[11px] text-gray-500">{it.product_code}</div>
+                              <div className="text-gray-800">{it.product_name}</div>
+                              <div className="text-[10px] text-gray-400">NCM {it.ncm} • CFOP {it.cfop}</div>
+                            </td>
+                            <td className="p-2">
+                              <select value={choice} onChange={e => setItemChoices(p => p.map((c, idx) => idx === i ? e.target.value : c))} className={`w-full h-9 rounded-md border px-2 text-xs ${matched ? "border-emerald-300 bg-emerald-50" : "border-input"}`}>
+                                <option value="new">+ Criar novo produto</option>
+                                {products.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
+                              </select>
+                              {matched && <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-0.5"><Link2 className="w-3 h-3" /> vinculado</span>}
+                            </td>
+                            <td className="p-2 text-right">{it.quantity}</td>
+                            <td className="p-2 text-right font-medium">{it.total.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
+                <div className="bg-gray-50 px-3 py-2 border-t text-[11px] text-gray-500 flex items-center gap-1.5"><Package className="w-3.5 h-3.5" /> Itens sem vínculo criarão um novo produto automaticamente vinculado ao código do fornecedor. Na próxima NF deste fornecedor, o sistema reconhecerá o produto pelo cProd.</div>
               </div>
             </div>
           )}
@@ -202,7 +361,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved }) {
           {/* === MODO MANUAL === */}
           {mode === "manual" && (
             <div className="space-y-3">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.).</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.). Se o fornecedor não existir, será cadastrado automaticamente.</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><label className="text-xs font-medium text-gray-600">Número do Doc. *</label><input value={manual.nota_number} onChange={e => setM("nota_number", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Data de Emissão</label><input type="date" value={manual.issue_date} onChange={e => setM("issue_date", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>

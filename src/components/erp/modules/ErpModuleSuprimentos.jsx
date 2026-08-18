@@ -32,7 +32,7 @@ export default function ErpModuleSuprimentos({ user }) {
       {sub === "compras" && <ErpPurchasePanel user={user} />}
       {sub === "solicitacao" && <ErpRequisitionPanel user={user} />}
       {sub === "tomada" && <ErpQuotationPanel user={user} />}
-      {sub === "entrada_nf" && <ErpFiscalEntryPanel user={user} />}
+      {sub === "entrada_nf" && <ErpFiscalEntryPanel user={user} onGoToProducts={() => setSub("almoxarifado")} />}
       {sub === "aprovacao_nf" && <ErpFiscalApprovalPanel user={user} />}
       {sub === "aprovadores" && <ErpApproverManager user={user} />}
       {sub === "manufatura" && (

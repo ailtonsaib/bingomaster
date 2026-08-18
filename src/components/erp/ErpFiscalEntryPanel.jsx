@@ -12,7 +12,7 @@ const STATUS = {
   lancada: { label: "Lançada", color: "text-blue-700 bg-blue-100" },
 };
 
-export default function ErpFiscalEntryPanel({ user }) {
+export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
   const [items, setItems] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,10 +79,11 @@ export default function ErpFiscalEntryPanel({ user }) {
         status: "definitivo",
       });
 
-      // Atualiza estoque dos itens (casa por código/barras/nome)
+      // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
       const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
+      const byId = new Map(products.map(p => [p.id, p]));
       for (const it of entry.items || []) {
-        const prod = products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
+        const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
         if (prod) {
           await base44.entities.ErpProduct.update(prod.id, {
             stock: (prod.stock || 0) + (it.quantity || 0),
@@ -166,7 +167,7 @@ export default function ErpFiscalEntryPanel({ user }) {
         </div>
       </div>
 
-      {showImport && <ErpFiscalEntryImport user={user} onClose={() => setShowImport(false)} onSaved={load} />}
+      {showImport && <ErpFiscalEntryImport user={user} onClose={() => setShowImport(false)} onSaved={load} onGoToProducts={onGoToProducts} />}
     </div>
   );
 }

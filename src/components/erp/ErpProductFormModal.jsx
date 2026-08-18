@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { PRODUCT_TYPES, UNITS } from "@/lib/erpUtils";
 import ErpNcmPicker from "@/components/erp/ErpNcmPicker";
+import ErpProductSupplierLinks from "@/components/erp/ErpProductSupplierLinks";
 
 const empty = {
   code: "", barcode: "", name: "", product_type: "mercadoria",
@@ -161,6 +162,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Produto ativo
           </label>
+          {product?.id && <ErpProductSupplierLinks user={user} product={{ ...product, ...form }} />}
         </div>
         <div className="p-4 border-t flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>

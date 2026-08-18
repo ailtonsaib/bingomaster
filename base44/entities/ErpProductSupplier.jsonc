@@ -1,0 +1,114 @@
+{
+  "name": "ErpProductSupplier",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto cadastrado (ErpProduct) \u2014 meu produto"
+    },
+    "product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto (cache)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nome do produto (cache)"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor (ErpPartner)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor (cache)"
+    },
+    "supplier_document": {
+      "type": "string",
+      "description": "CNPJ/CPF do fornecedor (cache) \u2014 usado para casar sem depender de supplier_id"
+    },
+    "supplier_product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto no cadastro do fornecedor (cProd do XML)"
+    },
+    "supplier_product_name": {
+      "type": "string",
+      "description": "Nome/descri\u00e7\u00e3o do produto pelo fornecedor (xProd do XML \u2014 cache)"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unidade comercial do fornecedor"
+    },
+    "last_unit_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "\u00daltimo pre\u00e7o de compra unit\u00e1rio (atualizado a cada entrada)"
+    },
+    "last_purchased_date": {
+      "type": "string",
+      "description": "Data da \u00faltima compra (ISO)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "product_id",
+    "supplier_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
