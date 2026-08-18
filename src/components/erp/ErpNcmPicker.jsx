@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { X } from "lucide-react";
 
 // Cache em nível de módulo para não recarregar ~10.500 NCMs a cada abertura
 let ncmCache = null;
@@ -23,7 +24,7 @@ async function loadAllNcms() {
   return loadingPromise;
 }
 
-export default function ErpNcmPicker({ value, onChange }) {
+export default function ErpNcmPicker({ value, onChange, allowClear = false }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [all, setAll] = useState(null);
@@ -51,8 +52,13 @@ export default function ErpNcmPicker({ value, onChange }) {
         onFocus={() => { setOpen(true); setQuery(""); }}
         onChange={e => { setQuery(e.target.value); setOpen(true); }}
         placeholder="Buscar NCM por código ou descrição..."
-        className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+        className="w-full h-9 rounded-md border border-input bg-transparent pl-3 pr-8 text-sm"
       />
+      {allowClear && value && (
+        <button type="button" onClick={() => onChange("")} title="Limpar NCM (regra geral)" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
+          <X className="w-4 h-4" />
+        </button>
+      )}
       {open && (
         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border rounded-md shadow-lg">
           {!all ? (

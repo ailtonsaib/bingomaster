@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Save, Copy, X, Receipt, Layers, Percent, Building2, MapPin, Calculator, Sparkles } from "lucide-react";
 import { ICMS_INTERNAL_RATES, interestadualRate, computeErpFiscalItem, num } from "@/lib/erpTaxCalc";
 import ErpCfopPicker from "@/components/erp/ErpCfopPicker";
+import ErpNcmPicker from "@/components/erp/ErpNcmPicker";
 import { suggestCfop, resolveScope, cfopPrefixesFor } from "@/lib/erpCfopSuggest";
 
 const BR_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -320,8 +321,8 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                     {DESTINATARIO_TIPOS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                   </select>
                 </Field>
-                <Field label="NCM específico (opcional)">
-                  <Input value={form.ncm} onChange={e => set("ncm", e.target.value)} placeholder="Geral se vazio" className="h-9 text-sm" />
+                <Field label="NCM específico (busca)">
+                  <ErpNcmPicker value={form.ncm || ""} onChange={code => set("ncm", code)} allowClear />
                 </Field>
                 <Field label="UF de destino">
                   <select value={form.uf} onChange={e => set("uf", e.target.value)} className={selInput}>
