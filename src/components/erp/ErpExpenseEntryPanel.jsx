@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Wallet, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Search, Trash2, Wallet, CheckCircle2, AlertTriangle, FileCheck2, Loader2 } from "lucide-react";
 import ErpExpenseEntryModal from "./ErpExpenseEntryModal";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
+import { gerarContabilDespesa, gerarFinanceiroDespesa } from "@/lib/erpDespesa";
 
 export default function ErpExpenseEntryPanel({ user, onGoToParams }) {
   const [items, setItems] = useState([]);
@@ -11,15 +12,18 @@ export default function ErpExpenseEntryPanel({ user, onGoToParams }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [gerandoId, setGerandoId] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [e, p] = await Promise.all([
+      const [e, p, accs] = await Promise.all([
         base44.entities.ErpFiscalEntry.filter({ user_email: user.email, entry_kind: "despesa" }, "-entry_date", 500),
         base44.entities.ErpExpenseParameter.filter({ user_email: user.email, is_active: true }, "-created_date", 200),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
       ]);
-      setItems(e); setParameters(p);
+      setItems(e); setParameters(p); setAccounts(accs);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -34,6 +38,22 @@ export default function ErpExpenseEntryPanel({ user, onGoToParams }) {
     if (!confirm(`Excluir a despesa ${i.nota_number}?`)) return;
     await base44.entities.ErpFiscalEntry.delete(i.id);
     load();
+  };
+
+  const handleGerar = async (i) => {
+    setGerandoId(i.id);
+    try {
+      if (!i.journal_entry_number) {
+        const param = parameters.find(p => p.operation_id === i.operation_id) || parameters[0];
+        if (!param) { alert("Nenhum Parâmetro de Despesas ativo encontrado."); setGerandoId(null); return; }
+        await gerarContabilDespesa(user, i, accounts, param);
+      }
+      if (!i.financeiro_gerado) {
+        await gerarFinanceiroDespesa(user, i);
+      }
+      load();
+    } catch (e) { alert(e.message || "Erro ao gerar financeiro/contábil."); }
+    setGerandoId(null);
   };
 
   const openNew = () => {
@@ -72,14 +92,14 @@ export default function ErpExpenseEntryPanel({ user, onGoToParams }) {
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
                 <th className="p-2 text-left">Documento</th><th className="p-2 text-left">Fornecedor</th><th className="p-2 text-left">OC</th>
-                <th className="p-2 text-left">CFOP</th><th className="p-2 text-right">Total</th><th className="p-2 text-left">Lançamento</th><th className="p-2 text-right">Ações</th>
+                <th className="p-2 text-left">CFOP</th><th className="p-2 text-right">Total</th><th className="p-2 text-left">Lançamento</th><th className="p-2 text-left">Financeiro</th><th className="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={8} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="p-8 text-center text-gray-400"><Wallet className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma despesa lançada.</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-gray-400"><Wallet className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma despesa lançada.</td></tr>
               ) : filtered.map(i => (
                 <tr key={i.id} className="border-t hover:bg-gray-50">
                   <td className="p-2">
@@ -97,7 +117,19 @@ export default function ErpExpenseEntryPanel({ user, onGoToParams }) {
                       <span className="text-xs text-amber-600">pendente contábil</span>
                     )}
                   </td>
-                  <td className="p-2 text-right">
+                  <td className="p-2">
+                    {i.financeiro_gerado ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /> Gerado</span>
+                    ) : (
+                      <span className="text-xs text-amber-600">pendente</span>
+                    )}
+                  </td>
+                  <td className="p-2 text-right whitespace-nowrap">
+                    {(!i.journal_entry_number || !i.financeiro_gerado) && (
+                      <button onClick={() => handleGerar(i)} disabled={gerandoId === i.id} title="Gerar Financeiro + Contábil" className="p-1 hover:bg-indigo-50 rounded disabled:opacity-50">
+                        {gerandoId === i.id ? <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /> : <FileCheck2 className="w-4 h-4 text-indigo-600" />}
+                      </button>
+                    )}
                     <button onClick={() => handleDelete(i)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                   </td>
                 </tr>

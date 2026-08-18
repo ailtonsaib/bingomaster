@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, UserPlus, Wallet, Receipt, Percent } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
-import { gerarLancamentoEntrada } from "@/lib/erpJournal";
+import { gerarContabilDespesa, gerarFinanceiroDespesa } from "@/lib/erpDespesa";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
 import { lookupCnpj } from "@/lib/cnpjLookup";
 import ErpPartnerFormModal from "@/components/erp/ErpPartnerFormModal";
@@ -263,42 +263,18 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
       payload.retentions = retList;
       payload.net_value = payload.total_nota - totalRetido;
       const entry = await base44.entities.ErpFiscalEntry.create(payload);
-      // Já gera o lançamento contábil (débito nas contas do rateio, crédito em Fornecedores)
+      // Contábil — lançamento contábil (débito nas contas do rateio, crédito em Fornecedores)
       try {
-        const je = await gerarLancamentoEntrada(user, { ...entry, apportionments, retentions: retList }, accounts, {
-          history: `Despesa ${entry.nota_number} - ${entry.supplier_name || ""}${hasPo ? ` (OC ${selectedPo.order_number})` : ""}`,
-          complement: `Despesa ${entry.nota_number}`,
-          param: activeParam,
-          retentions: retList,
-        });
-        await base44.entities.ErpFiscalEntry.update(entry.id, { journal_entry_id: je.id, journal_entry_number: je.number });
+        await gerarContabilDespesa(user, entry, accounts, activeParam);
       } catch (e) {
         setError(`Despesa registrada, mas o lançamento contábil falhou: ${e.message}`);
         setSaving(false); onSaved?.(); onClose(); return;
       }
-      // Financeiro: valor líquido ao fornecedor da nota + cada retenção ao seu fornecedor (quando houver retenções)
-      if (totalRetido > 0) {
-        const netValue = payload.total_nota - totalRetido;
-        const payables = [{
-          user_email: user.email,
-          description: `Despesa ${payload.nota_number} - ${payload.supplier_name || ""}${hasPo ? ` (OC ${selectedPo.order_number})` : ""}`,
-          beneficiary: payload.supplier_name || "",
-          amount: netValue,
-          category: "Despesa",
-          status: "aberto",
-        }];
-        for (const r of retList) {
-          payables.push({
-            user_email: user.email,
-            description: `Retenção ${r.type} - NF ${payload.nota_number} (${payload.supplier_name || ""})`,
-            beneficiary: r.partner_name,
-            amount: r.value,
-            category: `Retenção ${r.type}`,
-            status: "aberto",
-          });
-        }
-        try { await base44.entities.ErpPayable.bulkCreate(payables); }
-        catch (e) { setError(`Despesa e contábil gerados, mas falha ao criar contas a pagar: ${e.message}`); }
+      // Financeiro — contas a pagar (líquido ao fornecedor + retenções, ou valor total se sem retenções)
+      try {
+        await gerarFinanceiroDespesa(user, entry);
+      } catch (e) {
+        setError(`Despesa e contábil gerados, mas falha ao criar contas a pagar: ${e.message}`);
       }
       onSaved?.();
       onClose();
