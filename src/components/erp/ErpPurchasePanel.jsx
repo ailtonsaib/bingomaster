@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, ShoppingCart, Send, CheckCircle2, XCircle, Clock, Building2 } from "lucide-react";
 import ErpPurchaseFormModal from "./ErpPurchaseFormModal";
+import ErpApprovalModal from "./ErpApprovalModal";
 import { fmtMoney, fmtDate, PURCHASE_STATUS, APPROVAL_STATUS } from "@/lib/erpUtils";
 import { resolveCurrentErpUser, canApprovePo, filterVisibleOrders } from "@/lib/erpApproval";
 
@@ -17,6 +18,7 @@ export default function ErpPurchasePanel({ user }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [approvalOrder, setApprovalOrder] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -55,36 +57,8 @@ export default function ErpPurchasePanel({ user }) {
     load();
   };
 
-  const handleApprove = async (o) => {
-    const cfg = approvers.find(a => a.department_id === o.department_id && a.is_active !== false);
-    const check = canApprovePo({ isDiretor: ctx.isDiretor, erpUser: ctx.erpUser, po: o, approverConfig: cfg });
-    if (!check.can) { alert(`Não é possível aprovar: ${check.reason}`); return; }
-    const obs = prompt("Observação da aprovação (opcional):", "") ?? "";
-    await base44.entities.ErpPurchaseOrder.update(o.id, {
-      approval_status: "aprovada",
-      approved_by_id: ctx.erpUser?.id || undefined,
-      approved_by_name: ctx.erpUser?.name || user.name,
-      approved_date: new Date().toISOString(),
-      approval_obs: obs || undefined,
-    });
-    load();
-  };
-
-  const handleReject = async (o) => {
-    const cfg = approvers.find(a => a.department_id === o.department_id && a.is_active !== false);
-    const check = canApprovePo({ isDiretor: ctx.isDiretor, erpUser: ctx.erpUser, po: o, approverConfig: cfg });
-    if (!check.can) { alert(`Não é possível reprovar: ${check.reason}`); return; }
-    const obs = prompt("Motivo da reprovação:");
-    if (obs === null) return;
-    await base44.entities.ErpPurchaseOrder.update(o.id, {
-      approval_status: "reprovada",
-      approved_by_id: ctx.erpUser?.id || undefined,
-      approved_by_name: ctx.erpUser?.name || user.name,
-      approved_date: new Date().toISOString(),
-      approval_obs: obs || undefined,
-    });
-    load();
-  };
+  // Aprovação/reprovação agora via modal dedicado (sem prompt do navegador)
+  const openApproval = (o) => setApprovalOrder(o);
 
   const handleSend = async (o) => {
     await base44.entities.ErpPurchaseOrder.update(o.id, { status: "enviada" });
@@ -171,10 +145,7 @@ export default function ErpPurchasePanel({ user }) {
                         <button onClick={() => handleSendToApproval(o)} title="Enviar para aprovação" className="p-1 hover:bg-amber-50 rounded"><Clock className="w-4 h-4 text-amber-600" /></button>
                       )}
                       {pending && check.can && (
-                        <>
-                          <button onClick={() => handleApprove(o)} title="Aprovar" className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></button>
-                          <button onClick={() => handleReject(o)} title="Reprovar" className="p-1 hover:bg-red-50 rounded"><XCircle className="w-4 h-4 text-red-500" /></button>
-                        </>
+                        <button onClick={() => openApproval(o)} title="Aprovar / Não aprovar" className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></button>
                       )}
                       {pending && !check.can && (
                         <span className="text-[10px] text-gray-400" title={check.reason}>aguarda diretor</span>
@@ -195,6 +166,16 @@ export default function ErpPurchasePanel({ user }) {
 
       {showForm && (
         <ErpPurchaseFormModal user={user} order={editing} products={products} suppliers={suppliers} onClose={() => setShowForm(false)} onSaved={load} />
+      )}
+
+      {approvalOrder && (
+        <ErpApprovalModal
+          order={approvalOrder}
+          erpUser={ctx.erpUser}
+          userName={user.name}
+          onClose={() => setApprovalOrder(null)}
+          onDone={() => { setApprovalOrder(null); load(); }}
+        />
       )}
     </div>
   );
