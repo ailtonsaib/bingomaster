@@ -415,48 +415,126 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
   );
 }
 
-function AutoFiscalPreview({ form, operations }) {
-  const op = operations.find(o => o.id === form.operation_id);
-  const result = computeErpFiscalItem(
-    { ncm: form.ncm || "", quantity: 1, unit_price: 100, sale_price: 100 },
+function computeNotaAt(P, form, op) {
+  const res = computeErpFiscalItem(
+    { ncm: form.ncm || "", quantity: 1, unit_price: P, sale_price: P },
     { rules: [form], operation: op, customerUF: form.uf, companyUF: "", destinatarioTipo: form.destinatario_tipo }
   );
+  return res;
+}
+
+function AutoFiscalPreview({ form, operations }) {
+  const op = operations.find(o => o.id === form.operation_id);
+  const [mode, setMode] = useState("forward"); // forward | reverse
+  const [productPrice, setProductPrice] = useState(100);
+  const [finalPrice, setFinalPrice] = useState(0);
+  const [frete, setFrete] = useState(0);
+  const [desconto, setDesconto] = useState(0);
   const fmt = (v) => "R$ " + (Number(v) || 0).toFixed(2).replace(".", ",");
-  const totalImpostos =
-    num(result.ipi_value) + num(result.icms_value) + num(result.fcp_value) +
-    num(result.pis_value) + num(result.cofins_value) +
-    num(result.cbs_value) + num(result.ibs_value) +
-    (result.difal ? num(result.difal.difal_total) : 0) +
-    (result.st ? num(result.st.total_st) : 0);
-  const valorFinal = num(result.total) + totalImpostos;
-  const Row = ({ label, value, color }) => (
+
+  // Resolve o preço do produto: direto (forward) ou reverso a partir do valor da nota.
+  const freteN = num(frete), descN = num(desconto);
+  let P, res;
+  if (mode === "reverse") {
+    const V = num(finalPrice);
+    // Newton numérico: nota = P - desconto + frete + IPI(P) + ST(P)
+    let p = Math.max(0.01, V - freteN + descN);
+    for (let i = 0; i < 80; i++) {
+      const r = computeNotaAt(p, form, op);
+      const st = r.st ? num(r.st.total_st) : 0;
+      const nota = p - descN + freteN + num(r.ipi_value) + st;
+      const err = nota - V;
+      if (Math.abs(err) < 0.001) break;
+      const p2 = p * 1.0001 + 0.0001;
+      const r2 = computeNotaAt(p2, form, op);
+      const st2 = r2.st ? num(r2.st.total_st) : 0;
+      const nota2 = p2 - descN + freteN + num(r2.ipi_value) + st2;
+      const slope = (nota2 - nota) / (p2 - p);
+      if (Math.abs(slope) < 1e-9) break;
+      p = p - err / slope;
+      if (p < 0.01) p = 0.01;
+    }
+    P = p;
+    res = computeNotaAt(P, form, op);
+  } else {
+    P = num(productPrice);
+    res = computeNotaAt(P, form, op);
+  }
+
+  const ipiVal = num(res.ipi_value);
+  const stTotal = res.st ? num(res.st.total_st) : 0;
+  // Composição da NF-e: produtos + IPI + frete - desconto + ICMS-ST (+ FCP-ST)
+  const valorNota = P - descN + freteN + ipiVal + stTotal;
+
+  const CompRow = ({ label, value, op: sign, strong }) => (
+    <div className="flex justify-between text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      <b className={strong ? "text-foreground" : ""}>{sign === "-" ? "− " : ""}{fmt(value)}</b>
+    </div>
+  );
+  const DestRow = ({ label, value, color }) => (
     <div className="flex justify-between"><span className="text-muted-foreground">{label}</span><b className={color}>{fmt(value)}</b></div>
   );
+
   return (
-    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+      <div className="flex items-center gap-2">
         <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary text-primary-foreground"><Calculator className="w-4 h-4" /></span>
-        <div>
-          <p className="text-sm font-semibold text-foreground">Simulação (base R$ 100,00)</p>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-foreground">Simulação fiscal</p>
           <p className="text-[11px] text-muted-foreground">UF {form.uf || "—"} · CFOP {op?.cfop || "—"} · {form.destinatario_tipo}</p>
         </div>
+        <div className="inline-flex gap-1 p-0.5 bg-muted rounded-md">
+          <button onClick={() => setMode("forward")} className={`px-2.5 py-1 text-[11px] font-medium rounded ${mode === "forward" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Preço do produto</button>
+          <button onClick={() => setMode("reverse")} className={`px-2.5 py-1 text-[11px] font-medium rounded ${mode === "reverse" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Preço final</button>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs mb-3">
-        <Row label="Valor produtos" value={result.total} />
-        <Row label="IPI" value={result.ipi_value} color="text-indigo-600" />
-        <Row label="ICMS próprio" value={result.icms_value} />
-        <Row label="FCP" value={result.fcp_value} />
-        <Row label="PIS" value={result.pis_value} color="text-cyan-600" />
-        <Row label="COFINS" value={result.cofins_value} color="text-teal-600" />
-        <Row label="CBS" value={result.cbs_value} color="text-purple-600" />
-        <Row label="IBS" value={result.ibs_value} color="text-fuchsia-600" />
-        {result.difal && <Row label="DIFAL total" value={result.difal.difal_total} color="text-blue-600" />}
-        {result.st && <Row label="Total ST" value={result.st.total_st} color="text-amber-700" />}
+
+      <div className="grid grid-cols-3 gap-2">
+        {mode === "forward" ? (
+          <Field label="Preço do produto (R$)"><input type="number" step="0.01" value={productPrice} onChange={e => setProductPrice(e.target.value)} className={numInput} /></Field>
+        ) : (
+          <Field label="Preço final da nota (R$)"><input type="number" step="0.01" value={finalPrice} onChange={e => setFinalPrice(e.target.value)} className={numInput} /></Field>
+        )}
+        <Field label="Frete (R$)"><input type="number" step="0.01" value={frete} onChange={e => setFrete(e.target.value)} className={numInput} /></Field>
+        <Field label="Desconto (R$)"><input type="number" step="0.01" value={desconto} onChange={e => setDesconto(e.target.value)} className={numInput} /></Field>
       </div>
-      <div className="rounded-lg bg-primary/10 p-3 space-y-1">
-        <div className="flex justify-between text-xs"><span className="text-primary/80 font-medium">Total de impostos</span><b className="text-primary">{fmt(totalImpostos)}</b></div>
-        <div className="flex justify-between text-sm"><span className="font-semibold text-foreground">Valor final (produtos + impostos)</span><b className="text-primary">{fmt(valorFinal)}</b></div>
+
+      {/* Composição da nota (soma) */}
+      <div className="rounded-lg bg-background border border-border p-3 space-y-1">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Composição da nota (soma)</p>
+        <CompRow label="Valor dos produtos" value={P} strong />
+        {freteN > 0 && <CompRow label="Frete" value={freteN} />}
+        {descN > 0 && <CompRow label="Desconto" value={descN} op="-" />}
+        {ipiVal > 0 && <CompRow label="IPI (por fora)" value={ipiVal} />}
+        {stTotal > 0 && <CompRow label="ICMS-ST + FCP-ST" value={stTotal} />}
+        <div className="border-t border-border my-1" />
+        <div className="flex justify-between text-sm font-semibold">
+          <span className="text-foreground">Valor total da nota</span>
+          <b className="text-primary">{fmt(valorNota)}</b>
+        </div>
       </div>
+
+      {/* Impostos destacados (embutidos — não somam à nota) */}
+      <div className="rounded-lg bg-background border border-border p-3">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Impostos destacados (embutidos, não somam)</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+          <DestRow label="ICMS próprio" value={res.icms_value} />
+          <DestRow label="FCP" value={res.fcp_value} />
+          <DestRow label="PIS" value={res.pis_value} color="text-cyan-600" />
+          <DestRow label="COFINS" value={res.cofins_value} color="text-teal-600" />
+          <DestRow label="CBS" value={res.cbs_value} color="text-purple-600" />
+          <DestRow label="IBS" value={res.ibs_value} color="text-fuchsia-600" />
+          {res.difal && <DestRow label="DIFAL" value={res.difal.difal_total} color="text-blue-600" />}
+        </div>
+      </div>
+
+      {mode === "reverse" && (
+        <div className="rounded-lg bg-primary/10 p-2.5 flex justify-between text-sm">
+          <span className="text-primary/80 font-medium">Preço do produto (reverso)</span>
+          <b className="text-primary text-base">{fmt(P)}</b>
+        </div>
+      )}
     </div>
   );
 }
