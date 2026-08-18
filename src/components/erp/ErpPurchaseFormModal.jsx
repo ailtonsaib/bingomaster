@@ -8,11 +8,13 @@ import { genOrderNumber, fmtMoney } from "@/lib/erpUtils";
 
 export default function ErpPurchaseFormModal({ user, order, products, suppliers, onClose, onSaved }) {
   const [quotations, setQuotations] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [useQuotation, setUseQuotation] = useState(!!order?.quotation_id);
   const [form, setForm] = useState({
     order_number: order?.order_number || genOrderNumber("PC"),
     supplier_id: order?.supplier_id || "",
     quotation_id: order?.quotation_id || "",
+    department_id: order?.department_id || "",
     emission_date: order?.emission_date ? new Date(order.emission_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     expected_date: order?.expected_date ? new Date(order.expected_date).toISOString().slice(0, 10) : "",
     notes: order?.notes || "",
@@ -24,8 +26,11 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
   useEffect(() => {
     (async () => {
       try {
-        // Apenas tomadas de preço fechadas
-        setQuotations(await base44.entities.ErpQuotation.filter({ user_email: user.email, status: "fechada" }, "-created_date", 200));
+        const [q, d] = await Promise.all([
+          base44.entities.ErpQuotation.filter({ user_email: user.email, status: "fechada" }, "-created_date", 200),
+          base44.entities.ErpDepartment.filter({ user_email: user.email }, "name", 500),
+        ]);
+        setQuotations(q); setDepartments(d);
       } catch (e) { console.error(e); }
     })();
   }, [user.email]);
@@ -71,12 +76,15 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
     setSaving(true);
     const supplier = suppliers.find(s => s.id === form.supplier_id);
     const quotation = form.quotation_id ? quotations.find(q => q.id === form.quotation_id) : null;
+    const dept = departments.find(d => d.id === form.department_id);
     const payload = {
       user_email: user.email,
       order_number: form.order_number,
       supplier_id: form.supplier_id,
       supplier_name: supplier?.name || "",
       supplier_cnpj: supplier?.document || "",
+      department_id: form.department_id || undefined,
+      department_name: dept?.name || undefined,
       quotation_id: form.quotation_id || undefined,
       quotation_number: quotation?.number || undefined,
       emission_date: new Date(form.emission_date).toISOString(),
@@ -126,6 +134,13 @@ export default function ErpPurchaseFormModal({ user, order, products, suppliers,
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <Label>Setor / Departamento (para aprovação)</Label>
+            <select value={form.department_id} onChange={e => set("department_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <option value="">Selecione...</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Emissão</Label><Input type="date" value={form.emission_date} onChange={e => set("emission_date", e.target.value)} /></div>

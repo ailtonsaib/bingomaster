@@ -1,0 +1,107 @@
+{
+  "name": "ErpApprover",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador/dono (escopo da empresa)"
+    },
+    "department_id": {
+      "type": "string",
+      "description": "ID do setor/departamento que este aprovador cobre (ErpDepartment)"
+    },
+    "department_name": {
+      "type": "string",
+      "description": "Nome do setor (cache)"
+    },
+    "approver_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio (ErpUser) que ir\u00e1 aprovar as ordens de compra deste setor"
+    },
+    "approver_name": {
+      "type": "string",
+      "description": "Nome do aprovador (cache)"
+    },
+    "approver_email": {
+      "type": "string",
+      "description": "Email do aprovador (cache)"
+    },
+    "substitute_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio substituto (ErpUser) \u2014 pode aprovar em substitui\u00e7\u00e3o"
+    },
+    "substitute_name": {
+      "type": "string",
+      "description": "Nome do substituto (cache)"
+    },
+    "substitute_email": {
+      "type": "string",
+      "description": "Email do substituto (cache)"
+    },
+    "max_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor m\u00e1ximo que este aprovador pode aprovar. Acima deste valor, somente usu\u00e1rio do tipo 'diretor' pode aprovar."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "department_id",
+    "approver_user_id",
+    "max_value"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow, Package } from "lucide-react";
+import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow, Package, UserCheck } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
@@ -7,12 +7,14 @@ import ErpRequisitionPanel from "@/components/erp/ErpRequisitionPanel";
 import ErpQuotationPanel from "@/components/erp/ErpQuotationPanel";
 import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager";
 import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManager";
+import ErpApproverManager from "@/components/erp/ErpApproverManager";
 
 const SUBTABS = [
   { id: "almoxarifado", label: "Cadastro de Produtos", icon: Package },
   { id: "compras", label: "Compras", icon: ShoppingCart },
   { id: "solicitacao", label: "Solicitação", icon: ClipboardList },
   { id: "tomada", label: "Tomada de Preço", icon: Gavel },
+  { id: "aprovadores", label: "Aprovadores", icon: UserCheck },
   { id: "manufatura", label: "Manufatura", icon: Factory },
 ];
 
@@ -26,6 +28,7 @@ export default function ErpModuleSuprimentos({ user }) {
       {sub === "compras" && <ErpPurchasePanel user={user} />}
       {sub === "solicitacao" && <ErpRequisitionPanel user={user} />}
       {sub === "tomada" && <ErpQuotationPanel user={user} />}
+      {sub === "aprovadores" && <ErpApproverManager user={user} />}
       {sub === "manufatura" && (
         <div className="space-y-3">
           <SubNav sub={manSub} setSub={setManSub} tabs={[

@@ -15,6 +15,13 @@ export const PURCHASE_STATUS = {
   cancelada: { label: "Cancelada", color: "text-red-700 bg-red-100" },
 };
 
+export const APPROVAL_STATUS = {
+  nao_aplica: { label: "Sem aprovação", color: "text-gray-600 bg-gray-100" },
+  aguardando_aprovacao: { label: "Aguardando Aprovação", color: "text-amber-700 bg-amber-100" },
+  aprovada: { label: "Aprovada", color: "text-emerald-700 bg-emerald-100" },
+  reprovada: { label: "Reprovada", color: "text-red-700 bg-red-100" },
+};
+
 export const PRODUCTION_STATUS = {
   rascunho: { label: "Rascunho", color: "text-gray-700 bg-gray-100" },
   em_producao: { label: "Em Produção", color: "text-blue-700 bg-blue-100" },
