@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Settings2, Pencil, CheckCircle2 } from "lucide-react";
-import { fmtDate } from "@/lib/erpUtils";
+import { Plus, Search, Trash2, Settings2, Pencil, CheckCircle2, MapPin } from "lucide-react";
 
 const empty = {
   name: "",
   operation_id: "",
-  cfop_entrada: "",
-  cfop_entrada_servico: "",
-  default_department_id: "",
-  default_account_id: "",
+  cfop_nfe_dentro: "",
+  cfop_nfe_fora: "",
+  cfop_nfse_dentro: "",
+  cfop_nfse_fora: "",
+  default_department_ids: [],
+  default_account_ids: [],
   is_active: true,
 };
+
+const toggle = (list, id) => list.includes(id) ? list.filter(x => x !== id) : [...list, id];
 
 export default function ErpExpenseParameterManager({ user }) {
   const [items, setItems] = useState([]);
@@ -49,10 +52,12 @@ export default function ErpExpenseParameterManager({ user }) {
     setForm({
       name: p.name || "",
       operation_id: p.operation_id || "",
-      cfop_entrada: p.cfop_entrada || "",
-      cfop_entrada_servico: p.cfop_entrada_servico || "",
-      default_department_id: p.default_department_id || "",
-      default_account_id: p.default_account_id || "",
+      cfop_nfe_dentro: p.cfop_nfe_dentro || "",
+      cfop_nfe_fora: p.cfop_nfe_fora || "",
+      cfop_nfse_dentro: p.cfop_nfse_dentro || "",
+      cfop_nfse_fora: p.cfop_nfse_fora || "",
+      default_department_ids: p.default_department_ids || [],
+      default_account_ids: p.default_account_ids || [],
       is_active: p.is_active !== false,
     });
     setShowForm(true);
@@ -63,20 +68,22 @@ export default function ErpExpenseParameterManager({ user }) {
     setSaving(true);
     try {
       const op = operations.find(o => o.id === form.operation_id);
-      const dep = departments.find(d => d.id === form.default_department_id);
-      const acc = accounts.find(a => a.id === form.default_account_id);
+      const depNames = form.default_department_ids.map(id => departments.find(d => d.id === id)?.name).filter(Boolean);
+      const accList = form.default_account_ids.map(id => accounts.find(a => a.id === id)).filter(Boolean);
       const payload = {
         user_email: user.email,
         name: form.name.trim(),
         operation_id: form.operation_id || undefined,
         operation_name: op?.name || undefined,
-        cfop_entrada: form.cfop_entrada.trim(),
-        cfop_entrada_servico: form.cfop_entrada_servico.trim(),
-        default_department_id: form.default_department_id || undefined,
-        default_department_name: dep?.name || undefined,
-        default_account_id: form.default_account_id || undefined,
-        default_account_code: acc?.code || undefined,
-        default_account_name: acc?.name || undefined,
+        cfop_nfe_dentro: form.cfop_nfe_dentro.trim(),
+        cfop_nfe_fora: form.cfop_nfe_fora.trim(),
+        cfop_nfse_dentro: form.cfop_nfse_dentro.trim(),
+        cfop_nfse_fora: form.cfop_nfse_fora.trim(),
+        default_department_ids: form.default_department_ids,
+        default_department_names: depNames,
+        default_account_ids: form.default_account_ids,
+        default_account_codes: accList.map(a => a.code),
+        default_account_names: accList.map(a => a.name),
         is_active: form.is_active,
       };
       if (editing) await base44.entities.ErpExpenseParameter.update(editing.id, payload);
@@ -107,23 +114,26 @@ export default function ErpExpenseParameterManager({ user }) {
           <thead className="bg-gray-100 text-gray-500 text-xs">
             <tr>
               <th className="p-2 text-left">Nome</th><th className="p-2 text-left">Operação</th>
-              <th className="p-2 text-left">CFOP Entrada</th><th className="p-2 text-left">CFOP Serviço</th>
-              <th className="p-2 text-left">Setor/Conta Padrão</th><th className="p-2 text-left">Status</th><th className="p-2 text-right">Ações</th>
+              <th className="p-2 text-left">CFOPs (NF-e / NFS-e)</th>
+              <th className="p-2 text-left">Setores / Contas</th><th className="p-2 text-left">Status</th><th className="p-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+              <tr><td colSpan={6} className="p-6 text-center text-gray-400">Carregando...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="p-8 text-center text-gray-400"><Settings2 className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhum parâmetro de despesa cadastrado.</td></tr>
+              <tr><td colSpan={6} className="p-8 text-center text-gray-400"><Settings2 className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhum parâmetro de despesa cadastrado.</td></tr>
             ) : filtered.map(p => (
               <tr key={p.id} className="border-t hover:bg-gray-50">
                 <td className="p-2 font-medium">{p.name}</td>
                 <td className="p-2 text-gray-600">{p.operation_name || "—"}</td>
-                <td className="p-2 font-mono text-xs">{p.cfop_entrada || "—"}</td>
-                <td className="p-2 font-mono text-xs">{p.cfop_entrada_servico || "—"}</td>
+                <td className="p-2 text-xs">
+                  <div><span className="text-gray-400">NF-e:</span> <span className="font-mono">{p.cfop_nfe_dentro || "—"}</span> / <span className="font-mono">{p.cfop_nfe_fora || "—"}</span></div>
+                  <div><span className="text-gray-400">NFS-e:</span> <span className="font-mono">{p.cfop_nfse_dentro || "—"}</span> / <span className="font-mono">{p.cfop_nfse_fora || "—"}</span></div>
+                </td>
                 <td className="p-2 text-xs text-gray-600">
-                  {p.default_department_name || "—"} / {p.default_account_code ? `${p.default_account_code} ${p.default_account_name}` : "—"}
+                  <div>{(p.default_department_names || []).join(", ") || "—"}</div>
+                  <div className="text-gray-400">{(p.default_account_codes || []).map((c, i) => `${c} ${p.default_account_names?.[i] || ""}`).join(", ") || "—"}</div>
                 </td>
                 <td className="p-2">{p.is_active !== false ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <span className="text-xs text-gray-400">inativo</span>}</td>
                 <td className="p-2 text-right whitespace-nowrap">
@@ -138,12 +148,12 @@ export default function ErpExpenseParameterManager({ user }) {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
               <h3 className="font-bold flex items-center gap-2"><Settings2 className="w-5 h-5 text-indigo-600" /> {editing ? "Editar" : "Novo"} Parâmetro de Despesas</h3>
               <button onClick={() => setShowForm(false)} className="p-1 hover:bg-gray-100 rounded text-xl leading-none">×</button>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-4">
               <div>
                 <label className="text-xs font-medium text-gray-600">Nome *</label>
                 <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm" placeholder="Ex: Despesa Padrão, Despesa Operacional..." />
@@ -155,32 +165,56 @@ export default function ErpExpenseParameterManager({ user }) {
                   {operations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">CFOP Entrada (NF-e)</label>
-                  <input value={form.cfop_entrada} onChange={e => setForm(p => ({ ...p, cfop_entrada: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 1102, 2102, 1949" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">CFOP Serviço (NFS-e)</label>
-                  <input value={form.cfop_entrada_servico} onChange={e => setForm(p => ({ ...p, cfop_entrada_servico: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 1305, 2305, 1933" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Setor Padrão (opcional)</label>
-                  <select value={form.default_department_id} onChange={e => setForm(p => ({ ...p, default_department_id: e.target.value }))} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                    <option value="">Nenhum</option>
-                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Conta Contábil Padrão (opcional)</label>
-                  <select value={form.default_account_id} onChange={e => setForm(p => ({ ...p, default_account_id: e.target.value }))} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                    <option value="">Nenhuma</option>
-                    {accounts.map(a => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                  </select>
+
+              <div className="border rounded-lg p-3 bg-indigo-50/40">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-800 mb-2"><MapPin className="w-3.5 h-3.5" /> CFOPs de Entrada (dentro / fora do estado)</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">NF-e — Dentro do Estado</label>
+                    <input value={form.cfop_nfe_dentro} onChange={e => setForm(p => ({ ...p, cfop_nfe_dentro: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 1102, 1949" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">NF-e — Fora do Estado</label>
+                    <input value={form.cfop_nfe_fora} onChange={e => setForm(p => ({ ...p, cfop_nfe_fora: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 2102, 2949" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">NFS-e — Dentro do Estado</label>
+                    <input value={form.cfop_nfse_dentro} onChange={e => setForm(p => ({ ...p, cfop_nfse_dentro: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 1305, 1933" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">NFS-e — Fora do Estado</label>
+                    <input value={form.cfop_nfse_fora} onChange={e => setForm(p => ({ ...p, cfop_nfse_fora: e.target.value }))} className="w-full h-9 rounded-md border border-input px-3 text-sm font-mono" placeholder="ex: 2305, 2933" />
+                  </div>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Setores Padrão ({form.default_department_ids.length})</label>
+                  <div className="border rounded-md p-2 max-h-44 overflow-y-auto space-y-1 bg-white">
+                    {departments.length === 0 && <p className="text-xs text-gray-400">Nenhum departamento cadastrado.</p>}
+                    {departments.map(d => (
+                      <label key={d.id} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer">
+                        <input type="checkbox" checked={form.default_department_ids.includes(d.id)} onChange={() => setForm(p => ({ ...p, default_department_ids: toggle(p.default_department_ids, d.id) }))} />
+                        {d.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Contas Contábeis Padrão ({form.default_account_ids.length})</label>
+                  <div className="border rounded-md p-2 max-h-44 overflow-y-auto space-y-1 bg-white">
+                    {accounts.length === 0 && <p className="text-xs text-gray-400">Nenhuma conta analítica cadastrada.</p>}
+                    {accounts.map(a => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer">
+                        <input type="checkbox" checked={form.default_account_ids.includes(a.id)} onChange={() => setForm(p => ({ ...p, default_account_ids: toggle(p.default_account_ids, a.id) }))} />
+                        <span className="font-mono text-xs">{a.code}</span> {a.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} />
                 Parâmetro ativo

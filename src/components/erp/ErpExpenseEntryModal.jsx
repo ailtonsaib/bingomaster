@@ -23,6 +23,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   const [suppliers, setSuppliers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [companyUf, setCompanyUf] = useState("");
   const [poId, setPoId] = useState("");
   const [paramId, setParamId] = useState("");
   const [manualApportionments, setManualApportionments] = useState([]);
@@ -42,7 +43,8 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
       base44.entities.ErpPartner.filter({ user_email: user.email, partner_type: { $in: ["fornecedor", "ambos"] } }, "-created_date", 500),
       base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
       base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
-    ]).then(([o, s, d, acc]) => { setOrders(o); setSuppliers(s); setDepartments(d); setAccounts(acc); }).catch(() => {});
+      base44.entities.ErpCompany.filter({ user_email: user.email, is_active: true }, "razao_social", 50),
+    ]).then(([o, s, d, acc, comps]) => { setOrders(o); setSuppliers(s); setDepartments(d); setAccounts(acc); setCompanyUf((comps.find(c => c.is_main) || comps[0] || {}).uf || ""); }).catch(() => {});
   }, [user.email]);
 
   useEffect(() => {
@@ -59,16 +61,26 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
   useEffect(() => {
     if (poId) return;
     if (manualApportionments.length > 0) return;
-    if (activeParam && activeParam.default_department_id && activeParam.default_account_id) {
-      setManualApportionments([{
-        department_id: activeParam.default_department_id,
-        department_name: activeParam.default_department_name,
-        account_id: activeParam.default_account_id,
-        account_code: activeParam.default_account_code,
-        account_name: activeParam.default_account_name,
-        rateio_type: "percent", percent: 100, value: 0,
-      }]);
+    const depIds = activeParam?.default_department_ids || [];
+    const accIds = activeParam?.default_account_ids || [];
+    if (depIds.length === 0 || accIds.length === 0) return;
+    const combos = [];
+    depIds.forEach((dId, di) => accIds.forEach((aId, ai) => {
+      combos.push({
+        department_id: dId,
+        department_name: activeParam.default_department_names?.[di] || "",
+        account_id: aId,
+        account_code: activeParam.default_account_codes?.[ai] || "",
+        account_name: activeParam.default_account_names?.[ai] || "",
+        rateio_type: "percent", percent: 0, value: 0,
+      });
+    }));
+    if (combos.length === 1) { combos[0].percent = 100; }
+    else {
+      const base = Math.floor((100 / combos.length) * 100) / 100;
+      combos.forEach((c, i) => { c.percent = i === combos.length - 1 ? Math.round((100 - base * (combos.length - 1)) * 100) / 100 : base; });
     }
+    setManualApportionments(combos);
   }, [activeParam, poId, manualApportionments.length]);
 
   useEffect(() => {
@@ -78,10 +90,11 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
     setSupplierStatus(existing ? "exists" : "will_create");
   }, [parsed, mode, suppliers]);
 
-  const resolveCfop = (docModel) => {
+  const resolveCfop = (docModel, supplierUf) => {
     if (!activeParam) return "";
-    if (docModel === "NFSe") return activeParam.cfop_entrada_servico || activeParam.cfop_entrada || "";
-    return activeParam.cfop_entrada || "";
+    const dentro = (supplierUf || "").toUpperCase() === companyUf.toUpperCase();
+    if (docModel === "NFSe") return dentro ? (activeParam.cfop_nfse_dentro || activeParam.cfop_nfse_fora || "") : (activeParam.cfop_nfse_fora || activeParam.cfop_nfse_dentro || "");
+    return dentro ? (activeParam.cfop_nfe_dentro || activeParam.cfop_nfe_fora || "") : (activeParam.cfop_nfe_fora || activeParam.cfop_nfe_dentro || "");
   };
 
   const handleFile = async (file) => {
@@ -125,7 +138,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
       if (mode === "xml") {
         if (!parsed) { setSaving(false); setError("Importe um XML."); return; }
         await ensureSupplier(parsed.supplier.name, parsed.supplier.cpf_cnpj, parsed.supplier.uf, parsed.supplier.address, parsed.supplier.city);
-        const cfop = resolveCfop(parsed.nota.model);
+        const cfop = resolveCfop(parsed.nota.model, parsed.supplier.uf);
         payload = {
           user_email: user.email,
           entry_kind: "despesa",
@@ -181,7 +194,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
           supplier_cnpj: manual.supplier_cnpj,
           supplier_uf: manual.supplier_uf,
           nature_operation: manual.nature_operation || "Despesa",
-          cfop: resolveCfop("NDF"),
+          cfop: resolveCfop("NDF", manual.supplier_uf),
           total_products: items.reduce((a, it) => a + it.total, 0),
           total_nota: total,
           total_icms: 0, total_ipi: 0, total_pis: 0, total_cofins: 0,
@@ -233,11 +246,11 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
             <label className="text-xs font-medium text-indigo-700 flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> Parâmetro de Despesas</label>
             <select value={paramId} onChange={e => setParamId(e.target.value)} className="w-full h-9 rounded-md border border-indigo-200 bg-white px-3 text-sm mt-1">
               {parameters.length === 0 && <option value="">Nenhum parâmetro cadastrado</option>}
-              {parameters.map(p => <option key={p.id} value={p.id}>{p.name}{p.cfop_entrada ? ` — CFOP ${p.cfop_entrada}` : ""}</option>)}
+              {parameters.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             {activeParam && (
               <p className="text-[11px] text-indigo-700 mt-1">
-                Operação: {activeParam.operation_name || "—"} • CFOP NF-e: {activeParam.cfop_entrada || "—"} • CFOP NFS-e: {activeParam.cfop_entrada_servico || "—"}
+                Operação: {activeParam.operation_name || "—"} • NF-e: {activeParam.cfop_nfe_dentro || "—"}/{activeParam.cfop_nfe_fora || "—"} • NFS-e: {activeParam.cfop_nfse_dentro || "—"}/{activeParam.cfop_nfse_fora || "—"}{companyUf ? ` (sua UF: ${companyUf})` : ""}
               </p>
             )}
           </div>
@@ -274,7 +287,8 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
                   <div><span className="text-gray-500">Número:</span> <b>{parsed.nota.number}</b></div>
                   <div><span className="text-gray-500">Emissão:</span> {fmtDate(parsed.nota.issue_date)}</div>
                   <div><span className="text-gray-500">Total:</span> <b className="text-indigo-700">{fmtMoney(parsed.totals.total_nota)}</b></div>
-                  <div><span className="text-gray-500">CFOP Parâmetro:</span> <b className="font-mono">{resolveCfop(parsed.nota.model) || "—"}</b></div>
+                  <div><span className="text-gray-500">CFOP Parâmetro:</span> <b className="font-mono">{resolveCfop(parsed.nota.model, parsed.supplier.uf) || "—"}</b></div>
+                  <div><span className="text-gray-500">Origem:</span> {(parsed.supplier.uf || "").toUpperCase() === companyUf.toUpperCase() ? "Dentro do estado" : `Fora do estado${companyUf ? ` (sua UF: ${companyUf})` : ""}`}</div>
                   <div className="col-span-2"><span className="text-gray-500">Emitente:</span> {parsed.supplier.name}</div>
                   <div><span className="text-gray-500">CNPJ:</span> {parsed.supplier.cpf_cnpj}</div>
                   <div><span className="text-gray-500">UF:</span> {parsed.supplier.uf}</div>
