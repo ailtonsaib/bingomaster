@@ -1,4 +1,4 @@
-// Parser de XML fiscal (NF-e / NFC-e / NFS-e ABRASF) para o navegador.
+// Parser de XML fiscal (NF-e / NFC-e / NFS-e ABRASF / NFS-e Nacional SPED v1.01) para o navegador.
 // Retorna estrutura normalizada { model, nota, supplier, totals, items }.
 
 function getText(parent, tag) {
@@ -93,6 +93,77 @@ function parseNfe(doc) {
   };
 }
 
+// NFS-e Nacional (padrão SPED/Receita Federal v1.01) — raiz <NFSe> com <infNFSe> e <DPS>.
+function parseNfseNacional(doc) {
+  const inf = doc.getElementsByTagName("infNFSe")[0] || doc.getElementsByTagName("*:infNFSe")[0];
+  if (!inf) throw new Error("Registro infNFSe não encontrado (NFS-e Nacional).");
+
+  const emit = inf.getElementsByTagName("emit")[0] || inf.getElementsByTagName("*:emit")[0];
+  const endNac = emit?.getElementsByTagName("enderNac")[0] || emit?.getElementsByTagName("*:enderNac")[0];
+  const valores = inf.getElementsByTagName("valores")[0] || inf.getElementsByTagName("*:valores")[0];
+  const dps = inf.getElementsByTagName("DPS")[0] || inf.getElementsByTagName("*:DPS")[0];
+  const infDPS = dps?.getElementsByTagName("infDPS")[0] || dps?.getElementsByTagName("*:infDPS")[0];
+  const serv = infDPS?.getElementsByTagName("serv")[0] || infDPS?.getElementsByTagName("*:serv")[0];
+  const cServ = serv?.getElementsByTagName("cServ")[0] || serv?.getElementsByTagName("*:cServ")[0];
+  const dpsValores = infDPS?.getElementsByTagName("valores")[0] || infDPS?.getElementsByTagName("*:valores")[0];
+
+  const vLiq = num(getText(valores, "vLiq"));
+  const vServ = num(getText(dpsValores?.getElementsByTagName("vServPrest")[0] || dpsValores?.getElementsByTagName("*:vServPrest")[0], "vServ")) || vLiq;
+  const xDescServ = getText(cServ, "xDescServ");
+  const xTribNac = getText(inf, "xTribNac");
+  const cNBS = getText(cServ, "cNBS");
+  const idAttr = inf.getAttribute("Id") || "";
+
+  return {
+    model: "NFSe",
+    nota: {
+      number: getText(inf, "nNFSe"),
+      series: "",
+      model: "NFSe",
+      issue_date: getText(inf, "dhProc") || getText(infDPS, "dhEmi"),
+      nature_operation: `Prestação de Serviço — ${xTribNac || "NFS-e Nacional"}`,
+      cfop: "",
+      chave_acesso: idAttr,
+    },
+    supplier: {
+      name: getText(emit, "xNome"),
+      cpf_cnpj: getText(emit, "CNPJ") || getText(emit, "CPF"),
+      ie: "",
+      address: getText(endNac, "xLgr"),
+      number: getText(endNac, "nro"),
+      district: getText(endNac, "xBairro"),
+      city: getText(inf, "xLocEmi"),
+      uf: getText(endNac, "UF"),
+      cep: getText(endNac, "CEP"),
+    },
+    totals: {
+      total_products: vServ,
+      total_icms: 0,
+      total_ipi: 0,
+      total_pis: 0,
+      total_cofins: 0,
+      total_nota: vLiq,
+    },
+    items: [{
+      product_code: cNBS,
+      barcode: "",
+      product_name: xDescServ || xTribNac || "Serviço",
+      ncm: "",
+      cfop: "",
+      unit: "UN",
+      quantity: 1,
+      unit_price: vServ,
+      total: vServ,
+      cst_icms: "",
+      icms_rate: 0,
+      icms_value: 0,
+      ipi_value: 0,
+      pis_value: 0,
+      cofins_value: 0,
+    }],
+  };
+}
+
 function parseNfse(doc) {
   const inf = doc.getElementsByTagName("InfNfse")[0] || doc.getElementsByTagName("*:InfNfse")[0];
   if (!inf) throw new Error("Registro InfNfse não encontrado (NFS-e).");
@@ -162,11 +233,13 @@ export function parseFiscalXml(xmlText) {
   const doc = parser.parseFromString(xmlText, "text/xml");
   if (doc.querySelector("parsererror")) throw new Error("XML inválido ou mal formatado.");
 
-  // Detecta NF-e/NFC-e ou NFS-e
+  // Detecta NF-e/NFC-e, NFS-e Nacional (SPED) ou NFS-e ABRASF
   const hasNfe = doc.getElementsByTagName("infNFe").length > 0 || doc.getElementsByTagName("*:infNFe").length > 0;
+  const hasNfseNacional = doc.getElementsByTagName("infNFSe").length > 0 || doc.getElementsByTagName("*:infNFSe").length > 0;
   const hasNfse = doc.getElementsByTagName("InfNfse").length > 0 || doc.getElementsByTagName("*:InfNfse").length > 0;
 
   if (hasNfe) return parseNfe(doc);
+  if (hasNfseNacional) return parseNfseNacional(doc);
   if (hasNfse) return parseNfse(doc);
   throw new Error("XML não reconhecido como NF-e/NFC-e nem NFS-e.");
 }
