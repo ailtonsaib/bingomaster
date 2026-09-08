@@ -1,0 +1,37 @@
+{
+  "name": "Notificar vendedor \u2014 cartela aprovada",
+  "description": "",
+  "trigger": {
+    "condition": "${ ((.trigger.data.is_validated == true) and (.trigger.changed_fields | index(\"is_validated\") != null)) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "BingoCard"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notificar_vendedor_cartela_aprovada",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifySellerCardValidated",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "notifySellerCardValidated"
+  }
+}

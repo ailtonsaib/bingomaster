@@ -1,0 +1,37 @@
+{
+  "name": "Notificar Mudan\u00e7a de Status do Chamado",
+  "description": "Envia e-mail autom\u00e1tico via Gmail para o solicitante sempre que o status de um chamado \u00e9 alterado.",
+  "trigger": {
+    "condition": "${ (.trigger.changed_fields | index(\"status\") != null) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "SupportTicket"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notificar_mudan_a_de_status_do_chamado",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyTicketStatusChange",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "notifyTicketStatusChange"
+  }
+}

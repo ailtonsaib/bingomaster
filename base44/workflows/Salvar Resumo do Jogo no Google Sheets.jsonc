@@ -1,0 +1,37 @@
+{
+  "name": "Salvar Resumo do Jogo no Google Sheets",
+  "description": "Quando um jogo de bingo \u00e9 encerrado (status = finished), salva automaticamente o resumo com vencedores e estat\u00edsticas em uma planilha do Google Sheets.",
+  "trigger": {
+    "condition": "${ ((.trigger.data.status == \"finished\") and (.trigger.old_data.status != \"finished\")) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "BingoGame"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "salvar_resumo_do_jogo_no_google_sheets",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "saveGameSummaryToSheets",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "saveGameSummaryToSheets"
+  }
+}
