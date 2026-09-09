@@ -71,9 +71,10 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       notes: form.notes || undefined,
     };
     try {
-      if (product?.id) await base44.entities.ErpProduct.update(product.id, payload);
-      else await base44.entities.ErpProduct.create(payload);
-      onSaved();
+      let saved = product;
+      if (product?.id) { await base44.entities.ErpProduct.update(product.id, payload); saved = { ...product, ...payload }; }
+      else saved = await base44.entities.ErpProduct.create(payload);
+      onSaved(saved);
       onClose();
     } catch (e) { alert(e.message || "Erro ao salvar produto"); }
     setSaving(false);

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, Link2, UserPlus, Package } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
+import { maskCpfCnpj } from "@/lib/brMasks";
+import { lookupCnpj } from "@/lib/cnpjLookup";
+import ErpProductFormModal from "@/components/erp/ErpProductFormModal";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
 import { lancarEntradaNF } from "@/lib/erpDespesa";
 
@@ -33,14 +36,50 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   // Vínculo por item (XML): product_id selecionado, "new" para criar novo, ou "" (auto = cria novo)
   const [itemChoices, setItemChoices] = useState([]);
   const [supplierStatus, setSupplierStatus] = useState(""); // "exists" | "will_create" | ""
+  // Digitação manual: consulta Receita ao informar CNPJ e modal de cadastro de produto
+  const [supplierLookup, setSupplierLookup] = useState({ busy: false, msg: "", status: "", data: null });
+  const [productModal, setProductModal] = useState(null);
+  const lastCnpjLookup = useRef("");
   const fileRef = useRef(null);
 
   const [manual, setManual] = useState({
     nota_number: "", supplier_name: "", supplier_cnpj: "", supplier_uf: "",
     issue_date: new Date().toISOString().slice(0, 10), nature_operation: "", cfop: "", total_nota: "",
   });
-  const [manualItems, setManualItems] = useState([{ product_name: "", quantity: 1, unit_price: 0 }]);
+  const [manualItems, setManualItems] = useState([{ product_name: "", product_id: "", quantity: 1, unit_price: 0 }]);
   const setM = (k, v) => setManual(p => ({ ...p, [k]: v }));
+
+  // CNPJ informado na digitação manual: se o fornecedor não estiver cadastrado,
+  // busca os dados na Receita Federal e importa para o cadastro de fornecedores.
+  const handleManualCnpj = async (raw) => {
+    const masked = maskCpfCnpj(raw);
+    setM("supplier_cnpj", masked);
+    const doc = digits(masked);
+    if (doc.length !== 14) { setSupplierLookup({ busy: false, msg: "", status: "", data: null }); return; }
+    if (doc === lastCnpjLookup.current) return;
+    lastCnpjLookup.current = doc;
+    const existing = suppliers.find(s => s.document === doc);
+    if (existing) {
+      setSupplierLookup({ busy: false, status: "exists", msg: `Fornecedor já cadastrado: ${existing.name}`, data: null });
+      setManual(p => ({ ...p, supplier_name: p.supplier_name || existing.name, supplier_uf: p.supplier_uf || existing.uf || "" }));
+      return;
+    }
+    setSupplierLookup({ busy: true, status: "", msg: "Consultando CNPJ na Receita Federal...", data: null });
+    const res = await lookupCnpj(doc);
+    if (res?.error) {
+      setSupplierLookup({ busy: false, status: "", msg: `CNPJ não cadastrado — não foi possível consultar a Receita Federal (${res.error}). O fornecedor será criado com os dados informados.`, data: null });
+      return;
+    }
+    setManual(p => ({ ...p, supplier_name: p.supplier_name || res.razao_social, supplier_uf: p.supplier_uf || res.uf || "" }));
+    setSupplierLookup({ busy: false, status: "new", msg: `Dados obtidos da Receita Federal — o fornecedor "${res.razao_social}" será cadastrado automaticamente ao dar entrada.`, data: res });
+  };
+
+  // Descrição do item (manual): sugere produtos já cadastrados e vincula quando o nome coincide
+  const onManualItemName = (i, value) => setManualItems(p => p.map((x, idx) => idx === i
+    ? { ...x, product_name: value, product_id: products.find(pr => pr.name === value)?.id || "" } : x));
+
+  // Abre o cadastro de produto e aguarda (resolve com o produto criado ou null se cancelado)
+  const askNewProduct = (draft) => new Promise(resolve => setProductModal({ draft, resolve }));
 
   useEffect(() => {
     Promise.all([
@@ -83,7 +122,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   };
 
   // Cria/atualiza fornecedor a partir do documento; retorna o registro ErpPartner
-  const ensureSupplier = async (name, docRaw, uf, address, city) => {
+  const ensureSupplier = async (name, docRaw, uf, address, city, extra) => {
     const doc = digits(docRaw);
     if (!doc) return null;
     const existing = suppliers.find(s => s.document === doc);
@@ -97,6 +136,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       uf: uf || undefined,
       address: address || undefined,
       city: city || undefined,
+      ...(extra?.nome_fantasia ? { nome_fantasia: extra.nome_fantasia } : {}),
+      ...(extra?.cep ? { cep: extra.cep } : {}),
+      ...(extra?.district ? { district: extra.district } : {}),
+      ...(extra?.phone ? { phone: extra.phone } : {}),
+      ...(extra?.email ? { email: extra.email } : {}),
       is_active: true,
     });
     setSuppliers(p => [...p, created]);
@@ -175,7 +219,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       if (mode === "xml" && parsed) {
         supplier = await ensureSupplier(parsed.supplier.name, parsed.supplier.cpf_cnpj, parsed.supplier.uf, parsed.supplier.address, parsed.supplier.city);
       } else if (mode === "manual" && manual.supplier_name.trim()) {
-        supplier = await ensureSupplier(manual.supplier_name, manual.supplier_cnpj, manual.supplier_uf);
+        const rd = supplierLookup.data;
+        supplier = await ensureSupplier(manual.supplier_name, manual.supplier_cnpj, manual.supplier_uf, rd?.address, rd?.city, rd);
       }
 
       let payload;
@@ -239,8 +284,25 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         if (!manual.supplier_name.trim()) { setSaving(false); setError("Informe o fornecedor."); return; }
         if (!manual.total_nota || Number(manual.total_nota) <= 0) { setSaving(false); setError("Informe o total do documento."); return; }
         const total = Number(manual.total_nota);
-        const items = manualItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
-          product_name: it.product_name, quantity: Number(it.quantity) || 0,
+        // Itens sem produto cadastrado: pergunta se quer cadastrar agora (abre o
+        // cadastro de produto); se não, mantém apenas a descrição no item
+        const updatedItems = [...manualItems];
+        for (let i = 0; i < updatedItems.length; i++) {
+          const it = updatedItems[i];
+          if (!it.product_name.trim() || (Number(it.quantity) || 0) <= 0 || it.product_id) continue;
+          const cadastrar = window.confirm(`O produto "${it.product_name}" não está no cadastro.\n\nOK = cadastrar agora (abre o cadastro de produtos)\nCancelar = manter apenas a descrição no item`);
+          if (!cadastrar) continue;
+          const created = await askNewProduct({ name: it.product_name });
+          if (created) {
+            updatedItems[i] = { ...it, product_id: created.id, product_name: created.name || it.product_name };
+            setProducts(p => p.some(x => x.id === created.id) ? p : [...p, created]);
+          }
+        }
+        setManualItems(updatedItems);
+        const items = updatedItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
+          product_name: it.product_name, product_id: it.product_id || undefined,
+          product_code: it.product_id ? (products.find(p => p.id === it.product_id)?.code || "") : "",
+          quantity: Number(it.quantity) || 0,
           unit_price: Number(it.unit_price) || 0,
           total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
           ncm: "", cfop: "", unit: "UN",
@@ -385,16 +447,22 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           {/* === MODO MANUAL === */}
           {mode === "manual" && (
             <div className="space-y-3">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.). Se o fornecedor não existir, será cadastrado automaticamente.</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.). Informe o CNPJ: se o fornecedor não estiver cadastrado, os dados são buscados na Receita Federal e ele é cadastrado automaticamente.</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><label className="text-xs font-medium text-gray-600">Número do Doc. *</label><input value={manual.nota_number} onChange={e => setM("nota_number", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Data de Emissão</label><input type="date" value={manual.issue_date} onChange={e => setM("issue_date", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Total (R$) *</label><input type="number" step="0.01" value={manual.total_nota} onChange={e => setM("total_nota", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Natureza/CFOP</label><input value={manual.nature_operation} onChange={e => setM("nature_operation", e.target.value)} placeholder="Operação" className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Fornecedor *</label><input value={manual.supplier_name} onChange={e => setM("supplier_name", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
-                <div><label className="text-xs font-medium text-gray-600">CNPJ/CPF</label><input value={manual.supplier_cnpj} onChange={e => setM("supplier_cnpj", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
+                <div><label className="text-xs font-medium text-gray-600">CNPJ/CPF</label><input value={manual.supplier_cnpj} onChange={e => handleManualCnpj(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">UF</label><input value={manual.supplier_uf} onChange={e => setM("supplier_uf", e.target.value.toUpperCase().slice(0, 2))} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
               </div>
+              {supplierLookup.msg && (
+                <div className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${supplierLookup.status === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierLookup.status === "new" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+                  {supplierLookup.busy ? <Loader2 className="w-4 h-4 animate-spin" /> : supplierLookup.status === "exists" ? <CheckCircle2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                  {supplierLookup.msg}
+                </div>
+              )}
               <div className="border rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-3 py-2 border-b flex items-center justify-between">
                   <h4 className="text-sm font-semibold">Itens</h4>
@@ -405,7 +473,10 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   <tbody>
                     {manualItems.map((it, i) => (
                       <tr key={i} className="border-b">
-                        <td className="p-2"><input value={it.product_name} onChange={e => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, product_name: e.target.value } : x))} className="w-full h-8 rounded border border-input px-2 text-xs" /></td>
+                        <td className="p-2">
+                          <input list="manual-products-list" value={it.product_name} onChange={e => onManualItemName(i, e.target.value)} placeholder="Descrição — busque produto cadastrado" className="w-full h-8 rounded border border-input px-2 text-xs" />
+                          {it.product_id && <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-0.5"><Link2 className="w-3 h-3" /> produto cadastrado</span>}
+                        </td>
                         <td className="p-2"><input type="number" step="0.01" value={it.quantity} onChange={e => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, quantity: Number(e.target.value) || 0 } : x))} className="w-16 h-8 rounded border border-input px-2 text-right text-xs" /></td>
                         <td className="p-2"><input type="number" step="0.01" value={it.unit_price} onChange={e => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, unit_price: Number(e.target.value) || 0 } : x))} className="w-24 h-8 rounded border border-input px-2 text-right text-xs" /></td>
                         <td className="p-2 text-right font-medium">{fmtMoney((it.quantity || 0) * (it.unit_price || 0))}</td>
@@ -414,6 +485,9 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                     ))}
                   </tbody>
                 </table>
+                <datalist id="manual-products-list">
+                  {products.map(p => <option key={p.id} value={p.name}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
+                </datalist>
               </div>
             </div>
           )}
@@ -491,6 +565,15 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           )}
         </div>
       </div>
+
+      {productModal && (
+        <ErpProductFormModal
+          user={user}
+          product={productModal.draft}
+          onSaved={(saved) => productModal.resolve(saved || null)}
+          onClose={() => { productModal.resolve(null); setProductModal(null); }}
+        />
+      )}
     </div>
   );
 }
