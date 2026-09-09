@@ -7,6 +7,17 @@ import ErpCiapPanel from "@/components/erp/ErpCiapPanel";
 import ErpAssetReportsPanel from "@/components/erp/ErpAssetReportsPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
+// ordena contas contábeis pela estrutura do código (1.1.01.01.0001)
+const compareChartCode = (a, b) => {
+  const pa = String(a.code || "").split(".").map(Number);
+  const pb = String(b.code || "").split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+};
+
 const ESTRUTURA_CONFIG = {
   entityName: "ErpAssetStructure",
   title: "Cadastro de Estrutura Patrimonial",
@@ -15,6 +26,8 @@ const ESTRUTURA_CONFIG = {
     { key: "name", label: "Nome da Estrutura (ex: Máquinas, Veículos, Imóveis)", required: true, full: true },
     { key: "depreciation_rate", label: "Depreciação padrão (% a.a.)", type: "number" },
     { key: "useful_life_years", label: "Vida útil padrão (anos)", type: "number" },
+    { key: "deprec_expense_account_id", label: "Conta Contábil — Despesa de Depreciação (D)", type: "entity-select", entity: "ErpChartAccount", labelKey: "name", cacheKey: "deprec_expense_account_name", prefixKey: "code", prefixCacheKey: "deprec_expense_account_code", full: true, optionsFilter: a => a.accepts_entries !== false, sortOptions: compareChartCode, hierarchical: true },
+    { key: "deprec_accum_account_id", label: "Conta Contábil — Depreciação Acumulada (C)", type: "entity-select", entity: "ErpChartAccount", labelKey: "name", cacheKey: "deprec_accum_account_name", prefixKey: "code", prefixCacheKey: "deprec_accum_account_code", full: true, optionsFilter: a => a.accepts_entries !== false, sortOptions: compareChartCode, hierarchical: true },
     { key: "notes", label: "Observações", full: true },
     { key: "is_active", label: "Ativa", type: "checkbox" },
   ],
@@ -23,6 +36,8 @@ const ESTRUTURA_CONFIG = {
     { key: "name", label: "Estrutura" },
     { key: "depreciation_rate", label: "% a.a." },
     { key: "useful_life_years", label: "Vida útil (anos)" },
+    { key: "deprec_expense_account_code", label: "Despesa Depreciação", render: it => it.deprec_expense_account_code ? `${it.deprec_expense_account_code} — ${it.deprec_expense_account_name || ""}` : "—" },
+    { key: "deprec_accum_account_code", label: "Deprec. Acumulada", render: it => it.deprec_accum_account_code ? `${it.deprec_accum_account_code} — ${it.deprec_accum_account_name || ""}` : "—" },
     { key: "is_active", label: "Ativa", type: "bool" },
   ],
   searchKeys: ["name", "code"],

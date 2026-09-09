@@ -24,6 +24,30 @@
       "default": 0,
       "description": "Vida \u00fatil padr\u00e3o (anos) \u2014 0 = n\u00e3o aplica"
     },
+    "deprec_expense_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Despesa de Deprecia\u00e7\u00e3o (ErpChartAccount) \u2014 d\u00e9bito no lan\u00e7amento da deprecia\u00e7\u00e3o"
+    },
+    "deprec_expense_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Despesa de Deprecia\u00e7\u00e3o (cache)"
+    },
+    "deprec_expense_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Despesa de Deprecia\u00e7\u00e3o (cache)"
+    },
+    "deprec_accum_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Deprecia\u00e7\u00e3o Acumulada (ErpChartAccount) \u2014 cr\u00e9dito no lan\u00e7amento da deprecia\u00e7\u00e3o"
+    },
+    "deprec_accum_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Deprecia\u00e7\u00e3o Acumulada (cache)"
+    },
+    "deprec_accum_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Deprecia\u00e7\u00e3o Acumulada (cache)"
+    },
     "notes": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es"

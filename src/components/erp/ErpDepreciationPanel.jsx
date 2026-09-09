@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Calculator, Trash2 } from "lucide-react";
-import { fmtMoney } from "@/lib/erpUtils";
+import { fmtMoney, genOrderNumber } from "@/lib/erpUtils";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const num = (v) => Number(v) || 0;
@@ -14,17 +14,19 @@ export default function ErpDepreciationPanel({ user }) {
   const [year, setYear] = useState(now.getFullYear());
   const [assets, setAssets] = useState([]);
   const [records, setRecords] = useState([]);
+  const [structures, setStructures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [a, r] = await Promise.all([
+      const [a, r, s] = await Promise.all([
         base44.entities.ErpFixedAsset.filter({ user_email: user.email }, "code", 500),
         base44.entities.ErpDepreciation.filter({ user_email: user.email }, "-created_date", 1000),
+        base44.entities.ErpAssetStructure.filter({ user_email: user.email }, "code", 500),
       ]);
-      setAssets(a); setRecords(r);
+      setAssets(a); setRecords(r); setStructures(s);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -43,28 +45,60 @@ export default function ErpDepreciationPanel({ user }) {
 
   const processMonth = async () => {
     if (!pending.length) { alert("Todos os bens já foram depreciados neste mês."); return; }
-    if (!confirm(`Processar a depreciação de ${MONTHS[month]}/${year} para ${pending.length} bem(ns)? O valor atual de cada bem será reduzido.`)) return;
+    // valida as contas contábeis da estrutura antes de processar — nada é gravado sem configuração
+    const errs = [];
+    pending.forEach(a => {
+      const st = structures.find(s => s.id === a.structure_id);
+      if (!st) errs.push(`Bem "${a.name}": sem estrutura patrimonial vinculada.`);
+      else if (!st.deprec_expense_account_id || !st.deprec_accum_account_id) errs.push(`Estrutura "${st.name}": configure as contas de Despesa de Depreciação (D) e Depreciação Acumulada (C).`);
+    });
+    if (errs.length) { alert("Configure as contas contábeis na Estrutura Patrimonial para gerar o lançamento:\n" + errs.join("\n")); return; }
+    if (!confirm(`Processar a depreciação de ${MONTHS[month]}/${year} para ${pending.length} bem(ns)? O valor atual de cada bem será reduzido e será gerado o lançamento contábil de cada bem (D Despesa de Depreciação x C Depreciação Acumulada).`)) return;
     setBusy(true);
     try {
-      await base44.entities.ErpDepreciation.bulkCreate(pending.map(a => ({
+      const lastDay = new Date(year, month, 0, 12).toISOString();
+      // lançamento contábil por bem, conforme as contas da estrutura patrimonial
+      const journals = [];
+      for (const a of pending) {
+        const st = structures.find(s => s.id === a.structure_id);
+        const je = await base44.entities.ErpJournalEntry.create({
+          user_email: user.email,
+          number: genOrderNumber("LCT"),
+          date: lastDay,
+          history: `Depreciação ${MONTHS[month]}/${year} — ${a.name}`,
+          document: a.code || a.name,
+          lines: [
+            { account_id: st.deprec_expense_account_id, account_code: st.deprec_expense_account_code, account_name: st.deprec_expense_account_name, debit: a.monthly, credit: 0, complement: `Depreciação ${MONTHS[month]}/${year} — ${a.name}` },
+            { account_id: st.deprec_accum_account_id, account_code: st.deprec_accum_account_code, account_name: st.deprec_accum_account_name, debit: 0, credit: a.monthly, complement: `Depreciação acumulada — ${a.name}` },
+          ],
+          total_debit: a.monthly,
+          total_credit: a.monthly,
+          status: "definitivo",
+        });
+        journals.push(je);
+      }
+      await base44.entities.ErpDepreciation.bulkCreate(pending.map((a, i) => ({
         user_email: user.email,
         asset_id: a.id, asset_name: a.name, asset_code: a.code || "",
         month, year,
         depreciation_value: a.monthly,
         accumulated_to_date: round2(num(a.acquisition_value) - num(a.current_value) + a.monthly),
         processed_date: new Date().toISOString(),
+        journal_entry_id: journals[i]?.id || "",
+        journal_entry_number: journals[i]?.number || "",
         notes: `Depreciação de ${MONTHS[month]}/${year} (${num(a.depreciation_rate)}% a.a.)`,
       })));
       await base44.entities.ErpFixedAsset.bulkUpdate(pending.map(a => ({ id: a.id, current_value: round2(num(a.current_value) - a.monthly) })));
-      alert(`${pending.length} bem(ns) depreciado(s) — valor atual atualizado.`);
+      alert(`${pending.length} bem(ns) depreciado(s) — valor atual atualizado e lançamento(s) contábil(is) gerado(s).`);
       load();
     } catch (e) { alert(e.message); }
     setBusy(false);
   };
 
   const removeRecord = async (rec) => {
-    if (!confirm(`Excluir a depreciação de "${rec.asset_name}" em ${MONTHS[rec.month]}/${rec.year}? O valor atual do bem será restaurado.`)) return;
+    if (!confirm(`Excluir a depreciação de "${rec.asset_name}" em ${MONTHS[rec.month]}/${rec.year}? O valor atual do bem será restaurado e o lançamento contábil será excluído.`)) return;
     try {
+      if (rec.journal_entry_id) { try { await base44.entities.ErpJournalEntry.delete(rec.journal_entry_id); } catch (e) { console.error(e); } }
       const asset = assets.find(a => a.id === rec.asset_id);
       if (asset) await base44.entities.ErpFixedAsset.update(asset.id, { current_value: round2(num(asset.current_value) + num(rec.depreciation_value)) });
       await base44.entities.ErpDepreciation.delete(rec.id);
@@ -125,7 +159,7 @@ export default function ErpDepreciationPanel({ user }) {
           </table>
         </div>
       </div>
-      <p className="text-xs text-gray-400">Depreciação mensal = valor de aquisição × taxa anual ÷ 12, limitada ao valor atual do bem. Ao processar, o valor atual de cada bem é reduzido.</p>
+      <p className="text-xs text-gray-400">Depreciação mensal = valor de aquisição × taxa anual ÷ 12, limitada ao valor atual do bem. Ao processar, é gerado um lançamento contábil por bem (D Despesa de Depreciação x C Depreciação Acumulada, contas da estrutura patrimonial). Ao excluir a depreciação, o lançamento contábil é excluído e o valor do bem restaurado.</p>
     </div>
   );
 }
