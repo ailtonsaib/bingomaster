@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Loader2 } from "lucide-react";
+import ErpCombobox from "@/components/erp/ErpCombobox";
 
 // carrega todas as páginas de uma entidade (limite de 500 por requisição)
 async function loadAll(entity, query, sort) {
@@ -238,14 +239,23 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
                     <option value="D">D — Débito</option>
                     <option value="C">C — Crédito</option>
                   </select>
-                  <select value={l.account_id} onChange={e => onAccount(i, e.target.value)} className="col-span-6 h-9 rounded-md border border-input bg-white px-2 text-sm">
-                    <option value="">Conta contábil...</option>
-                    {accounts.map(a => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
-                  </select>
-                  <select value={l.history_id} onChange={e => onHistory(i, e.target.value)} className="col-span-3 h-9 rounded-md border border-input bg-white px-2 text-sm">
-                    <option value="">Hist. padrão...</option>
-                    {histories.map(h => <option key={h.id} value={h.id}>{h.code} — {h.description}</option>)}
-                  </select>
+                  <div className="col-span-6">
+                    <ErpCombobox
+                      value={l.account_id}
+                      onValueChange={v => onAccount(i, v)}
+                      options={accounts.map(a => ({ id: a.id, label: `${a.code} — ${a.name}` }))}
+                      placeholder="Digite código ou descrição da conta..."
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <ErpCombobox
+                      value={l.history_id}
+                      onValueChange={v => onHistory(i, v)}
+                      options={histories.map(h => ({ id: h.id, label: `${h.code} — ${h.description}` }))}
+                      placeholder="Hist. padrão..."
+                      clearable
+                    />
+                  </div>
                   <button onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))} className="col-span-1 p-1 hover:bg-red-50 rounded justify-self-center" title="Remover linha">
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </button>
