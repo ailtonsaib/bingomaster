@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Trash2, FileText, Receipt, Calculator, Download, Printer } from "lucide-react";
 import { calcFolha, calcFerias, calcDecimoTerceiro, fmtMoney } from "@/lib/erpPayrollCalc";
+import { checkOfficialTables } from "@/lib/erpPayrollTables";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const PAYROLL_TYPES = [
@@ -63,6 +64,9 @@ export default function ErpPayrollPanel({ user }) {
     return map;
   }, [tables, year]);
   const missingTables = ["inss", "irrf", "fgts", "salario_familia", "employer_charges"].filter(t => !taxTables[t]);
+  // Tabelas oficiais em vigor para o ano da competência — importação obrigatória
+  const vigencia = useMemo(() => checkOfficialTables(tables, year), [tables, year]);
+  const calculoBloqueado = missingTables.length > 0 || vigencia.missing.length > 0;
 
   const monthFolhas = folhas.filter(f => num(f.month) === month && num(f.year) === year);
   const totals = useMemo(() => ({
@@ -96,7 +100,9 @@ export default function ErpPayrollPanel({ user }) {
   };
 
   const calcAllFolhas = async () => {
-    if (missingTables.length) return alert("Cadastre as tabelas de impostos (aba Tabelas de Impostos) antes de calcular a folha.");
+    if (calculoBloqueado) return alert(vigencia.missing.length > 0
+      ? `Importação obrigatória: importe as tabelas oficiais de ${year} em RH → Tabelas de Impostos ("Verificar Tabelas em Vigor") antes de calcular a folha.`
+      : "Cadastre as tabelas de impostos (aba Tabelas de Impostos) antes de calcular a folha.");
     if (!confirm(`Calcular a folha de ${MONTHS[month]}/${year} para todos os funcionários ativos (${employees.length})? Funcionários com folha já lançada neste mês não serão duplicados.`)) return;
     setBusy(true);
     try {
@@ -148,9 +154,11 @@ export default function ErpPayrollPanel({ user }) {
         </div>
       </div>
 
-      {missingTables.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-700">
-          ⚠ Tabelas de impostos não cadastradas ({missingTables.join(", ")}). Vá em RH → Tabelas de Impostos e clique em "Carregar Tabelas Padrão (2024/2026)" para habilitar os cálculos.
+      {(missingTables.length > 0 || vigencia.missing.length > 0) && (
+        <div className={`border rounded-lg p-2.5 text-xs ${vigencia.missing.length > 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+          {vigencia.missing.length > 0
+            ? <>⛔ Importação obrigatória: as tabelas oficiais de {year} estão em vigor e não foram importadas ({vigencia.missingNames.join(", ")}). O cálculo da folha de {year} está bloqueado — vá em RH → Tabelas de Impostos e clique em "Verificar Tabelas em Vigor" para importar.</>
+            : <>⚠ Tabelas de impostos não cadastradas ({missingTables.join(", ")}). Vá em RH → Tabelas de Impostos e clique em "Carregar Tabelas Padrão (2024/2026)" para habilitar os cálculos.</>}
         </div>
       )}
 
@@ -158,7 +166,7 @@ export default function ErpPayrollPanel({ user }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex gap-2">
-              <Button size="sm" onClick={calcAllFolhas} disabled={busy || missingTables.length > 0} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4" />} Calcular Folha de Todos</Button>
+              <Button size="sm" onClick={calcAllFolhas} disabled={busy || calculoBloqueado} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4" />} Calcular Folha de Todos</Button>
               <Button size="sm" variant="outline" onClick={() => setShowNewFolha(true)} className="gap-1.5"><Plus className="w-4 h-4" /> Folha Individual</Button>
             </div>
             <div className="text-xs text-gray-600 flex gap-3 flex-wrap">
@@ -199,12 +207,12 @@ export default function ErpPayrollPanel({ user }) {
         </div>
       )}
 
-      {tab === "ferias" && <FeriasTab user={user} employees={employees} taxTables={taxTables} month={month} year={year} onSaved={load} />}
-      {tab === "decimo" && <DecimoTab user={user} employees={employees} taxTables={taxTables} month={month} year={year} onSaved={load} />}
+      {tab === "ferias" && <FeriasTab user={user} employees={employees} taxTables={taxTables} month={month} year={year} blocked={calculoBloqueado} onSaved={load} />}
+      {tab === "decimo" && <DecimoTab user={user} employees={employees} taxTables={taxTables} month={month} year={year} blocked={calculoBloqueado} onSaved={load} />}
       {tab === "arquivos" && <ArquivosTab folhas={monthFolhas} company={company} month={month} year={year} />}
 
       {showNewFolha && (
-        <NewFolhaModal user={user} employees={employees} rubricas={rubricas} taxTables={taxTables} month={month} year={year}
+        <NewFolhaModal user={user} employees={employees} rubricas={rubricas} taxTables={taxTables} month={month} year={year} blocked={calculoBloqueado}
           onClose={() => setShowNewFolha(false)} onSaved={() => { setShowNewFolha(false); load(); }} buildLines={buildLines} calcFor={calcFor} />
       )}
       {holerite && <HolleriteModal folha={holerite} company={company} month={month} year={year} onClose={() => setHolerite(null)} />}
@@ -213,7 +221,7 @@ export default function ErpPayrollPanel({ user }) {
 }
 
 // ─── Férias ───
-function FeriasTab({ user, employees, taxTables, month, year, onSaved }) {
+function FeriasTab({ user, employees, taxTables, month, year, blocked, onSaved }) {
   const [empId, setEmpId] = useState("");
   const [days, setDays] = useState(30);
   const [abono, setAbono] = useState(false);
@@ -274,13 +282,13 @@ function FeriasTab({ user, employees, taxTables, month, year, onSaved }) {
           <div className="flex justify-between text-xs text-gray-500"><span>Encargos do empregador</span><span>{fmtMoney(calc.employer_total)}</span></div>
         </div>
       )}
-      <Button size="sm" disabled={saving || !employee} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Lançando..." : "Lançar Férias na Folha"}</Button>
+      <Button size="sm" disabled={saving || !employee || blocked} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Lançando..." : "Lançar Férias na Folha"}</Button>
     </div>
   );
 }
 
 // ─── 13º Salário ───
-function DecimoTab({ user, employees, taxTables, month, year, onSaved }) {
+function DecimoTab({ user, employees, taxTables, month, year, blocked, onSaved }) {
   const [empId, setEmpId] = useState("");
   const [monthsWorked, setMonthsWorked] = useState(12);
   const [saving, setSaving] = useState(false);
@@ -339,7 +347,7 @@ function DecimoTab({ user, employees, taxTables, month, year, onSaved }) {
           <div className="flex justify-between text-xs text-gray-500"><span>Encargos do empregador</span><span>{fmtMoney(calc.employer_total)}</span></div>
         </div>
       )}
-      <Button size="sm" disabled={saving || !employee} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Lançando..." : "Lançar 13º na Folha"}</Button>
+      <Button size="sm" disabled={saving || !employee || blocked} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Lançando..." : "Lançar 13º na Folha"}</Button>
     </div>
   );
 }
@@ -440,7 +448,7 @@ ${emp}
 }
 
 // ─── Nova Folha Individual ───
-function NewFolhaModal({ user, employees, rubricas, taxTables, month, year, onClose, onSaved, buildLines, calcFor }) {
+function NewFolhaModal({ user, employees, rubricas, taxTables, month, year, blocked, onClose, onSaved, buildLines, calcFor }) {
   const [empId, setEmpId] = useState("");
   const [lines, setLines] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -518,7 +526,7 @@ function NewFolhaModal({ user, employees, rubricas, taxTables, month, year, onCl
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" disabled={saving || !employee} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Salvando..." : "Lançar Folha"}</Button>
+          <Button size="sm" disabled={saving || !employee || blocked} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Salvando..." : "Lançar Folha"}</Button>
         </div>
       </div>
     </div>

@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, Trash2, Pencil, ScrollText, Sparkles } from "lucide-react";
+import { Search, Plus, Trash2, Pencil, Sparkles, RefreshCw, AlertTriangle } from "lucide-react";
+import { OFFICIAL_TABLES, checkOfficialTables } from "@/lib/erpPayrollTables";
 
 const TAX_OPTS = [
   { value: "inss", label: "INSS (empregado)", color: "bg-blue-100 text-blue-700" },
@@ -13,54 +14,7 @@ const TAX_OPTS = [
   { value: "employer_charges", label: "Encargos do Empregador", color: "bg-red-100 text-red-700" },
 ];
 
-// Tabelas padrão — 2024 e 2026 (INSS: Portaria Interministerial; IRRF 2026: Lei 15.270/2025)
-const DEFAULT_TABLES = [
-  {
-    name: "INSS 2024", tax_type: "inss", year: 2024, is_default: true, inss_ceiling: 7786.02,
-    brackets: [
-      { min: 0, max: 1412.00, rate: 7.5, deduction: 0 },
-      { min: 1412.00, max: 2666.68, rate: 9, deduction: 0 },
-      { min: 2666.68, max: 4000.03, rate: 12, deduction: 0 },
-      { min: 4000.03, max: 0, rate: 14, deduction: 0 },
-    ],
-  },
-  {
-    name: "IRRF 2024", tax_type: "irrf", year: 2024, is_default: true, dependent_deduction: 189.59,
-    brackets: [
-      { min: 0, max: 2259.20, rate: 0, deduction: 0 },
-      { min: 2259.20, max: 2826.65, rate: 7.5, deduction: 169.44 },
-      { min: 2826.65, max: 3751.05, rate: 15, deduction: 381.44 },
-      { min: 3751.05, max: 4664.68, rate: 22.5, deduction: 662.77 },
-      { min: 4664.68, max: 0, rate: 27.5, deduction: 896.00 },
-    ],
-  },
-  { name: "FGTS 2024", tax_type: "fgts", year: 2024, is_default: true, fgts_rate: 8, brackets: [] },
-  { name: "Salário Família 2024", tax_type: "salario_familia", year: 2024, is_default: true, salario_familia_value: 62.04, salario_familia_limit: 1819.26, brackets: [] },
-  { name: "Encargos Empregador 2024", tax_type: "employer_charges", year: 2024, is_default: true, inss_employer_rate: 20, fgts_rate: 8, sat_rate: 1, terceiros_rate: 5.8, brackets: [] },
-  {
-    name: "INSS 2026", tax_type: "inss", year: 2026, is_default: true, inss_ceiling: 8475.55,
-    brackets: [
-      { min: 0, max: 1621.00, rate: 7.5, deduction: 0 },
-      { min: 1621.00, max: 2902.84, rate: 9, deduction: 0 },
-      { min: 2902.84, max: 4354.27, rate: 12, deduction: 0 },
-      { min: 4354.27, max: 0, rate: 14, deduction: 0 },
-    ],
-  },
-  {
-    name: "IRRF 2026 (Lei 15.270/2025)", tax_type: "irrf", year: 2026, is_default: true, dependent_deduction: 189.59,
-    irrf_isento_limit: 5000, irrf_reduction_limit: 7350,
-    brackets: [
-      { min: 0, max: 2428.80, rate: 0, deduction: 0 },
-      { min: 2428.80, max: 2826.65, rate: 7.5, deduction: 182.16 },
-      { min: 2826.65, max: 3751.05, rate: 15, deduction: 394.16 },
-      { min: 3751.05, max: 4664.68, rate: 22.5, deduction: 675.49 },
-      { min: 4664.68, max: 0, rate: 27.5, deduction: 908.73 },
-    ],
-  },
-  { name: "FGTS 2026", tax_type: "fgts", year: 2026, is_default: true, fgts_rate: 8, brackets: [] },
-  { name: "Salário Família 2026", tax_type: "salario_familia", year: 2026, is_default: true, salario_familia_value: 67.54, salario_familia_limit: 1980.38, brackets: [] },
-  { name: "Encargos Empregador 2026", tax_type: "employer_charges", year: 2026, is_default: true, inss_employer_rate: 20, fgts_rate: 8, sat_rate: 1, terceiros_rate: 5.8, brackets: [] },
-];
+
 
 export default function ErpPayrollTaxTableManager({ user }) {
   const [items, setItems] = useState([]);
@@ -68,6 +22,8 @@ export default function ErpPayrollTaxTableManager({ user }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [seeding, setSeeding] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkMsg, setCheckMsg] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -79,12 +35,39 @@ export default function ErpPayrollTaxTableManager({ user }) {
 
   const filtered = items.filter(t => [t.name, t.tax_type, String(t.year)].map(v => String(v ?? "")).join(" ").toLowerCase().includes(search.toLowerCase()));
 
+  // Verificação automática: tabelas oficiais em vigor (ano atual) ainda não importadas
+  const vigencia = checkOfficialTables(items);
+
+  const importMissing = async () => {
+    setSeeding(true);
+    try {
+      const faltantes = OFFICIAL_TABLES.filter(t => t.year === vigencia.year && vigencia.missing.includes(t.tax_type));
+      if (faltantes.length) await base44.entities.ErpPayrollTaxTable.bulkCreate(faltantes.map(t => ({ ...t, user_email: user.email })));
+      alert(`${faltantes.length} tabela(s) oficial(is) de ${vigencia.year} importada(s) com sucesso.`);
+      load();
+    } catch (e) { alert(e.message); }
+    setSeeding(false);
+  };
+
+  const runCheck = () => {
+    setChecking(true);
+    setCheckMsg("");
+    setTimeout(() => {
+      setChecking(false);
+      setCheckMsg(vigencia.missing.length > 0
+        ? `⚠ Faltam ${vigencia.missing.length} tabela(s) oficial(is) de ${vigencia.year} em vigor: ${vigencia.missingNames.join(", ")}. A importação é obrigatória.`
+        : vigencia.hasOfficialYear
+          ? `✓ Todas as tabelas oficiais de ${vigencia.year} estão importadas e em vigor.`
+          : `ℹ Não há tabelas oficiais de ${vigencia.year} disponíveis no sistema. Use as tabelas do ano disponível ou cadastre manualmente.`);
+    }, 600);
+  };
+
   const seedDefaults = async () => {
     if (!confirm("Carregar tabelas de impostos padrão (2024 e 2026 — valores oficiais, incl. isenção do IRRF até R$ 5.000)? As já cadastradas não serão duplicadas.")) return;
     setSeeding(true);
     try {
       const existing = new Set(items.map(t => `${t.year}-${t.tax_type}`));
-      const toCreate = DEFAULT_TABLES.filter(t => !existing.has(`${t.year}-${t.tax_type}`)).map(t => ({ ...t, user_email: user.email }));
+      const toCreate = OFFICIAL_TABLES.filter(t => !existing.has(`${t.year}-${t.tax_type}`)).map(t => ({ ...t, user_email: user.email }));
       if (toCreate.length) await base44.entities.ErpPayrollTaxTable.bulkCreate(toCreate);
       load();
     } catch (e) { alert(e.message); }
@@ -96,10 +79,21 @@ export default function ErpPayrollTaxTableManager({ user }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-semibold text-base">Tabelas de Impostos (INSS / IRRF / FGTS / Encargos)</h2>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={runCheck} disabled={checking} className="gap-1.5"><RefreshCw className={`w-4 h-4 ${checking ? "animate-spin" : ""}`} /> Verificar Tabelas em Vigor</Button>
           <Button size="sm" variant="outline" onClick={seedDefaults} disabled={seeding} className="gap-1.5"><Sparkles className="w-4 h-4" /> Carregar Tabelas Padrão (2024/2026)</Button>
           <Button size="sm" onClick={() => setEditing({})} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Tabela</Button>
         </div>
       </div>
+
+      {vigencia.missing.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 flex items-center justify-between flex-wrap gap-2">
+          <span className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 shrink-0" />
+            <b>Importação obrigatória:</b> as tabelas oficiais de {vigencia.year} estão em vigor e não foram importadas ({vigencia.missingNames.join(", ")}). O cálculo da folha de {vigencia.year} fica bloqueado até a importação.
+          </span>
+          <Button size="sm" onClick={importMissing} disabled={seeding} className="bg-red-600 hover:bg-red-700 text-white">{seeding ? "Importando..." : `Importar Tabelas ${vigencia.year} Agora`}</Button>
+        </div>
+      )}
+      {checkMsg && <div className={`border rounded-lg p-2.5 text-xs ${checkMsg.startsWith("✓") ? "bg-emerald-50 border-emerald-200 text-emerald-700" : checkMsg.startsWith("ℹ") ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>{checkMsg}</div>}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar tabela..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
@@ -112,7 +106,7 @@ export default function ErpPayrollTaxTableManager({ user }) {
             </thead>
             <tbody>
               {loading ? <tr><td colSpan={6} className="p-6 text-center text-gray-400">Carregando...</td></tr>
-                : filtered.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-gray-400">Nenhuma tabela. Clique em "Carregar Tabelas 2024" para começar.</td></tr>
+                : filtered.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-gray-400">Nenhuma tabela. Clique em "Verificar Tabelas em Vigor" ou "Carregar Tabelas Padrão" para começar.</td></tr>
                 : filtered.map(t => {
                   const to = TAX_OPTS.find(o => o.value === t.tax_type) || {};
                   return (
