@@ -40,6 +40,41 @@
       "type": "string",
       "description": "Conta banc\u00e1ria da baixa (cache)"
     },
+    "settled_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor efetivamente pago na baixa (com manuten\u00e7\u00e3o de juros/descontos)"
+    },
+    "juros_1": {
+      "type": "number",
+      "default": 0,
+      "description": "Juros da baixa \u2014 campo 1"
+    },
+    "juros_2": {
+      "type": "number",
+      "default": 0,
+      "description": "Juros da baixa \u2014 campo 2"
+    },
+    "juros_3": {
+      "type": "number",
+      "default": 0,
+      "description": "Juros da baixa \u2014 campo 3"
+    },
+    "descontos_1": {
+      "type": "number",
+      "default": 0,
+      "description": "Descontos da baixa \u2014 campo 1"
+    },
+    "descontos_2": {
+      "type": "number",
+      "default": 0,
+      "description": "Descontos da baixa \u2014 campo 2"
+    },
+    "descontos_3": {
+      "type": "number",
+      "default": 0,
+      "description": "Descontos da baixa \u2014 campo 3"
+    },
     "status": {
       "type": "string",
       "enum": [

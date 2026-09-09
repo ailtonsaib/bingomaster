@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
 import { maskCpfCnpj, maskCep, maskPhone, onlyDigits } from "@/lib/brMasks";
+import ErpSettleModal from "@/components/erp/ErpSettleModal";
 
 async function lookupCep(cep) {
   const clean = onlyDigits(cep);
@@ -32,6 +33,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
   const [settleBankId, setSettleBankId] = useState("");
   const [settleDate, setSettleDate] = useState(new Date().toISOString().slice(0, 10));
   const [settling, setSettling] = useState(false);
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
 
   const entitySelectFields = useMemo(() => fields.filter(f => f.type === "entity-select"), [fields]);
 
@@ -88,20 +90,34 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
   const settleOpenRows = filtered.filter(isSettleable);
   const allOpenSelected = settleOpenRows.length > 0 && settleOpenRows.every(it => selectedIds.includes(it.id));
   const selectedTotal = items.filter(it => selectedIds.includes(it.id)).reduce((s, it) => s + (Number(it.amount) || 0), 0);
-  const handleSettle = async () => {
+  const settleVerb = settle?.doneStatus === "recebido" ? "Receber" : "Pagar";
+
+  const handleSettle = () => {
     const bank = bankAccounts.find(b => b.id === settleBankId);
     if (!bank) { alert("Selecione a conta bancária da baixa."); return; }
     if (!settleDate) { alert("Informe a data da baixa."); return; }
-    if (!confirm(`Baixar ${selectedIds.length} título(s) na conta "${bank.bank}"?`)) return;
+    setSettleModalOpen(true);
+  };
+
+  const handleSettleConfirm = async (entries) => {
+    const bank = bankAccounts.find(b => b.id === settleBankId);
     setSettling(true);
     try {
-      await base44.entities[entityName].bulkUpdate(selectedIds.map(id => ({
-        id,
+      await base44.entities[entityName].bulkUpdate(entries.map(e => ({
+        id: e.id,
         [settle.statusField || "status"]: settle.doneStatus,
         [settle.dateField]: settleDate,
         bank_account_id: bank.id,
         bank_account_name: bank.bank + (bank.account ? ` — ${bank.account}` : ""),
+        settled_value: Number(e.paid) || 0,
+        juros_1: Number(e.juros[0]) || 0,
+        juros_2: Number(e.juros[1]) || 0,
+        juros_3: Number(e.juros[2]) || 0,
+        descontos_1: Number(e.descontos[0]) || 0,
+        descontos_2: Number(e.descontos[1]) || 0,
+        descontos_3: Number(e.descontos[2]) || 0,
       })));
+      setSettleModalOpen(false);
       setSelectedIds([]);
       load();
     } catch (e) { alert(e.message); }
@@ -200,6 +216,17 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
           entityOptions={entityOptions}
           onClose={() => setShowForm(false)}
           onSaved={load}
+        />
+      )}
+
+      {settle && settleModalOpen && (
+        <ErpSettleModal
+          titles={items.filter(it => selectedIds.includes(it.id))}
+          verb={settleVerb}
+          bankName={(() => { const b = bankAccounts.find(x => x.id === settleBankId); return b ? b.bank + (b.account ? ` — ${b.account}` : "") : ""; })()}
+          date={settleDate}
+          onClose={() => setSettleModalOpen(false)}
+          onConfirm={handleSettleConfirm}
         />
       )}
     </div>
