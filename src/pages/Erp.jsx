@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Factory, LogOut, Boxes, ShoppingCart, Landmark, Settings } from "lucide-react";
+import { ArrowLeft, Factory, LogOut, Boxes, ShoppingCart, Landmark, Settings, Wrench } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ErpModuleSuprimentos from "@/components/erp/modules/ErpModuleSuprimentos";
 import ErpModuleComercial from "@/components/erp/modules/ErpModuleComercial";
 import ErpModuleAdministrativo from "@/components/erp/modules/ErpModuleAdministrativo";
 import ErpModuleGerencial from "@/components/erp/modules/ErpModuleGerencial";
+import ErpModuleIndustrial from "@/components/erp/modules/ErpModuleIndustrial";
 
 export default function Erp() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function Erp() {
     { id: "comercial", label: "Comercial", icon: ShoppingCart, color: "border-emerald-500 text-emerald-600" },
     { id: "administrativo", label: "Administrativo", icon: Landmark, color: "border-amber-500 text-amber-600" },
     { id: "gerencial", label: "Gerencial", icon: Settings, color: "border-purple-500 text-purple-600" },
+    { id: "industrial", label: "Manutenção & WMS", icon: Wrench, color: "border-rose-500 text-rose-600" },
   ];
 
   return (
@@ -53,6 +55,7 @@ export default function Erp() {
         {activeModule === "comercial" && <ErpModuleComercial user={user} />}
         {activeModule === "administrativo" && <ErpModuleAdministrativo user={user} />}
         {activeModule === "gerencial" && <ErpModuleGerencial user={user} />}
+        {activeModule === "industrial" && <ErpModuleIndustrial user={user} />}
       </div>
     </div>
   );

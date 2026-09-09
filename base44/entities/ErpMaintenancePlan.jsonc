@@ -1,0 +1,102 @@
+{
+  "name": "ErpMaintenancePlan",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "equipment_id": {
+      "type": "string",
+      "description": "ID do equipamento (ErpEquipment)"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nome do equipamento (cache)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do plano preventivo (servi\u00e7os a executar)"
+    },
+    "frequency_days": {
+      "type": "number",
+      "default": 30,
+      "description": "Periodicidade da manuten\u00e7\u00e3o preventiva (dias)"
+    },
+    "last_execution": {
+      "type": "string",
+      "description": "Data da \u00faltima execu\u00e7\u00e3o (ISO)"
+    },
+    "next_execution": {
+      "type": "string",
+      "description": "Data prevista da pr\u00f3xima execu\u00e7\u00e3o (ISO)"
+    },
+    "checklist": {
+      "type": "string",
+      "description": "Checklist de inspe\u00e7\u00e3o (itens a verificar)"
+    },
+    "responsible": {
+      "type": "string",
+      "description": "Respons\u00e1vel pela execu\u00e7\u00e3o do plano"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "equipment_id",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

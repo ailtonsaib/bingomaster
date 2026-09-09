@@ -1,0 +1,106 @@
+{
+  "name": "ErpWmsLocation",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "warehouse_id": {
+      "type": "string",
+      "description": "ID do armaz\u00e9m (ErpWarehouse)"
+    },
+    "warehouse_name": {
+      "type": "string",
+      "description": "Nome do armaz\u00e9m (cache)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo do endere\u00e7o (ex: A-01-02-03)"
+    },
+    "zone": {
+      "type": "string",
+      "description": "Zona do armaz\u00e9m (ex: picking, paletiza\u00e7\u00e3o, quarentena)"
+    },
+    "aisle": {
+      "type": "string",
+      "description": "Corredor"
+    },
+    "shelf": {
+      "type": "string",
+      "description": "Prateleira"
+    },
+    "level": {
+      "type": "string",
+      "description": "N\u00edvel"
+    },
+    "capacity": {
+      "type": "number",
+      "default": 0,
+      "description": "Capacidade do endere\u00e7o (unidades/paletes)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "warehouse_id",
+    "code"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
