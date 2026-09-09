@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Warehouse, ShoppingCart, ClipboardList, Gavel, Factory, FileStack, Workflow, Package, UserCheck, FileInput, ShieldCheck, Wallet, Receipt, Settings2 } from "lucide-react";
+import { ShoppingCart, ClipboardList, Gavel, Package, PackagePlus, UserCheck, FileInput, ShieldCheck, Wallet, Receipt, Settings2 } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
-import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
+import ErpWarehouseRequisitionPanel from "@/components/erp/ErpWarehouseRequisitionPanel";
 import ErpRequisitionPanel from "@/components/erp/ErpRequisitionPanel";
 import ErpQuotationPanel from "@/components/erp/ErpQuotationPanel";
-import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager";
-import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManager";
 import ErpApproverManager from "@/components/erp/ErpApproverManager";
 import ErpFiscalEntryPanel from "@/components/erp/ErpFiscalEntryPanel";
 import ErpFiscalApprovalPanel from "@/components/erp/ErpFiscalApprovalPanel";
@@ -22,12 +20,11 @@ const SUBTABS = [
   { id: "aprovacao_nf", label: "Aprovação NF x OC", icon: ShieldCheck },
   { id: "aprovadores", label: "Aprovadores", icon: UserCheck },
   { id: "despesas", label: "Despesas", icon: Wallet },
-  { id: "manufatura", label: "Manufatura", icon: Factory },
+  { id: "requisicoes_almox", label: "Requisições ao Almoxarifado", icon: PackagePlus },
 ];
 
 export default function ErpModuleSuprimentos({ user }) {
   const [sub, setSub] = useState("almoxarifado");
-  const [manSub, setManSub] = useState("op");
   const [despesaSub, setDespesaSub] = useState("entrada");
   return (
     <div className="space-y-3">
@@ -49,18 +46,7 @@ export default function ErpModuleSuprimentos({ user }) {
           {despesaSub === "parametros" && <ErpExpenseParameterManager user={user} />}
         </div>
       )}
-      {sub === "manufatura" && (
-        <div className="space-y-3">
-          <SubNav sub={manSub} setSub={setManSub} tabs={[
-            { id: "op", label: "Ordens de Produção", icon: Factory },
-            { id: "ficha", label: "Ficha Técnica", icon: FileStack },
-            { id: "roteiros", label: "Roteiros de Produção", icon: Workflow },
-          ]} color="indigo" />
-          {manSub === "op" && <ErpProductionPanel user={user} />}
-          {manSub === "ficha" && <ErpTechnicalSheetManager user={user} />}
-          {manSub === "roteiros" && <ErpProductionRouteManager user={user} />}
-        </div>
-      )}
+      {sub === "requisicoes_almox" && <ErpWarehouseRequisitionPanel user={user} />}
     </div>
   );
 }
