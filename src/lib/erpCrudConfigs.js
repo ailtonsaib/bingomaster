@@ -343,7 +343,7 @@ export const ERP_CRUD_CONFIGS = {
     entityName: "ErpCashMove", title: "Caixa e Banco — Movimentações",
     fields: [
       { key: "date", label: "Data", inputType: "date" }, { key: "type", label: "Tipo", type: "select", options: MOVE_TYPE, required: true },
-      { key: "bank_account_id", label: "Conta", type: "entity-select", entity: "ErpBankAccount", cacheKey: "bank_name" },
+      { key: "bank_account_id", label: "Conta Bancária", type: "entity-select", entity: "ErpBankAccount", labelKey: "bank", cacheKey: "bank_name", required: true },
       { key: "category", label: "Categoria" }, { key: "description", label: "Descrição", required: true, full: true },
       { key: "amount", label: "Valor", type: "number", required: true }, { key: "notes", label: "Observações", full: true },
     ],
