@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Loader2, BadgePercent, Trash2 } from "lucide-react";
-import { fmtMoney } from "@/lib/erpUtils";
+import { fmtMoney, genOrderNumber } from "@/lib/erpUtils";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const num = (v) => Number(v) || 0;
@@ -22,17 +22,19 @@ export default function ErpCiapPanel({ user }) {
   const [year, setYear] = useState(now.getFullYear());
   const [assets, setAssets] = useState([]);
   const [records, setRecords] = useState([]);
+  const [structures, setStructures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [a, r] = await Promise.all([
+      const [a, r, s] = await Promise.all([
         base44.entities.ErpFixedAsset.filter({ user_email: user.email }, "code", 500),
         base44.entities.ErpCiap.filter({ user_email: user.email }, "-created_date", 1000),
+        base44.entities.ErpAssetStructure.filter({ user_email: user.email }, "code", 500),
       ]);
-      setAssets(a); setRecords(r);
+      setAssets(a); setRecords(r); setStructures(s);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -56,26 +58,60 @@ export default function ErpCiapPanel({ user }) {
 
   const appropriate = async () => {
     if (!pending.length) { alert("Não há parcelas CIAP pendentes nesta competência."); return; }
-    if (!confirm(`Apropriar o crédito CIAP de ${MONTHS[month]}/${year} para ${pending.length} bem(ns) (parcela de 1/48 do ICMS de cada bem)?`)) return;
+    // valida as contas contábeis da estrutura antes de apropriar — nada é gravado sem configuração
+    const errs = [];
+    pending.forEach(a => {
+      const st = structures.find(s => s.id === a.structure_id);
+      if (!st) errs.push(`Bem "${a.name}": sem estrutura patrimonial vinculada.`);
+      else if (!st.ciap_debit_account_id || !st.ciap_credit_account_id) errs.push(`Estrutura "${st.name}": configure as contas de CIAP (ICMS a Recuperar — D e ICMS do Ativo Permanente — C).`);
+    });
+    if (errs.length) { alert("Configure as contas contábeis na Estrutura Patrimonial para gerar o lançamento:\n" + errs.join("\n")); return; }
+    if (!confirm(`Apropriar o crédito CIAP de ${MONTHS[month]}/${year} para ${pending.length} bem(ns) (parcela de 1/48 do ICMS de cada bem)? Será gerado o lançamento contábil de cada bem (D ICMS a Recuperar x C CIAP).`)) return;
     setBusy(true);
     try {
-      await base44.entities.ErpCiap.bulkCreate(pending.map(a => ({
+      const lastDay = new Date(year, month, 0, 12).toISOString();
+      // lançamento contábil por bem, conforme as contas CIAP da estrutura patrimonial
+      const journals = [];
+      for (const a of pending) {
+        const st = structures.find(s => s.id === a.structure_id);
+        const je = await base44.entities.ErpJournalEntry.create({
+          user_email: user.email,
+          number: genOrderNumber("LCT"),
+          date: lastDay,
+          history: `CIAP ${MONTHS[month]}/${year} — ${a.name} (parcela ${a.installment}/48)`,
+          document: a.code || a.name,
+          lines: [
+            { account_id: st.ciap_debit_account_id, account_code: st.ciap_debit_account_code, account_name: st.ciap_debit_account_name, debit: a.credit, credit: 0, complement: `Apropriação CIAP ${MONTHS[month]}/${year} — ${a.name}` },
+            { account_id: st.ciap_credit_account_id, account_code: st.ciap_credit_account_code, account_name: st.ciap_credit_account_name, debit: 0, credit: a.credit, complement: `CIAP — ICMS do ativo permanente (${a.name})` },
+          ],
+          total_debit: a.credit,
+          total_credit: a.credit,
+          status: "definitivo",
+        });
+        journals.push(je);
+      }
+      await base44.entities.ErpCiap.bulkCreate(pending.map((a, i) => ({
         user_email: user.email,
         asset_id: a.id, asset_name: a.name, asset_code: a.code || "",
         acquisition_date: a.acquisition_date, icms_value: num(a.icms_value),
         month, year, installment: a.installment, credit_value: a.credit,
         status: "apropriado", apropriation_date: new Date().toISOString(),
+        journal_entry_id: journals[i]?.id || "",
+        journal_entry_number: journals[i]?.number || "",
         notes: `CIAP parcela ${a.installment}/48 — ${MONTHS[month]}/${year}`,
       })));
-      alert(`${pending.length} parcela(s) CIAP apropriada(s).`);
+      alert(`${pending.length} parcela(s) CIAP apropriada(s) — lançamento(s) contábil(is) gerado(s).`);
       load();
     } catch (e) { alert(e.message); }
     setBusy(false);
   };
 
   const removeRecord = async (rec) => {
-    if (!confirm(`Excluir a apropriação CIAP de "${rec.asset_name}" em ${MONTHS[rec.month]}/${rec.year}?`)) return;
-    try { await base44.entities.ErpCiap.delete(rec.id); load(); } catch (e) { alert(e.message); }
+    if (!confirm(`Excluir a apropriação CIAP de "${rec.asset_name}" em ${MONTHS[rec.month]}/${rec.year}? O lançamento contábil será excluído.`)) return;
+    try {
+      if (rec.journal_entry_id) { try { await base44.entities.ErpJournalEntry.delete(rec.journal_entry_id); } catch (e) { console.error(e); } }
+      await base44.entities.ErpCiap.delete(rec.id); load();
+    } catch (e) { alert(e.message); }
   };
 
   if (loading) return <div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
@@ -131,7 +167,7 @@ export default function ErpCiapPanel({ user }) {
           </table>
         </div>
       </div>
-      <p className="text-xs text-gray-400">CIAP — Controle de Crédito de ICMS do Ativo Permanente: o ICMS destacado na aquisição do bem é apropriado em 48 parcelas mensais (1/48), a partir do mês da aquisição.</p>
+      <p className="text-xs text-gray-400">CIAP — Controle de Crédito de ICMS do Ativo Permanente: o ICMS destacado na aquisição do bem é apropriado em 48 parcelas mensais (1/48), a partir do mês da aquisição. Ao apropriar, é gerado um lançamento contábil por bem (D ICMS a Recuperar/Outros Créditos x C CIAP, contas da estrutura patrimonial); ao excluir a apropriação, o lançamento contábil é excluído.</p>
     </div>
   );
 }

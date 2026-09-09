@@ -48,6 +48,30 @@
       "type": "string",
       "description": "Nome da conta de Deprecia\u00e7\u00e3o Acumulada (cache)"
     },
+    "ciap_debit_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de cr\u00e9dito CIAP \u2014 ICMS a Recuperar/Outros Cr\u00e9ditos (ErpChartAccount) \u2014 d\u00e9bito no lan\u00e7amento da apropria\u00e7\u00e3o mensal do CIAP"
+    },
+    "ciap_debit_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de cr\u00e9dito CIAP (cache)"
+    },
+    "ciap_debit_account_name": {
+      "type": "string",
+      "description": "Nome da conta de cr\u00e9dito CIAP (cache)"
+    },
+    "ciap_credit_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de CIAP \u2014 ICMS do Ativo Permanente (ErpChartAccount) \u2014 cr\u00e9dito no lan\u00e7amento da apropria\u00e7\u00e3o mensal do CIAP"
+    },
+    "ciap_credit_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de CIAP (cache)"
+    },
+    "ciap_credit_account_name": {
+      "type": "string",
+      "description": "Nome da conta de CIAP (cache)"
+    },
     "notes": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es"
