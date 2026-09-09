@@ -42,7 +42,13 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     const opts = {};
     for (const f of entitySelectFields) {
       try {
-        const list = await base44.entities[f.entity].filter({ user_email: user.email }, "-created_date", 500);
+        // paginação: carrega todas as páginas (limite de 500 por requisição)
+        const list = [];
+        for (let skip = 0; skip < 5000; skip += 500) {
+          const page = await base44.entities[f.entity].filter({ user_email: user.email }, "-created_date", 500, skip);
+          list.push(...page);
+          if (page.length < 500) break;
+        }
         const filtered = f.optionsFilter ? list.filter(f.optionsFilter) : list;
         opts[f.key] = f.sortOptions ? [...filtered].sort(f.sortOptions) : filtered;
       } catch (e) { opts[f.key] = []; }
