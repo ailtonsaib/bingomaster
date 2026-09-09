@@ -592,6 +592,14 @@ function HolleriteModal({ folha, company, month, year, onClose }) {
               <div><p className="text-gray-500">Abono</p><p className="font-medium">{folha.abono_pecuniario ? "Sim" : "Não"}</p></div>
             </div>
           )}
+          <div className="grid grid-cols-2 gap-6 pt-8 text-xs">
+            <div>
+              <p className="border-t border-gray-400 pt-1 text-center">Assinatura do Funcionário</p>
+            </div>
+            <div>
+              <p className="border-t border-gray-400 pt-1 text-center">Data: ____/____/______</p>
+            </div>
+          </div>
           <p className="text-center text-[10px] text-gray-400">Documento gerado em {fmtData(todayISO())} — SoftPremier ERP</p>
         </div>
       </div>
