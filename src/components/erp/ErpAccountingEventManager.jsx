@@ -204,7 +204,16 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!name.trim()) { alert("Informe o nome do evento."); return; }
-    const valid = lines.filter(l => l.account_id);
+    const valid = [];
+    for (const [idx, l] of lines.entries()) {
+      if (!l.account_id) continue;
+      const acc = accounts.find(a => a.id === l.account_id);
+      if (!acc || acc.accepts_entries === false) {
+        alert(`Linha ${idx + 1}: conta sintética (agrupadora) não é permitida — selecione uma conta analítica.`);
+        return;
+      }
+      valid.push(l);
+    }
     if (!valid.length) { alert("Selecione a conta contábil em pelo menos uma linha."); return; }
     setSaving(true);
     const payload = { user_email: user.email, name: name.trim(), lines: valid };
