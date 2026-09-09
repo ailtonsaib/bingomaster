@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  CreditCard, Banknote, Landmark, BookOpen, Building, ScrollText,
+  CreditCard, Banknote, Landmark, BookOpen, Building, ScrollText, PieChart, Target,
   ListTree, ArrowLeftRight, BarChart3, FileText, BookCheck, Layers,
   Users, Network, Receipt,
 } from "lucide-react";
@@ -18,6 +18,10 @@ import ErpPayrollTaxTableManager from "@/components/erp/ErpPayrollTaxTableManage
 import ErpPayrollPanel from "@/components/erp/ErpPayrollPanel";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
+import ErpModulePatrimonial from "./ErpModulePatrimonial";
+import ErpModuleCusto from "./ErpModuleCusto";
+import ErpModuleOrcamento from "./ErpModuleOrcamento";
+import ErpModuleFiscal from "./ErpModuleFiscal";
 
 const SUBMODULES = [
   {
@@ -42,6 +46,22 @@ const SUBMODULES = [
     ],
   },
   {
+    id: "patrimonial", label: "Patrimonial", icon: Building, color: "amber",
+    items: [],
+  },
+  {
+    id: "custos", label: "Custo de Produção", icon: PieChart, color: "purple",
+    items: [],
+  },
+  {
+    id: "orcamento", label: "Orçamento", icon: Target, color: "emerald",
+    items: [],
+  },
+  {
+    id: "fiscal", label: "Fiscal", icon: ScrollText, color: "indigo",
+    items: [],
+  },
+  {
     id: "rh", label: "RH", icon: Users, color: "emerald",
     items: [
       { id: "funcionariosFolha", label: "Funcionários (Folha)", icon: Users },
@@ -62,10 +82,15 @@ export default function ErpModuleAdministrativo({ user }) {
 
   const selectModule = (id) => {
     setMod(id);
-    setSub(SUBMODULES.find(s => s.id === id).items[0].id);
+    setSub((SUBMODULES.find(s => s.id === id).items[0] || {}).id);
   };
 
   const renderSub = () => {
+    // Grupos com sub-módulos próprios (navegação interna do próprio grupo)
+    if (active.id === "patrimonial") return <ErpModulePatrimonial user={user} />;
+    if (active.id === "custos") return <ErpModuleCusto user={user} />;
+    if (active.id === "orcamento") return <ErpModuleOrcamento user={user} />;
+    if (active.id === "fiscal") return <ErpModuleFiscal user={user} />;
     switch (sub) {
       case "planoReferencial": return <ErpChartAccountReferentialManager user={user} />;
       case "estruturaDre": return <ErpDreStructureManager user={user} />;
@@ -93,7 +118,7 @@ export default function ErpModuleAdministrativo({ user }) {
           </button>
         ))}
       </div>
-      <SubNav sub={sub} setSub={setSub} tabs={active.items} color={active.color} />
+      {active.items.length > 0 && <SubNav sub={sub} setSub={setSub} tabs={active.items} color={active.color} />}
       {renderSub()}
     </div>
   );
