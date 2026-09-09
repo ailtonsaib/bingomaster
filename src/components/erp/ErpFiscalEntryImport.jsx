@@ -7,6 +7,7 @@ import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { maskCpfCnpj } from "@/lib/brMasks";
 import { lookupCnpj } from "@/lib/cnpjLookup";
 import ErpProductFormModal from "@/components/erp/ErpProductFormModal";
+import ErpManualInstallments from "@/components/erp/ErpManualInstallments";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
 import { lancarEntradaNF } from "@/lib/erpDespesa";
 
@@ -40,6 +41,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [supplierLookup, setSupplierLookup] = useState({ busy: false, msg: "", status: "", data: null });
   const [productModal, setProductModal] = useState(null);
   const lastCnpjLookup = useRef("");
+  // Parcelas/vencimentos do financeiro (digitação manual)
+  const [manualInstallments, setManualInstallments] = useState([{ due_date: new Date().toISOString().slice(0, 10), amount: "" }]);
   const fileRef = useRef(null);
 
   const [manual, setManual] = useState({
@@ -80,6 +83,25 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
 
   // Abre o cadastro de produto e aguarda (resolve com o produto criado ou null se cancelado)
   const askNewProduct = (draft) => new Promise(resolve => setProductModal({ draft, resolve }));
+
+  // Ao adicionar parcela: redistribui o total do documento igualmente com
+  // vencimentos mensais a partir do primeiro (ajustável depois pelo usuário)
+  const addParcela = () => {
+    setManualInstallments(prev => {
+      const qty = prev.length + 1;
+      const firstDate = prev[0]?.due_date || new Date().toISOString().slice(0, 10);
+      const base = Number(manual.total_nota) || 0;
+      const per = Math.round((base / qty) * 100) / 100;
+      return Array.from({ length: qty }, (_, i) => {
+        const d = new Date(`${firstDate}T12:00:00`);
+        d.setMonth(d.getMonth() + i);
+        return {
+          due_date: d.toISOString().slice(0, 10),
+          amount: base > 0 ? (i === qty - 1 ? Math.round((base - per * (qty - 1)) * 100) / 100 : per) : "",
+        };
+      });
+    });
+  };
 
   useEffect(() => {
     Promise.all([
@@ -299,6 +321,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           }
         }
         setManualItems(updatedItems);
+        // Parcelas informadas: exige vencimento em todas e soma igual ao total do documento
+        const hasInstValues = manualInstallments.some(it => String(it.amount).trim() !== "" && (Number(it.amount) || 0) > 0);
+        if (hasInstValues) {
+          if (manualInstallments.some(it => !it.due_date)) { setSaving(false); setError("Informe o vencimento de todas as parcelas."); return; }
+          const sumInst = manualInstallments.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+          if (total > 0 && Math.abs(sumInst - total) > 0.01) { setSaving(false); setError(`A soma das parcelas (${fmtMoney(sumInst)}) deve ser igual ao total do documento (${fmtMoney(total)}).`); return; }
+        }
         const items = updatedItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
           product_name: it.product_name, product_id: it.product_id || undefined,
           product_code: it.product_id ? (products.find(p => p.id === it.product_id)?.code || "") : "",
@@ -317,7 +346,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           chave_acesso: "",
           issue_date: manual.issue_date ? new Date(manual.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
-          due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+          due_date: manualInstallments[0]?.due_date ? new Date(`${manualInstallments[0].due_date}T12:00:00`).toISOString() : (dueDate ? new Date(dueDate).toISOString() : undefined),
+          installments: hasInstValues ? manualInstallments.map(it => ({
+            due_date: it.due_date ? new Date(`${it.due_date}T12:00:00`).toISOString() : undefined,
+            amount: Number(it.amount) || 0,
+          })) : undefined,
           supplier_name: manual.supplier_name,
           supplier_cnpj: manual.supplier_cnpj,
           supplier_uf: manual.supplier_uf,
@@ -495,12 +528,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           {/* === OC e Conferência (comum) === */}
           {(mode === "xml" ? parsed : mode === "manual") && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Vencimento (financeiro)</label>
-                  <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+              {mode === "xml" ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Vencimento (financeiro)</label>
+                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <ErpManualInstallments value={manualInstallments} onChange={setManualInstallments} onAdd={addParcela} total={Number(manual.total_nota) || 0} />
+              )}
               <div className="grid md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>

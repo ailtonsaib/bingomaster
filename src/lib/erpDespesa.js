@@ -37,8 +37,22 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
   const hasPo = !!entry.purchase_order_id;
   const desc = `${prefix} ${entry.nota_number} - ${entry.supplier_name || ""}${hasPo ? ` (OC ${entry.purchase_order_number || ""})` : ""}`;
   const due = entry.due_date || undefined;
+  const instList = (entry.installments || []).filter(i => (i.amount || 0) > 0);
   const payables = [];
-  if (totalRetido > 0) {
+  if (instList.length && totalRetido === 0) {
+    // Parcelas informadas (digitação manual): uma conta a pagar por parcela
+    instList.forEach((inst, idx) => {
+      payables.push({
+        user_email: user.email,
+        description: `${desc} — Parcela ${idx + 1}/${instList.length}`,
+        beneficiary: entry.supplier_name || "",
+        amount: inst.amount,
+        category,
+        status: "aberto",
+        due_date: inst.due_date || due,
+      });
+    });
+  } else if (totalRetido > 0) {
     payables.push({
       user_email: user.email,
       description: desc,

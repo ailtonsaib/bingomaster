@@ -43,6 +43,25 @@
       "type": "string",
       "description": "Data de vencimento (financeiro/contas a pagar) (ISO)"
     },
+    "installments": {
+      "type": "array",
+      "default": [],
+      "description": "Parcelas de pagamento (digita\u00e7\u00e3o manual) \u2014 cada parcela gera uma conta a pagar no financeiro com seu vencimento e valor",
+      "items": {
+        "type": "object",
+        "properties": {
+          "due_date": {
+            "type": "string",
+            "description": "Vencimento da parcela (ISO)"
+          },
+          "amount": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor da parcela"
+          }
+        }
+      }
+    },
     "supplier_name": {
       "type": "string",
       "description": "Fornecedor/Emitente (cache)"
