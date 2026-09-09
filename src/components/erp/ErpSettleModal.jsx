@@ -8,7 +8,7 @@ const fmt = v => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", c
 // Modal de baixa em lote com manutenção de valores:
 // valor do título x valor pago/recebido + juros - descontos deve fechar exatamente.
 // A diferença é lançada automaticamente no 1º campo de juros ou descontos.
-export default function ErpSettleModal({ titles, verb, bankName, date, onClose, onConfirm }) {
+export default function ErpSettleModal({ titles, verb, bankName, date, events, onClose, onConfirm }) {
   const [entries, setEntries] = useState(titles.map(t => ({
     id: t.id,
     description: t.description || "",
@@ -20,6 +20,7 @@ export default function ErpSettleModal({ titles, verb, bankName, date, onClose, 
     descontos: [0, 0, 0],
   })));
   const [saving, setSaving] = useState(false);
+  const [eventId, setEventId] = useState("");
 
   // ao alterar o valor a pagar/receber, identifica automaticamente juros ou desconto
   const onPaid = (id, v) => {
@@ -52,13 +53,15 @@ export default function ErpSettleModal({ titles, verb, bankName, date, onClose, 
   }), { paid: 0, juros: 0, descontos: 0 });
 
   const handleConfirm = async () => {
+    if (!eventId) { alert("Selecione o evento contábil da baixa."); return; }
     if (!allBalanced) {
       alert("Existem títulos com valores não fechados: valor do documento ≠ valor " + (verb === "Pagar" ? "pago" : "recebido") + " + juros - descontos.");
       return;
     }
+    const ev = (events || []).find(x => x.id === eventId);
     setSaving(true);
     try {
-      await onConfirm(entries);
+      await onConfirm(entries, ev);
     } finally {
       setSaving(false);
     }
@@ -73,6 +76,15 @@ export default function ErpSettleModal({ titles, verb, bankName, date, onClose, 
             <p className="text-xs text-gray-500">Conta: {bankName} — Data: {date}</p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500">✕</button>
+        </div>
+
+        <div className="px-4 pt-3">
+          <label className="text-xs font-medium text-gray-600">Evento Contábil *</label>
+          <select value={eventId} onChange={e => setEventId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
+            <option value="">Selecione o evento da baixa...</option>
+            {(events || []).map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">O evento é a base do lançamento contábil: banco x {verb === "Pagar" ? "fornecedor" : "cliente"}, juros e descontos.</p>
         </div>
 
         <div className="p-4 space-y-3">
@@ -121,7 +133,7 @@ export default function ErpSettleModal({ titles, verb, bankName, date, onClose, 
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-            <Button size="sm" disabled={!allBalanced || saving} onClick={handleConfirm}>{saving ? "Baixando..." : "Confirmar Baixa"}</Button>
+            <Button size="sm" disabled={!allBalanced || saving || !eventId} onClick={handleConfirm}>{saving ? "Baixando..." : "Confirmar Baixa"}</Button>
           </div>
         </div>
       </div>

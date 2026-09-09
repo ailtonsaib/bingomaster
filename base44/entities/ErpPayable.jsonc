@@ -40,6 +40,14 @@
       "type": "string",
       "description": "Conta banc\u00e1ria da baixa (cache)"
     },
+    "event_id": {
+      "type": "string",
+      "description": "ID do evento cont\u00e1bil da baixa (ErpAccountingEvent) \u2014 base do lan\u00e7amento cont\u00e1bil: banco x fornecedor, juros e descontos"
+    },
+    "event_name": {
+      "type": "string",
+      "description": "Evento cont\u00e1bil da baixa (cache)"
+    },
     "settled_value": {
       "type": "number",
       "default": 0,

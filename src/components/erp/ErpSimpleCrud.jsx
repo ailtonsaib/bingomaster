@@ -30,6 +30,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
   // Baixa em lote (settle): { openStatus, doneStatus, dateField, actionLabel }
   const [selectedIds, setSelectedIds] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
+  const [settleEvents, setSettleEvents] = useState([]);
   const [settleBankId, setSettleBankId] = useState("");
   const [settleDate, setSettleDate] = useState(new Date().toISOString().slice(0, 10));
   const [settling, setSettling] = useState(false);
@@ -71,6 +72,9 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     base44.entities.ErpBankAccount.filter({ user_email: user.email }, "-created_date", 500)
       .then(list => setBankAccounts(list.filter(b => b.is_active !== false)))
       .catch(() => setBankAccounts([]));
+    base44.entities.ErpAccountingEvent.filter({ user_email: user.email }, "-created_date", 500)
+      .then(list => setSettleEvents(list))
+      .catch(() => setSettleEvents([]));
   }, [user.email, settle]);
 
   const filtered = items.filter(it => {
@@ -99,7 +103,8 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     setSettleModalOpen(true);
   };
 
-  const handleSettleConfirm = async (entries) => {
+  const handleSettleConfirm = async (entries, event) => {
+    if (!event) { alert("Selecione o evento contábil da baixa."); return; }
     const bank = bankAccounts.find(b => b.id === settleBankId);
     setSettling(true);
     try {
@@ -109,6 +114,8 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
         [settle.dateField]: settleDate,
         bank_account_id: bank.id,
         bank_account_name: bank.bank + (bank.account ? ` — ${bank.account}` : ""),
+        event_id: event.id,
+        event_name: event.name,
         settled_value: Number(e.paid) || 0,
         juros_1: Number(e.juros[0]) || 0,
         juros_2: Number(e.juros[1]) || 0,
@@ -225,6 +232,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
           verb={settleVerb}
           bankName={(() => { const b = bankAccounts.find(x => x.id === settleBankId); return b ? b.bank + (b.account ? ` — ${b.account}` : "") : ""; })()}
           date={settleDate}
+          events={settleEvents}
           onClose={() => setSettleModalOpen(false)}
           onConfirm={handleSettleConfirm}
         />
