@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus } from "lucide-react";
 import ErpProductionFormModal from "./ErpProductionFormModal";
+import RequisitionsTable, { RequisitionDetailModal } from "./ErpWarehouseRequisitionTable";
 import { fmtDate, PRODUCTION_STATUS } from "@/lib/erpUtils";
 import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
 
@@ -17,20 +18,33 @@ export default function ErpProductionPanel({ user }) {
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [detailReq, setDetailReq] = useState(null);
+  const [reqs, setReqs] = useState([]);
+  const [view, setView] = useState("ops");
+  const [reqDetail, setReqDetail] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [o, p, t] = await Promise.all([
+      const [o, p, t, r] = await Promise.all([
         base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-emission_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpTechnicalSheet.filter({ user_email: user.email }, "code", 500),
+        base44.entities.ErpWarehouseRequisition.filter({ user_email: user.email }, "-created_date", 500),
       ]);
-      setOrders(o); setProducts(p); setTechnicalSheets(t);
+      setOrders(o); setProducts(p); setTechnicalSheets(t); setReqs(r);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user.email]);
+
+  // Carrega a requisição vinculada quando abre o detalhe da OP
+  useEffect(() => {
+    if (!detail?.requisition_id) { setDetailReq(null); return; }
+    base44.entities.ErpWarehouseRequisition.get(detail.requisition_id)
+      .then(setDetailReq)
+      .catch(() => setDetailReq(null));
+  }, [detail]);
 
   const filtered = orders.filter(o => {
     const okS = statusFilter === "all" || o.status === statusFilter;
@@ -122,18 +136,24 @@ export default function ErpProductionPanel({ user }) {
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar ordem..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={view === "ops" ? "Buscar ordem..." : "Buscar requisição/insumo..."} className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-          <option value="all">Todos os status</option>
-          {Object.entries(PRODUCTION_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
-          <Plus className="w-4 h-4" /> Nova OP
-        </Button>
+        <button onClick={() => setView("ops")} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${view === "ops" ? "bg-emerald-600 text-white" : "bg-white border text-gray-600 hover:bg-gray-50"}`}>Ordens de Produção</button>
+        <button onClick={() => setView("reqs")} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${view === "reqs" ? "bg-emerald-600 text-white" : "bg-white border text-gray-600 hover:bg-gray-50"}`}>Requisições ao Almoxarifado</button>
+        {view === "ops" && (
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+            <option value="all">Todos os status</option>
+            {Object.entries(PRODUCTION_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        )}
+        {view === "ops" && (
+          <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="w-4 h-4" /> Nova OP
+          </Button>
+        )}
       </div>
 
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className={`bg-white rounded-xl border overflow-hidden ${view === "ops" ? "" : "hidden"}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-500 text-xs">
@@ -194,6 +214,10 @@ export default function ErpProductionPanel({ user }) {
         </div>
       </div>
 
+      {view === "reqs" && (
+        <RequisitionsTable reqs={reqs} loading={loading} search={search} onOpen={setReqDetail} />
+      )}
+
       {showForm && (
         <ErpProductionFormModal user={user} order={editing} products={products} technicalSheets={technicalSheets} onClose={() => setShowForm(false)} onSaved={load} />
       )}
@@ -213,6 +237,19 @@ export default function ErpProductionPanel({ user }) {
                 <div><span className="text-gray-500">Status: </span><b>{(PRODUCTION_STATUS[detail.status] || {}).label}</b></div>
                 {detail.requisition_number && <div><span className="text-gray-500">Solicitação almoxarifado: </span><b>{detail.requisition_number}</b></div>}
               </div>
+              {detailReq && detailReq.items?.length > 0 && (
+                <div>
+                  <p className="font-semibold mb-1">Itens requisitados ao almoxarifado ({detailReq.number}):</p>
+                  <table className="w-full text-xs border rounded">
+                    <thead className="bg-gray-100"><tr><th className="p-1.5 text-left">Insumo</th><th className="p-1.5 text-right">Solicitado</th><th className="p-1.5 text-right">Estoque na ocasião</th></tr></thead>
+                    <tbody>
+                      {detailReq.items.map((it, i) => (
+                        <tr key={i} className="border-t"><td className="p-1.5">{it.product_name}</td><td className="p-1.5 text-right">{it.quantity} {it.unit}</td><td className="p-1.5 text-right">{it.stock_at_request}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <div>
                 <p className="font-semibold mb-1">Insumos consumidos:</p>
                 {detail.bom_items?.length ? (
@@ -230,6 +267,9 @@ export default function ErpProductionPanel({ user }) {
             </div>
           </div>
         </div>
+      )}
+      {reqDetail && (
+        <RequisitionDetailModal req={reqDetail} onClose={() => setReqDetail(null)} onSaved={load} />
       )}
     </div>
   );
