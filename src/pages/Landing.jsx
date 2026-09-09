@@ -32,6 +32,7 @@ const iconMap = {
   Bomb: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="13" r="9"/><path d="M17 7l1-1"/><path d="M14 4l1-1"/><path d="m21 3-3 3"/><path d="M16 8l1-1"/></svg>,
   Wrench: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
   Gavel: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m14.13 7.32 4.59-4.59a2 2 0 0 1 2.83 2.83l-4.59 4.59"/><path d="M11.7 5.66 4.08 13.28a2 2 0 0 0 0 2.83l3.54 3.54a2 2 0 0 0 2.83 0l7.62-7.62"/><path d="M18 12.3 21.3 15"/><path d="M6 9.7 2.7 6"/><path d="M14 20H2"/></svg>,
+  Factory: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/></svg>,
 };
 
 function currency(v) {
