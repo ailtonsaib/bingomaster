@@ -98,7 +98,16 @@ export async function lancarEntradaNF(user, entry, accounts) {
   if (!passivo) throw new Error("Cadastre uma conta de passivo 'Fornecedores' (ou 'Contas a Pagar') para gerar o lançamento.");
   if (!entry.apportionments?.length) throw new Error("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio ou informe o rateio.");
 
-  const je = await gerarLancamentoEntrada(user, entry, accounts);
+  // Parametrização contábil da operação de entrada (ErpOperationAccounting) —
+  // contas do lançamento definidas por operação (fornecedores/impostos a recuperar)
+  let acctParam = null;
+  if (entry.operation_id) {
+    try {
+      const aps = await base44.entities.ErpOperationAccounting.filter({ user_email: user.email, operation_id: entry.operation_id }, "-created_date", 10);
+      acctParam = aps[0] || null;
+    } catch (e) { acctParam = null; }
+  }
+  const je = await gerarLancamentoEntrada(user, entry, accounts, acctParam ? { acctParam } : {});
 
   // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
   const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);

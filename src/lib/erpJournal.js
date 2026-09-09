@@ -11,13 +11,21 @@ import { genOrderNumber } from "@/lib/erpUtils";
 // `opts` (opcional): { history, complement, param, retentions }.
 //   - opts.param: parâmetro de despesa (ErpExpenseParameter) com credora/outras/credit_accounts/retentions.
 //   - opts.retentions: lista de retenções resolvida { type, value, partner_id, account_id, ... }.
+//   - opts.acctParam: parametrização contábil da operação (ErpOperationAccounting) — contas do
+//     lançamento da NF de entrada: fornecedores (C total), ICMS/PIS/COFINS/IPI a recuperar (D).
 export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   const param = opts.param || null;
+  const acctParam = opts.acctParam || null;
+  const acctLine = (key) => (acctParam?.lines || []).find((l) => l.key === key && l.account_id);
+  const byIdOrCache = (l) => accounts.find((a) => a.id === l.account_id) || { id: l.account_id, code: l.account_code, name: l.account_name };
   const retentions = opts.retentions || entry.retentions || [];
   const complement = opts.complement || `Entrada NF ${entry.nota_number}`;
 
-  // Conta credora: do parâmetro ou detecção automática (passivo Fornecedores/Contas a Pagar)
-  let credora = param?.credora_account_id ? accounts.find((a) => a.id === param.credora_account_id) : null;
+  // Conta credora: parametrização da operação, parâmetro de despesa ou detecção automática (passivo Fornecedores/Contas a Pagar)
+  let credora = null;
+  const fornLine = acctLine("fornecedores");
+  if (fornLine) credora = byIdOrCache(fornLine);
+  if (!credora && param?.credora_account_id) credora = accounts.find((a) => a.id === param.credora_account_id);
   if (!credora) {
     credora = accounts.find(
       (a) => a.account_type === "passivo" && /fornecedor|contas a pagar/i.test(a.name)
@@ -41,16 +49,25 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   const retWithAcct = retResolved.filter((r) => r.account_id && (r.value || 0) > 0);
   const retentionsValueWithAcct = retWithAcct.reduce((s, r) => s + (r.value || 0), 0);
 
-  // Créditos de impostos (ICMS/PIS/COFINS a recuperar) e outras de impostos (sem crédito)
+  // Créditos de impostos (ICMS/PIS/COFINS/IPI a recuperar) e outras de impostos (sem crédito).
+  // Com a parametrização da operação, usa as contas configuradas por operação.
   const taxes = [
     { type: "ICMS", value: entry.total_icms || 0 },
     { type: "PIS", value: entry.total_pis || 0 },
     { type: "COFINS", value: entry.total_cofins || 0 },
+    ...(acctLine("ipi") ? [{ type: "IPI", value: entry.total_ipi || 0 }] : []),
   ];
   let despesaBase = entry.total_nota;
   const debitTaxLines = [];
   for (const t of taxes) {
     if (t.value > 0) {
+      const pl = acctLine(String(t.type).toLowerCase());
+      if (pl) {
+        const acc = byIdOrCache(pl);
+        debitTaxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: t.value, credit: 0, complement: pl.history_text || `Crédito ${t.type} NF ${entry.nota_number}` });
+        despesaBase -= t.value;
+        continue;
+      }
       const cc = (param?.credit_accounts || []).find((c) => c.type === t.type && c.account_id);
       if (cc) {
         const acc = accounts.find((a) => a.id === cc.account_id);
