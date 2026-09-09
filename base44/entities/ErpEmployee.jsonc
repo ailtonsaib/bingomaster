@@ -1,0 +1,208 @@
+{
+  "name": "ErpEmployee",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome completo do funcion\u00e1rio"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF (apenas n\u00fameros)"
+    },
+    "pis_pasep": {
+      "type": "string",
+      "description": "PIS/PASEP/NIT"
+    },
+    "rg": {
+      "type": "string"
+    },
+    "birth_date": {
+      "type": "string",
+      "description": "Data de nascimento (ISO)"
+    },
+    "sexo": {
+      "type": "string",
+      "enum": [
+        "M",
+        "F"
+      ]
+    },
+    "ctps_number": {
+      "type": "string",
+      "description": "N\u00famero da CTPS"
+    },
+    "ctps_series": {
+      "type": "string",
+      "description": "S\u00e9rie da CTPS"
+    },
+    "ctps_uf": {
+      "type": "string"
+    },
+    "admission_date": {
+      "type": "string",
+      "description": "Data de admiss\u00e3o (ISO)"
+    },
+    "resignation_date": {
+      "type": "string",
+      "description": "Data de demiss\u00e3o (ISO)"
+    },
+    "cbo_code": {
+      "type": "string",
+      "description": "C\u00f3digo CBO da fun\u00e7\u00e3o"
+    },
+    "job_title": {
+      "type": "string",
+      "description": "Cargo/Fun\u00e7\u00e3o"
+    },
+    "department_id": {
+      "type": "string"
+    },
+    "department_name": {
+      "type": "string",
+      "description": "Departamento (cache)"
+    },
+    "contract_type": {
+      "type": "string",
+      "enum": [
+        "clt",
+        "estagiario",
+        "aprendiz",
+        "intermitente",
+        "diretor"
+      ],
+      "default": "clt",
+      "description": "Tipo de contrata\u00e7\u00e3o"
+    },
+    "weekly_hours": {
+      "type": "number",
+      "default": 44,
+      "description": "Jornada semanal (horas)"
+    },
+    "salary_base": {
+      "type": "number",
+      "default": 0,
+      "description": "Sal\u00e1rio base mensal (R$)"
+    },
+    "dependents_count": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00ba de dependentes para IRRF"
+    },
+    "dependents_irrf": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00ba de dependentes usados na base de IRRF"
+    },
+    "bank_code": {
+      "type": "string",
+      "description": "C\u00f3digo do banco (compe)"
+    },
+    "bank_name": {
+      "type": "string"
+    },
+    "bank_agency": {
+      "type": "string"
+    },
+    "bank_account": {
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "conta",
+        "pix",
+        "dinheiro"
+      ],
+      "default": "conta"
+    },
+    "pix_key": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "uf": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Ativo (empregado)"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "cpf"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

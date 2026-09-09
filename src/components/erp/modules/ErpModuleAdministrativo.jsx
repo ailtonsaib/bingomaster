@@ -15,6 +15,10 @@ import ErpAccountingSped from "@/components/erp/ErpAccountingSped";
 import ErpFixedAssetManager from "@/components/erp/ErpFixedAssetManager";
 import ErpFinanceReports from "@/components/erp/ErpFinanceReports";
 import ErpProductionCostPanel from "@/components/erp/ErpProductionCostPanel";
+import ErpEmployeeManager from "@/components/erp/ErpEmployeeManager";
+import ErpPayrollRubricManager from "@/components/erp/ErpPayrollRubricManager";
+import ErpPayrollTaxTableManager from "@/components/erp/ErpPayrollTaxTableManager";
+import ErpPayrollPanel from "@/components/erp/ErpPayrollPanel";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -47,10 +51,13 @@ const SUBMODULES = [
   {
     id: "rh", label: "RH", icon: Users, color: "emerald",
     items: [
-      { id: "funcionarios", label: "Funcionários", icon: Users },
+      { id: "funcionariosFolha", label: "Funcionários (Folha)", icon: Users },
+      { id: "rubricas", label: "Rubricas (Proventos/Descontos)", icon: Receipt },
+      { id: "tabelasImpostos", label: "Tabelas de Impostos", icon: ScrollText },
+      { id: "folhaPagamento", label: "Folha de Pagamento", icon: Receipt },
+      { id: "funcionarios", label: "Usuários do Sistema", icon: Users },
       { id: "departamentos", label: "Departamentos", icon: Building },
       { id: "setores", label: "Setores", icon: Network },
-      { id: "folhaPagamento", label: "Folha de Pagamento", icon: Receipt },
     ],
   },
 ];
@@ -77,6 +84,10 @@ export default function ErpModuleAdministrativo({ user }) {
       case "patrimonial": return <ErpFixedAssetManager user={user} />;
       case "custos": return <ErpProductionCostPanel user={user} />;
       case "relatoriosFinanceiro": return <ErpFinanceReports user={user} />;
+      case "funcionariosFolha": return <ErpEmployeeManager user={user} />;
+      case "rubricas": return <ErpPayrollRubricManager user={user} />;
+      case "tabelasImpostos": return <ErpPayrollTaxTableManager user={user} />;
+      case "folhaPagamento": return <ErpPayrollPanel user={user} />;
       case "funcionarios": return <ErpSimpleCrud key="usuarios" user={user} {...ERP_CRUD_CONFIGS.usuarios} />;
       default: return <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />;
     }

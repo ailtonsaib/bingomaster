@@ -1,0 +1,114 @@
+{
+  "name": "ErpPayrollRubric",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da rubrica (ex: 101, 501)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da rubrica"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "provento",
+        "desconto",
+        "base",
+        "informativa"
+      ],
+      "default": "provento",
+      "description": "Tipo: provento, desconto, base ou informativa"
+    },
+    "inc_inss": {
+      "type": "boolean",
+      "default": false,
+      "description": "Incide INSS"
+    },
+    "inc_irrf": {
+      "type": "boolean",
+      "default": false,
+      "description": "Incide IRRF"
+    },
+    "inc_fgts": {
+      "type": "boolean",
+      "default": false,
+      "description": "Incide FGTS"
+    },
+    "inc_13": {
+      "type": "boolean",
+      "default": false,
+      "description": "Incide 13\u00ba sal\u00e1rio"
+    },
+    "auto_salary": {
+      "type": "boolean",
+      "default": false,
+      "description": "Preenche automaticamente com o sal\u00e1rio base do funcion\u00e1rio"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "code",
+    "name",
+    "kind"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

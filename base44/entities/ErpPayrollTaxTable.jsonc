@@ -1,0 +1,162 @@
+{
+  "name": "ErpPayrollTaxTable",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome identificador da tabela"
+    },
+    "tax_type": {
+      "type": "string",
+      "enum": [
+        "inss",
+        "irrf",
+        "fgts",
+        "salario_familia",
+        "employer_charges"
+      ],
+      "description": "Tipo: inss, irrf, fgts, salario_familia, employer_charges"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano de vig\u00eancia"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Tabela padr\u00e3o do tipo para o ano"
+    },
+    "brackets": {
+      "type": "array",
+      "default": [],
+      "description": "Faixas progressivas: {min, max, rate, deduction}",
+      "items": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number",
+            "default": 0
+          },
+          "max": {
+            "type": "number",
+            "default": 0,
+            "description": "0 = sem limite (\u00faltima faixa)"
+          },
+          "rate": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota (%)"
+          },
+          "deduction": {
+            "type": "number",
+            "default": 0,
+            "description": "Parcela a deduzir (IRRF)"
+          }
+        }
+      }
+    },
+    "inss_ceiling": {
+      "type": "number",
+      "default": 0,
+      "description": "Teto do INSS (tabela INSS)"
+    },
+    "fgts_rate": {
+      "type": "number",
+      "default": 8,
+      "description": "Al\u00edquota FGTS (%) \u2014 tabela FGTS/employer"
+    },
+    "inss_employer_rate": {
+      "type": "number",
+      "default": 20,
+      "description": "INSS patronal (%) \u2014 tabela employer"
+    },
+    "sat_rate": {
+      "type": "number",
+      "default": 1,
+      "description": "RAT/SAT (%) \u2014 tabela employer"
+    },
+    "terceiros_rate": {
+      "type": "number",
+      "default": 5.8,
+      "description": "Terceiros (SESI/SENAI/SEBRAE...) (%) \u2014 tabela employer"
+    },
+    "dependent_deduction": {
+      "type": "number",
+      "default": 189.59,
+      "description": "Dedu\u00e7\u00e3o por dependente IRRF (R$) \u2014 tabela IRRF"
+    },
+    "salario_familia_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor por filho \u2014 tabela sal\u00e1rio-fam\u00edlia"
+    },
+    "salario_familia_limit": {
+      "type": "number",
+      "default": 0,
+      "description": "Limite de sal\u00e1rio para sal\u00e1rio-fam\u00edlia (0 = sem limite)"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "tax_type",
+    "year"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
