@@ -66,6 +66,16 @@ const PAYROLL_STATUS = [
   { value: "pendente", label: "Pendente", color: "text-amber-700 bg-amber-100" },
   { value: "pago", label: "Pago", color: "text-emerald-700 bg-emerald-100" },
 ];
+// Ordena contas contábeis pela estrutura do código (1.1.01.01.0001)
+const compareChartCode = (a, b) => {
+  const pa = String(a.code || "").split(".").map(Number);
+  const pb = String(b.code || "").split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+};
 
 export const ERP_CRUD_CONFIGS = {
   empresas: {
@@ -313,7 +323,7 @@ export const ERP_CRUD_CONFIGS = {
     fields: [
       { key: "bank", label: "Banco", required: true }, { key: "agency", label: "Agência" }, { key: "account", label: "Conta" },
       { key: "account_type", label: "Tipo", type: "select", options: ACCT_TYPE_OPTS }, { key: "holder", label: "Titular" },
-      { key: "chart_account_id", label: "Conta Contábil", type: "entity-select", entity: "ErpChartAccount", labelKey: "name", cacheKey: "chart_account_name", prefixKey: "code", prefixCacheKey: "chart_account_code", full: true, optionsFilter: a => a.accepts_entries !== false },
+      { key: "chart_account_id", label: "Conta Contábil", type: "entity-select", entity: "ErpChartAccount", labelKey: "name", cacheKey: "chart_account_name", prefixKey: "code", prefixCacheKey: "chart_account_code", full: true, optionsFilter: a => a.accepts_entries !== false, sortOptions: compareChartCode, hierarchical: true },
       { key: "balance", label: "Saldo", type: "number" }, { key: "is_active", label: "Ativa", type: "checkbox" },
     ],
     columns: [
