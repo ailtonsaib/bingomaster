@@ -167,7 +167,7 @@ export default function ErpProductionPanel({ user }) {
                 const st = PRODUCTION_STATUS[o.status] || { label: o.status, color: "text-gray-700 bg-gray-100" };
                 return (
                   <tr key={o.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setDetail(o)}>
-                    <td className="p-2 font-mono text-xs">{o.order_number}</td>
+                    <td className="p-2 font-mono text-xs">{o.order_number}{o.parent_order_number && <span className="block text-[10px] text-gray-400">↳ {o.parent_order_number}</span>}</td>
                     <td className="p-2 font-medium">{o.output_product_name}</td>
                     <td className="p-2 text-right">{o.output_quantity}</td>
                     <td className="p-2 text-right">{o.bom_items?.length || 0}</td>
@@ -220,6 +220,7 @@ export default function ErpProductionPanel({ user }) {
                 <div><span className="text-gray-500">Qtd planejada: </span><b>{detail.output_quantity}</b></div>
                 <div><span className="text-gray-500">Produzida: </span><b>{detail.produced_quantity || 0}</b></div>
                 <div><span className="text-gray-500">Status: </span><b>{(PRODUCTION_STATUS[detail.status] || {}).label}</b></div>
+                {detail.parent_order_number && <div><span className="text-gray-500">OP de origem: </span><b>{detail.parent_order_number}</b></div>}
                 {detail.requisition_number && <div><span className="text-gray-500">Solicitação almoxarifado: </span><b>{detail.requisition_number}</b></div>}
               </div>
               {detailReq && detailReq.items?.length > 0 && (

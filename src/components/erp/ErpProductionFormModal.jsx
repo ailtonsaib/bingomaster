@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Plus, Trash2, FileCheck2 } from "lucide-react";
 import { genOrderNumber } from "@/lib/erpUtils";
-import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
+import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition, buildProductionTree, sumMaterials } from "@/lib/erpProductionStock";
 
 const round3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
 
@@ -19,7 +19,9 @@ export default function ErpProductionFormModal({ user, order, products, technica
     bom_items: order?.bom_items || [],
   });
   const [saving, setSaving] = useState(false);
+  const [groupReq, setGroupReq] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const hasSheet = (pid) => (technicalSheets || []).some(t => t.product_id === pid && t.is_active !== false);
 
   // Ao selecionar o produto, preenche automaticamente os insumos pela Ficha Técnica
   const pickProduct = (id) => {
@@ -36,6 +38,7 @@ export default function ErpProductionFormModal({ user, order, products, technica
           product_code: it.product_code || "",
           unit: it.product_unit || "UN",
           quantity_per_unit: round3((Number(it.quantity) || 0) / yieldQ),
+          is_subproduct: it.item_type === "subproduto" || hasSheet(it.product_id),
         })),
       }));
     } else {
@@ -51,6 +54,7 @@ export default function ErpProductionFormModal({ user, order, products, technica
       if (field === "product_id") {
         const p = products.find(p => p.id === value);
         if (p) { bom_items[i].product_name = p.name; bom_items[i].unit = p.unit; bom_items[i].product_code = p.code || ""; }
+        bom_items[i].is_subproduct = hasSheet(value);
       }
     }
     return { ...prev, bom_items };
@@ -63,56 +67,112 @@ export default function ErpProductionFormModal({ user, order, products, technica
     if (!form.output_product_id) { alert("Selecione o produto a ser produzido."); return; }
     setSaving(true);
     const outProd = products.find(p => p.id === form.output_product_id);
+    const outQty = Number(form.output_quantity) || 0;
     const bom = form.bom_items.map(b => ({
       product_id: b.product_id,
       product_name: b.product_name,
       product_code: b.product_code || "",
       unit: b.unit || "UN",
       quantity_per_unit: Number(b.quantity_per_unit) || 0,
-      total_consumed: (Number(b.quantity_per_unit) || 0) * (Number(form.output_quantity) || 0),
+      is_subproduct: !!b.is_subproduct,
+      total_consumed: (Number(b.quantity_per_unit) || 0) * outQty,
     }));
-    const payload = {
-      user_email: user.email,
-      order_number: form.order_number,
-      output_product_id: form.output_product_id,
-      output_product_name: outProd?.name || "",
-      output_product_code: outProd?.code || "",
-      output_quantity: Number(form.output_quantity) || 0,
-      bom_items: bom,
-      emission_date: new Date(form.emission_date).toISOString(),
-      produced_quantity: order?.produced_quantity || 0,
-      status: order?.status || "rascunho",
-      notes: form.notes || undefined,
-    };
+    const stripSub = (list) => list.map(({ is_subproduct, ...rest }) => rest);
     try {
       if (order?.id) {
         // Edição — apenas atualiza a OP
-        await base44.entities.ErpProductionOrder.update(order.id, payload);
+        await base44.entities.ErpProductionOrder.update(order.id, {
+          user_email: user.email,
+          order_number: form.order_number,
+          output_product_id: form.output_product_id,
+          output_product_name: outProd?.name || "",
+          output_product_code: outProd?.code || "",
+          output_quantity: outQty,
+          bom_items: stripSub(bom),
+          emission_date: new Date(form.emission_date).toISOString(),
+          produced_quantity: order?.produced_quantity || 0,
+          status: order?.status || "rascunho",
+          notes: form.notes || undefined,
+        });
       } else {
-        // Criação — calcula insumos, verifica estoque e gera solicitação ao almoxarifado
-        const needed = computeNeeded(bom, payload.output_quantity);
-        const shortages = needed.length ? checkStock(products, needed) : [];
+        // Criação — produção multi-nível: OP principal + OPs automáticas dos subprodutos + requisições
+        const directBom = stripSub(bom.filter(b => b.product_id && !b.is_subproduct));
+        const tree = buildProductionTree(technicalSheets, form.output_product_id, outQty);
+        // Respeita as linhas de subproduto editadas/removidas no formulário
+        const subRows = bom.filter(b => b.is_subproduct && b.product_id);
+        tree.children = tree.children
+          .filter(c => subRows.some(r => r.product_id === c.product_id))
+          .map(c => ({ ...c, qty: round3((Number((subRows.find(r => r.product_id === c.product_id) || {}).quantity_per_unit) || 0) * outQty) }));
+
+        // Insumos de TODAS as OPs somados (verificação de estoque e requisição agrupada)
+        const collectNeeded = (node, isRoot) => {
+          const items = isRoot ? directBom : node.bom;
+          const arr = computeNeeded(items, isRoot ? outQty : node.qty);
+          (node.children || []).forEach(ch => arr.push(...collectNeeded(ch, false)));
+          return arr;
+        };
+        const allNeeded = sumMaterials(collectNeeded(tree, true));
+        const shortages = allNeeded.length ? checkStock(products, allNeeded) : [];
         let proceed = true;
         if (shortages.length) {
-          proceed = confirm(`Os seguintes insumos estão SEM estoque suficiente:\n\n${shortagesMessage(shortages)}\n\nDeseja prosseguir? A solicitação ao almoxarifado será gerada mesmo assim.\n\n[OK] = Prosseguir e gerar solicitação\n[Cancelar] = Deixar a OP em standby até poder gerar a solicitação`);
+          proceed = confirm(`Os seguintes insumos estão SEM estoque suficiente (considerando todas as OPs):\n\n${shortagesMessage(shortages)}\n\nDeseja prosseguir? As solicitações ao almoxarifado serão geradas mesmo assim.\n\n[OK] = Prosseguir e gerar solicitações\n[Cancelar] = Deixar as OPs em standby até poder gerar as solicitações`);
         }
-        const created = await base44.entities.ErpProductionOrder.create({
-          ...payload,
-          status: proceed ? "rascunho" : "standby",
-        });
-        if (proceed && needed.length) {
-          const req = await createWarehouseRequisition(user, {
-            production_order_id: created.id,
-            production_order_number: created.order_number,
-            items: needed,
+        const status = proceed ? "rascunho" : "standby";
+
+        // Cria a OP principal e, recursivamente, as OPs dos subprodutos (multi-nível)
+        const createdOps = [];
+        const createOp = async (node, parentId, parentNumber, isRoot) => {
+          const p = products.find(x => x.id === node.product_id);
+          const qty = isRoot ? outQty : node.qty;
+          const items = (isRoot ? directBom : node.bom).map(b => ({ ...b, total_consumed: round3((Number(b.quantity_per_unit) || 0) * qty) }));
+          const op = await base44.entities.ErpProductionOrder.create({
+            user_email: user.email,
+            order_number: isRoot ? form.order_number : genOrderNumber("OP"),
+            output_product_id: node.product_id,
+            output_product_name: (isRoot ? outProd : p)?.name || "",
+            output_product_code: (isRoot ? outProd : p)?.code || "",
+            output_quantity: qty,
+            bom_items: items,
+            emission_date: new Date(form.emission_date).toISOString(),
+            status,
+            notes: isRoot ? (form.notes || undefined) : `OP automática de subproduto — origem: ${form.order_number}`,
+            parent_order_id: parentId || undefined,
+            parent_order_number: parentNumber || undefined,
           });
-          await base44.entities.ErpProductionOrder.update(created.id, { requisition_id: req.id, requisition_number: req.number });
-          alert(`Solicitação ao almoxarifado gerada: ${req.number}`);
-        } else if (!proceed) {
-          alert("Ordem de produção deixada em STANDBY. Na lista de OPs, use o botão 'Gerar solicitação ao almoxarifado' quando o estoque for reposto.");
-        } else if (!needed.length) {
-          alert("OP criada sem insumos (sem ficha técnica/BOM). Nenhuma solicitação ao almoxarifado foi gerada.");
+          createdOps.push({ op, needed: computeNeeded(items, qty) });
+          for (const ch of (node.children || [])) await createOp(ch, op.id, op.order_number, false);
+        };
+        await createOp(tree, null, null, true);
+        const mainOp = createdOps[0].op;
+
+        // Requisições ao almoxarifado: agrupada (1 única com todos os insumos) ou individual (1 por OP)
+        let reqs = 0;
+        if (proceed && allNeeded.length) {
+          if (groupReq) {
+            const req = await createWarehouseRequisition(user, {
+              production_order_id: mainOp.id,
+              production_order_number: mainOp.order_number,
+              items: allNeeded,
+            });
+            await base44.entities.ErpProductionOrder.update(mainOp.id, { requisition_id: req.id, requisition_number: req.number });
+            reqs = 1;
+          } else {
+            for (const { op, needed } of createdOps) {
+              if (!needed.length) continue;
+              const req = await createWarehouseRequisition(user, {
+                production_order_id: op.id,
+                production_order_number: op.order_number,
+                items: needed,
+              });
+              await base44.entities.ErpProductionOrder.update(op.id, { requisition_id: req.id, requisition_number: req.number });
+              reqs++;
+            }
+          }
         }
+        const subs = createdOps.length - 1;
+        if (!proceed) alert(`${createdOps.length} OP(s) criada(s) em STANDBY${subs ? ` (principal + ${subs} subproduto(s))` : ""}. Na lista de OPs, use o botão 'Gerar solicitação ao almoxarifado' quando o estoque for reposto.`);
+        else if (!allNeeded.length) alert("OP criada sem insumos (sem ficha técnica/BOM). Nenhuma solicitação ao almoxarifado foi gerada.");
+        else alert(`${createdOps.length} OP(s) criada(s)${subs ? ` (principal + ${subs} subproduto(s))` : ""} e ${reqs} requisição(ões) ao almoxarifado gerada(s)${groupReq ? " — insumos agrupados" : ""}.`);
       }
       onSaved();
       onClose();
@@ -156,6 +216,11 @@ export default function ErpProductionFormModal({ user, order, products, technica
               Nenhuma ficha técnica encontrada para este produto — adicione os insumos manualmente abaixo.
             </div>
           )}
+          {form.bom_items.some(b => b.is_subproduct) && (
+            <div className="text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded-md p-2">
+              Esta ficha possui <b>subprodutos</b> (produtos em processo com ficha própria). Ao salvar, o sistema gerará OPs automáticas para cada subproduto — inclusive nos níveis mais profundos — com suas requisições ao almoxarifado.
+            </div>
+          )}
 
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-2 bg-gray-50 border-b">
@@ -174,6 +239,7 @@ export default function ErpProductionFormModal({ user, order, products, technica
                       <option value="">Selecione...</option>
                       {products.filter(p => p.product_type === "materia_prima" || p.product_type === "insumo" || p.product_type === "produto_em_processo").map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
+                    {b.is_subproduct && <span className="text-[10px] text-purple-600 block mt-0.5">Subproduto — gera OP própria ao salvar</span>}
                   </div>
                   <div className="col-span-3"><Label className="text-[10px]">Qtd por unidade</Label><Input type="number" step="0.001" value={b.quantity_per_unit} onChange={e => setInput(key, "quantity_per_unit", e.target.value)} className="h-8 text-xs" /></div>
                   <div className="col-span-1"><Label className="text-[10px]">Total</Label><p className="h-8 flex items-center font-medium text-[10px]">{((Number(b.quantity_per_unit) || 0) * (Number(form.output_quantity) || 0)).toFixed(2)}</p></div>
@@ -182,6 +248,12 @@ export default function ErpProductionFormModal({ user, order, products, technica
               );
             })}
           </div>
+          {!order && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={groupReq} onChange={e => setGroupReq(e.target.checked)} className="w-4 h-4" />
+              Agrupar os insumos de todas as OPs (principal + subprodutos) em uma única requisição ao almoxarifado
+            </label>
+          )}
           <div><Label>Observações</Label><Input value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">

@@ -43,3 +43,48 @@ export async function createWarehouseRequisition(user, { production_order_id, pr
     request_date: new Date().toISOString(),
   });
 }
+
+// Árvore de produção multi-nível: ficha técnica → subprodutos com ficha própria (recursivo)
+export function buildProductionTree(technicalSheets, productId, qty, visited = new Set()) {
+  const sheets = technicalSheets || [];
+  const sheet = sheets.find(t => t.product_id === productId && t.is_active !== false);
+  const node = { product_id: productId, qty: round3(Number(qty) || 0), bom: [], children: [] };
+  if (!sheet || visited.has(productId)) return node; // sem ficha técnica ou ciclo
+  visited.add(productId);
+  const yieldQ = Number(sheet.yield_quantity) || 1;
+  (sheet.items || []).forEach(it => {
+    const isSub = it.item_type === "subproduto" && it.product_id !== productId &&
+      sheets.some(t => t.product_id === it.product_id && t.is_active !== false);
+    const perUnit = round3((Number(it.quantity) || 0) / yieldQ);
+    if (isSub) {
+      node.children.push(buildProductionTree(sheets, it.product_id, round3(perUnit * node.qty), visited));
+    } else {
+      node.bom.push({
+        product_id: it.product_id,
+        product_name: it.product_name || "",
+        product_code: it.product_code || "",
+        unit: it.product_unit || "UN",
+        quantity_per_unit: perUnit,
+      });
+    }
+  });
+  return node;
+}
+
+// Soma insumos repetidos (verificação de estoque global / requisição agrupada)
+export function sumMaterials(items) {
+  const acc = new Map();
+  (items || []).forEach(m => {
+    if (!m.product_id) return;
+    const cur = acc.get(m.product_id) || {
+      product_id: m.product_id,
+      product_name: m.product_name || "",
+      product_code: m.product_code || "",
+      unit: m.unit || "UN",
+      quantity: 0,
+    };
+    cur.quantity = round3(cur.quantity + (Number(m.quantity) || 0));
+    acc.set(m.product_id, cur);
+  });
+  return [...acc.values()];
+}
