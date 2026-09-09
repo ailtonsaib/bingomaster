@@ -106,9 +106,13 @@ export async function lancarEntradaNF(user, entry, accounts) {
   for (const it of entry.items || []) {
     const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
     if (prod) {
+      // Custo do produto sem os impostos a creditar (ICMS/IPI/PIS/COFINS)
+      const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0);
+      const qty = Number(it.quantity) || 0;
+      const netCost = qty > 0 ? (Number(it.unit_price) || 0) - credited / qty : Number(it.unit_price) || 0;
       await base44.entities.ErpProduct.update(prod.id, {
-        stock: (prod.stock || 0) + (it.quantity || 0),
-        cost_price: it.unit_price || prod.cost_price,
+        stock: (prod.stock || 0) + qty,
+        cost_price: netCost > 0 ? netCost : (prod.cost_price || 0),
       });
     }
   }

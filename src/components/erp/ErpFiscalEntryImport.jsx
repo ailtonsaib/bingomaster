@@ -6,6 +6,7 @@ import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { maskCpfCnpj } from "@/lib/brMasks";
 import { lookupCnpj } from "@/lib/cnpjLookup";
+import { computeErpFiscalItem } from "@/lib/erpTaxCalc";
 import ErpProductFormModal from "@/components/erp/ErpProductFormModal";
 import ErpManualInstallments from "@/components/erp/ErpManualInstallments";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
@@ -25,6 +26,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState([]);
   const [operations, setOperations] = useState([]);
+  const [taxRules, setTaxRules] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [links, setLinks] = useState([]);
@@ -103,6 +105,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     });
   };
 
+  // Calcula os impostos do item pela regra fiscal da operação de entrada selecionada
+  const calcManualItem = (it) => {
+    const op = operations.find(o => o.id === opId);
+    if (!op) return null;
+    return computeErpFiscalItem(
+      { ncm: "", quantity: Number(it.quantity) || 0, unit_price: Number(it.unit_price) || 0 },
+      { rules: taxRules, operation: op, customerUF: manual.supplier_uf }
+    );
+  };
+
   useEffect(() => {
     Promise.all([
       base44.entities.ErpPurchaseOrder.filter({ user_email: user.email, status: { $ne: "cancelada" } }, "-emission_date", 200),
@@ -112,7 +124,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       base44.entities.ErpProductSupplier.filter({ user_email: user.email }, "-created_date", 500),
       base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
       base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 500),
-    ]).then(([o, op, s, p, l, d, acc]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); }).catch(() => {});
+      base44.entities.ErpTaxRule.filter({ user_email: user.email }, "-created_date", 500),
+    ]).then(([o, op, s, p, l, d, acc, tr]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); setTaxRules(tr); }).catch(() => {});
   }, [user.email]);
 
   const selectedPo = orders.find(o => o.id === poId);
@@ -227,6 +240,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     const hasPo = !!poId;
     const po = selectedPo;
     const op = operations.find(o => o.id === opId);
+    // A operação de entrada é obrigatória — base do cálculo dos impostos
+    if (!op) { setError("Selecione a operação de entrada — ela define os impostos e o custo do produto."); return; }
     // Entrada sem OC: exige rateio (setor + conta) preenchido e soma 100%
     if (!hasPo) {
       const aps = manualApportionments.filter(a => a.department_id && a.account_id);
@@ -328,14 +343,27 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           const sumInst = manualInstallments.reduce((s, it) => s + (Number(it.amount) || 0), 0);
           if (total > 0 && Math.abs(sumInst - total) > 0.01) { setSaving(false); setError(`A soma das parcelas (${fmtMoney(sumInst)}) deve ser igual ao total do documento (${fmtMoney(total)}).`); return; }
         }
-        const items = updatedItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => ({
-          product_name: it.product_name, product_id: it.product_id || undefined,
-          product_code: it.product_id ? (products.find(p => p.id === it.product_id)?.code || "") : "",
-          quantity: Number(it.quantity) || 0,
-          unit_price: Number(it.unit_price) || 0,
-          total: (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
-          ncm: "", cfop: "", unit: "UN",
-        }));
+        // Impostos calculados pela regra fiscal da operação — gravados no item
+        // para gerar os créditos e o custo do produto sem os impostos
+        const items = updatedItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => {
+          const calc = calcManualItem(it);
+          const qty = Number(it.quantity) || 0;
+          const unit = Number(it.unit_price) || 0;
+          return {
+            product_name: it.product_name, product_id: it.product_id || undefined,
+            product_code: it.product_id ? (products.find(p => p.id === it.product_id)?.code || "") : "",
+            quantity: qty,
+            unit_price: unit,
+            total: qty * unit,
+            ncm: "", cfop: calc?.cfop || "", unit: "UN",
+            cst_icms: calc?.cst_icms || "",
+            icms_rate: calc?.icms_rate || 0,
+            icms_value: calc?.icms_value || 0,
+            ipi_value: calc?.ipi_value || 0,
+            pis_value: calc?.pis_value || 0,
+            cofins_value: calc?.cofins_value || 0,
+          };
+        });
         const valueDiff = total - (po?.total_value || 0);
         const valuesMatch = Math.abs(valueDiff) < 0.01;
         payload = {
@@ -358,7 +386,10 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           cfop: manual.cfop,
           total_products: items.reduce((a, it) => a + it.total, 0),
           total_nota: total,
-          total_icms: 0, total_ipi: 0, total_pis: 0, total_cofins: 0,
+          total_icms: items.reduce((s, it) => s + (it.icms_value || 0), 0),
+          total_ipi: items.reduce((s, it) => s + (it.ipi_value || 0), 0),
+          total_pis: items.reduce((s, it) => s + (it.pis_value || 0), 0),
+          total_cofins: items.reduce((s, it) => s + (it.cofins_value || 0), 0),
           items,
           purchase_order_id: hasPo ? po.id : undefined,
           purchase_order_number: hasPo ? po.order_number : undefined,
@@ -400,15 +431,27 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         </div>
 
         <div className="p-4 space-y-4">
+          {/* 1º passo: operação de entrada — base do cálculo dos impostos */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1.5">
+            <label className="text-sm font-semibold text-indigo-900 flex items-center gap-2"><ArrowDownToLine className="w-4 h-4" /> 1. Operação de Entrada *</label>
+            <select value={opId} onChange={e => { setOpId(e.target.value); setError(""); }} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm">
+              <option value="">Selecione a operação de entrada usada no cálculo dos impostos...</option>
+              {operations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <p className="text-xs text-indigo-600">A operação define as regras fiscais (ICMS/IPI/PIS/COFINS) e o custo do produto — deduzidos os impostos a creditar. Selecione-a antes de importar o XML ou digitar o documento.</p>
+          </div>
+
+          {opId && (
           <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
             <button onClick={() => { setMode("xml"); setError(""); }} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${mode === "xml" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500"}`}><FileText className="w-4 h-4" /> Importar XML</button>
             <button onClick={() => { setMode("manual"); setError(""); }} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${mode === "manual" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500"}`}><Keyboard className="w-4 h-4" /> Digitação Manual</button>
           </div>
+          )}
 
           {error && <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"><AlertTriangle className="w-4 h-4" /> {error}</div>}
 
           {/* === MODO XML === */}
-          {mode === "xml" && !parsed && (
+          {opId && mode === "xml" && !parsed && (
             <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors">
               {parsing ? (
                 <div className="flex flex-col items-center gap-2"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /><p className="text-sm text-gray-500">Processando XML...</p></div>
@@ -419,7 +462,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             </div>
           )}
 
-          {mode === "xml" && parsed && (
+          {opId && mode === "xml" && parsed && (
             <div className="space-y-4">
               {/* Status do fornecedor */}
               <div className={`rounded-lg p-2.5 border flex items-center gap-2 text-xs ${supplierStatus === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierStatus === "will_create" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
@@ -478,7 +521,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           )}
 
           {/* === MODO MANUAL === */}
-          {mode === "manual" && (
+          {opId && mode === "manual" && (
             <div className="space-y-3">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.). Informe o CNPJ: se o fornecedor não estiver cadastrado, os dados são buscados na Receita Federal e ele é cadastrado automaticamente.</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -522,11 +565,24 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   {products.map(p => <option key={p.id} value={p.name}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
                 </datalist>
               </div>
+              {(() => {
+                const calcs = manualItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => calcManualItem(it)).filter(Boolean);
+                const sum = (k) => calcs.reduce((s, c) => s + (c[k] || 0), 0);
+                if (!calcs.length || (sum("icms_value") === 0 && sum("ipi_value") === 0 && sum("pis_value") === 0 && sum("cofins_value") === 0)) return null;
+                return (
+                  <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-2.5 text-xs text-emerald-800 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 mt-0.5" />
+                    <span>
+                      Impostos calculados pela operação (a creditar): ICMS <b>{fmtMoney(sum("icms_value"))}</b> • IPI <b>{fmtMoney(sum("ipi_value"))}</b> • PIS <b>{fmtMoney(sum("pis_value"))}</b> • COFINS <b>{fmtMoney(sum("cofins_value"))}</b> — o custo dos produtos será gravado deduzido destes créditos.
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
           {/* === OC e Conferência (comum) === */}
-          {(mode === "xml" ? parsed : mode === "manual") && (
+          {opId && (mode === "xml" ? parsed : mode === "manual") && (
             <div className="space-y-3">
               {mode === "xml" ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -538,22 +594,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
               ) : (
                 <ErpManualInstallments value={manualInstallments} onChange={setManualInstallments} onAdd={addParcela} total={Number(manual.total_nota) || 0} />
               )}
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>
-                  <select value={poId} onChange={e => setPoId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                    <option value="">Sem ordem de compra (despesa/serviço)</option>
-                    {orders.map(o => <option key={o.id} value={o.id}>{o.order_number} — {o.supplier_name || "—"} ({fmtMoney(o.total_value)})</option>)}
-                  </select>
-                  {!poId && <p className="text-[11px] text-amber-600 mt-1">Entrada avulsa: informe abaixo o setor e a conta contábil para o lançamento.</p>}
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Operação de Entrada (opcional)</label>
-                  <select value={opId} onChange={e => setOpId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                    <option value="">Usar dados do documento</option>
-                    {operations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </select>
-                </div>
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-2 text-xs text-indigo-800">
+                <b>Operação selecionada:</b> {operations.find(o => o.id === opId)?.name || "—"} — os impostos e o custo dos produtos são calculados pelas regras fiscais desta operação.
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>
+                <select value={poId} onChange={e => setPoId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                  <option value="">Sem ordem de compra (despesa/serviço)</option>
+                  {orders.map(o => <option key={o.id} value={o.id}>{o.order_number} — {o.supplier_name || "—"} ({fmtMoney(o.total_value)})</option>)}
+                </select>
+                {!poId && <p className="text-[11px] text-amber-600 mt-1">Entrada avulsa: informe abaixo o setor e a conta contábil para o lançamento.</p>}
               </div>
 
               {selectedPo && (
@@ -595,7 +645,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
 
         <div className="flex justify-end gap-2 p-4 border-t sticky bottom-0 bg-white">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          {(mode === "xml" ? parsed : true) && (
+          {opId && (mode === "xml" ? parsed : true) && (
             <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />} Dar Entrada
             </Button>
