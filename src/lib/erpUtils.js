@@ -32,7 +32,7 @@ export const PRODUCTION_STATUS = {
 
 export const UNITS = ["UN", "KG", "G", "LT", "ML", "M", "M2", "M3", "CX", "PCT", "FD", "PAR", "CJ", "L"];
 
-export function fmtMoney(v) { return "R$ " + (Number(v) || 0).toFixed(2).replace(".", ","); }
+export function fmtMoney(v) { return "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 export function fmtDate(d) { if (!d) return "—"; try { return new Date(d).toLocaleDateString("pt-BR"); } catch { return d; } }
 export function typeLabel(k) { return (PRODUCT_TYPES.find(t => t.key === k) || {}).label || k; }
 export function typeColor(k) { return (PRODUCT_TYPES.find(t => t.key === k) || {}).color || "text-gray-700 bg-gray-50 border-gray-200"; }

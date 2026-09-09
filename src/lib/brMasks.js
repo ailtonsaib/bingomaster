@@ -44,3 +44,29 @@ export function maskCep(value) {
 export function onlyDigits(value) {
   return (value || '').replace(/\D/g, '');
 }
+
+// Máscara monetária: ponto para separação de milhares e vírgula para centavos (ex: 1.234,56)
+export function maskMoney(value) {
+  let v = String(value ?? '').replace(/[^\d,.]/g, '');
+  // sem vírgula, um único ponto com até 2 dígitos depois = decimal (ex: 1234.56)
+  if (!v.includes(',')) {
+    const parts = v.split('.');
+    if (parts.length === 2 && parts[1].length <= 2) v = parts[0] + ',' + parts[1];
+  }
+  const lastComma = v.lastIndexOf(',');
+  let intPart = v, decPart = '';
+  if (lastComma >= 0) {
+    intPart = v.slice(0, lastComma);
+    decPart = ',' + v.slice(lastComma + 1);
+  }
+  intPart = intPart.replace(/\./g, '');
+  decPart = decPart.replace(/\./g, '').slice(0, 3); // no máximo 2 centavos
+  const n = parseInt(intPart || '0', 10);
+  return (n ? n.toLocaleString('pt-BR') : '0') + (decPart ? decPart.slice(0, 3) : '');
+}
+
+// Converte "1.234,56" (mascarado) para número 1234.56
+export function parseMoney(value) {
+  const n = parseFloat(String(value ?? '').replace(/\./g, '').replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}

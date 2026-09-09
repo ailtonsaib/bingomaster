@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Plus, Pencil, Trash2, Loader2, PieChart } from "lucide-react";
 import { fmtMoney } from "@/lib/erpUtils";
+import { maskMoney, parseMoney } from "@/lib/brMasks";
 
 const MONTH_OPTS = [
   { value: 0, label: "Ano todo" },
@@ -121,7 +122,7 @@ function ErpBudgetForm({ user, departments, sectors, editing, onClose, onSaved }
     month: editing?.month ?? 0, category: editing?.category || "",
     allocation_mode: editing?.allocation_mode || "departamento",
     department_id: editing?.department_id || "", sector_id: editing?.sector_id || "",
-    planned_value: editing?.planned_value || 0, is_active: editing?.is_active !== false,
+    planned_value: editing?.planned_value ? maskMoney(editing.planned_value) : "", is_active: editing?.is_active !== false,
     notes: editing?.notes || "",
   });
   const [rates, setRates] = useState(() => {
@@ -133,7 +134,7 @@ function ErpBudgetForm({ user, departments, sectors, editing, onClose, onSaved }
 
   const deptSectors = sectors.filter(s => s.department_id === form.department_id && s.is_active !== false);
   const totalPct = deptSectors.reduce((s, sec) => s + (Number(rates[sec.id]) || 0), 0);
-  const planned = Number(form.planned_value) || 0;
+  const planned = parseMoney(form.planned_value);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const onDeptChange = (v) => { setForm(p => ({ ...p, department_id: v, sector_id: "" })); setRates({}); };
@@ -232,13 +233,13 @@ function ErpBudgetForm({ user, departments, sectors, editing, onClose, onSaved }
           ) : (
             <div>
               <Label className="text-xs font-medium text-gray-600">Valor Planejado (departamento) *</Label>
-              <Input type="number" step="0.01" value={form.planned_value} onChange={e => set("planned_value", e.target.value)} className="mt-1" />
+              <Input inputMode="decimal" placeholder="0,00" value={form.planned_value} onChange={e => set("planned_value", maskMoney(e.target.value))} className="mt-1 text-right" />
             </div>
           )}
           {form.allocation_mode === "setor" && (
             <div>
               <Label className="text-xs font-medium text-gray-600">Valor Planejado (setor) *</Label>
-              <Input type="number" step="0.01" value={form.planned_value} onChange={e => set("planned_value", e.target.value)} className="mt-1" />
+              <Input inputMode="decimal" placeholder="0,00" value={form.planned_value} onChange={e => set("planned_value", maskMoney(e.target.value))} className="mt-1 text-right" />
             </div>
           )}
 
