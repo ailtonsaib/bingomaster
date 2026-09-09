@@ -266,6 +266,7 @@ export const APPS = [
     id: "erp",
     category: "empresas",
     name: "ERP — Indústria & Comércio",
+    hidden: true,
     icon: "Factory",
     iconBg: "bg-[#D1FAE5]",
     iconColor: "text-[#059669]",

@@ -264,8 +264,10 @@ export default function Landing({ category }) {
   const [plansApp, setPlansApp] = useState(null);
   const { bingoPlans, spedPlans, financePlans, chamadosPlans, diagnosticPlans, loading } = useDynamicPlans();
 
-  // Filtra apps pela categoria (se informada) e exclui admin
-  const publicApps = APPS.filter((a) => !a.adminOnly && !a.hidden && (!category || a.category === category)).map((app) => {
+  // Filtra apps pela categoria (se informada) e exclui admin.
+  // Apps marcados como "hidden" só aparecem para usuários com permissão do app.
+  const portalUser = getPortalUser();
+  const publicApps = APPS.filter((a) => !a.adminOnly && (!a.hidden || (a.permission && portalUser?.[a.permission])) && (!category || a.category === category)).map((app) => {
     if (app.id === "bingo" && bingoPlans) return { ...app, plans: bingoPlans };
     if (app.id === "sped" && spedPlans) return { ...app, plans: spedPlans };
     if (app.id === "pdv" && financePlans) return { ...app, plans: financePlans };
