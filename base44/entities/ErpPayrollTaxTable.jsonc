@@ -89,6 +89,26 @@
       "default": 189.59,
       "description": "Dedu\u00e7\u00e3o por dependente IRRF (R$) \u2014 tabela IRRF"
     },
+    "irrf_isento_limit": {
+      "type": "number",
+      "default": 0,
+      "description": "Isen\u00e7\u00e3o total do IRRF at\u00e9 este rendimento mensal (Lei 15.270/2025); 0 = regra desativada"
+    },
+    "irrf_reduction_limit": {
+      "type": "number",
+      "default": 0,
+      "description": "Redu\u00e7\u00e3o linear do IRRF at\u00e9 este rendimento mensal (Lei 15.270/2025); 0 = regra desativada"
+    },
+    "irrf_reduction_base": {
+      "type": "number",
+      "default": 978.62,
+      "description": "Base da f\u00f3rmula da redu\u00e7\u00e3o (Lei 15.270/2025)"
+    },
+    "irrf_reduction_factor": {
+      "type": "number",
+      "default": 0.133145,
+      "description": "Fator da f\u00f3rmula da redu\u00e7\u00e3o (Lei 15.270/2025)"
+    },
     "salario_familia_value": {
       "type": "number",
       "default": 0,

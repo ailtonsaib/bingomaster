@@ -19,20 +19,32 @@ export function calcINSS(base, table) {
   return Math.round(inss * 100) / 100;
 }
 
-// IRRF: base = baseIRRF - INSS - (dependentes * deducao); aplica faixa e deduz parcela
+// IRRF: base = rendimentos - INSS - (dependentes * deducao); aplica faixa progressiva.
+// Lei 15.270/2025 (tabelas 2026+): rendimento mensal até irrf_isento_limit => IRRF zero;
+// entre isento e irrf_reduction_limit => desconta redução linear decrescente:
+// reducao = irrf_reduction_base - (irrf_reduction_factor x rendimento bruto)
 export function calcIRRF(baseIRRF, inssValue, dependentCount, table) {
+  const gross = num(baseIRRF); // rendimentos tributáveis (bruto)
   const dedDep = num(dependentCount) * num(table?.dependent_deduction);
-  const base = num(baseIRRF) - num(inssValue) - dedDep;
+  const base = gross - num(inssValue) - dedDep;
   if (!table || !Array.isArray(table.brackets) || base <= 0) return 0;
+  const isentoLimit = num(table.irrf_isento_limit);
+  const redLimit = num(table.irrf_reduction_limit);
+  if (isentoLimit > 0 && gross <= isentoLimit) return 0;
+  let irrf = 0;
   for (const faixa of table.brackets) {
     const min = num(faixa.min), max = num(faixa.max);
     const inFaixa = (max > 0 && base > min && base <= max) || (max === 0 && base > min);
     if (inFaixa) {
-      const irrf = base * (num(faixa.rate) / 100) - num(faixa.deduction);
-      return Math.max(0, Math.round(irrf * 100) / 100);
+      irrf = base * (num(faixa.rate) / 100) - num(faixa.deduction);
+      break;
     }
   }
-  return 0;
+  if (isentoLimit > 0 && redLimit > 0 && gross > isentoLimit && gross <= redLimit) {
+    const reducao = num(table.irrf_reduction_base || 978.62) - num(table.irrf_reduction_factor || 0.133145) * gross;
+    irrf -= Math.max(0, reducao);
+  }
+  return Math.max(0, Math.round(irrf * 100) / 100);
 }
 
 export function calcFGTS(base, table) {

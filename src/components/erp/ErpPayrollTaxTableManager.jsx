@@ -13,7 +13,7 @@ const TAX_OPTS = [
   { value: "employer_charges", label: "Encargos do Empregador", color: "bg-red-100 text-red-700" },
 ];
 
-// Tabelas padrão 2024
+// Tabelas padrão — 2024 e 2026 (INSS: Portaria Interministerial; IRRF 2026: Lei 15.270/2025)
 const DEFAULT_TABLES = [
   {
     name: "INSS 2024", tax_type: "inss", year: 2024, is_default: true, inss_ceiling: 7786.02,
@@ -35,8 +35,31 @@ const DEFAULT_TABLES = [
     ],
   },
   { name: "FGTS 2024", tax_type: "fgts", year: 2024, is_default: true, fgts_rate: 8, brackets: [] },
-  { name: "Salário Família 2024", tax_type: "salario_familia", year: 2024, is_default: true, salario_familia_value: 64.79, salario_familia_limit: 0, brackets: [] },
+  { name: "Salário Família 2024", tax_type: "salario_familia", year: 2024, is_default: true, salario_familia_value: 62.04, salario_familia_limit: 1819.26, brackets: [] },
   { name: "Encargos Empregador 2024", tax_type: "employer_charges", year: 2024, is_default: true, inss_employer_rate: 20, fgts_rate: 8, sat_rate: 1, terceiros_rate: 5.8, brackets: [] },
+  {
+    name: "INSS 2026", tax_type: "inss", year: 2026, is_default: true, inss_ceiling: 8475.55,
+    brackets: [
+      { min: 0, max: 1621.00, rate: 7.5, deduction: 0 },
+      { min: 1621.00, max: 2902.84, rate: 9, deduction: 0 },
+      { min: 2902.84, max: 4354.27, rate: 12, deduction: 0 },
+      { min: 4354.27, max: 0, rate: 14, deduction: 0 },
+    ],
+  },
+  {
+    name: "IRRF 2026 (Lei 15.270/2025)", tax_type: "irrf", year: 2026, is_default: true, dependent_deduction: 189.59,
+    irrf_isento_limit: 5000, irrf_reduction_limit: 7350,
+    brackets: [
+      { min: 0, max: 2428.80, rate: 0, deduction: 0 },
+      { min: 2428.80, max: 2826.65, rate: 7.5, deduction: 182.16 },
+      { min: 2826.65, max: 3751.05, rate: 15, deduction: 394.16 },
+      { min: 3751.05, max: 4664.68, rate: 22.5, deduction: 675.49 },
+      { min: 4664.68, max: 0, rate: 27.5, deduction: 908.73 },
+    ],
+  },
+  { name: "FGTS 2026", tax_type: "fgts", year: 2026, is_default: true, fgts_rate: 8, brackets: [] },
+  { name: "Salário Família 2026", tax_type: "salario_familia", year: 2026, is_default: true, salario_familia_value: 67.54, salario_familia_limit: 1980.38, brackets: [] },
+  { name: "Encargos Empregador 2026", tax_type: "employer_charges", year: 2026, is_default: true, inss_employer_rate: 20, fgts_rate: 8, sat_rate: 1, terceiros_rate: 5.8, brackets: [] },
 ];
 
 export default function ErpPayrollTaxTableManager({ user }) {
@@ -57,11 +80,11 @@ export default function ErpPayrollTaxTableManager({ user }) {
   const filtered = items.filter(t => [t.name, t.tax_type, String(t.year)].map(v => String(v ?? "")).join(" ").toLowerCase().includes(search.toLowerCase()));
 
   const seedDefaults = async () => {
-    if (!confirm("Carregar tabelas de impostos padrão (2024)?")) return;
+    if (!confirm("Carregar tabelas de impostos padrão (2024 e 2026 — valores oficiais, incl. isenção do IRRF até R$ 5.000)? As já cadastradas não serão duplicadas.")) return;
     setSeeding(true);
     try {
-      const existing = new Set(items.filter(t => t.year === 2024).map(t => t.tax_type));
-      const toCreate = DEFAULT_TABLES.filter(t => !existing.has(t.tax_type)).map(t => ({ ...t, user_email: user.email }));
+      const existing = new Set(items.map(t => `${t.year}-${t.tax_type}`));
+      const toCreate = DEFAULT_TABLES.filter(t => !existing.has(`${t.year}-${t.tax_type}`)).map(t => ({ ...t, user_email: user.email }));
       if (toCreate.length) await base44.entities.ErpPayrollTaxTable.bulkCreate(toCreate);
       load();
     } catch (e) { alert(e.message); }
@@ -73,7 +96,7 @@ export default function ErpPayrollTaxTableManager({ user }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-semibold text-base">Tabelas de Impostos (INSS / IRRF / FGTS / Encargos)</h2>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={seedDefaults} disabled={seeding} className="gap-1.5"><Sparkles className="w-4 h-4" /> Carregar Tabelas 2024</Button>
+          <Button size="sm" variant="outline" onClick={seedDefaults} disabled={seeding} className="gap-1.5"><Sparkles className="w-4 h-4" /> Carregar Tabelas Padrão (2024/2026)</Button>
           <Button size="sm" onClick={() => setEditing({})} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Tabela</Button>
         </div>
       </div>
@@ -119,7 +142,9 @@ function TableForm({ user, editing, onClose, onSaved }) {
   const [form, setForm] = useState(() => ({
     name: "", tax_type: "inss", year: new Date().getFullYear(), is_default: true,
     brackets: [], inss_ceiling: 0, fgts_rate: 8, inss_employer_rate: 20, sat_rate: 1, terceiros_rate: 5.8,
-    dependent_deduction: 189.59, salario_familia_value: 0, salario_familia_limit: 0, notes: "",
+    dependent_deduction: 189.59, irrf_isento_limit: 0, irrf_reduction_limit: 0,
+    irrf_reduction_base: 978.62, irrf_reduction_factor: 0.133145,
+    salario_familia_value: 0, salario_familia_limit: 0, notes: "",
     ...(editing.id ? editing : {}),
   }));
   const [saving, setSaving] = useState(false);
@@ -153,7 +178,11 @@ function TableForm({ user, editing, onClose, onSaved }) {
           <div className="col-span-2 flex items-end"><label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={form.is_default} onChange={e => set("is_default", e.target.checked)} className="w-4 h-4" /> Tabela padrão deste tipo para o ano</label></div>
 
           {form.tax_type === "inss" && <div><Label>Teto do INSS (R$)</Label><Input type="number" step="0.01" value={form.inss_ceiling} onChange={e => set("inss_ceiling", Number(e.target.value))} /></div>}
-          {form.tax_type === "irrf" && <div><Label>Dedução por dependente (R$)</Label><Input type="number" step="0.01" value={form.dependent_deduction} onChange={e => set("dependent_deduction", Number(e.target.value))} /></div>}
+          {form.tax_type === "irrf" && <>
+            <div><Label>Dedução por dependente (R$)</Label><Input type="number" step="0.01" value={form.dependent_deduction} onChange={e => set("dependent_deduction", Number(e.target.value))} /></div>
+            <div><Label>Isento até rendimento (R$)</Label><Input type="number" step="0.01" value={form.irrf_isento_limit} onChange={e => set("irrf_isento_limit", Number(e.target.value))} /></div>
+            <div><Label>Redução linear até (R$)</Label><Input type="number" step="0.01" value={form.irrf_reduction_limit} onChange={e => set("irrf_reduction_limit", Number(e.target.value))} /></div>
+          </>}
           {form.tax_type === "fgts" && <div><Label>Alíquota FGTS (%)</Label><Input type="number" step="0.01" value={form.fgts_rate} onChange={e => set("fgts_rate", Number(e.target.value))} /></div>}
           {form.tax_type === "salario_familia" && <>
             <div><Label>Valor por filho (R$)</Label><Input type="number" step="0.01" value={form.salario_familia_value} onChange={e => set("salario_familia_value", Number(e.target.value))} /></div>

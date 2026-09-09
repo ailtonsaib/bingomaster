@@ -52,14 +52,16 @@ export default function ErpPayrollPanel({ user }) {
   useEffect(() => { load(); }, [user.email]);
 
   // Mapa de tabelas por tipo (is_default tem prioridade)
+  // Usa a tabela do ano da competência; sem tabela do ano, usa qualquer uma (padrão primeiro)
   const taxTables = useMemo(() => {
     const map = {};
     ["inss", "irrf", "fgts", "salario_familia", "employer_charges"].forEach(type => {
-      const of = tables.filter(t => t.tax_type === type);
+      let of = tables.filter(t => t.tax_type === type && num(t.year) === year);
+      if (of.length === 0) of = tables.filter(t => t.tax_type === type);
       map[type] = of.find(t => t.is_default) || of[0] || null;
     });
     return map;
-  }, [tables]);
+  }, [tables, year]);
   const missingTables = ["inss", "irrf", "fgts", "salario_familia", "employer_charges"].filter(t => !taxTables[t]);
 
   const monthFolhas = folhas.filter(f => num(f.month) === month && num(f.year) === year);
@@ -148,7 +150,7 @@ export default function ErpPayrollPanel({ user }) {
 
       {missingTables.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-700">
-          ⚠ Tabelas de impostos não cadastradas ({missingTables.join(", ")}). Vá em RH → Tabelas de Impostos e clique em "Carregar Tabelas 2024" para habilitar os cálculos.
+          ⚠ Tabelas de impostos não cadastradas ({missingTables.join(", ")}). Vá em RH → Tabelas de Impostos e clique em "Carregar Tabelas Padrão (2024/2026)" para habilitar os cálculos.
         </div>
       )}
 
