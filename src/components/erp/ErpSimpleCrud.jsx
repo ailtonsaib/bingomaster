@@ -19,13 +19,19 @@ async function lookupCep(cep) {
 
 // field: { key, label, type: text|number|select|checkbox|entity-select, options?, entity?, labelKey?, cacheKey?, required?, full?, placeholder? }
 // column: { key, label, type?: text|badge|money|bool, options?(for badge) }
-export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys }) {
+export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [entityOptions, setEntityOptions] = useState({});
+  // Baixa em lote (settle): { openStatus, doneStatus, dateField, actionLabel }
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [settleBankId, setSettleBankId] = useState("");
+  const [settleDate, setSettleDate] = useState(new Date().toISOString().slice(0, 10));
+  const [settling, setSettling] = useState(false);
 
   const entitySelectFields = useMemo(() => fields.filter(f => f.type === "entity-select"), [fields]);
 
@@ -58,6 +64,13 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
 
   useEffect(() => { load(); if (entitySelectFields.length) loadOptions(); }, [user.email]);
 
+  useEffect(() => {
+    if (!settle) return;
+    base44.entities.ErpBankAccount.filter({ user_email: user.email }, "-created_date", 500)
+      .then(list => setBankAccounts(list.filter(b => b.is_active !== false)))
+      .catch(() => setBankAccounts([]));
+  }, [user.email, settle]);
+
   const filtered = items.filter(it => {
     const t = (searchKeys || columns.map(c => c.key)).map(k => String(it[k] ?? "")).join(" ").toLowerCase();
     return t.includes(search.toLowerCase());
@@ -67,6 +80,32 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     if (!confirm(`Excluir "${it.name || it.razao_social || it.id}"?`)) return;
     await base44.entities[entityName].delete(it.id);
     load();
+  };
+
+  // --- Baixa em lote ---
+  const isSettleable = (it) => !!settle && it[settle.statusField || "status"] === settle.openStatus;
+  const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const settleOpenRows = filtered.filter(isSettleable);
+  const allOpenSelected = settleOpenRows.length > 0 && settleOpenRows.every(it => selectedIds.includes(it.id));
+  const selectedTotal = items.filter(it => selectedIds.includes(it.id)).reduce((s, it) => s + (Number(it.amount) || 0), 0);
+  const handleSettle = async () => {
+    const bank = bankAccounts.find(b => b.id === settleBankId);
+    if (!bank) { alert("Selecione a conta bancária da baixa."); return; }
+    if (!settleDate) { alert("Informe a data da baixa."); return; }
+    if (!confirm(`Baixar ${selectedIds.length} título(s) na conta "${bank.bank}"?`)) return;
+    setSettling(true);
+    try {
+      await base44.entities[entityName].bulkUpdate(selectedIds.map(id => ({
+        id,
+        [settle.statusField || "status"]: settle.doneStatus,
+        [settle.dateField]: settleDate,
+        bank_account_id: bank.id,
+        bank_account_name: bank.bank + (bank.account ? ` — ${bank.account}` : ""),
+      })));
+      setSelectedIds([]);
+      load();
+    } catch (e) { alert(e.message); }
+    setSettling(false);
   };
 
   const renderCell = (it, col) => {
@@ -94,21 +133,51 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Novo</Button>
       </div>
 
+      {settle && (
+        <div className="flex items-center gap-2 flex-wrap bg-amber-50 border border-amber-200 rounded-lg p-2 text-sm">
+          <span className="text-xs font-medium text-amber-800">
+            {selectedIds.length} selecionado(s) — Total: {Number(selectedTotal).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </span>
+          <select value={settleBankId} onChange={e => setSettleBankId(e.target.value)} className="h-8 rounded-md border border-input bg-white px-2 text-xs">
+            <option value="">Conta bancária da baixa...</option>
+            {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.bank}{b.account ? ` — ${b.account}` : ""}</option>)}
+          </select>
+          <input type="date" value={settleDate} onChange={e => setSettleDate(e.target.value)} className="h-8 rounded-md border border-input bg-white px-2 text-xs" />
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-700" disabled={settling || selectedIds.length === 0} onClick={handleSettle}>
+            {settling ? "Baixando..." : (settle.actionLabel || "Baixar Selecionados")}
+          </Button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-500 text-xs">
-              <tr>{columns.map(c => <th key={c.key} className="p-2 text-left">{c.label}</th>)}
+              <tr>
+                {settle && (
+                  <th className="p-2 w-8">
+                    <input type="checkbox" className="w-4 h-4 accent-amber-600" checked={allOpenSelected}
+                      onChange={e => setSelectedIds(e.target.checked ? settleOpenRows.map(it => it.id) : [])} />
+                  </th>
+                )}
+                {columns.map(c => <th key={c.key} className="p-2 text-left">{c.label}</th>)}
                 <th className="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={columns.length + 1} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={columns.length + (settle ? 2 : 1)} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={columns.length + 1} className="p-8 text-center text-gray-400">Nenhum registro.</td></tr>
+                <tr><td colSpan={columns.length + (settle ? 2 : 1)} className="p-8 text-center text-gray-400">Nenhum registro.</td></tr>
               ) : filtered.map(it => (
                 <tr key={it.id} className="border-t hover:bg-gray-50">
+                  {settle && (
+                    <td className="p-2">
+                      {isSettleable(it) && (
+                        <input type="checkbox" className="w-4 h-4 accent-amber-600" checked={selectedIds.includes(it.id)} onChange={() => toggleSelect(it.id)} />
+                      )}
+                    </td>
+                  )}
                   {columns.map(c => <td key={c.key} className="p-2">{renderCell(it, c)}</td>)}
                   <td className="p-2 text-right whitespace-nowrap">
                     <button onClick={() => { setEditing(it); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><Pencil className="w-4 h-4 text-gray-500" /></button>

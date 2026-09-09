@@ -299,8 +299,10 @@ export const ERP_CRUD_CONFIGS = {
     columns: [
       { key: "description", label: "Descrição" }, { key: "beneficiary", label: "Beneficiário" }, { key: "due_date", label: "Vencimento" },
       { key: "amount", label: "Valor", type: "money" }, { key: "status", label: "Status", type: "badge", options: PAY_STATUS },
+      { key: "bank_account_name", label: "Conta Bancária" },
     ],
-    searchKeys: ["description", "beneficiary", "category"],
+    searchKeys: ["description", "beneficiary", "category", "bank_account_name"],
+    settle: { openStatus: "aberto", doneStatus: "pago", dateField: "payment_date", actionLabel: "Baixar Selecionados" },
   },
   contasReceber: {
     entityName: "ErpReceivable", title: "Contas a Receber",
@@ -315,8 +317,10 @@ export const ERP_CRUD_CONFIGS = {
     columns: [
       { key: "description", label: "Descrição" }, { key: "customer_name", label: "Cliente" }, { key: "due_date", label: "Vencimento" },
       { key: "amount", label: "Valor", type: "money" }, { key: "status", label: "Status", type: "badge", options: REC_STATUS },
+      { key: "bank_account_name", label: "Conta Bancária" },
     ],
-    searchKeys: ["description", "customer_name", "category"],
+    searchKeys: ["description", "customer_name", "category", "bank_account_name"],
+    settle: { openStatus: "aberto", doneStatus: "recebido", dateField: "receipt_date", actionLabel: "Receber Selecionados" },
   },
   contasBancarias: {
     entityName: "ErpBankAccount", title: "Contas Bancárias",

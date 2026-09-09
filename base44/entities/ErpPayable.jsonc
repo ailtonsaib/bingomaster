@@ -32,6 +32,14 @@
     "payment_method": {
       "type": "string"
     },
+    "bank_account_id": {
+      "type": "string",
+      "description": "ID da conta banc\u00e1ria utilizada na baixa (ErpBankAccount)"
+    },
+    "bank_account_name": {
+      "type": "string",
+      "description": "Conta banc\u00e1ria da baixa (cache)"
+    },
     "status": {
       "type": "string",
       "enum": [
