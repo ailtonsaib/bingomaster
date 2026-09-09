@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Factory, Play, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus } from "lucide-react";
 import ErpProductionFormModal from "./ErpProductionFormModal";
 import { fmtDate, PRODUCTION_STATUS } from "@/lib/erpUtils";
+import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
 
 export default function ErpProductionPanel({ user }) {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
+  const [technicalSheets, setTechnicalSheets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -19,11 +21,12 @@ export default function ErpProductionPanel({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [o, p] = await Promise.all([
+      const [o, p, t] = await Promise.all([
         base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-emission_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpTechnicalSheet.filter({ user_email: user.email }, "code", 500),
       ]);
-      setOrders(o); setProducts(p);
+      setOrders(o); setProducts(p); setTechnicalSheets(t);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -39,6 +42,34 @@ export default function ErpProductionPanel({ user }) {
     if (!confirm(`Excluir a ordem "${o.order_number}"?`)) return;
     await base44.entities.ErpProductionOrder.delete(o.id);
     load();
+  };
+
+  // Gerar solicitação ao almoxarifado (OP em standby ou OP sem solicitação)
+  const handleGenerateRequisition = async (o) => {
+    const needed = computeNeeded(o.bom_items, o.output_quantity);
+    if (!needed.length) { alert("Esta OP não possui insumos no BOM — nada a solicitar."); return; }
+    const shortages = checkStock(products, needed);
+    let proceed = true;
+    if (shortages.length) {
+      proceed = confirm(`Os seguintes insumos AINDA estão sem estoque suficiente:\n\n${shortagesMessage(shortages)}\n\nDeseja prosseguir? A solicitação ao almoxarifado será gerada mesmo assim.\n\n[OK] = Prosseguir e gerar solicitação\n[Cancelar] = Manter a OP em standby`);
+    }
+    if (!proceed) return;
+    setBusy(o.id);
+    try {
+      const req = await createWarehouseRequisition(user, {
+        production_order_id: o.id,
+        production_order_number: o.order_number,
+        items: needed,
+      });
+      await base44.entities.ErpProductionOrder.update(o.id, {
+        status: o.status === "standby" ? "rascunho" : o.status,
+        requisition_id: req.id,
+        requisition_number: req.number,
+      });
+      alert(`Solicitação ao almoxarifado gerada: ${req.number}`);
+      load();
+    } catch (e) { alert("Erro ao gerar solicitação: " + e.message); }
+    setBusy(null);
   };
 
   // Iniciar produção
@@ -134,6 +165,16 @@ export default function ErpProductionPanel({ user }) {
                     <td className="p-2 text-gray-600">{fmtDate(o.emission_date)}</td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></td>
                     <td className="p-2 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      {o.status === "standby" && (
+                        <button onClick={() => handleGenerateRequisition(o)} disabled={busy === o.id} title="Gerar solicitação ao almoxarifado" className="p-1 hover:bg-amber-50 rounded">
+                          <PackagePlus className={`w-4 h-4 text-amber-600 ${busy === o.id ? "animate-spin" : ""}`} />
+                        </button>
+                      )}
+                      {!o.requisition_id && o.status === "rascunho" && (
+                        <button onClick={() => handleGenerateRequisition(o)} disabled={busy === o.id} title="Gerar solicitação ao almoxarifado" className="p-1 hover:bg-amber-50 rounded">
+                          <PackagePlus className="w-4 h-4 text-amber-600" />
+                        </button>
+                      )}
                       {o.status === "rascunho" && (
                         <button onClick={() => handleStart(o)} title="Iniciar produção" className="p-1 hover:bg-blue-50 rounded"><Play className="w-4 h-4 text-blue-600" /></button>
                       )}
@@ -154,7 +195,7 @@ export default function ErpProductionPanel({ user }) {
       </div>
 
       {showForm && (
-        <ErpProductionFormModal user={user} order={editing} products={products} onClose={() => setShowForm(false)} onSaved={load} />
+        <ErpProductionFormModal user={user} order={editing} products={products} technicalSheets={technicalSheets} onClose={() => setShowForm(false)} onSaved={load} />
       )}
 
       {detail && (
@@ -170,6 +211,7 @@ export default function ErpProductionPanel({ user }) {
                 <div><span className="text-gray-500">Qtd planejada: </span><b>{detail.output_quantity}</b></div>
                 <div><span className="text-gray-500">Produzida: </span><b>{detail.produced_quantity || 0}</b></div>
                 <div><span className="text-gray-500">Status: </span><b>{(PRODUCTION_STATUS[detail.status] || {}).label}</b></div>
+                {detail.requisition_number && <div><span className="text-gray-500">Solicitação almoxarifado: </span><b>{detail.requisition_number}</b></div>}
               </div>
               <div>
                 <p className="font-semibold mb-1">Insumos consumidos:</p>

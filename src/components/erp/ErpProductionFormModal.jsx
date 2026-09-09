@@ -3,10 +3,13 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, FileCheck2 } from "lucide-react";
 import { genOrderNumber } from "@/lib/erpUtils";
+import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
 
-export default function ErpProductionFormModal({ user, order, products, onClose, onSaved }) {
+const round3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
+
+export default function ErpProductionFormModal({ user, order, products, technicalSheets, onClose, onSaved }) {
   const [form, setForm] = useState({
     order_number: order?.order_number || genOrderNumber("OP"),
     output_product_id: order?.output_product_id || "",
@@ -17,6 +20,28 @@ export default function ErpProductionFormModal({ user, order, products, onClose,
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  // Ao selecionar o produto, preenche automaticamente os insumos pela Ficha Técnica
+  const pickProduct = (id) => {
+    const sheet = (technicalSheets || []).find(t => t.product_id === id && t.is_active !== false);
+    if (sheet && (sheet.items || []).length) {
+      const yieldQ = Number(sheet.yield_quantity) || 1;
+      setForm(prev => ({
+        ...prev,
+        output_product_id: id,
+        bom_items: sheet.items.map((it, i) => ({
+          _key: "ft" + i + "-" + it.product_id,
+          product_id: it.product_id,
+          product_name: it.product_name,
+          product_code: it.product_code || "",
+          unit: it.product_unit || "UN",
+          quantity_per_unit: round3((Number(it.quantity) || 0) / yieldQ),
+        })),
+      }));
+    } else {
+      set("output_product_id", id);
+    }
+  };
 
   const setInput = (id, field, value) => setForm(prev => {
     const bom_items = [...prev.bom_items];
@@ -60,13 +85,43 @@ export default function ErpProductionFormModal({ user, order, products, onClose,
       notes: form.notes || undefined,
     };
     try {
-      if (order?.id) await base44.entities.ErpProductionOrder.update(order.id, payload);
-      else await base44.entities.ErpProductionOrder.create(payload);
+      if (order?.id) {
+        // Edição — apenas atualiza a OP
+        await base44.entities.ErpProductionOrder.update(order.id, payload);
+      } else {
+        // Criação — calcula insumos, verifica estoque e gera solicitação ao almoxarifado
+        const needed = computeNeeded(bom, payload.output_quantity);
+        const shortages = needed.length ? checkStock(products, needed) : [];
+        let proceed = true;
+        if (shortages.length) {
+          proceed = confirm(`Os seguintes insumos estão SEM estoque suficiente:\n\n${shortagesMessage(shortages)}\n\nDeseja prosseguir? A solicitação ao almoxarifado será gerada mesmo assim.\n\n[OK] = Prosseguir e gerar solicitação\n[Cancelar] = Deixar a OP em standby até poder gerar a solicitação`);
+        }
+        const created = await base44.entities.ErpProductionOrder.create({
+          ...payload,
+          status: proceed ? "rascunho" : "standby",
+        });
+        if (proceed && needed.length) {
+          const req = await createWarehouseRequisition(user, {
+            production_order_id: created.id,
+            production_order_number: created.order_number,
+            items: needed,
+          });
+          await base44.entities.ErpProductionOrder.update(created.id, { requisition_id: req.id, requisition_number: req.number });
+          alert(`Solicitação ao almoxarifado gerada: ${req.number}`);
+        } else if (!proceed) {
+          alert("Ordem de produção deixada em STANDBY. Na lista de OPs, use o botão 'Gerar solicitação ao almoxarifado' quando o estoque for reposto.");
+        } else if (!needed.length) {
+          alert("OP criada sem insumos (sem ficha técnica/BOM). Nenhuma solicitação ao almoxarifado foi gerada.");
+        }
+      }
       onSaved();
       onClose();
     } catch (e) { alert(e.message); }
     setSaving(false);
   };
+
+  const sheet = (technicalSheets || []).find(t => t.product_id === form.output_product_id && t.is_active !== false);
+  const missingSheet = form.output_product_id && !sheet;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -83,13 +138,24 @@ export default function ErpProductionFormModal({ user, order, products, onClose,
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Produto a produzir *</Label>
-              <select value={form.output_product_id} onChange={e => set("output_product_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.output_product_id} onChange={e => pickProduct(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 <option value="">Selecione...</option>
                 {products.filter(p => p.product_type === "produto_acabado" || p.product_type === "produto_em_processo").map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div><Label>Quantidade a produzir</Label><Input type="number" value={form.output_quantity} onChange={e => set("output_quantity", e.target.value)} /></div>
           </div>
+          {sheet && (
+            <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-2">
+              <FileCheck2 className="w-4 h-4" />
+              Ficha técnica <b>{sheet.code || "—"}</b> aplicada — insumos calculados automaticamente (rendimento: {sheet.yield_quantity} {sheet.product_unit} por lote).
+            </div>
+          )}
+          {missingSheet && (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+              Nenhuma ficha técnica encontrada para este produto — adicione os insumos manualmente abaixo.
+            </div>
+          )}
 
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between p-2 bg-gray-50 border-b">

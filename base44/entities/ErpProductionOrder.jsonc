@@ -78,12 +78,21 @@
       "type": "string",
       "enum": [
         "rascunho",
+        "standby",
         "em_producao",
         "concluida",
         "cancelada"
       ],
       "default": "rascunho",
-      "description": "Status: rascunho, em_producao, concluida (estoque atualizado), cancelada"
+      "description": "Status: rascunho, standby (aguardando estoque p/ gerar solicita\u00e7\u00e3o ao almoxarifado), em_producao, concluida (estoque atualizado), cancelada"
+    },
+    "requisition_id": {
+      "type": "string",
+      "description": "ID da requisi\u00e7\u00e3o ao almoxarifado gerada (ErpWarehouseRequisition)"
+    },
+    "requisition_number": {
+      "type": "string",
+      "description": "N\u00famero da requisi\u00e7\u00e3o ao almoxarifado (cache)"
     },
     "notes": {
       "type": "string",
