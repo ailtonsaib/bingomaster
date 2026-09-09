@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Target, BarChart3 } from "lucide-react";
-import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
+import ErpBudgetManager from "@/components/erp/ErpBudgetManager";
 import ErpBudgetComparisonPanel from "@/components/erp/ErpBudgetComparisonPanel";
-import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const TABS = [
@@ -15,7 +14,7 @@ export default function ErpModuleOrcamento({ user }) {
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="emerald" />
-      {sub === "cadastro" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS.orcamento} />}
+      {sub === "cadastro" && <ErpBudgetManager user={user} />}
       {sub === "comparativo" && <ErpBudgetComparisonPanel user={user} />}
     </div>
   );

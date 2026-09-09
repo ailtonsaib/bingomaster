@@ -59,6 +59,10 @@ export default function ErpBudgetComparisonPanel({ user }) {
     const planned = num(b.planned_value);
     return {
       id: b.id, name: b.name, category: b.category,
+      department_name: b.department_name || "",
+      sectorCell: b.allocation_mode === "setor" ? (b.sector_name || "—")
+        : (b.sector_allocations || []).length ? `${b.sector_allocations.length} setor(es) — rateio` : "—",
+      sectorTitle: (b.sector_allocations || []).map(a => `${a.sector_name}: ${a.percent}% = ${fmtMoney(a.value)}`).join(" • "),
       monthLabel: num(b.month) > 0 ? MONTHS[num(b.month)] : "Ano todo",
       planned, realized: real,
       diff: real === null ? null : planned - real,
@@ -93,17 +97,19 @@ export default function ErpBudgetComparisonPanel({ user }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
-                <th className="p-2 text-left">Orçamento</th><th className="p-2 text-left">Categoria / Conta</th><th className="p-2 text-left">Mês</th>
+                <th className="p-2 text-left">Orçamento</th><th className="p-2 text-left">Categoria / Conta</th><th className="p-2 text-left">Departamento</th><th className="p-2 text-left">Setor</th><th className="p-2 text-left">Mês</th>
                 <th className="p-2 text-right">Planejado</th><th className="p-2 text-right">Realizado</th>
                 <th className="p-2 text-right">Variação</th><th className="p-2 text-right">% Executado</th>
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? <tr><td colSpan={7} className="p-8 text-center text-gray-400">Nenhum orçamento ativo para {year}. Cadastre na aba "Cadastro de Orçamentos".</td></tr>
+              {rows.length === 0 ? <tr><td colSpan={9} className="p-8 text-center text-gray-400">Nenhum orçamento ativo para {year}. Cadastre na aba "Cadastro de Orçamentos".</td></tr>
                 : rows.map(r => (
                   <tr key={r.id} className="border-t hover:bg-gray-50">
                     <td className="p-2 font-medium">{r.name}</td>
                     <td className="p-2 text-xs">{r.category || "—"}</td>
+                    <td className="p-2">{r.department_name || "—"}</td>
+                    <td className="p-2 text-xs" title={r.sectorTitle}>{r.sectorCell}</td>
                     <td className="p-2 text-xs">{r.monthLabel}</td>
                     <td className="p-2 text-right">{fmtMoney(r.planned)}</td>
                     <td className="p-2 text-right text-emerald-600">{r.realized === null ? <span className="text-gray-400 text-xs">sem vínculo contábil</span> : fmtMoney(r.realized)}</td>

@@ -23,6 +23,57 @@
       "type": "string",
       "description": "Categoria/conta"
     },
+    "allocation_mode": {
+      "type": "string",
+      "enum": [
+        "departamento",
+        "setor"
+      ],
+      "default": "departamento",
+      "description": "Modo de aloca\u00e7\u00e3o: departamento (valor rateado entre os setores por %) ou setor (valor direto do setor)"
+    },
+    "department_id": {
+      "type": "string",
+      "description": "ID do departamento (ErpDepartment)"
+    },
+    "department_name": {
+      "type": "string",
+      "description": "Nome do departamento (cache)"
+    },
+    "sector_id": {
+      "type": "string",
+      "description": "ID do setor (ErpSector) \u2014 apenas quando aloca\u00e7\u00e3o por setor"
+    },
+    "sector_name": {
+      "type": "string",
+      "description": "Nome do setor (cache) \u2014 apenas quando aloca\u00e7\u00e3o por setor"
+    },
+    "sector_allocations": {
+      "type": "array",
+      "default": [],
+      "description": "Rateio do or\u00e7amento do departamento entre seus setores (cada setor com % do total)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sector_id": {
+            "type": "string"
+          },
+          "sector_name": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number",
+            "default": 0,
+            "description": "Percentual do total (%)"
+          },
+          "value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor calculado (planned_value \u00d7 percent / 100)"
+          }
+        }
+      }
+    },
     "planned_value": {
       "type": "number",
       "default": 0,
