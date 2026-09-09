@@ -1,0 +1,133 @@
+{
+  "name": "ErpWmsInventory",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "inventory_type": {
+      "type": "string",
+      "enum": [
+        "fisico",
+        "ciclico"
+      ],
+      "default": "fisico",
+      "description": "Tipo de invent\u00e1rio: fisico ou ciclico"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto (ErpProduct)"
+    },
+    "product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto (cache)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nome do produto (cache)"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unidade de medida (cache)"
+    },
+    "warehouse_id": {
+      "type": "string",
+      "description": "ID do armaz\u00e9m (ErpWarehouse)"
+    },
+    "warehouse_name": {
+      "type": "string",
+      "description": "Nome do armaz\u00e9m (cache)"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "ID do endere\u00e7o (ErpWmsLocation)"
+    },
+    "location_code": {
+      "type": "string",
+      "description": "C\u00f3digo do endere\u00e7o (cache)"
+    },
+    "system_qty": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade em sistema no momento da abertura da contagem"
+    },
+    "counted_qty": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade f\u00edsica contada"
+    },
+    "count_date": {
+      "type": "string",
+      "description": "Data da contagem (ISO)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aberto",
+        "contado",
+        "ajustado"
+      ],
+      "default": "aberto",
+      "description": "Status: aberto, contado, ajustado (saldo corrigido no estoque)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es da contagem"
+    }
+  },
+  "required": [
+    "user_email",
+    "product_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

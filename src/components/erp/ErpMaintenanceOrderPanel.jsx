@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, Trash2, PlayCircle, CheckCircle2, Wrench } from "lucide-react";
+import { Search, Plus, Trash2, PlayCircle, CheckCircle2, Wrench, Timer } from "lucide-react";
 
 const TYPE_OPTS = [
   { value: "preventiva", label: "Preventiva", color: "bg-blue-100 text-blue-700" },
@@ -25,22 +25,24 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default function ErpMaintenanceOrderPanel({ user }) {
   const [orders, setOrders] = useState([]);
   const [equipments, setEquipments] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [closing, setClosing] = useState(null);
-  const [closeForm, setCloseForm] = useState({ downtime_hours: 0, cost: 0, notes: "" });
+  const [closeForm, setCloseForm] = useState({ downtime_hours: 0, cost: 0, notes: "", part_product_id: "", part_quantity: 0 });
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [o, e] = await Promise.all([
+      const [o, e, p] = await Promise.all([
         base44.entities.ErpMaintenanceOrder.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpEquipment.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
       ]);
-      setOrders(o); setEquipments(e);
+      setOrders(o); setEquipments(e); setProducts(p);
     } catch (err) { console.error(err); }
     setLoading(false);
   };
@@ -51,6 +53,32 @@ export default function ErpMaintenanceOrderPanel({ user }) {
   const done = orders.filter(o => o.status === "concluida");
   const mttr = done.length ? (done.reduce((s, o) => s + (Number(o.downtime_hours) || 0), 0) / done.length).toFixed(1) + "h" : "—";
   const custoTotal = done.reduce((s, o) => s + (Number(o.cost) || 0), 0);
+  // MTBF — intervalo médio entre falhas corretivas (horas), por equipamento
+  const mtbf = (() => {
+    const intervals = [];
+    const byEquip = {};
+    orders.filter(o => o.order_type === "corretiva").forEach(o => {
+      if (!o.opened_date || !o.equipment_id) return;
+      (byEquip[o.equipment_id] = byEquip[o.equipment_id] || []).push(new Date(o.opened_date).getTime());
+    });
+    Object.values(byEquip).forEach(dates => {
+      dates.sort((a, b) => a - b);
+      for (let i = 1; i < dates.length; i++) intervals.push((dates[i] - dates[i - 1]) / 3600000);
+    });
+    return intervals.length ? (intervals.reduce((s, v) => s + v, 0) / intervals.length).toFixed(0) + "h" : "—";
+  })();
+  // Disponibilidade da frota ativa nos últimos 90 dias
+  const disponibilidade = (() => {
+    const ativos = equipments.filter(e => e.status !== "inativo");
+    if (!ativos.length) return "—";
+    const calHours = ativos.length * 90 * 24;
+    const limit = Date.now() - 90 * 24 * 3600000;
+    const down = done.reduce((s, o) => {
+      const closed = new Date(o.closed_date || o.opened_date || 0).getTime();
+      return s + (closed >= limit ? (Number(o.downtime_hours) || 0) : 0);
+    }, 0);
+    return Math.max(0, ((calHours - down) / calHours) * 100).toFixed(1) + "%";
+  })();
 
   const filtered = orders.filter(o => {
     if (typeFilter && o.order_type !== typeFilter) return false;
@@ -63,11 +91,28 @@ export default function ErpMaintenanceOrderPanel({ user }) {
   const confirmClose = async () => {
     setSaving(true);
     try {
+      // Peça de reposição: baixa no estoque + movimentação WMS (ciclo 4.4 da especificação)
+      const partQty = Number(closeForm.part_quantity) || 0;
+      const part = products.find(p => p.id === closeForm.part_product_id);
+      let partsNotes = closing.parts_notes || "";
+      if (part && partQty > 0) {
+        const stock = Number(part.stock) || 0;
+        if (stock < partQty) { setSaving(false); return alert(`Estoque insuficiente da peça "${part.name}". Saldo: ${stock}.`); }
+        await base44.entities.ErpProduct.update(part.id, { stock: stock - partQty });
+        await base44.entities.ErpWmsMove.create({
+          user_email: user.email, move_type: "saida",
+          product_id: part.id, product_code: part.code || "", product_name: part.name, unit: part.unit || "",
+          quantity: partQty, document: closing.number,
+          move_date: todayISO(), notes: `Consumo de peça — ${closing.number}`,
+        });
+        partsNotes = (partsNotes ? partsNotes + "; " : "") + `${part.name} x ${partQty}`;
+      }
       await base44.entities.ErpMaintenanceOrder.update(closing.id, {
         status: "concluida", closed_date: todayISO(),
         downtime_hours: Number(closeForm.downtime_hours) || 0,
         cost: Number(closeForm.cost) || 0,
         notes: closeForm.notes || closing.notes || "",
+        parts_notes: partsNotes,
       });
       setClosing(null); load();
     } catch (e) { alert(e.message); }
@@ -81,11 +126,13 @@ export default function ErpMaintenanceOrderPanel({ user }) {
         <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova OS</Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <Kpi label="Abertas" value={qty("aberta")} icon={<Wrench className="w-4 h-4" />} color="text-blue-600 bg-blue-50" />
         <Kpi label="Em Execução" value={qty("em_execucao")} icon={<PlayCircle className="w-4 h-4" />} color="text-amber-600 bg-amber-50" />
         <Kpi label="Concluídas" value={done.length} icon={<CheckCircle2 className="w-4 h-4" />} color="text-emerald-600 bg-emerald-50" />
         <Kpi label="MTTR Médio / Custo" value={mttr} sub={`R$ ${custoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={<Wrench className="w-4 h-4" />} color="text-purple-600 bg-purple-50" />
+        <Kpi label="MTBF (entre falhas)" value={mtbf} icon={<Timer className="w-4 h-4" />} color="text-blue-600 bg-blue-50" />
+        <Kpi label="Disponibilidade (90d)" value={disponibilidade} icon={<CheckCircle2 className="w-4 h-4" />} color="text-emerald-600 bg-emerald-50" />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -128,7 +175,7 @@ export default function ErpMaintenanceOrderPanel({ user }) {
                   <td className="p-2 text-right whitespace-nowrap">
                     {o.status === "aberta" && <button title="Iniciar" onClick={() => start(o)} className="p-1 hover:bg-blue-50 rounded"><PlayCircle className="w-4 h-4 text-blue-500" /></button>}
                     {(o.status === "aberta" || o.status === "em_execucao") && (
-                      <button title="Concluir" onClick={() => { setClosing(o); setCloseForm({ downtime_hours: o.downtime_hours || 0, cost: o.cost || 0, notes: o.notes || "" }); }} className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></button>
+                      <button title="Concluir" onClick={() => { setClosing(o); setCloseForm({ downtime_hours: o.downtime_hours || 0, cost: o.cost || 0, notes: o.notes || "", part_product_id: "", part_quantity: 0 }); }} className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></button>
                     )}
                     <button title="Excluir" onClick={async () => { if (confirm(`Excluir "${o.number}"?`)) { await base44.entities.ErpMaintenanceOrder.delete(o.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                   </td>
@@ -158,6 +205,16 @@ export default function ErpMaintenanceOrderPanel({ user }) {
               <div>
                 <Label className="text-xs font-medium text-gray-600">Custo Total (R$)</Label>
                 <Input type="number" step="0.01" value={closeForm.cost} onChange={e => setCloseForm(p => ({ ...p, cost: e.target.value }))} className="mt-1" />
+              </div>
+              <div className="col-span-2 border-t pt-3">
+                <Label className="text-xs font-medium text-gray-600">Peça de Reposição (baixa automática no estoque)</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  <select value={closeForm.part_product_id} onChange={e => setCloseForm(p => ({ ...p, part_product_id: e.target.value }))} className="col-span-2 h-9 rounded-md border border-input bg-white px-3 text-sm">
+                    <option value="">Nenhuma</option>
+                    {products.map(p => <option key={p.id} value={p.id}>{p.code ? p.code + " — " : ""}{p.name} (saldo: {Number(p.stock || 0).toLocaleString("pt-BR")})</option>)}
+                  </select>
+                  <Input type="number" step="0.01" placeholder="Qtd" value={closeForm.part_quantity} onChange={e => setCloseForm(p => ({ ...p, part_quantity: e.target.value }))} />
+                </div>
               </div>
               <div className="col-span-2">
                 <Label className="text-xs font-medium text-gray-600">Observações / Laudo Técnico</Label>

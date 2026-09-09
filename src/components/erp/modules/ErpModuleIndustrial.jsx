@@ -1,10 +1,11 @@
 import { useState } from "react";
 import {
-  Wrench, ClipboardCheck, HardHat, Warehouse, MapPin, ArrowLeftRight,
+  Wrench, ClipboardCheck, HardHat, Warehouse, MapPin, ArrowLeftRight, ClipboardList,
 } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpMaintenanceOrderPanel from "@/components/erp/ErpMaintenanceOrderPanel";
 import ErpWmsMovePanel from "@/components/erp/ErpWmsMovePanel";
+import ErpWmsInventoryPanel from "@/components/erp/ErpWmsInventoryPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const EQUIP_STATUS = [
@@ -123,6 +124,7 @@ const GROUPS = [
       { id: "armazens", label: "Armazéns", icon: Warehouse },
       { id: "enderecos", label: "Endereçamento", icon: MapPin },
       { id: "movimentos", label: "Movimentações", icon: ArrowLeftRight },
+      { id: "inventario", label: "Inventário", icon: ClipboardList },
     ],
   },
 ];
@@ -141,6 +143,7 @@ export default function ErpModuleIndustrial({ user }) {
     switch (sub) {
       case "os": return <ErpMaintenanceOrderPanel user={user} />;
       case "movimentos": return <ErpWmsMovePanel user={user} />;
+      case "inventario": return <ErpWmsInventoryPanel user={user} />;
       default: return <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />;
     }
   };
