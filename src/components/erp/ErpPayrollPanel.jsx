@@ -548,7 +548,7 @@ function HolleriteModal({ folha, company, month, year, onClose }) {
             <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">✕</button>
           </div>
         </div>
-        <div className="p-5 space-y-4 text-sm">
+        <div id="print-area" className="p-5 space-y-4 text-sm bg-white">
           <div className="flex justify-between border-b pb-2">
             <div><p className="font-bold">{company?.razao_social || "Empresa"}</p><p className="text-xs text-gray-500">CNPJ: {company?.cnpj || "—"}</p></div>
             <div className="text-right"><p className="font-bold">Comprovante de Rendimentos</p><p className="text-xs text-gray-500">{MONTHS[folha.month]}/{folha.year} — {(PAYROLL_TYPES.find(t => t.value === folha.payroll_type) || { label: folha.payroll_type }).label}</p></div>
