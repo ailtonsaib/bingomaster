@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Plus, Trash2, Pencil, Users } from "lucide-react";
+import { maskCpf, maskPhone, maskCep, onlyDigits } from "@/lib/brMasks";
 
 const CONTRACT_OPTS = [
   { value: "clt", label: "CLT" },
@@ -12,7 +13,7 @@ const CONTRACT_OPTS = [
   { value: "intermitente", label: "Intermitente" },
   { value: "diretor", label: "Diretor" },
 ];
-const onlyDigits = (s) => (s || "").replace(/\D/g, "");
+
 
 export default function ErpEmployeeManager({ user }) {
   const [items, setItems] = useState([]);
@@ -115,7 +116,7 @@ function EmployeeForm({ user, editing, departments, onClose, onSaved }) {
         </div>
         <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
           <div className="col-span-2 md:col-span-2"><Label>Nome *</Label><Input value={form.name} onChange={e => set("name", e.target.value)} /></div>
-          <div><Label>CPF *</Label><Input value={form.cpf} onChange={e => set("cpf", e.target.value)} placeholder="000.000.000-00" /></div>
+          <div><Label>CPF *</Label><Input value={form.cpf} onChange={e => set("cpf", maskCpf(e.target.value))} placeholder="000.000.000-00" /></div>
           <div><Label>PIS/PASEP</Label><Input value={form.pis_pasep} onChange={e => set("pis_pasep", e.target.value)} /></div>
           <div><Label>RG</Label><Input value={form.rg} onChange={e => set("rg", e.target.value)} /></div>
           <div><Label>Nascimento</Label><Input type="date" value={(form.birth_date || "").slice(0, 10)} onChange={e => set("birth_date", e.target.value)} /></div>
@@ -137,12 +138,12 @@ function EmployeeForm({ user, editing, departments, onClose, onSaved }) {
           <div><Label>Agência</Label><Input value={form.bank_agency} onChange={e => set("bank_agency", e.target.value)} /></div>
           <div><Label>Conta</Label><Input value={form.bank_account} onChange={e => set("bank_account", e.target.value)} /></div>
           <div><Label>Pagamento</Label><select value={form.payment_method} onChange={e => set("payment_method", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm"><option value="conta">Conta</option><option value="pix">PIX</option><option value="dinheiro">Dinheiro</option></select></div>
-          <div><Label>Telefone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} /></div>
+          <div><Label>Telefone</Label><Input value={form.phone} onChange={e => set("phone", maskPhone(e.target.value))} placeholder="(47) 99999-9999" /></div>
           <div><Label>Email</Label><Input value={form.email} onChange={e => set("email", e.target.value)} /></div>
           <div className="col-span-3"><Label>Endereço</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
           <div><Label>Cidade</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
           <div><Label>UF</Label><Input value={form.uf} onChange={e => set("uf", e.target.value)} /></div>
-          <div><Label>CEP</Label><Input value={form.zip} onChange={e => set("zip", e.target.value)} /></div>
+          <div><Label>CEP</Label><Input value={form.zip} onChange={e => set("zip", maskCep(e.target.value))} placeholder="00000-000" /></div>
           <div className="col-span-3"><Label>Observações</Label><Input value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
           <label className="col-span-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Funcionário ativo (empregado)</label>
         </div>
