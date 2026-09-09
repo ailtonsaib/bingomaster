@@ -32,6 +32,7 @@ export default function ErpAccountingReports({ user }) {
   const [tab, setTab] = useState("balancete");
   const [year, setYear] = useState(new Date().getFullYear());
   const [razaoAccount, setRazaoAccount] = useState("");
+  const [onlyWithValues, setOnlyWithValues] = useState(true);
 
   const load = async () => {
     setLoading(true);
@@ -111,6 +112,10 @@ export default function ErpAccountingReports({ user }) {
 
   // --- Balancete: todas as contas (sintéticas + analíticas) consolidadas ---
   const balancete = consolidated;
+  // Opção: listar apenas contas com valores (saldo inicial, débito/crédito ou saldo final)
+  const balanceteRows = useMemo(() => onlyWithValues
+    ? balancete.filter(r => r.siMag || r.deb || r.cre || r.sfMag)
+    : balancete, [balancete, onlyWithValues]);
   const totals = useMemo(() => {
     // Totais apenas das analíticas (sintéticas são consolidação — somá-las duplicaria)
     const a = consolidated.filter(r => r.analitica);
@@ -199,9 +204,15 @@ export default function ErpAccountingReports({ user }) {
           <span className="text-xs text-gray-500">Ano:</span>
           <input type="number" value={year} onChange={e => setYear(e.target.value)} className="h-8 w-20 rounded-md border border-input px-2 text-sm" />
           {tab === "balancete" && (
+            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
+              <input type="checkbox" checked={onlyWithValues} onChange={e => setOnlyWithValues(e.target.checked)} className="w-4 h-4 accent-amber-600" />
+              Somente contas com valores
+            </label>
+          )}
+          {tab === "balancete" && (
             <ExportButtons
-              onPdf={() => exportBalancete({ rows: balancete, totals, year, companyName, format: "pdf" })}
-              onXls={() => exportBalancete({ rows: balancete, totals, year, companyName, format: "excel" })}
+              onPdf={() => exportBalancete({ rows: balanceteRows, totals, year, companyName, format: "pdf" })}
+              onXls={() => exportBalancete({ rows: balanceteRows, totals, year, companyName, format: "excel" })}
             />
           )}
           {tab === "balanco" && (
@@ -221,7 +232,7 @@ export default function ErpAccountingReports({ user }) {
                 <tr><th className="p-2 text-left">Código</th><th className="p-2 text-left">Conta</th><th className="p-2 text-right">Saldo Inicial</th><th className="p-2 text-right">Débito</th><th className="p-2 text-right">Crédito</th><th className="p-2 text-right">Saldo Final</th></tr>
               </thead>
               <tbody>
-                {balancete.map(r => (
+                {balanceteRows.map(r => (
                   <tr key={r.id} className={`border-t hover:bg-gray-50 ${!r.analitica ? "bg-gray-50/60 font-semibold" : ""}`}>
                     <td className="p-2 font-mono text-xs">{r.code}</td>
                     <td className="p-2" style={{ paddingLeft: `${8 + r.level * 14}px` }}>{r.name}</td>
