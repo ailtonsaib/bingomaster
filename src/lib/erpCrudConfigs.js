@@ -435,4 +435,14 @@ export const ERP_CRUD_CONFIGS = {
     ],
     searchKeys: ["employee_name"],
   },
+  historicos: {
+    entityName: "ErpStandardHistory", title: "Cadastro de Históricos Padrão",
+    fields: [
+      { key: "code", label: "Código", required: true },
+      { key: "description", label: "Descrição", required: true, full: true },
+      { key: "is_active", label: "Ativo", type: "checkbox" },
+    ],
+    columns: [{ key: "code", label: "Código" }, { key: "description", label: "Descrição" }, { key: "is_active", label: "Ativo", type: "bool" }],
+    searchKeys: ["code", "description"],
+  },
 };

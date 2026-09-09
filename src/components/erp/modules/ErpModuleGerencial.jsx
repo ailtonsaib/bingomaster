@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft, Handshake, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft, Handshake, SlidersHorizontal, ListChecks, History } from "lucide-react";
 import ErpDashboard from "@/components/erp/ErpDashboard";
+import ErpAccountingEventManager from "@/components/erp/ErpAccountingEventManager";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpTaxRuleManager from "@/components/erp/ErpTaxRuleManager";
 import ErpUserManager from "@/components/erp/ErpUserManager";
@@ -24,6 +25,8 @@ const SUBTABS = [
   { id: "parceiros", label: "Clientes / Fornecedores", icon: Handshake },
   { id: "operacoes", label: "Operações", icon: ArrowRightLeft },
   { id: "regras", label: "Regras Fiscais", icon: ScrollText },
+  { id: "eventos", label: "Eventos Contábeis", icon: ListChecks },
+  { id: "historicos", label: "Históricos Padrão", icon: History },
 ];
 
 export default function ErpModuleGerencial({ user }) {
@@ -57,7 +60,8 @@ export default function ErpModuleGerencial({ user }) {
       {sub === "parametros_usuario" && <ErpUserParameterManager user={user} />}
       {sub === "parceiros" && <ErpPartnerManager user={user} />}
       {sub === "operacoes" && <ErpOperationManager user={user} />}
-      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
+      {sub === "eventos" && <ErpAccountingEventManager user={user} />}
+      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && sub !== "eventos" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
 }
