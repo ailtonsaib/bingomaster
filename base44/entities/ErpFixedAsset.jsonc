@@ -13,6 +13,14 @@
       "type": "string",
       "description": "Bem patrimonial"
     },
+    "structure_id": {
+      "type": "string",
+      "description": "ID da estrutura patrimonial (ErpAssetStructure)"
+    },
+    "structure_name": {
+      "type": "string",
+      "description": "Nome da estrutura patrimonial (cache)"
+    },
     "acquisition_date": {
       "type": "string",
       "description": "Data de aquisi\u00e7\u00e3o (ISO)"
@@ -30,6 +38,11 @@
       "type": "number",
       "default": 0,
       "description": "Valor atual"
+    },
+    "icms_value": {
+      "type": "number",
+      "default": 0,
+      "description": "ICMS destacado na aquisi\u00e7\u00e3o (base do CIAP)"
     },
     "location": {
       "type": "string",

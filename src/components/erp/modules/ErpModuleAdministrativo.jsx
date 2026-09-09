@@ -1,20 +1,17 @@
 import { useState } from "react";
 import {
-  CreditCard, Banknote, Landmark, BookOpen, PieChart, Building, ScrollText,
+  CreditCard, Banknote, Landmark, BookOpen, Building, ScrollText,
   ListTree, ArrowLeftRight, BarChart3, FileText, BookCheck, Layers,
-  Users, Network, Target, Receipt,
+  Users, Network, Receipt,
 } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
-import ErpFiscalPanel from "@/components/erp/ErpFiscalPanel";
 import ErpChartAccountManager from "@/components/erp/ErpChartAccountManager";
 import ErpChartAccountReferentialManager from "@/components/erp/ErpChartAccountReferentialManager";
 import ErpDreStructureManager from "@/components/erp/ErpDreStructureManager";
 import ErpJournalEntryManager from "@/components/erp/ErpJournalEntryManager";
 import ErpAccountingReports from "@/components/erp/ErpAccountingReports";
 import ErpAccountingSped from "@/components/erp/ErpAccountingSped";
-import ErpFixedAssetManager from "@/components/erp/ErpFixedAssetManager";
 import ErpFinanceReports from "@/components/erp/ErpFinanceReports";
-import ErpProductionCostPanel from "@/components/erp/ErpProductionCostPanel";
 import ErpEmployeeManager from "@/components/erp/ErpEmployeeManager";
 import ErpPayrollRubricManager from "@/components/erp/ErpPayrollRubricManager";
 import ErpPayrollTaxTableManager from "@/components/erp/ErpPayrollTaxTableManager";
@@ -42,10 +39,6 @@ const SUBMODULES = [
       { id: "estruturaDre", label: "Estrutura de DRE", icon: Layers },
       { id: "relatoriosContabeis", label: "Relatórios Contábeis", icon: BarChart3 },
       { id: "spedContabil", label: "SPED ECD", icon: FileText },
-      { id: "patrimonial", label: "Patrimonial", icon: Building },
-      { id: "custos", label: "Custo de Produção", icon: PieChart },
-      { id: "orcamento", label: "Orçamento", icon: Target },
-      { id: "fiscal", label: "Fiscal", icon: ScrollText },
     ],
   },
   {
@@ -74,15 +67,12 @@ export default function ErpModuleAdministrativo({ user }) {
 
   const renderSub = () => {
     switch (sub) {
-      case "fiscal": return <ErpFiscalPanel user={user} />;
       case "planoReferencial": return <ErpChartAccountReferentialManager user={user} />;
       case "estruturaDre": return <ErpDreStructureManager user={user} />;
       case "planoContas": return <ErpChartAccountManager user={user} />;
       case "movimentos": return <ErpJournalEntryManager user={user} />;
       case "relatoriosContabeis": return <ErpAccountingReports user={user} />;
       case "spedContabil": return <ErpAccountingSped user={user} />;
-      case "patrimonial": return <ErpFixedAssetManager user={user} />;
-      case "custos": return <ErpProductionCostPanel user={user} />;
       case "relatoriosFinanceiro": return <ErpFinanceReports user={user} />;
       case "funcionariosFolha": return <ErpEmployeeManager user={user} />;
       case "rubricas": return <ErpPayrollRubricManager user={user} />;

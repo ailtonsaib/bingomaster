@@ -64,7 +64,7 @@ export default function ErpFiscalPanel({ user }) {
   return (
     <div className="space-y-3">
       <div><h2 className="font-semibold text-base">Fiscal — Operações e Regras Configuradas</h2>
-        <p className="text-xs text-gray-500">Visualização consolidada. A edição das regras fica no módulo Gerencial.</p>
+        <p className="text-xs text-gray-500">Visualização consolidada. A edição fica nas abas "Operações" e "Regras Fiscais" deste módulo.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

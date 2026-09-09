@@ -1,0 +1,104 @@
+{
+  "name": "ErpDepreciation",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "ID do bem patrimonial (ErpFixedAsset)"
+    },
+    "asset_name": {
+      "type": "string",
+      "description": "Nome do bem (cache)"
+    },
+    "asset_code": {
+      "type": "string",
+      "description": "C\u00f3digo do bem (cache)"
+    },
+    "month": {
+      "type": "number",
+      "description": "M\u00eas da deprecia\u00e7\u00e3o (1-12)"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano da deprecia\u00e7\u00e3o"
+    },
+    "depreciation_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da deprecia\u00e7\u00e3o do m\u00eas"
+    },
+    "accumulated_to_date": {
+      "type": "number",
+      "default": 0,
+      "description": "Deprecia\u00e7\u00e3o acumulada at\u00e9 a compet\u00eancia (cache)"
+    },
+    "processed_date": {
+      "type": "string",
+      "description": "Data do processamento (ISO)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "asset_id",
+    "month",
+    "year"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

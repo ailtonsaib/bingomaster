@@ -1,0 +1,90 @@
+{
+  "name": "ErpAssetStructure",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da estrutura patrimonial"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da estrutura (ex: M\u00e1quinas, Ve\u00edculos, Im\u00f3veis, M\u00f3veis e Utens\u00edlios, Inform\u00e1tica)"
+    },
+    "depreciation_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Taxa de deprecia\u00e7\u00e3o padr\u00e3o da estrutura (% a.a.)"
+    },
+    "useful_life_years": {
+      "type": "number",
+      "default": 0,
+      "description": "Vida \u00fatil padr\u00e3o (anos) \u2014 0 = n\u00e3o aplica"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

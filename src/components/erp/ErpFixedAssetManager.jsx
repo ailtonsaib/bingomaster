@@ -86,8 +86,17 @@ export default function ErpFixedAssetManager({ user }) {
 }
 
 function AssetForm({ user, editing, onClose, onSaved }) {
+  const [structures, setStructures] = useState([]);
+  useEffect(() => {
+    (async () => {
+      try { setStructures(await base44.entities.ErpAssetStructure.filter({ user_email: user.email }, "name", 200)); }
+      catch (e) { console.error(e); }
+    })();
+  }, [user.email]);
   const [form, setForm] = useState({
     code: editing?.code || "",
+    structure_id: editing?.structure_id || "",
+    icms_value: editing?.icms_value || 0,
     name: editing?.name || "",
     acquisition_date: editing?.acquisition_date ? editing.acquisition_date.slice(0, 10) : "",
     acquisition_value: editing?.acquisition_value || 0,
@@ -106,6 +115,8 @@ function AssetForm({ user, editing, onClose, onSaved }) {
     const payload = {
       user_email: user.email,
       ...form,
+      structure_name: (structures.find(s => s.id === form.structure_id) || {}).name || "",
+      icms_value: Number(form.icms_value) || 0,
       acquisition_value: Number(form.acquisition_value) || 0,
       current_value: Number(form.current_value) || 0,
       depreciation_rate: Number(form.depreciation_rate) || 0,
@@ -129,6 +140,15 @@ function AssetForm({ user, editing, onClose, onSaved }) {
             <div><Label>Status</Label><select value={form.status} onChange={e => set("status", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">{ASSET_STATUS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
           </div>
           <div><Label>Bem *</Label><Input value={form.name} onChange={e => set("name", e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Estrutura Patrimonial</Label>
+              <select value={form.structure_id} onChange={e => set("structure_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                <option value="">Selecione...</option>
+                {structures.filter(s => s.is_active !== false).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div><Label>ICMS na Aquisição (CIAP)</Label><Input type="number" step="0.01" value={form.icms_value} onChange={e => set("icms_value", e.target.value)} /></div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Data Aquisição</Label><Input type="date" value={form.acquisition_date} onChange={e => set("acquisition_date", e.target.value)} /></div>
             <div><Label>Localização</Label><Input value={form.location} onChange={e => set("location", e.target.value)} /></div>

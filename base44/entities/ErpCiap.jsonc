@@ -1,0 +1,122 @@
+{
+  "name": "ErpCiap",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "ID do bem patrimonial (ErpFixedAsset)"
+    },
+    "asset_name": {
+      "type": "string",
+      "description": "Nome do bem (cache)"
+    },
+    "asset_code": {
+      "type": "string",
+      "description": "C\u00f3digo do bem (cache)"
+    },
+    "acquisition_date": {
+      "type": "string",
+      "description": "Data de aquisi\u00e7\u00e3o do bem (cache, ISO)"
+    },
+    "icms_value": {
+      "type": "number",
+      "default": 0,
+      "description": "ICMS destacado na aquisi\u00e7\u00e3o (cache)"
+    },
+    "month": {
+      "type": "number",
+      "description": "M\u00eas da apropria\u00e7\u00e3o (1-12)"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano da apropria\u00e7\u00e3o"
+    },
+    "installment": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero da parcela (1 a 48)"
+    },
+    "credit_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor do cr\u00e9dito apropriado no m\u00eas (ICMS \u00f7 48)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "apropriado"
+      ],
+      "default": "apropriado",
+      "description": "Status: pendente, apropriado"
+    },
+    "apropriation_date": {
+      "type": "string",
+      "description": "Data da apropria\u00e7\u00e3o (ISO)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "asset_id",
+    "month",
+    "year"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
