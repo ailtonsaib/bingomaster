@@ -508,7 +508,7 @@ function NewFolhaModal({ user, employees, rubricas, taxTables, month, year, bloc
                 <div className="flex-1"><Label className="text-xs">Adicionar rubrica</Label>
                   <select onChange={e => { if (e.target.value) { addLine(rubricas.find(r => r.id === e.target.value)); e.target.value = ""; } }} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
                     <option value="">Selecione uma rubrica...</option>
-                    {rubricas.filter(r => r.kind === "provento" || r.kind === "base").map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}
+                    {rubricas.filter(r => r.kind === "provento" || r.kind === "base" || r.kind === "desconto").map(r => <option key={r.id} value={r.id}>{r.code} — {r.name}{r.kind === "desconto" ? " (desconto)" : ""}</option>)}
                   </select>
                 </div>
               </div>
