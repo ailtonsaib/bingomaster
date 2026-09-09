@@ -84,7 +84,7 @@ export default function ErpSettleModal({ titles, verb, bankName, date, events, o
             <option value="">Selecione o evento da baixa...</option>
             {(events || []).map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
           </select>
-          <p className="text-xs text-gray-400 mt-1">O evento é a base do lançamento contábil: banco x {verb === "Pagar" ? "fornecedor" : "cliente"}, juros e descontos.</p>
+          <p className="text-xs text-gray-400 mt-1">O evento é a base do lançamento contábil: banco ({verb === "Pagar" ? "C" : "D"}) x {verb === "Pagar" ? "fornecedor" : "cliente"}, juros e descontos. Cada título baixado gera o seu próprio lançamento na contabilidade.</p>
         </div>
 
         <div className="p-4 space-y-3">

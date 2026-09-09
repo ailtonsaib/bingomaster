@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
+import { genOrderNumber } from "@/lib/erpUtils";
 import { maskCpfCnpj, maskCep, maskPhone, onlyDigits } from "@/lib/brMasks";
 import ErpSettleModal from "@/components/erp/ErpSettleModal";
 
@@ -106,6 +107,22 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
   const handleSettleConfirm = async (entries, event) => {
     if (!event) { alert("Selecione o evento contábil da baixa."); return; }
     const bank = bankAccounts.find(b => b.id === settleBankId);
+    const isPay = settle.doneStatus === "pago";
+    const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+
+    // validações antes de baixar — nada é gravado se faltar configuração contábil
+    const errs = [];
+    if (!bank?.chart_account_id) errs.push("A conta bancária da baixa não possui conta contábil vinculada (cadastre em Contas Bancárias).");
+    const partnerLines = (event.lines || []).filter(l => l.type === (isPay ? "D" : "C"));
+    if (!partnerLines.length) errs.push(`O evento "${event.name}" não possui linha ${isPay ? "de débito (fornecedor)" : "de crédito (cliente)"}.`);
+    entries.forEach(e => {
+      [1, 2, 3].forEach(n => {
+        if ((Number(e.juros[n - 1]) || 0) > 0 && !event[`juros_${n}_account_id`]) errs.push(`Título "${e.description}": Juros ${n} informado, mas o evento não tem a conta de Juros ${n} configurada.`);
+        if ((Number(e.descontos[n - 1]) || 0) > 0 && !event[`descontos_${n}_account_id`]) errs.push(`Título "${e.description}": Desconto ${n} informado, mas o evento não tem a conta de Desconto ${n} configurada.`);
+      });
+    });
+    if (errs.length) { alert(errs.join("\n")); return; }
+
     setSettling(true);
     try {
       await base44.entities[entityName].bulkUpdate(entries.map(e => ({
@@ -124,6 +141,59 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
         descontos_2: Number(e.descontos[1]) || 0,
         descontos_3: Number(e.descontos[2]) || 0,
       })));
+
+      // Lançamento contábil por título — banco sempre C no pagamento e sempre D no recebimento
+      for (const e of entries) {
+        const docVal = r2(e.docValue);
+        const jSum = r2((Number(e.juros[0]) || 0) + (Number(e.juros[1]) || 0) + (Number(e.juros[2]) || 0));
+        const dSum = r2((Number(e.descontos[0]) || 0) + (Number(e.descontos[1]) || 0) + (Number(e.descontos[2]) || 0));
+        const bankVal = r2(docVal + jSum - dSum);
+        const lines = [];
+        // lado do parceiro: fornecedor D (pagamento) / cliente C (recebimento) pelo valor do título
+        for (const l of partnerLines) {
+          lines.push({
+            account_id: l.account_id, account_code: l.account_code, account_name: l.account_name,
+            ...(isPay ? { debit: docVal, credit: 0 } : { debit: 0, credit: docVal }),
+            complement: l.history_text || `${isPay ? "Pagamento" : "Recebimento"} ${e.description}`,
+          });
+        }
+        // juros e descontos conforme o evento — cada título mantém seus próprios valores
+        for (let n = 1; n <= 3; n++) {
+          const jv = Number(e.juros[n - 1]) || 0;
+          if (jv > 0) lines.push({
+            account_id: event[`juros_${n}_account_id`], account_code: event[`juros_${n}_account_code`], account_name: event[`juros_${n}_account_name`],
+            ...(isPay ? { debit: jv, credit: 0 } : { debit: 0, credit: jv }),
+            complement: `Juros ${n} — ${e.description}`,
+          });
+          const dv = Number(e.descontos[n - 1]) || 0;
+          if (dv > 0) lines.push({
+            account_id: event[`descontos_${n}_account_id`], account_code: event[`descontos_${n}_account_code`], account_name: event[`descontos_${n}_account_name`],
+            ...(isPay ? { debit: 0, credit: dv } : { debit: dv, credit: 0 }),
+            complement: `Desconto ${n} — ${e.description}`,
+          });
+        }
+        // banco: crédito na baixa de Contas a Pagar, débito na baixa de Contas a Receber
+        lines.push({
+          account_id: bank.chart_account_id, account_code: bank.chart_account_code, account_name: bank.chart_account_name,
+          ...(isPay ? { debit: 0, credit: bankVal } : { debit: bankVal, credit: 0 }),
+          complement: `${isPay ? "Pagamento" : "Recebimento"} ${bank.bank}${bank.account ? ` — ${bank.account}` : ""}`,
+        });
+
+        const totalDebit = r2(lines.reduce((s, l) => s + (l.debit || 0), 0));
+        const totalCredit = r2(lines.reduce((s, l) => s + (l.credit || 0), 0));
+        await base44.entities.ErpJournalEntry.create({
+          user_email: user.email,
+          number: genOrderNumber("LCT"),
+          date: settleDate ? new Date(`${settleDate}T12:00:00`).toISOString() : new Date().toISOString(),
+          history: `${isPay ? "Pagamento" : "Recebimento"} ${e.description}${e.party ? ` - ${e.party}` : ""}`,
+          document: e.description,
+          lines,
+          total_debit: totalDebit,
+          total_credit: totalCredit,
+          status: "definitivo",
+        });
+      }
+
       setSettleModalOpen(false);
       setSelectedIds([]);
       load();
