@@ -21,7 +21,7 @@ async function lookupCep(cep) {
 
 // field: { key, label, type: text|number|select|checkbox|entity-select, options?, entity?, labelKey?, cacheKey?, required?, full?, placeholder? }
 // column: { key, label, type?: text|badge|money|bool, options?(for badge) }
-export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle }) {
+export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle, cashJournal }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -201,6 +201,51 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     setSettling(false);
   };
 
+  // Após salvar movimentação de caixa com evento contábil: gera o lançamento
+  // Entrada: banco D x evento C — Saída: banco C x evento D (apenas na inclusão)
+  const handleSaved = async (payload, editing) => {
+    await load();
+    if (!cashJournal || editing?.id || !payload?.event_id) return;
+    try {
+      const value = Number(payload.amount) || 0;
+      if (value <= 0) return;
+      const [ev, bankAcc] = await Promise.all([
+        base44.entities.ErpAccountingEvent.get(payload.event_id),
+        payload.bank_account_id ? base44.entities.ErpBankAccount.get(payload.bank_account_id) : null,
+      ]);
+      if (!bankAcc?.chart_account_id) { alert("Movimentação salva, mas a conta bancária não possui conta contábil vinculada — o lançamento contábil não foi gerado."); return; }
+      const isIn = payload.type === "entrada";
+      const evLines = (ev?.lines || []).filter(l => l.type === (isIn ? "C" : "D"));
+      if (evLines.length !== 1) { alert(`Movimentação salva, mas o evento "${ev?.name}" precisa de exatamente uma linha ${isIn ? "de crédito (para entrada)" : "de débito (para saída)"} — o lançamento contábil não foi gerado.`); return; }
+      const l = evLines[0];
+      const lines = [
+        {
+          account_id: bankAcc.chart_account_id, account_code: bankAcc.chart_account_code, account_name: bankAcc.chart_account_name,
+          ...(isIn ? { debit: value, credit: 0 } : { debit: 0, credit: value }),
+          complement: `${isIn ? "Entrada" : "Saída"} ${bankAcc.bank}${bankAcc.account ? ` — ${bankAcc.account}` : ""}`,
+        },
+        {
+          account_id: l.account_id, account_code: l.account_code, account_name: l.account_name,
+          ...(isIn ? { debit: 0, credit: value } : { debit: value, credit: 0 }),
+          complement: l.history_text || payload.description,
+        },
+      ];
+      await base44.entities.ErpJournalEntry.create({
+        user_email: user.email,
+        number: genOrderNumber("LCT"),
+        date: payload.date ? new Date(`${payload.date}T12:00:00`).toISOString() : new Date().toISOString(),
+        history: `${isIn ? "Entrada" : "Saída"} de caixa — ${payload.description}`,
+        document: payload.description,
+        lines,
+        total_debit: value,
+        total_credit: value,
+        status: "definitivo",
+      });
+    } catch (e) {
+      alert("Movimentação salva, mas o lançamento contábil não foi gerado: " + e.message);
+    }
+  };
+
   const renderCell = (it, col) => {
     const v = it[col.key];
     if (col.type === "money") return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -292,7 +337,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
           fields={fields}
           entityOptions={entityOptions}
           onClose={() => setShowForm(false)}
-          onSaved={load}
+          onSaved={handleSaved}
         />
       )}
 
@@ -404,7 +449,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     try {
       if (editing?.id) await base44.entities[entityName].update(editing.id, payload);
       else await base44.entities[entityName].create(payload);
-      onSaved();
+      onSaved(payload, editing);
       onClose();
     } catch (e) { alert(e.message); }
     setSaving(false);

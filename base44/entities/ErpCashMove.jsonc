@@ -37,6 +37,14 @@
       "type": "number",
       "default": 0
     },
+    "event_id": {
+      "type": "string",
+      "description": "ID do evento cont\u00e1bil (ErpAccountingEvent) \u2014 base do lan\u00e7amento: entrada banco D x evento C, sa\u00edda banco C x evento D"
+    },
+    "event_name": {
+      "type": "string",
+      "description": "Evento cont\u00e1bil (cache)"
+    },
     "notes": {
       "type": "string"
     }
