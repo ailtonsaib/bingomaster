@@ -31,7 +31,7 @@ export default function ErpMaintenanceOrderPanel({ user }) {
   const [typeFilter, setTypeFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [closing, setClosing] = useState(null);
-  const [closeForm, setCloseForm] = useState({ downtime_hours: 0, cost: 0, notes: "", part_product_id: "", part_quantity: 0 });
+  const [closeForm, setCloseForm] = useState({ downtime_hours: 0, cost: 0, notes: "", part_product_id: "", part_quantity: 0, checklist: [] });
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -113,6 +113,7 @@ export default function ErpMaintenanceOrderPanel({ user }) {
         cost: Number(closeForm.cost) || 0,
         notes: closeForm.notes || closing.notes || "",
         parts_notes: partsNotes,
+        checklist_items: closeForm.checklist,
       });
       setClosing(null); load();
     } catch (e) { alert(e.message); }
@@ -175,7 +176,7 @@ export default function ErpMaintenanceOrderPanel({ user }) {
                   <td className="p-2 text-right whitespace-nowrap">
                     {o.status === "aberta" && <button title="Iniciar" onClick={() => start(o)} className="p-1 hover:bg-blue-50 rounded"><PlayCircle className="w-4 h-4 text-blue-500" /></button>}
                     {(o.status === "aberta" || o.status === "em_execucao") && (
-                      <button title="Concluir" onClick={() => { setClosing(o); setCloseForm({ downtime_hours: o.downtime_hours || 0, cost: o.cost || 0, notes: o.notes || "", part_product_id: "", part_quantity: 0 }); }} className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></button>
+                      <button title="Concluir" onClick={() => { setClosing(o); setCloseForm({ downtime_hours: o.downtime_hours || 0, cost: o.cost || 0, notes: o.notes || "", part_product_id: "", part_quantity: 0, checklist: (o.checklist_items || []).map(c => ({ ...c })) }); }} className="p-1 hover:bg-emerald-50 rounded"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></button>
                     )}
                     <button title="Excluir" onClick={async () => { if (confirm(`Excluir "${o.number}"?`)) { await base44.entities.ErpMaintenanceOrder.delete(o.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                   </td>
@@ -216,6 +217,19 @@ export default function ErpMaintenanceOrderPanel({ user }) {
                   <Input type="number" step="0.01" placeholder="Qtd" value={closeForm.part_quantity} onChange={e => setCloseForm(p => ({ ...p, part_quantity: e.target.value }))} />
                 </div>
               </div>
+              {closeForm.checklist.length > 0 && (
+                <div className="col-span-2 border-t pt-3">
+                  <Label className="text-xs font-medium text-gray-600">Checklist de Execução ({closeForm.checklist.filter(c => c.done).length}/{closeForm.checklist.length})</Label>
+                  <div className="space-y-1 mt-1">
+                    {closeForm.checklist.map((c, i) => (
+                      <label key={i} className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={c.done} onChange={e => setCloseForm(p => { const ch = [...p.checklist]; ch[i] = { ...ch[i], done: e.target.checked }; return { ...p, checklist: ch }; })} />
+                        <span className={c.done ? "line-through text-gray-400" : ""}>{c.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="col-span-2">
                 <Label className="text-xs font-medium text-gray-600">Observações / Laudo Técnico</Label>
                 <textarea value={closeForm.notes} onChange={e => setCloseForm(p => ({ ...p, notes: e.target.value }))} rows={3} className="w-full rounded-md border border-input px-3 py-2 text-sm mt-1" />
@@ -249,6 +263,7 @@ function OsForm({ user, equipments, defaultNumber, onClose, onSaved }) {
   const [form, setForm] = useState({
     number: defaultNumber, equipment_id: "", order_type: "corretiva",
     description: "", responsible: "", opened_date: todayISO(),
+    scheduled_date: "",
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => {
@@ -304,6 +319,10 @@ function OsForm({ user, equipments, defaultNumber, onClose, onSaved }) {
           <div>
             <Label className="text-xs font-medium text-gray-600">Data de Abertura</Label>
             <Input type="date" value={form.opened_date} onChange={e => set("opened_date", e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-gray-600">Data Prevista (Agendamento)</Label>
+            <Input type="date" value={form.scheduled_date} onChange={e => set("scheduled_date", e.target.value)} className="mt-1" />
           </div>
         </div>
         <div className="p-4 border-t flex gap-2 justify-end">

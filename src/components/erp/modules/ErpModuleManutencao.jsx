@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Wrench, ClipboardCheck, HardHat } from "lucide-react";
+import { Wrench, ClipboardCheck, HardHat, CalendarDays, Zap } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpMaintenanceOrderPanel from "@/components/erp/ErpMaintenanceOrderPanel";
+import ErpPreventivePanel from "@/components/erp/ErpPreventivePanel";
+import ErpMaintenanceCalendar from "@/components/erp/ErpMaintenanceCalendar";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const EQUIP_STATUS = [
@@ -61,7 +63,9 @@ const CRUD_CONFIGS = {
 const TABS = [
   { id: "equipamentos", label: "Equipamentos", icon: Wrench },
   { id: "planos", label: "Planos Preventivos", icon: ClipboardCheck },
+  { id: "preventivas", label: "Gerar Preventivas", icon: Zap },
   { id: "os", label: "Ordens de Serviço", icon: HardHat },
+  { id: "calendario", label: "Calendário de OS", icon: CalendarDays },
 ];
 
 export default function ErpModuleManutencao({ user }) {
@@ -70,6 +74,8 @@ export default function ErpModuleManutencao({ user }) {
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="purple" />
       {sub === "os" ? <ErpMaintenanceOrderPanel user={user} />
+        : sub === "preventivas" ? <ErpPreventivePanel user={user} />
+        : sub === "calendario" ? <ErpMaintenanceCalendar user={user} />
         : <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />}
     </div>
   );
