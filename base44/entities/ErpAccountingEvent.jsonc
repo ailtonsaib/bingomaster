@@ -10,6 +10,15 @@
       "type": "string",
       "description": "Nome do evento (ex: FORNECEDORES)"
     },
+    "partner_type": {
+      "type": "string",
+      "enum": [
+        "cliente",
+        "fornecedor"
+      ],
+      "default": "fornecedor",
+      "description": "Tipo do evento: fornecedor (baixa de Contas a Pagar) ou cliente (baixa de Contas a Receber)"
+    },
     "lines": {
       "type": "array",
       "default": [],
@@ -52,6 +61,78 @@
           }
         }
       }
+    },
+    "juros_1_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Juros 1 (ErpChartAccount) \u2014 d\u00e9bito na baixa"
+    },
+    "juros_1_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Juros 1 (cache)"
+    },
+    "juros_1_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Juros 1 (cache)"
+    },
+    "juros_2_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Juros 2 (ErpChartAccount) \u2014 d\u00e9bito na baixa"
+    },
+    "juros_2_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Juros 2 (cache)"
+    },
+    "juros_2_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Juros 2 (cache)"
+    },
+    "juros_3_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Juros 3 (ErpChartAccount) \u2014 d\u00e9bito na baixa"
+    },
+    "juros_3_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Juros 3 (cache)"
+    },
+    "juros_3_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Juros 3 (cache)"
+    },
+    "descontos_1_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Desconto 1 (ErpChartAccount) \u2014 cr\u00e9dito na baixa"
+    },
+    "descontos_1_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Desconto 1 (cache)"
+    },
+    "descontos_1_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Desconto 1 (cache)"
+    },
+    "descontos_2_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Desconto 2 (ErpChartAccount) \u2014 cr\u00e9dito na baixa"
+    },
+    "descontos_2_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Desconto 2 (cache)"
+    },
+    "descontos_2_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Desconto 2 (cache)"
+    },
+    "descontos_3_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil de Desconto 3 (ErpChartAccount) \u2014 cr\u00e9dito na baixa"
+    },
+    "descontos_3_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta de Desconto 3 (cache)"
+    },
+    "descontos_3_account_name": {
+      "type": "string",
+      "description": "Nome da conta de Desconto 3 (cache)"
     },
     "notes": {
       "type": "string",

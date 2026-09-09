@@ -74,7 +74,12 @@ export default function ErpAccountingEventManager({ user }) {
     setEditor({
       id: ev?.id || null,
       name: ev?.name || "",
+      partner_type: ev?.partner_type || "fornecedor",
       lines: (ev?.lines || []).length ? ev.lines.map(l => ({ ...l })) : [emptyLine()],
+      jd: {
+        j1: ev?.juros_1_account_id || "", j2: ev?.juros_2_account_id || "", j3: ev?.juros_3_account_id || "",
+        d1: ev?.descontos_1_account_id || "", d2: ev?.descontos_2_account_id || "", d3: ev?.descontos_3_account_id || "",
+      },
     });
   };
 
@@ -101,20 +106,22 @@ export default function ErpAccountingEventManager({ user }) {
                 <thead className="bg-gray-100 text-gray-500 text-xs">
                   <tr>
                     <th className="p-2 text-left">Nome do Evento</th>
+                    <th className="p-2 text-left">Tipo</th>
                     <th className="p-2 text-left">Linhas</th>
                     <th className="p-2 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={3} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                    <tr><td colSpan={4} className="p-6 text-center text-gray-400">Carregando...</td></tr>
                   ) : filteredEvents.length === 0 ? (
-                    <tr><td colSpan={3} className="p-8 text-center text-gray-400">Nenhum evento cadastrado.</td></tr>
+                    <tr><td colSpan={4} className="p-8 text-center text-gray-400">Nenhum evento cadastrado.</td></tr>
                   ) : filteredEvents.map(ev => (
                     <tr key={ev.id} className="border-t hover:bg-gray-50">
                       <td className="p-2">
                         <button onClick={() => setSelectedId(ev.id)} className="text-left font-medium text-blue-700 hover:underline">{ev.name}</button>
                       </td>
+                      <td className="p-2">{ev.partner_type === "cliente" ? "Cliente" : "Fornecedor"}</td>
                       <td className="p-2">{(ev.lines || []).length}</td>
                       <td className="p-2 text-right whitespace-nowrap">
                         <button onClick={() => openEditor(ev)} className="p-1 hover:bg-gray-100 rounded"><Pencil className="w-4 h-4 text-gray-500" /></button>
@@ -131,7 +138,7 @@ export default function ErpAccountingEventManager({ user }) {
         <>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => setSelectedId(null)} className="gap-1"><ChevronLeft className="w-4 h-4" /> Voltar</Button>
-            <h2 className="font-semibold text-base flex-1">nome do evento: <span className="uppercase">{selected.name}</span></h2>
+            <h2 className="font-semibold text-base flex-1">nome do evento: <span className="uppercase">{selected.name}</span> <span className="text-xs font-normal text-gray-500">({selected.partner_type === "cliente" ? "Cliente — Contas a Receber" : "Fornecedor — Contas a Pagar"})</span></h2>
             <Button variant="outline" size="sm" onClick={() => openEditor(selected)} className="gap-1"><Pencil className="w-4 h-4" /> Editar</Button>
             <Button variant="destructive" size="sm" onClick={() => handleDelete(selected)} className="gap-1"><Trash2 className="w-4 h-4" /> Excluir</Button>
           </div>
@@ -168,6 +175,24 @@ export default function ErpAccountingEventManager({ user }) {
               </table>
             </div>
           </div>
+
+          <div className="bg-white rounded-xl border p-3">
+            <p className="text-xs font-medium text-gray-600 mb-2">Contas de juros e descontos da baixa (contabilização sempre contra a conta do banco)</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+              {[1, 2, 3].map(n => (
+                <div key={`j${n}`} className="flex items-center gap-1">
+                  <span className="w-28 shrink-0 text-gray-500 font-medium">Juros {n} (D)</span>
+                  <span>{selected[`juros_${n}_account_code`] ? `${selected[`juros_${n}_account_code`]} — ${selected[`juros_${n}_account_name`]}` : "—"}</span>
+                </div>
+              ))}
+              {[1, 2, 3].map(n => (
+                <div key={`d${n}`} className="flex items-center gap-1">
+                  <span className="w-28 shrink-0 text-gray-500 font-medium">Desconto {n} (C)</span>
+                  <span>{selected[`descontos_${n}_account_code`] ? `${selected[`descontos_${n}_account_code`]} — ${selected[`descontos_${n}_account_name`]}` : "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </>
       )}
 
@@ -187,6 +212,8 @@ export default function ErpAccountingEventManager({ user }) {
 
 function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
   const [name, setName] = useState(initial.name);
+  const [partnerType, setPartnerType] = useState(initial.partner_type || "fornecedor");
+  const [jd, setJd] = useState(initial.jd || { j1: "", j2: "", j3: "", d1: "", d2: "", d3: "" });
   const [lines, setLines] = useState(initial.lines.length ? initial.lines : [emptyLine()]);
   const [saving, setSaving] = useState(false);
 
@@ -216,7 +243,16 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
     }
     if (!valid.length) { alert("Selecione a conta contábil em pelo menos uma linha."); return; }
     setSaving(true);
-    const payload = { user_email: user.email, name: name.trim(), lines: valid };
+    const payload = { user_email: user.email, name: name.trim(), partner_type: partnerType, lines: valid };
+    const accOf = id => accounts.find(a => a.id === id);
+    [["j", "juros"], ["d", "descontos"]].forEach(([p, field]) => {
+      for (let n = 1; n <= 3; n++) {
+        const acc = accOf(jd[`${p}${n}`]);
+        payload[`${field}_${n}_account_id`] = acc?.id || "";
+        payload[`${field}_${n}_account_code`] = acc?.code || "";
+        payload[`${field}_${n}_account_name`] = acc?.name || "";
+      }
+    });
     try {
       if (initial.id) await base44.entities.ErpAccountingEvent.update(initial.id, payload);
       else await base44.entities.ErpAccountingEvent.create(payload);
@@ -237,6 +273,14 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
           <div>
             <label className="text-xs font-medium text-gray-600">Nome do Evento *</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: FORNECEDORES" className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1 uppercase" />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600">Tipo do Evento *</label>
+            <select value={partnerType} onChange={e => setPartnerType(e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
+              <option value="fornecedor">Fornecedor — Contas a Pagar (D Fornecedor x C Banco)</option>
+              <option value="cliente">Cliente — Contas a Receber (D Banco x C Cliente)</option>
+            </select>
           </div>
 
           <div className="bg-gray-50 rounded-lg border p-2">
@@ -272,6 +316,37 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
               ))}
             </div>
             <Button variant="outline" size="sm" onClick={() => setLines(prev => [...prev, emptyLine()])} className="gap-1 mt-2"><Plus className="w-4 h-4" /> Adicionar linha</Button>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg border p-2">
+            <p className="text-xs font-medium text-gray-600 mb-1">Contas de juros e descontos da baixa (contabilização sempre contra a conta contábil do banco)</p>
+            <p className="text-xs text-gray-400 mb-2">Pagamento: D Fornecedor, D Juros 1-3, C Descontos 1-3 e C da conta contábil cadastrada no banco. Recebimento: D banco e D descontos, C cliente e C juros.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[1, 2, 3].map(n => (
+                <div key={`j${n}`}>
+                  <label className="text-xs text-gray-500">Juros {n} (D)</label>
+                  <ErpCombobox
+                    value={jd[`j${n}`]}
+                    onValueChange={v => setJd(prev => ({ ...prev, [`j${n}`]: v }))}
+                    options={accounts.map(a => ({ id: a.id, label: `${a.code} — ${a.name}` }))}
+                    placeholder="Conta de juros..."
+                    clearable
+                  />
+                </div>
+              ))}
+              {[1, 2, 3].map(n => (
+                <div key={`d${n}`}>
+                  <label className="text-xs text-gray-500">Desconto {n} (C)</label>
+                  <ErpCombobox
+                    value={jd[`d${n}`]}
+                    onValueChange={v => setJd(prev => ({ ...prev, [`d${n}`]: v }))}
+                    options={accounts.map(a => ({ id: a.id, label: `${a.code} — ${a.name}` }))}
+                    placeholder="Conta de desconto..."
+                    clearable
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <p className="text-xs text-gray-400">Selecione somente contas analíticas (aceitam lançamento). O histórico padrão é opcional — cadastre em Históricos Padrão.</p>

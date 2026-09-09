@@ -232,7 +232,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
           verb={settleVerb}
           bankName={(() => { const b = bankAccounts.find(x => x.id === settleBankId); return b ? b.bank + (b.account ? ` — ${b.account}` : "") : ""; })()}
           date={settleDate}
-          events={settleEvents}
+          events={settleEvents.filter(ev => ev.partner_type === (settleVerb === "Pagar" ? "fornecedor" : "cliente"))}
           onClose={() => setSettleModalOpen(false)}
           onConfirm={handleSettleConfirm}
         />
