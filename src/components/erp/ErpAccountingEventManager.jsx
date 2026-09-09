@@ -181,13 +181,13 @@ export default function ErpAccountingEventManager({ user }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
               {[1, 2, 3].map(n => (
                 <div key={`j${n}`} className="flex items-center gap-1">
-                  <span className="w-28 shrink-0 text-gray-500 font-medium">Juros {n} (D)</span>
+                  <span className="w-28 shrink-0 text-gray-500 font-medium">Juros {n} ({selected.partner_type === "cliente" ? "C" : "D"})</span>
                   <span>{selected[`juros_${n}_account_code`] ? `${selected[`juros_${n}_account_code`]} — ${selected[`juros_${n}_account_name`]}` : "—"}</span>
                 </div>
               ))}
               {[1, 2, 3].map(n => (
                 <div key={`d${n}`} className="flex items-center gap-1">
-                  <span className="w-28 shrink-0 text-gray-500 font-medium">Desconto {n} (C)</span>
+                  <span className="w-28 shrink-0 text-gray-500 font-medium">Desconto {n} ({selected.partner_type === "cliente" ? "D" : "C"})</span>
                   <span>{selected[`descontos_${n}_account_code`] ? `${selected[`descontos_${n}_account_code`]} — ${selected[`descontos_${n}_account_name`]}` : "—"}</span>
                 </div>
               ))}
@@ -324,7 +324,7 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
             <div className="grid grid-cols-2 gap-2">
               {[1, 2, 3].map(n => (
                 <div key={`j${n}`}>
-                  <label className="text-xs text-gray-500">Juros {n} (D)</label>
+                  <label className="text-xs text-gray-500">Juros {n} ({partnerType === "cliente" ? "C" : "D"})</label>
                   <ErpCombobox
                     value={jd[`j${n}`]}
                     onValueChange={v => setJd(prev => ({ ...prev, [`j${n}`]: v }))}
@@ -336,7 +336,7 @@ function EventEditor({ user, initial, accounts, histories, onClose, onSaved }) {
               ))}
               {[1, 2, 3].map(n => (
                 <div key={`d${n}`}>
-                  <label className="text-xs text-gray-500">Desconto {n} (C)</label>
+                  <label className="text-xs text-gray-500">Desconto {n} ({partnerType === "cliente" ? "D" : "C"})</label>
                   <ErpCombobox
                     value={jd[`d${n}`]}
                     onValueChange={v => setJd(prev => ({ ...prev, [`d${n}`]: v }))}

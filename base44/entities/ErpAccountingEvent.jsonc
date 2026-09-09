@@ -64,7 +64,7 @@
     },
     "juros_1_account_id": {
       "type": "string",
-      "description": "ID da conta cont\u00e1bil de Juros 1 (ErpChartAccount) \u2014 d\u00e9bito na baixa"
+      "description": "ID da conta cont\u00e1bil de Juros 1 (ErpChartAccount) \u2014 D na baixa de fornecedor, C na baixa de cliente"
     },
     "juros_1_account_code": {
       "type": "string",
@@ -76,7 +76,7 @@
     },
     "juros_2_account_id": {
       "type": "string",
-      "description": "ID da conta cont\u00e1bil de Juros 2 (ErpChartAccount) \u2014 d\u00e9bito na baixa"
+      "description": "ID da conta cont\u00e1bil de Juros 2 (ErpChartAccount) \u2014 D na baixa de fornecedor, C na baixa de cliente"
     },
     "juros_2_account_code": {
       "type": "string",
@@ -88,7 +88,7 @@
     },
     "juros_3_account_id": {
       "type": "string",
-      "description": "ID da conta cont\u00e1bil de Juros 3 (ErpChartAccount) \u2014 d\u00e9bito na baixa"
+      "description": "ID da conta cont\u00e1bil de Juros 3 (ErpChartAccount) \u2014 D na baixa de fornecedor, C na baixa de cliente"
     },
     "juros_3_account_code": {
       "type": "string",
@@ -100,7 +100,7 @@
     },
     "descontos_1_account_id": {
       "type": "string",
-      "description": "ID da conta cont\u00e1bil de Desconto 1 (ErpChartAccount) \u2014 cr\u00e9dito na baixa"
+      "description": "ID da conta cont\u00e1bil de Desconto 1 (ErpChartAccount) \u2014 C na baixa de fornecedor, D na baixa de cliente"
     },
     "descontos_1_account_code": {
       "type": "string",
@@ -112,7 +112,7 @@
     },
     "descontos_2_account_id": {
       "type": "string",
-      "description": "ID da conta cont\u00e1bil de Desconto 2 (ErpChartAccount) \u2014 cr\u00e9dito na baixa"
+      "description": "ID da conta cont\u00e1bil de Desconto 2 (ErpChartAccount) \u2014 C na baixa de fornecedor, D na baixa de cliente"
     },
     "descontos_2_account_code": {
       "type": "string",
@@ -124,7 +124,7 @@
     },
     "descontos_3_account_id": {
       "type": "string",
-      "description": "ID da conta cont\u00e1bil de Desconto 3 (ErpChartAccount) \u2014 cr\u00e9dito na baixa"
+      "description": "ID da conta cont\u00e1bil de Desconto 3 (ErpChartAccount) \u2014 C na baixa de fornecedor, D na baixa de cliente"
     },
     "descontos_3_account_code": {
       "type": "string",
