@@ -313,14 +313,17 @@ export const ERP_CRUD_CONFIGS = {
     fields: [
       { key: "bank", label: "Banco", required: true }, { key: "agency", label: "Agência" }, { key: "account", label: "Conta" },
       { key: "account_type", label: "Tipo", type: "select", options: ACCT_TYPE_OPTS }, { key: "holder", label: "Titular" },
+      { key: "chart_account_id", label: "Conta Contábil", type: "entity-select", entity: "ErpChartAccount", labelKey: "name", cacheKey: "chart_account_name", prefixKey: "code", prefixCacheKey: "chart_account_code", full: true, optionsFilter: a => a.accepts_entries !== false },
       { key: "balance", label: "Saldo", type: "number" }, { key: "is_active", label: "Ativa", type: "checkbox" },
     ],
     columns: [
       { key: "bank", label: "Banco" }, { key: "agency", label: "Agência" }, { key: "account", label: "Conta" },
       { key: "account_type", label: "Tipo", type: "badge", options: ACCT_TYPE_OPTS },
-      { key: "holder", label: "Titular" }, { key: "balance", label: "Saldo", type: "money" }, { key: "is_active", label: "Ativa", type: "bool" },
+      { key: "holder", label: "Titular" },
+      { key: "chart_account_code", label: "Conta Contábil", render: it => it.chart_account_code ? `${it.chart_account_code} — ${it.chart_account_name || ""}` : "—" },
+      { key: "balance", label: "Saldo", type: "money" }, { key: "is_active", label: "Ativa", type: "bool" },
     ],
-    searchKeys: ["bank", "holder", "account"],
+    searchKeys: ["bank", "holder", "account", "chart_account_name"],
   },
   caixaBanco: {
     entityName: "ErpCashMove", title: "Caixa e Banco — Movimentações",

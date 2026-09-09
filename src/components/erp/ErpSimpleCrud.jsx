@@ -42,7 +42,8 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     const opts = {};
     for (const f of entitySelectFields) {
       try {
-        opts[f.key] = await base44.entities[f.entity].filter({ user_email: user.email }, "-created_date", 500);
+        const list = await base44.entities[f.entity].filter({ user_email: user.email }, "-created_date", 500);
+        opts[f.key] = f.optionsFilter ? list.filter(f.optionsFilter) : list;
       } catch (e) { opts[f.key] = []; }
     }
     setEntityOptions(opts);
@@ -201,6 +202,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     if (f?.type === "entity-select" && f.cacheKey) {
       const opt = (entityOptions[k] || []).find(o => o.id === v);
       next[f.cacheKey] = opt ? opt[f.labelKey || "name"] : "";
+      if (f.prefixKey && opt) next[f.prefixCacheKey] = opt[f.prefixKey] || "";
     }
     return next;
   });
@@ -250,7 +252,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
               ) : f.type === "entity-select" ? (
                 <select value={form[f.key]} onChange={e => set(f.key, e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
                   <option value="">Selecione...</option>
-                  {(entityOptions[f.key] || []).map(o => <option key={o.id} value={o.id}>{o[f.labelKey || "name"]}</option>)}
+                  {(entityOptions[f.key] || []).map(o => <option key={o.id} value={o.id}>{f.prefixKey && o[f.prefixKey] ? `${o[f.prefixKey]} — ` : ""}{o[f.labelKey || "name"]}</option>)}
                 </select>
               ) : (
                 <input

@@ -29,6 +29,18 @@
       "type": "string",
       "description": "Titular"
     },
+    "chart_account_id": {
+      "type": "string",
+      "description": "ID da conta cont\u00e1bil a que a conta banc\u00e1ria pertence (ErpChartAccount)"
+    },
+    "chart_account_code": {
+      "type": "string",
+      "description": "C\u00f3digo da conta cont\u00e1bil (cache)"
+    },
+    "chart_account_name": {
+      "type": "string",
+      "description": "Nome da conta cont\u00e1bil (cache)"
+    },
     "balance": {
       "type": "number",
       "default": 0
