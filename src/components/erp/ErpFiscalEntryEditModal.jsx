@@ -12,7 +12,8 @@ const EMPTY_ITEM = { product_id: "", product_name: "", product_code: "", quantit
   cst_pis: "", cst_cofins: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "",
   aliq_pis: "", aliq_cofins: "", pauta_pis: "", pauta_cofins: "",
   pis_value: "", cofins_value: "", ipi_value: "",
-  cst_cbs: "", cbs_rate: "", cbs_value: "", cst_ibs: "", ibs_rate: "", ibs_value: "" };
+  cst_cbs: "", cbs_rate: "", cbs_value: "", cst_ibs: "", ibs_rate: "", ibs_value: "",
+  desconto_value: "", despesas_value: "", ciap_value: "" };
 
 // Manutenção de uma entrada de NF reaberta: corrige dados da nota, itens,
 // impostos (capa e por item) e rateio — depois basta lançar novamente.
@@ -34,10 +35,6 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
     cfop: entry.cfop || "",
     operation_id: entry.operation_id || "",
     dif_aliquota_value: entry.dif_aliquota_value || "",
-    despesas_value: entry.despesas_value || "",
-    descontos_value: entry.descontos_value || "",
-    ciap_curto_value: entry.ciap_curto_value || "",
-    ciap_longo_value: entry.ciap_longo_value || "",
     icms_frete_value: entry.icms_frete_value || "",
     pis_frete_value: entry.pis_frete_value || "",
     cofins_frete_value: entry.cofins_frete_value || "",
@@ -61,6 +58,10 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
     base_icms: entry.base_icms || "", aliq_icms: entry.aliq_icms || "", aliq_reducao_icms: entry.aliq_reducao_icms || "",
     base_pis_cofins: entry.base_pis_cofins || "", aliq_pis_cofins: entry.aliq_pis_cofins || "",
     pauta_pis_cofins: entry.pauta_pis_cofins || "", difal_value: entry.difal_value || "",
+    despesas_value: entry.despesas_value || "",
+    descontos_value: entry.descontos_value || "",
+    ciap_curto_value: entry.ciap_curto_value || "",
+    ciap_longo_value: entry.ciap_longo_value || "",
   });
   const [apportionments, setApportionments] = useState(entry.apportionments || []);
 
@@ -84,10 +85,13 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
       difal_value: Math.round(s("difal_value") * 100) / 100,
       cbs_value: Math.round(s("cbs_value") * 100) / 100,
       ibs_value: Math.round(s("ibs_value") * 100) / 100,
+      ciap_value: Math.round(s("ciap_value") * 100) / 100,
     };
   })();
 
   const updItem = (i, patch) => setItems(p => p.map((x, idx) => idx === i ? { ...x, ...patch } : x));
+  // Operação patrimonial (imobilizado): exibe o ICMS CIAP na capa e nos itens
+  const isPatrimonio = !!operations.find(o => o.id === form.operation_id)?.is_patrimonio;
 
   const handleSave = async () => {
     setError("");
@@ -113,6 +117,7 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
       cst_cbs: it.cst_cbs || "", cbs_rate: Number(it.cbs_rate) || 0, cbs_value: r2(it.cbs_value),
       cst_ibs: it.cst_ibs || "", ibs_rate: Number(it.ibs_rate) || 0, ibs_value: r2(it.ibs_value),
       ipi_value: r2(it.ipi_value),
+      desconto_value: r2(it.desconto_value), despesas_value: r2(it.despesas_value), ciap_value: r2(it.ciap_value),
     }));
     // Capa x itens: os valores dos impostos da capa devem fechar com a soma dos itens
     const taxSumOf = (k) => mapped.reduce((s, it) => s + (Number(it[k]) || 0), 0);
@@ -152,10 +157,10 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
         pauta_pis_cofins: Number(capa.pauta_pis_cofins) || 0,
         difal_value: capaNum.difal_value > 0 ? capaNum.difal_value : Math.round(taxSumOf("difal_value") * 100) / 100,
         dif_aliquota_value: Number(form.dif_aliquota_value) || 0,
-        despesas_value: Number(form.despesas_value) || 0,
-        descontos_value: Number(form.descontos_value) || 0,
-        ciap_curto_value: Number(form.ciap_curto_value) || 0,
-        ciap_longo_value: Number(form.ciap_longo_value) || 0,
+        despesas_value: Number(capa.despesas_value) || 0,
+        descontos_value: Number(capa.descontos_value) || 0,
+        ciap_curto_value: Number(capa.ciap_curto_value) || 0,
+        ciap_longo_value: Number(capa.ciap_longo_value) || 0,
         icms_frete_value: Number(form.icms_frete_value) || 0,
         pis_frete_value: Number(form.pis_frete_value) || 0,
         cofins_frete_value: Number(form.cofins_frete_value) || 0,
@@ -199,7 +204,7 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
           </div>
 
           {/* Capa dos impostos — acima dos itens */}
-          <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} />
+          <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} isPatrimonio={isPatrimonio} />
 
           {/* Itens */}
           <div className="border rounded-lg overflow-hidden">
@@ -224,13 +229,13 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
           </div>
 
           {/* Impostos por item */}
-          <ErpFiscalItemTaxes items={items} onChange={updItem} />
+          <ErpFiscalItemTaxes items={items} onChange={updItem} isPatrimonio={isPatrimonio} />
 
           {/* Outros valores */}
           <div>
             <label className="text-xs font-medium text-gray-600">Outros valores — contabilizados nas contas da parametrização da operação</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-              {[["dif_aliquota_value", "Dif. Alíquota"], ["despesas_value", "Despesas Acessórias"], ["descontos_value", "Descontos"], ["ciap_curto_value", "CIAP Curto Prazo"], ["ciap_longo_value", "CIAP Longo Prazo"], ["icms_frete_value", "ICMS Frete"], ["pis_frete_value", "PIS s/ Frete"], ["cofins_frete_value", "COFINS s/ Frete"]].map(([k, label]) => (
+              {[["dif_aliquota_value", "Dif. Alíquota"], ["icms_frete_value", "ICMS Frete"], ["pis_frete_value", "PIS s/ Frete"], ["cofins_frete_value", "COFINS s/ Frete"]].map(([k, label]) => (
                 <div key={k}>
                   <input type="number" step="0.01" value={form[k]} onChange={e => setF(k, e.target.value)} placeholder={label} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
                   <p className="text-[10px] text-gray-400 mt-0.5">{label}</p>

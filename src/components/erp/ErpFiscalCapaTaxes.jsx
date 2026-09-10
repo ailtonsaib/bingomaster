@@ -4,8 +4,9 @@ import { fmtMoney } from "@/lib/erpUtils";
 // Capa dos impostos da nota — os valores (bases e DIFAL) devem fechar com a
 // soma dos itens. Campos vazios usam automaticamente a soma dos itens;
 // preencher divergindo dos itens bloqueia a entrada.
-// sums: { base_icms, icms_value, base_pis_cofins, pis_value, cofins_value, difal_value }
-export default function ErpFiscalCapaTaxes({ capa, onChange, sums }) {
+// sums: { base_icms, icms_value, base_pis_cofins, pis_value, cofins_value, difal_value, cbs_value, ibs_value, ciap_value }
+// isPatrimonio: operação marcada como "Gera bem patrimonial (imobilizado)" — exibe o ICMS CIAP.
+export default function ErpFiscalCapaTaxes({ capa, onChange, sums, isPatrimonio = false }) {
   const cmp = (k) => {
     const v = Number(capa[k]) || 0;
     if (!(v > 0)) return null;
@@ -38,13 +39,18 @@ export default function ErpFiscalCapaTaxes({ capa, onChange, sums }) {
         {field("aliq_reducao_icms", "Alíq. Redução ICMS %")}
         {field("difal_value", "DIFAL", "difal_value")}
         {field("base_pis_cofins", "Base PIS/COFINS", "base_pis_cofins")}
+        {field("despesas_value", "Outras Despesas")}
+        {field("descontos_value", "Descontos")}
         {readOnly("Vlr ICMS (itens)", sums?.icms_value || 0)}
         {readOnly("Vlr PIS (itens)", sums?.pis_value || 0)}
         {readOnly("Vlr COFINS (itens)", sums?.cofins_value || 0)}
         {readOnly("Vlr CBS (itens)", sums?.cbs_value || 0)}
         {readOnly("Vlr IBS (itens)", sums?.ibs_value || 0)}
+        {isPatrimonio && field("ciap_curto_value", "ICMS CIAP Curto")}
+        {isPatrimonio && field("ciap_longo_value", "ICMS CIAP Longo")}
+        {isPatrimonio && readOnly("CIAP (itens)", sums?.ciap_value || 0)}
       </div>
-      <p className="text-[10px] text-gray-500 mt-1.5">Campos vazios usam a soma dos itens automaticamente — preencher divergindo dos itens bloqueia a entrada.</p>
+      <p className="text-[10px] text-gray-500 mt-1.5">Campos vazios usam a soma dos itens automaticamente — preencher divergindo dos itens bloqueia a entrada.{isPatrimonio ? " Operação patrimonial: informe o ICMS CIAP (curto/longo prazo) da capa e dos itens." : ""}</p>
     </div>
   );
 }

@@ -36,7 +36,7 @@ function recompute(item, field) {
   return {};
 }
 
-export default function ErpFiscalItemTaxes({ items, onChange }) {
+export default function ErpFiscalItemTaxes({ items, onChange, isPatrimonio = false }) {
   if (!items?.length) return null;
   const upd = (i, field, raw) => {
     const isCst = ["cst_icms", "cst_pis", "cst_cofins"].includes(field);
@@ -63,7 +63,7 @@ export default function ErpFiscalItemTaxes({ items, onChange }) {
       {items.map((it, i) => (
         <div key={i} className="border rounded-lg p-2">
           <p className="text-xs font-medium text-gray-700 mb-1.5">{i + 1}. {it.product_name || "Item sem descrição"}</p>
-          <div className="grid grid-cols-4 md:grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5">
             {cstInput(i, "cst_icms", "CST ICMS")}
             {numInput(i, "base_icms", "Base ICMS")}
             {numInput(i, "icms_rate", "Alíq. ICMS %")}
@@ -85,6 +85,9 @@ export default function ErpFiscalItemTaxes({ items, onChange }) {
             {cstInput(i, "cst_ibs", "CST IBS")}
             {numInput(i, "ibs_rate", "Alíq. IBS %")}
             {numInput(i, "ibs_value", "Vlr IBS")}
+            {numInput(i, "desconto_value", "Desconto R$")}
+            {numInput(i, "despesas_value", "Outras Despesas R$")}
+            {isPatrimonio && numInput(i, "ciap_value", "ICMS CIAP", "font-medium")}
           </div>
         </div>
       ))}

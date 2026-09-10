@@ -116,7 +116,7 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
       amount: Number(entry.freight.value) || 0,
       category: "Frete",
       status: "aberto",
-      due_date: due,
+      due_date: entry.freight.due_date || due,
     });
   }
   await base44.entities.ErpPayable.bulkCreate(payables.map(p => ({ ...p, fiscal_entry_id: entry.id })));
