@@ -15,6 +15,7 @@ import ErpFiscalCapaTaxes from "@/components/erp/ErpFiscalCapaTaxes";
 import { lancarEntradaNF } from "@/lib/erpDespesa";
 
 const digits = (v) => String(v || "").replace(/\D/g, "");
+const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
 // Modal de entrada de documento (NF-e/NFS-e por XML ou digitação manual).
 // XML: cadastra o fornecedor automaticamente se não existir, e vincula cada item
@@ -147,7 +148,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     setManualItems(prev => prev.map(it => it._taxEdited ? it : {
       ...it,
       cst_icms: "", base_icms: "", icms_rate: "", aliq_reducao_icms: "", icms_value: "", difal_value: "",
-      cst_pis: "", cst_cofins: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "", pis_value: "", cofins_value: "",
+      cst_pis: "", cst_cofins: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "",
+      aliq_pis: "", aliq_cofins: "", pauta_pis: "", pauta_cofins: "", pis_value: "", cofins_value: "",
       cst_cbs: "", cbs_rate: "", cbs_value: "", cst_ibs: "", ibs_rate: "", ibs_value: "",
     }));
   };
@@ -260,6 +262,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           cst_cofins: calc.cst_cofins || "",
           base_pis_cofins: Math.round((calc.pis_base || 0) * 100) / 100,
           aliq_pis_cofins: calc.pis_rate || 0,
+          aliq_pis: calc.pis_rate || 0,
+          aliq_cofins: calc.cofins_rate || 0,
           pis_value: Math.round((calc.pis_value || 0) * 100) / 100,
           cofins_value: Math.round((calc.cofins_value || 0) * 100) / 100,
           cst_cbs: calc.cst_cbs || "",
@@ -468,7 +472,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           if (supplier && product) {
             await ensureLink(supplier, product, it);
           }
-          resolvedItems.push({ ...it, product_id: product?.id || undefined, product_code: product?.code || it.product_code });
+          resolvedItems.push({
+            ...it,
+            product_id: product?.id || undefined,
+            product_code: product?.code || it.product_code,
+            base_icms: r2(it.base_icms), icms_value: r2(it.icms_value), difal_value: r2(it.difal_value),
+            base_pis_cofins: r2(it.base_pis_cofins), pis_value: r2(it.pis_value), cofins_value: r2(it.cofins_value),
+            ipi_value: r2(it.ipi_value),
+          });
         }
         const valueDiff = parsed.totals.total_nota - (po?.total_value || 0);
         const valuesMatch = Math.abs(valueDiff) < 0.01;
@@ -488,11 +499,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           cfop: parsed.nota.cfop,
           total_products: parsed.totals.total_products,
           total_nota: parsed.totals.total_nota,
-          total_icms: parsed.totals.total_icms,
-          total_ipi: parsed.totals.total_ipi,
-          total_pis: parsed.totals.total_pis,
-          total_cofins: parsed.totals.total_cofins,
-          base_icms: (parsed.items || []).reduce((s, it) => s + (Number(it.icms_rate) > 0 ? (Number(it.icms_value) || 0) / (Number(it.icms_rate) / 100) : 0), 0),
+          total_icms: r2(parsed.totals.total_icms),
+          total_ipi: r2(parsed.totals.total_ipi),
+          total_pis: r2(parsed.totals.total_pis),
+          total_cofins: r2(parsed.totals.total_cofins),
+          base_icms: r2((parsed.items || []).reduce((s, it) => s + (Number(it.icms_rate) > 0 ? (Number(it.icms_value) || 0) / (Number(it.icms_rate) / 100) : 0), 0)),
           despesas_value: parsed.totals.despesas || 0,
           descontos_value: parsed.totals.descontos || 0,
           items: resolvedItems,
@@ -541,7 +552,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         // Impostos por item: usados os campos mantidos pelo usuário (base/alíquota/
         // valores/CST); sem digitação, preenchidos pela regra fiscal da operação.
         // Gravados no item para gerar os créditos e o custo do produto sem os impostos.
-        const taxOr = (v, fb) => (v !== undefined && v !== "" && Number(v) !== 0) ? Number(v) : (fb || 0);
+        const taxOr = (v, fb) => (v !== undefined && v !== "" && Number(v) !== 0) ? r2(v) : r2(fb);
         const items = updatedItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => {
           const calc = calcManualItem(it);
           const qty = Number(it.quantity) || 0;
@@ -563,7 +574,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             cst_cofins: it.cst_cofins || calc?.cst_cofins || "",
             base_pis_cofins: taxOr(it.base_pis_cofins, calc?.pis_base),
             aliq_pis_cofins: taxOr(it.aliq_pis_cofins, calc?.pis_rate),
+            aliq_pis: taxOr(it.aliq_pis, calc?.pis_rate),
+            aliq_cofins: taxOr(it.aliq_cofins, calc?.cofins_rate),
             pauta_pis_cofins: Number(it.pauta_pis_cofins) || 0,
+            pauta_pis: Number(it.pauta_pis) || 0,
+            pauta_cofins: Number(it.pauta_cofins) || 0,
             pis_value: taxOr(it.pis_value, calc?.pis_value),
             cofins_value: taxOr(it.cofins_value, calc?.cofins_value),
             cst_cbs: it.cst_cbs || calc?.cst_cbs || "",

@@ -10,6 +10,7 @@ import { fmtMoney } from "@/lib/erpUtils";
 const EMPTY_ITEM = { product_id: "", product_name: "", product_code: "", quantity: 1, unit_price: 0,
   cst_icms: "", base_icms: "", icms_rate: "", aliq_reducao_icms: "", icms_value: "", difal_value: "",
   cst_pis: "", cst_cofins: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "",
+  aliq_pis: "", aliq_cofins: "", pauta_pis: "", pauta_cofins: "",
   pis_value: "", cofins_value: "", ipi_value: "",
   cst_cbs: "", cbs_rate: "", cbs_value: "", cst_ibs: "", ibs_rate: "", ibs_value: "" };
 
@@ -43,10 +44,18 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
     notes: entry.notes || "",
   });
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
   const [items, setItems] = useState((entry.items || []).map(it => ({
     ...EMPTY_ITEM, ...it,
     quantity: Number(it.quantity) || 0,
     unit_price: Number(it.unit_price) || 0,
+    base_icms: r2(it.base_icms), icms_value: r2(it.icms_value), difal_value: r2(it.difal_value),
+    base_pis_cofins: r2(it.base_pis_cofins), pis_value: r2(it.pis_value), cofins_value: r2(it.cofins_value),
+    cbs_value: r2(it.cbs_value), ibs_value: r2(it.ibs_value), ipi_value: r2(it.ipi_value),
+    aliq_pis: Number(it.aliq_pis ?? it.aliq_pis_cofins) || 0,
+    aliq_cofins: Number(it.aliq_cofins ?? it.aliq_pis_cofins) || 0,
+    pauta_pis: Number(it.pauta_pis ?? it.pauta_pis_cofins) || 0,
+    pauta_cofins: Number(it.pauta_cofins ?? it.pauta_pis_cofins) || 0,
   })));
   const [capa, setCapa] = useState({
     base_icms: entry.base_icms || "", aliq_icms: entry.aliq_icms || "", aliq_reducao_icms: entry.aliq_reducao_icms || "",
@@ -92,16 +101,18 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
       quantity: Number(it.quantity) || 0,
       unit_price: Number(it.unit_price) || 0,
       total: Math.round(((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)) * 100) / 100,
-      cst_icms: it.cst_icms || "", base_icms: Number(it.base_icms) || 0, icms_rate: Number(it.icms_rate) || 0,
-      aliq_reducao_icms: Number(it.aliq_reducao_icms) || 0, icms_value: Number(it.icms_value) || 0,
-      difal_value: Number(it.difal_value) || 0,
+      cst_icms: it.cst_icms || "", base_icms: r2(it.base_icms), icms_rate: Number(it.icms_rate) || 0,
+      aliq_reducao_icms: Number(it.aliq_reducao_icms) || 0, icms_value: r2(it.icms_value),
+      difal_value: r2(it.difal_value),
       cst_pis: it.cst_pis || "", cst_cofins: it.cst_cofins || "",
-      base_pis_cofins: Number(it.base_pis_cofins) || 0, aliq_pis_cofins: Number(it.aliq_pis_cofins) || 0,
+      base_pis_cofins: r2(it.base_pis_cofins), aliq_pis_cofins: Number(it.aliq_pis_cofins) || 0,
+      aliq_pis: Number(it.aliq_pis) || 0, aliq_cofins: Number(it.aliq_cofins) || 0,
       pauta_pis_cofins: Number(it.pauta_pis_cofins) || 0,
-      pis_value: Number(it.pis_value) || 0, cofins_value: Number(it.cofins_value) || 0,
-      cst_cbs: it.cst_cbs || "", cbs_rate: Number(it.cbs_rate) || 0, cbs_value: Number(it.cbs_value) || 0,
-      cst_ibs: it.cst_ibs || "", ibs_rate: Number(it.ibs_rate) || 0, ibs_value: Number(it.ibs_value) || 0,
-      ipi_value: Number(it.ipi_value) || 0,
+      pauta_pis: Number(it.pauta_pis) || 0, pauta_cofins: Number(it.pauta_cofins) || 0,
+      pis_value: r2(it.pis_value), cofins_value: r2(it.cofins_value),
+      cst_cbs: it.cst_cbs || "", cbs_rate: Number(it.cbs_rate) || 0, cbs_value: r2(it.cbs_value),
+      cst_ibs: it.cst_ibs || "", ibs_rate: Number(it.ibs_rate) || 0, ibs_value: r2(it.ibs_value),
+      ipi_value: r2(it.ipi_value),
     }));
     // Capa x itens: os valores dos impostos da capa devem fechar com a soma dos itens
     const taxSumOf = (k) => mapped.reduce((s, it) => s + (Number(it[k]) || 0), 0);

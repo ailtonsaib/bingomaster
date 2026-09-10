@@ -10,13 +10,22 @@ function recompute(item, field) {
   if (["base_icms", "icms_rate", "aliq_reducao_icms"].includes(field)) {
     return { icms_value: r2((n("base_icms") * n("icms_rate") / 100) * (1 - n("aliq_reducao_icms") / 100)) };
   }
-  if (["base_pis_cofins", "aliq_pis_cofins"].includes(field)) {
-    const v = r2(n("base_pis_cofins") * n("aliq_pis_cofins") / 100);
-    return { pis_value: v, cofins_value: v };
+  if (["base_pis_cofins"].includes(field)) {
+    const aPis = n("aliq_pis") || n("aliq_pis_cofins");
+    const aCof = n("aliq_cofins") || n("aliq_pis_cofins");
+    return { pis_value: r2(n("base_pis_cofins") * aPis / 100), cofins_value: r2(n("base_pis_cofins") * aCof / 100) };
   }
-  if (field === "pauta_pis_cofins") {
-    const v = r2(n("pauta_pis_cofins") * (Number(item.quantity) || 0));
-    return { pis_value: v, cofins_value: v };
+  if (field === "aliq_pis") {
+    return { pis_value: r2(n("base_pis_cofins") * (n("aliq_pis") || n("aliq_pis_cofins")) / 100) };
+  }
+  if (field === "aliq_cofins") {
+    return { cofins_value: r2(n("base_pis_cofins") * (n("aliq_cofins") || n("aliq_pis_cofins")) / 100) };
+  }
+  if (field === "pauta_pis") {
+    return { pis_value: r2(n("pauta_pis") * (Number(item.quantity) || 0)) };
+  }
+  if (field === "pauta_cofins") {
+    return { cofins_value: r2(n("pauta_cofins") * (Number(item.quantity) || 0)) };
   }
   if (field === "cbs_rate") {
     return { cbs_value: r2(n("quantity") * n("unit_price") * n("cbs_rate") / 100) };
@@ -64,8 +73,10 @@ export default function ErpFiscalItemTaxes({ items, onChange }) {
             {cstInput(i, "cst_pis", "CST PIS")}
             {cstInput(i, "cst_cofins", "CST COFINS")}
             {numInput(i, "base_pis_cofins", "Base PIS/COFINS")}
-            {numInput(i, "aliq_pis_cofins", "Alíq. PIS/COFINS %")}
-            {numInput(i, "pauta_pis_cofins", "Pauta R$/un")}
+            {numInput(i, "aliq_pis", "Alíq. PIS %")}
+            {numInput(i, "aliq_cofins", "Alíq. COFINS %")}
+            {numInput(i, "pauta_pis", "Pauta PIS R$/un")}
+            {numInput(i, "pauta_cofins", "Pauta COFINS R$/un")}
             {numInput(i, "pis_value", "Vlr PIS", "font-medium")}
             {numInput(i, "cofins_value", "Vlr COFINS", "font-medium")}
             {cstInput(i, "cst_cbs", "CST CBS")}

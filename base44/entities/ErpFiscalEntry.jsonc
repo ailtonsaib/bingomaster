@@ -354,6 +354,26 @@
             "default": 0,
             "description": "Pauta do PIS/COFINS do item (R$ por unidade \u2014 usada no lugar da al\u00edquota)"
           },
+          "aliq_pis": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do PIS do item (%)"
+          },
+          "aliq_cofins": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do COFINS do item (%)"
+          },
+          "pauta_pis": {
+            "type": "number",
+            "default": 0,
+            "description": "Pauta do PIS do item (R$ por unidade \u2014 usada no lugar da al\u00edquota)"
+          },
+          "pauta_cofins": {
+            "type": "number",
+            "default": 0,
+            "description": "Pauta do COFINS do item (R$ por unidade \u2014 usada no lugar da al\u00edquota)"
+          },
           "ipi_value": {
             "type": "number"
           },
