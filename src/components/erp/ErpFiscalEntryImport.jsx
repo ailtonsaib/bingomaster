@@ -10,6 +10,8 @@ import { computeErpFiscalItem } from "@/lib/erpTaxCalc";
 import ErpProductFormModal from "@/components/erp/ErpProductFormModal";
 import ErpManualInstallments from "@/components/erp/ErpManualInstallments";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
+import ErpFiscalItemTaxes from "@/components/erp/ErpFiscalItemTaxes";
+import ErpFiscalCapaTaxes from "@/components/erp/ErpFiscalCapaTaxes";
 import { lancarEntradaNF } from "@/lib/erpDespesa";
 
 const digits = (v) => String(v || "").replace(/\D/g, "");
@@ -64,6 +66,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   });
   const [manualItems, setManualItems] = useState([{ product_name: "", product_id: "", quantity: 1, unit_price: 0 }]);
   const setM = (k, v) => setManual(p => ({ ...p, [k]: v }));
+  // Impostos da capa — devem fechar com a soma dos itens
+  const [capa, setCapa] = useState({ base_icms: "", aliq_icms: "", aliq_reducao_icms: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "", difal_value: "" });
 
   // Fornecedor da entrada (passo 2): pesquisável no cadastro ou informado por CNPJ.
   // CNPJ não cadastrado → consulta a Receita Federal e cadastra ao dar entrada.
@@ -200,6 +204,53 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       unit_price: it.unit_cost || 0,
     })));
   }, [poId, mode]);
+
+  // Soma dos impostos dos itens — base de comparação com a capa
+  const taxSums = (() => {
+    const s = (k) => manualItems.reduce((a, it) => a + (Number(it[k]) || 0), 0);
+    return {
+      base_icms: Math.round(s("base_icms") * 100) / 100,
+      icms_value: Math.round(s("icms_value") * 100) / 100,
+      base_pis_cofins: Math.round(s("base_pis_cofins") * 100) / 100,
+      pis_value: Math.round(s("pis_value") * 100) / 100,
+      cofins_value: Math.round(s("cofins_value") * 100) / 100,
+      difal_value: Math.round(s("difal_value") * 100) / 100,
+    };
+  })();
+
+  // Preenche os impostos de cada item pela regra fiscal da operação (digitação
+  // manual) — depois o usuário mantém os campos por item (base/alíquota/valores/CST)
+  const itemsSignature = manualItems.map(it => `${it.product_id}|${it.product_name}|${it.quantity}|${it.unit_price}`).join(";");
+  useEffect(() => {
+    if (mode !== "manual" || !opId) return;
+    setManualItems(prev => {
+      let changed = false;
+      const next = prev.map(it => {
+        if (it._taxEdited) return it;
+        const hasTaxes = ["base_icms", "icms_value", "pis_value", "cofins_value", "difal_value"].some(k => it[k] !== undefined && it[k] !== "" && Number(it[k]) !== 0);
+        if (hasTaxes) return it;
+        const calc = calcManualItem(it);
+        if (!calc || !(calc.icms_value || calc.pis_value || calc.cofins_value || calc.ipi_value || calc.difal)) return it;
+        changed = true;
+        return {
+          ...it,
+          cst_icms: calc.cst_icms || "",
+          base_icms: Math.round((calc.icms_base || 0) * 100) / 100,
+          icms_rate: calc.icms_rate || 0,
+          aliq_reducao_icms: 0,
+          icms_value: Math.round((calc.icms_value || 0) * 100) / 100,
+          difal_value: Math.round((calc.difal?.difal_total || 0) * 100) / 100,
+          cst_pis: calc.cst_pis || "",
+          cst_cofins: calc.cst_cofins || "",
+          base_pis_cofins: Math.round((calc.pis_base || 0) * 100) / 100,
+          aliq_pis_cofins: calc.pis_rate || 0,
+          pis_value: Math.round((calc.pis_value || 0) * 100) / 100,
+          cofins_value: Math.round((calc.cofins_value || 0) * 100) / 100,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [opId, forn.uf, taxRules, manualItems.length, mode, itemsSignature]);
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
@@ -398,6 +449,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_ipi: parsed.totals.total_ipi,
           total_pis: parsed.totals.total_pis,
           total_cofins: parsed.totals.total_cofins,
+          base_icms: (parsed.items || []).reduce((s, it) => s + (Number(it.icms_rate) > 0 ? (Number(it.icms_value) || 0) / (Number(it.icms_rate) / 100) : 0), 0),
           despesas_value: parsed.totals.despesas || 0,
           descontos_value: parsed.totals.descontos || 0,
           items: resolvedItems,
@@ -443,8 +495,10 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           const sumInst = manualInstallments.reduce((s, it) => s + (Number(it.amount) || 0), 0);
           if (total > 0 && Math.abs(sumInst - total) > 0.01) { setSaving(false); setError(`A soma das parcelas (${fmtMoney(sumInst)}) deve ser igual ao total do documento (${fmtMoney(total)}).`); return; }
         }
-        // Impostos calculados pela regra fiscal da operação — gravados no item
-        // para gerar os créditos e o custo do produto sem os impostos
+        // Impostos por item: usados os campos mantidos pelo usuário (base/alíquota/
+        // valores/CST); sem digitação, preenchidos pela regra fiscal da operação.
+        // Gravados no item para gerar os créditos e o custo do produto sem os impostos.
+        const taxOr = (v, fb) => (v !== undefined && v !== "" && Number(v) !== 0) ? Number(v) : (fb || 0);
         const items = updatedItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => {
           const calc = calcManualItem(it);
           const qty = Number(it.quantity) || 0;
@@ -456,14 +510,34 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             unit_price: unit,
             total: qty * unit,
             ncm: "", cfop: calc?.cfop || "", unit: "UN",
-            cst_icms: calc?.cst_icms || "",
-            icms_rate: calc?.icms_rate || 0,
-            icms_value: calc?.icms_value || 0,
+            cst_icms: it.cst_icms || calc?.cst_icms || "",
+            base_icms: taxOr(it.base_icms, calc?.icms_base),
+            icms_rate: taxOr(it.icms_rate, calc?.icms_rate),
+            aliq_reducao_icms: Number(it.aliq_reducao_icms) || 0,
+            icms_value: taxOr(it.icms_value, calc?.icms_value),
+            difal_value: taxOr(it.difal_value, calc?.difal?.difal_total),
+            cst_pis: it.cst_pis || calc?.cst_pis || "",
+            cst_cofins: it.cst_cofins || calc?.cst_cofins || "",
+            base_pis_cofins: taxOr(it.base_pis_cofins, calc?.pis_base),
+            aliq_pis_cofins: taxOr(it.aliq_pis_cofins, calc?.pis_rate),
+            pauta_pis_cofins: Number(it.pauta_pis_cofins) || 0,
+            pis_value: taxOr(it.pis_value, calc?.pis_value),
+            cofins_value: taxOr(it.cofins_value, calc?.cofins_value),
             ipi_value: calc?.ipi_value || 0,
-            pis_value: calc?.pis_value || 0,
-            cofins_value: calc?.cofins_value || 0,
           };
         });
+        // Capa x itens: os valores dos impostos da capa devem fechar com a soma dos itens
+        const taxSumOf = (k) => items.reduce((s, it) => s + (Number(it[k]) || 0), 0);
+        const capaNum = {
+          base_icms: Number(capa.base_icms) || 0,
+          base_pis_cofins: Number(capa.base_pis_cofins) || 0,
+          difal_value: Number(capa.difal_value) || 0,
+        };
+        for (const [k, label] of [["base_icms", "Base de cálculo do ICMS"], ["base_pis_cofins", "Base de PIS/COFINS"], ["difal_value", "DIFAL"]]) {
+          if (capaNum[k] > 0 && Math.abs(capaNum[k] - taxSumOf(k)) > 0.01) {
+            setSaving(false); setError(`${label} da capa (${fmtMoney(capaNum[k])}) não fecha com a soma dos itens (${fmtMoney(taxSumOf(k))}).`); return;
+          }
+        }
         const valueDiff = total - (po?.total_value || 0);
         const valuesMatch = Math.abs(valueDiff) < 0.01;
         payload = {
@@ -490,6 +564,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_ipi: items.reduce((s, it) => s + (it.ipi_value || 0), 0),
           total_pis: items.reduce((s, it) => s + (it.pis_value || 0), 0),
           total_cofins: items.reduce((s, it) => s + (it.cofins_value || 0), 0),
+          base_icms: capaNum.base_icms > 0 ? capaNum.base_icms : Math.round(taxSumOf("base_icms") * 100) / 100,
+          aliq_icms: Number(capa.aliq_icms) || 0,
+          aliq_reducao_icms: Number(capa.aliq_reducao_icms) || 0,
+          base_pis_cofins: capaNum.base_pis_cofins > 0 ? capaNum.base_pis_cofins : Math.round(taxSumOf("base_pis_cofins") * 100) / 100,
+          aliq_pis_cofins: Number(capa.aliq_pis_cofins) || 0,
+          pauta_pis_cofins: Number(capa.pauta_pis_cofins) || 0,
+          difal_value: capaNum.difal_value > 0 ? capaNum.difal_value : Math.round(taxSumOf("difal_value") * 100) / 100,
           dif_aliquota_value: Number(manual.dif_aliquota_value) || 0,
           despesas_value: Number(manual.despesas_value) || 0,
           descontos_value: Number(manual.descontos_value) || 0,
@@ -588,7 +669,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       // aguardando aprovação do admin no painel.
       if (payload.status === "aprovada") {
         try { await lancarEntradaNF(user, entry, accounts); }
-        catch (e) { console.error("Falha ao gerar lançamento contábil automático:", e); }
+        catch (e) { console.error("Falha ao gerar lançamento contábil automático:", e); alert(`Lançamento contábil não gerado: ${e.message}`); }
       }
       onSaved?.();
       onClose();
@@ -796,19 +877,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   {products.map(p => <option key={p.id} value={p.name}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
                 </datalist>
               </div>
-              {(() => {
-                const calcs = manualItems.filter(it => it.product_name.trim() && it.quantity > 0).map(it => calcManualItem(it)).filter(Boolean);
-                const sum = (k) => calcs.reduce((s, c) => s + (c[k] || 0), 0);
-                if (!calcs.length || (sum("icms_value") === 0 && sum("ipi_value") === 0 && sum("pis_value") === 0 && sum("cofins_value") === 0)) return null;
-                return (
-                  <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-2.5 text-xs text-emerald-800 flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5" />
-                    <span>
-                      Impostos calculados pela operação (a creditar): ICMS <b>{fmtMoney(sum("icms_value"))}</b> • IPI <b>{fmtMoney(sum("ipi_value"))}</b> • PIS <b>{fmtMoney(sum("pis_value"))}</b> • COFINS <b>{fmtMoney(sum("cofins_value"))}</b> — o custo dos produtos será gravado deduzido destes créditos.
-                    </span>
-                  </div>
-                );
-              })()}
+              <ErpFiscalItemTaxes items={manualItems} onChange={(i, patch) => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, ...patch } : x))} />
+              <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} />
             </div>
           )}
 

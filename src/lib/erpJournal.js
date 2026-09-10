@@ -46,7 +46,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     for (const it of entry.items) {
       const prod = (it.product_id && byId.get(it.product_id)) || products.find((p) => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
       if (!prod?.account_estoque_id) continue;
-      const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0);
+      const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0) + (Number(it.difal_value) || 0);
       const gross = Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
       const net = gross - credited;
       if (net > 0) stockItems.push({ prod, net, name: it.product_name || prod.name });
@@ -73,38 +73,44 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     { type: "ICMS", value: entry.total_icms || 0 },
     { type: "PIS", value: entry.total_pis || 0 },
     { type: "COFINS", value: entry.total_cofins || 0 },
-    ...(acctLine("ipi") ? [{ type: "IPI", value: entry.total_ipi || 0 }] : []),
+    { type: "IPI", value: entry.total_ipi || 0 },
   ];
   let despesaBase = entry.total_nota;
   const debitTaxLines = [];
+  const pushTaxLine = (acc, t, complement) => {
+    debitTaxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: t.value, credit: 0, complement });
+    despesaBase -= t.value;
+  };
   for (const t of taxes) {
-    if (t.value > 0) {
-      const pl = acctLine(String(t.type).toLowerCase());
-      if (pl) {
-        const acc = byIdOrCache(pl);
-        debitTaxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: t.value, credit: 0, complement: pl.history_text || `Crédito ${t.type} NF ${entry.nota_number}` });
-        despesaBase -= t.value;
-        continue;
-      }
-      const cc = (param?.credit_accounts || []).find((c) => c.type === t.type && c.account_id);
-      if (cc) {
-        const acc = accounts.find((a) => a.id === cc.account_id);
-        if (acc) {
-          debitTaxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: t.value, credit: 0, complement: `Crédito ${t.type} NF ${entry.nota_number}` });
-          despesaBase -= t.value;
-        } else {
-          throw new Error(`Conta de crédito de ${t.type} não encontrada no plano de contas.`);
-        }
-      } else if (param?.outras_impostos_account_id) {
-        const acc = accounts.find((a) => a.id === param.outras_impostos_account_id);
-        if (acc) {
-          debitTaxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: t.value, credit: 0, complement: `Outras impostos ${t.type} NF ${entry.nota_number}` });
-          despesaBase -= t.value;
-        }
-        // se a conta de outras não existir no plano, mantém na despesa (rateio)
-      }
-      // sem crédito e sem conta de outras configurada → permanece na despesa (despesaBase)
+    if (!(t.value > 0)) continue;
+    const pl = acctLine(String(t.type).toLowerCase());
+    if (pl) { pushTaxLine(byIdOrCache(pl), t, pl.history_text || `Crédito ${t.type} NF ${entry.nota_number}`); continue; }
+    const cc = (param?.credit_accounts || []).find((c) => c.type === t.type && c.account_id);
+    if (cc) {
+      const acc = accounts.find((a) => a.id === cc.account_id);
+      if (!acc) throw new Error(`Conta de crédito de ${t.type} não encontrada no plano de contas.`);
+      pushTaxLine(acc, t, `Crédito ${t.type} NF ${entry.nota_number}`);
+      continue;
     }
+    if (param?.outras_impostos_account_id) {
+      const acc = accounts.find((a) => a.id === param.outras_impostos_account_id);
+      if (acc) { pushTaxLine(acc, t, `Outras impostos ${t.type} NF ${entry.nota_number}`); continue; }
+    }
+    // Imposto destacado exige débito a recuperar — sem conta configurada o
+    // lançamento ficaria errado (imposto fora do custo sem contrapartida)
+    throw new Error(`${t.type} destacado (${t.value}) sem conta para débito: configure a conta de ${t.type} a recuperar na parametrização contábil da operação (ou no parâmetro de despesas).`);
+  }
+  // DIFAL (entrada interestadual): débito a recuperar na conta de ICMS — sai do custo
+  const difalValue = Number(entry.difal_value) || 0;
+  if (difalValue > 0) {
+    const pl = acctLine("icms");
+    const cc = (param?.credit_accounts || []).find((c) => c.type === "ICMS" && c.account_id);
+    const acc = pl ? byIdOrCache(pl)
+      : cc ? accounts.find((a) => a.id === cc.account_id)
+      : (param?.outras_impostos_account_id ? accounts.find((a) => a.id === param.outras_impostos_account_id) : null);
+    if (!acc) throw new Error(`DIFAL destacado (${difalValue}) sem conta para débito: configure a conta de ICMS a recuperar na parametrização contábil da operação.`);
+    debitTaxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: difalValue, credit: 0, complement: `DIFAL NF ${entry.nota_number}` });
+    despesaBase -= difalValue;
   }
 
   // Linhas opcionais da parametrização da operação: despesas acessórias e CIAP

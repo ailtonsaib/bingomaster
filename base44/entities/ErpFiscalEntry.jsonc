@@ -88,6 +88,41 @@
       "default": 0,
       "description": "Valor total da nota (vNF / ValorLiquidoNfse)"
     },
+    "base_icms": {
+      "type": "number",
+      "default": 0,
+      "description": "Base de c\u00e1lculo do ICMS (capa \u2014 deve fechar com a soma dos itens)"
+    },
+    "aliq_icms": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota do ICMS (capa, %)"
+    },
+    "aliq_reducao_icms": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota de redu\u00e7\u00e3o da base do ICMS (capa, %)"
+    },
+    "base_pis_cofins": {
+      "type": "number",
+      "default": 0,
+      "description": "Base de c\u00e1lculo do PIS/COFINS (capa \u2014 deve fechar com a soma dos itens)"
+    },
+    "aliq_pis_cofins": {
+      "type": "number",
+      "default": 0,
+      "description": "Al\u00edquota do PIS/COFINS (capa, %)"
+    },
+    "pauta_pis_cofins": {
+      "type": "number",
+      "default": 0,
+      "description": "Pauta do PIS/COFINS (capa, R$ por unidade \u2014 usada no lugar da al\u00edquota)"
+    },
+    "difal_value": {
+      "type": "number",
+      "default": 0,
+      "description": "DIFAL total (capa \u2014 deve fechar com a soma dos itens)"
+    },
     "total_icms": {
       "type": "number",
       "default": 0
@@ -225,10 +260,14 @@
     "items": {
       "type": "array",
       "default": [],
-      "description": "Itens da nota",
+      "description": "Itens da nota \u2014 os impostos por item (CST, base, al\u00edquota, redu\u00e7\u00e3o, pauta, valores) devem fechar com os totais da capa",
       "items": {
         "type": "object",
         "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "ID do produto vinculado (ErpProduct)"
+          },
           "product_code": {
             "type": "string"
           },
@@ -257,13 +296,53 @@
             "type": "number"
           },
           "cst_icms": {
-            "type": "string"
+            "type": "string",
+            "description": "CST do ICMS do item"
+          },
+          "base_icms": {
+            "type": "number",
+            "default": 0,
+            "description": "Base de c\u00e1lculo do ICMS do item"
           },
           "icms_rate": {
-            "type": "number"
+            "type": "number",
+            "description": "Al\u00edquota do ICMS do item (%)"
+          },
+          "aliq_reducao_icms": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota de redu\u00e7\u00e3o da base do ICMS do item (%)"
           },
           "icms_value": {
             "type": "number"
+          },
+          "difal_value": {
+            "type": "number",
+            "default": 0,
+            "description": "DIFAL do item (ICMS interestadual a recuperar)"
+          },
+          "cst_pis": {
+            "type": "string",
+            "description": "CST do PIS do item"
+          },
+          "cst_cofins": {
+            "type": "string",
+            "description": "CST do COFINS do item"
+          },
+          "base_pis_cofins": {
+            "type": "number",
+            "default": 0,
+            "description": "Base de c\u00e1lculo do PIS/COFINS do item"
+          },
+          "aliq_pis_cofins": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do PIS/COFINS do item (%)"
+          },
+          "pauta_pis_cofins": {
+            "type": "number",
+            "default": 0,
+            "description": "Pauta do PIS/COFINS do item (R$ por unidade \u2014 usada no lugar da al\u00edquota)"
           },
           "ipi_value": {
             "type": "number"

@@ -164,7 +164,7 @@ export async function lancarEntradaNF(user, entry, accounts) {
     const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
     if (prod) {
       // Custo do produto sem os impostos a creditar (ICMS/IPI/PIS/COFINS) + frete líquido
-      const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0);
+      const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0) + (Number(it.difal_value) || 0);
       const qty = Number(it.quantity) || 0;
       const gross = Number(it.total) || qty * (Number(it.unit_price) || 0);
       const freteShare = freightNet > 0 && itemsGrossTotal > 0 ? freightNet * (gross / itemsGrossTotal) : 0;
