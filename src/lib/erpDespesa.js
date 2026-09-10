@@ -1,9 +1,21 @@
 import { base44 } from "@/api/base44Client";
 import { gerarLancamentoEntrada, gerarLancamentoFrete } from "@/lib/erpJournal";
 
+// Carrega a operação (ErpOperation) da entrada — null quando não vinculada/falha
+async function loadOperation(user, operation_id) {
+  if (!operation_id) return null;
+  try { return await base44.entities.ErpOperation.get(operation_id); } catch (e) { return null; }
+}
+
 // Gera o lançamento contábil de uma despesa (ErpFiscalEntry entry_kind=despesa).
 // Requer: entry.apportionments, entry.retentions, accounts (ErpChartAccount analíticas), param (ErpExpenseParameter).
+// Se a operação tiver a flag Contábil desligada, não gera lançamento — apenas marca a despesa como lançada.
 export async function gerarContabilDespesa(user, entry, accounts, param) {
+  const op = await loadOperation(user, entry.operation_id);
+  if (op && op.flag_contabil === false) {
+    await base44.entities.ErpFiscalEntry.update(entry.id, { status: "lancada" });
+    return null;
+  }
   const retList = (entry.retentions || []).filter(r => (r.value || 0) > 0);
   const je = await gerarLancamentoEntrada(
     user,
@@ -32,6 +44,15 @@ export async function gerarContabilDespesa(user, entry, accounts, param) {
 export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
   const prefix = opts.prefix || "Despesa";
   const category = opts.category || "Despesa";
+  // Flags da operação: Financeiro desligada → não gera contas a pagar
+  const op = await loadOperation(user, entry.operation_id);
+  const geraPrincipal = !op || op.flag_financeiro !== false;
+  const freteOp = entry.freight?.operation_id ? await loadOperation(user, entry.freight.operation_id) : null;
+  const geraFrete = !!(entry.freight && (Number(entry.freight.value) || 0) > 0 && (!freteOp || freteOp.flag_financeiro !== false));
+  if (!geraPrincipal && !geraFrete) {
+    await base44.entities.ErpFiscalEntry.update(entry.id, { financeiro_gerado: true });
+    return 0;
+  }
   const retList = (entry.retentions || []).filter(r => (r.value || 0) > 0);
   const totalRetido = retList.reduce((s, r) => s + (r.value || 0), 0);
   const hasPo = !!entry.purchase_order_id;
@@ -39,53 +60,55 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
   const due = entry.due_date || undefined;
   const instList = (entry.installments || []).filter(i => (i.amount || 0) > 0);
   const payables = [];
-  if (instList.length && totalRetido === 0) {
-    // Parcelas informadas (digitação manual): uma conta a pagar por parcela
-    instList.forEach((inst, idx) => {
+  if (geraPrincipal) {
+    if (instList.length && totalRetido === 0) {
+      // Parcelas informadas (digitação manual): uma conta a pagar por parcela
+      instList.forEach((inst, idx) => {
+        payables.push({
+          user_email: user.email,
+          description: `${desc} — Parcela ${idx + 1}/${instList.length}`,
+          beneficiary: entry.supplier_name || "",
+          amount: inst.amount,
+          category,
+          status: "aberto",
+          due_date: inst.due_date || due,
+        });
+      });
+    } else if (totalRetido > 0) {
       payables.push({
         user_email: user.email,
-        description: `${desc} — Parcela ${idx + 1}/${instList.length}`,
+        description: desc,
         beneficiary: entry.supplier_name || "",
-        amount: inst.amount,
+        amount: (entry.total_nota || 0) - totalRetido,
         category,
         status: "aberto",
-        due_date: inst.due_date || due,
+        due_date: due,
       });
-    });
-  } else if (totalRetido > 0) {
-    payables.push({
-      user_email: user.email,
-      description: desc,
-      beneficiary: entry.supplier_name || "",
-      amount: (entry.total_nota || 0) - totalRetido,
-      category,
-      status: "aberto",
-      due_date: due,
-    });
-    for (const r of retList) {
+      for (const r of retList) {
+        payables.push({
+          user_email: user.email,
+          description: `Retenção ${r.type} - NF ${entry.nota_number} (${entry.supplier_name || ""})`,
+          beneficiary: r.partner_name,
+          amount: r.value,
+          category: `Retenção ${r.type}`,
+          status: "aberto",
+          due_date: due,
+        });
+      }
+    } else {
       payables.push({
         user_email: user.email,
-        description: `Retenção ${r.type} - NF ${entry.nota_number} (${entry.supplier_name || ""})`,
-        beneficiary: r.partner_name,
-        amount: r.value,
-        category: `Retenção ${r.type}`,
+        description: desc,
+        beneficiary: entry.supplier_name || "",
+        amount: entry.total_nota || 0,
+        category,
         status: "aberto",
         due_date: due,
       });
     }
-  } else {
-    payables.push({
-      user_email: user.email,
-      description: desc,
-      beneficiary: entry.supplier_name || "",
-      amount: entry.total_nota || 0,
-      category,
-      status: "aberto",
-      due_date: due,
-    });
   }
   // Frete (CT-e/NF-e/NFS importado): título próprio para a transportadora
-  if (entry.freight && (Number(entry.freight.value) || 0) > 0) {
+  if (geraFrete) {
     payables.push({
       user_email: user.email,
       description: `Frete ${entry.freight.doc_number || ""} - ${entry.freight.supplier_name || ""} (NF ${entry.nota_number})`,
@@ -110,6 +133,12 @@ export async function lancarEntradaNF(user, entry, accounts) {
   if (!passivo) throw new Error("Cadastre uma conta de passivo 'Fornecedores' (ou 'Contas a Pagar') para gerar o lançamento.");
   if (!entry.apportionments?.length && entry.entry_kind !== "nf_entrada") throw new Error("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio ou informe o rateio.");
 
+  // Flags da operação: Contábil desligada → não gera lançamento contábil (nem do frete)
+  const op = await loadOperation(user, entry.operation_id);
+  const geraContabil = !op || op.flag_contabil !== false;
+  const freteOp = entry.freight?.operation_id ? await loadOperation(user, entry.freight.operation_id) : null;
+  const geraContabilFrete = !freteOp || freteOp.flag_contabil !== false;
+
   // Parametrização contábil da operação de entrada (ErpOperationAccounting) —
   // contas do lançamento definidas por operação (fornecedores/impostos a recuperar)
   let acctParam = null;
@@ -119,7 +148,10 @@ export async function lancarEntradaNF(user, entry, accounts) {
       acctParam = aps[0] || null;
     } catch (e) { acctParam = null; }
   }
-  const je = await gerarLancamentoEntrada(user, entry, accounts, acctParam ? { acctParam } : {});
+  let je = null;
+  if (geraContabil) {
+    je = await gerarLancamentoEntrada(user, entry, accounts, acctParam ? { acctParam } : {});
+  }
 
   // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
   const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
@@ -146,12 +178,11 @@ export async function lancarEntradaNF(user, entry, accounts) {
 
   await base44.entities.ErpFiscalEntry.update(entry.id, {
     status: "lancada",
-    journal_entry_id: je.id,
-    journal_entry_number: je.number,
+    ...(je ? { journal_entry_id: je.id, journal_entry_number: je.number } : {}),
   });
 
   // Lançamento do frete (transportadora): impostos a recuperar + custo líquido x fornecedor de frete
-  if (entry.freight && (Number(entry.freight.value) || 0) > 0) {
+  if (geraContabilFrete && entry.freight && (Number(entry.freight.value) || 0) > 0) {
     let freteParam = null;
     if (entry.freight.operation_id) {
       try {

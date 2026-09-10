@@ -24,12 +24,22 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
     description: operation?.description || "",
     is_patrimonio: !!operation?.is_patrimonio,
     is_active: operation?.is_active !== false,
+    flag_contabil: operation?.flag_contabil !== false,
+    flag_fiscal: operation?.flag_fiscal !== false,
+    flag_financeiro: operation?.flag_financeiro !== false,
+    cfop_dentro_estado: operation?.cfop_dentro_estado || "",
+    cfop_fora_estado: operation?.cfop_fora_estado || "",
+    cfop_importacao: operation?.cfop_importacao || "",
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome da operação."); return; }
+    if (form.flag_fiscal && !onlyDigits(form.cfop_dentro_estado) && !onlyDigits(form.cfop_fora_estado) && !onlyDigits(form.cfop_importacao)) {
+      alert("Operação marcada como Fiscal: informe pelo menos um CFOP (dentro do estado, fora do estado ou importação).");
+      return;
+    }
     setSaving(true);
     const payload = {
       user_email: user.email,
@@ -39,6 +49,12 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
       name: form.name.trim(),
       nature_operation: form.nature_operation || undefined,
       description: form.description || undefined,
+      flag_contabil: form.flag_contabil,
+      flag_fiscal: form.flag_fiscal,
+      flag_financeiro: form.flag_financeiro,
+      cfop_dentro_estado: onlyDigits(form.cfop_dentro_estado) || undefined,
+      cfop_fora_estado: onlyDigits(form.cfop_fora_estado) || undefined,
+      cfop_importacao: onlyDigits(form.cfop_importacao) || undefined,
       is_patrimonio: form.is_patrimonio,
       is_active: form.is_active,
     };
@@ -82,6 +98,22 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
 
           <div><Label>Natureza da Operação (texto livre)</Label><Input value={form.nature_operation} onChange={e => set("nature_operation", e.target.value)} /></div>
           <div><Label>Descrição</Label><Input value={form.description} onChange={e => set("description", e.target.value)} /></div>
+
+          <div className="border rounded-lg p-3 space-y-2 bg-gray-50">
+            <p className="text-xs font-semibold text-gray-600">Integrações da operação</p>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.flag_contabil} onChange={e => set("flag_contabil", e.target.checked)} className="w-4 h-4" /> Contábil</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.flag_fiscal} onChange={e => set("flag_fiscal", e.target.checked)} className="w-4 h-4" /> Fiscal</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.flag_financeiro} onChange={e => set("flag_financeiro", e.target.checked)} className="w-4 h-4" /> Financeiro</label>
+            </div>
+            <p className="text-[11px] text-gray-500">Contábil: gera lançamento contábil. Fiscal: exige CFOP e envia ao fiscal (SPEDs fiscais). Financeiro: gera as parcelas no contas a pagar.</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div><Label className="text-xs">CFOP dentro do estado</Label><Input value={form.cfop_dentro_estado} onChange={e => set("cfop_dentro_estado", onlyDigits(e.target.value).slice(0, 4))} placeholder="ex: 1102" /></div>
+              <div><Label className="text-xs">CFOP fora do estado</Label><Input value={form.cfop_fora_estado} onChange={e => set("cfop_fora_estado", onlyDigits(e.target.value).slice(0, 4))} placeholder="ex: 2102" /></div>
+              <div><Label className="text-xs">CFOP importação</Label><Input value={form.cfop_importacao} onChange={e => set("cfop_importacao", onlyDigits(e.target.value).slice(0, 4))} placeholder="ex: 3102" /></div>
+            </div>
+            <p className="text-[11px] text-gray-500">CFOPs opcionais — quando a operação é marcada como Fiscal, ao menos um é obrigatório; nas entradas o CFOP é escolhido conforme a UF do fornecedor.</p>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.is_patrimonio} onChange={e => set("is_patrimonio", e.target.checked)} className="w-4 h-4" /> Gera bem patrimonial (imobilizado)
           </label>

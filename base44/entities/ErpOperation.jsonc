@@ -43,6 +43,33 @@
     "description": {
       "type": "string"
     },
+    "flag_contabil": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se marcada, a opera\u00e7\u00e3o gera lan\u00e7amento cont\u00e1bil; desmarcada, n\u00e3o vai para a contabilidade"
+    },
+    "flag_fiscal": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se marcada, a opera\u00e7\u00e3o \u00e9 fiscal: exige CFOP e vai para o fiscal (SPEDs fiscais)"
+    },
+    "flag_financeiro": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se marcada, a opera\u00e7\u00e3o gera as parcelas no contas a pagar"
+    },
+    "cfop_dentro_estado": {
+      "type": "string",
+      "description": "CFOP da opera\u00e7\u00e3o dentro do estado (mesma UF) \u2014 opcional; obrigat\u00f3rio quando a opera\u00e7\u00e3o \u00e9 fiscal"
+    },
+    "cfop_fora_estado": {
+      "type": "string",
+      "description": "CFOP da opera\u00e7\u00e3o fora do estado (interestadual) \u2014 opcional; obrigat\u00f3rio quando a opera\u00e7\u00e3o \u00e9 fiscal"
+    },
+    "cfop_importacao": {
+      "type": "string",
+      "description": "CFOP da opera\u00e7\u00e3o de importa\u00e7\u00e3o (exterior) \u2014 opcional; obrigat\u00f3rio quando a opera\u00e7\u00e3o \u00e9 fiscal"
+    },
     "is_patrimonio": {
       "type": "boolean",
       "default": false,

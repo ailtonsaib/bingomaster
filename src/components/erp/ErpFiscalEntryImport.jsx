@@ -204,6 +204,21 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     return c ? { icms: c.icms_value || 0, pis: c.pis_value || 0, cofins: c.cofins_value || 0, source: "calc" } : null;
   })();
 
+  // CFOP do frete: prioriza os CFOPs cadastrados na operação do frete (dentro/fora/importação);
+  // sem operação selecionada, sugere pela UF da transportadora (mesma UF → 1, fora → 2, EX → 3)
+  useEffect(() => {
+    if (!freteXml) return;
+    const uf = freteXml.supplier?.uf || "";
+    const op = operations.find(o => o.id === freteOpId);
+    const dentro = uf && companyUF && uf === companyUF;
+    const importacao = !uf || uf === "EX";
+    const fromOp = op
+      ? (importacao ? op.cfop_importacao : dentro ? op.cfop_dentro_estado : op.cfop_fora_estado) || (dentro ? op.cfop_fora_estado : op.cfop_dentro_estado) || ""
+      : "";
+    if (fromOp) { setFreteCfop(fromOp); return; }
+    setFreteCfop(importacao ? "3351" : dentro ? "1351" : "2351");
+  }, [freteOpId, freteXml, companyUF, operations]);
+
   // Cria/atualiza fornecedor a partir do documento; retorna o registro ErpPartner
   const ensureSupplier = async (name, docRaw, uf, address, city, extra) => {
     const doc = digits(docRaw);
@@ -460,6 +475,18 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           status: !hasPo || valuesMatch ? "aprovada" : "pendente",
           approval_status: !hasPo || valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
         };
+      }
+
+      // Operação marcada como Fiscal: o CFOP é obrigatório e vai para os livros/SPEDs fiscais
+      if (op?.flag_fiscal && !payload.cfop) {
+        const uf = mode === "xml" ? (parsed?.supplier?.uf || "") : manual.supplier_uf;
+        const cfopOp = (!uf || uf === "EX")
+          ? (op.cfop_importacao || "")
+          : (uf && companyUF && uf === companyUF
+            ? (op.cfop_dentro_estado || op.cfop_fora_estado || "")
+            : (op.cfop_fora_estado || op.cfop_dentro_estado || ""));
+        if (!cfopOp) { setSaving(false); setError("Operação fiscal exige CFOP — cadastre o CFOP (dentro/fora do estado ou importação) no cadastro da operação."); return; }
+        payload.cfop = cfopOp;
       }
 
       // Frete importado: exige operação e CFOP; a transportadora é cadastrada como fornecedor
