@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock, RotateCcw, Wrench } from "lucide-react";
 import ErpFiscalEntryImport from "./ErpFiscalEntryImport";
 import ErpFiscalEntryEditModal from "./ErpFiscalEntryEditModal";
+import ErpCteSection from "./ErpCteSection";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { lancarEntradaNF, reabrirEntradaNF } from "@/lib/erpDespesa";
 
@@ -148,6 +149,8 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
           </table>
         </div>
       </div>
+
+      <ErpCteSection user={user} />
 
       {showImport && <ErpFiscalEntryImport user={user} onClose={() => setShowImport(false)} onSaved={load} onGoToProducts={onGoToProducts} />}
       {showEdit && <ErpFiscalEntryEditModal user={user} entry={showEdit} onClose={() => setShowEdit(null)} onSaved={load} />}
