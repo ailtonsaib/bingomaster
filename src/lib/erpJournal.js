@@ -223,3 +223,121 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
 
   return je;
 }
+
+// Gera o lançamento contábil do frete da entrada (CT-e/NF-e/NFS-e de frete):
+// débito dos impostos do frete (contas icms_frete/pis_frete/cofins_frete da parametrização
+// da operação do frete), débito do valor líquido nas contas de estoque dos produtos
+// (composição do custo, rateado pelo valor dos itens) ou nas contas do rateio da entrada,
+// e crédito na conta do fornecedor de frete (linha "frete" ou "fornecedores" da
+// parametrização, ou passivo Fornecedores/Contas a Pagar detectado automaticamente).
+export async function gerarLancamentoFrete(user, entry, accounts, opts = {}) {
+  const f = entry.freight || {};
+  const value = Number(f.value) || 0;
+  if (value <= 0) throw new Error("Frete sem valor informado.");
+  const acctParam = opts.acctParam || null;
+  const acctLine = (key) => (acctParam?.lines || []).find((l) => l.key === key && l.account_id);
+  const byIdOrCache = (l) => accounts.find((a) => a.id === l.account_id) || { id: l.account_id, code: l.account_code, name: l.account_name };
+  const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+
+  // Impostos do frete (D a recuperar) — saem do custo líquido
+  const taxSpecs = [
+    { key: "icms_frete", value: Number(f.icms_value) || 0, label: "ICMS FRETE" },
+    { key: "pis_frete", value: Number(f.pis_value) || 0, label: "PIS S/ FRETE" },
+    { key: "cofins_frete", value: Number(f.cofins_value) || 0, label: "COFINS S/ FRETE" },
+  ];
+  const taxLines = [];
+  let net = value;
+  for (const t of taxSpecs) {
+    if (!(t.value > 0)) continue;
+    const pl = acctLine(t.key);
+    if (!pl) throw new Error(`Configure a conta de ${t.label} na parametrização contábil da operação do frete.`);
+    const acc = byIdOrCache(pl);
+    taxLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: t.value, credit: 0, complement: pl.history_text || `${t.label} - Frete ${f.doc_number || ""} NF ${entry.nota_number}` });
+    net -= t.value;
+  }
+  net = r2(Math.max(net, 0));
+
+  const lines = [...taxLines];
+  // Destino do líquido: contas de estoque dos produtos (rateado pelo valor dos itens)
+  const stockItems = [];
+  if (entry.entry_kind === "nf_entrada" && (entry.items || []).length) {
+    const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500).catch(() => []);
+    const byId = new Map(products.map((p) => [p.id, p]));
+    for (const it of entry.items) {
+      const prod = (it.product_id && byId.get(it.product_id)) || products.find((p) => (p.code && p.code === it.product_code) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
+      if (!prod?.account_estoque_id) continue;
+      const gross = Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+      if (gross > 0) stockItems.push({ prod, gross, name: it.product_name || prod.name });
+    }
+  }
+  const stockGrossTotal = stockItems.reduce((s, x) => s + x.gross, 0);
+  if (stockGrossTotal > 0) {
+    let allocated = 0;
+    stockItems.forEach((s, idx) => {
+      const val = idx === stockItems.length - 1 ? r2(net - allocated) : r2(net * (s.gross / stockGrossTotal));
+      allocated = r2(allocated + val);
+      const acc = accounts.find((a) => a.id === s.prod.account_estoque_id);
+      lines.push({
+        account_id: s.prod.account_estoque_id,
+        account_code: acc?.code || "",
+        account_name: s.prod.account_estoque_name || acc?.name || "",
+        debit: val,
+        credit: 0,
+        sector_id: s.prod.stock_sector_id || "",
+        sector_name: s.prod.stock_sector_name || "",
+        complement: `Frete — entrada estoque ${s.name} NF ${entry.nota_number}`,
+      });
+    });
+  } else if (entry.apportionments?.length) {
+    // Sem contas de estoque: líquido do frete no rateio da entrada (por % ou por valor)
+    const weights = entry.apportionments.map((ap) => (ap.rateio_type === "value" ? Number(ap.value) || 0 : Number(ap.percent) || 0));
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    if (wSum <= 0) throw new Error("Sem contas de destino para o frete: configure a conta de estoque dos produtos ou o rateio da entrada.");
+    let allocated = 0;
+    const idxs = entry.apportionments.map((ap, i) => i).filter((i) => entry.apportionments[i].account_id && weights[i] > 0);
+    idxs.forEach((i, k) => {
+      const val = k === idxs.length - 1 ? r2(net - allocated) : r2(net * (weights[i] / wSum));
+      allocated = r2(allocated + val);
+      const ap = entry.apportionments[i];
+      lines.push({ account_id: ap.account_id, account_code: ap.account_code, account_name: ap.account_name, debit: val, credit: 0, complement: `Frete NF ${entry.nota_number}` });
+    });
+  }
+
+  const totalDebit = r2(lines.reduce((a, l) => a + (l.debit || 0), 0));
+  if (net > 0 && totalDebit <= r2(taxLines.reduce((a, l) => a + l.debit, 0))) {
+    throw new Error("Sem contas de destino para o frete: configure a conta de estoque dos produtos ou o rateio da entrada.");
+  }
+
+  // Crédito: conta do fornecedor de frete da parametrização (ou fornecedores/passivo)
+  let credora = null;
+  const freteLine = acctLine("frete");
+  if (freteLine) credora = byIdOrCache(freteLine);
+  if (!credora) {
+    const fl = acctLine("fornecedores");
+    if (fl) credora = byIdOrCache(fl);
+  }
+  if (!credora) credora = accounts.find((a) => a.account_type === "passivo" && /fornecedor|contas a pagar/i.test(a.name));
+  if (!credora) throw new Error("Configure a conta do fornecedor de frete (linha FRETE ou FORNECEDORES) na parametrização da operação do frete.");
+  lines.push({
+    account_id: credora.id,
+    account_code: credora.code,
+    account_name: credora.name,
+    debit: 0,
+    credit: totalDebit,
+    complement: `Frete ${f.doc_number || ""} - ${f.supplier_name || ""} (NF ${entry.nota_number})`,
+  });
+
+  const je = await base44.entities.ErpJournalEntry.create({
+    user_email: user.email,
+    number: genOrderNumber("LCT"),
+    date: new Date().toISOString(),
+    history: `Frete ${f.doc_number || ""} - ${f.supplier_name || ""} (NF ${entry.nota_number})`,
+    document: f.doc_number || entry.nota_number,
+    lines,
+    total_debit: totalDebit,
+    total_credit: r2(lines.reduce((a, l) => a + (l.credit || 0), 0)),
+    status: "definitivo",
+  });
+
+  return je;
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, Link2, UserPlus, Package } from "lucide-react";
+import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, Link2, UserPlus, Package, Truck } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { maskCpfCnpj } from "@/lib/brMasks";
@@ -45,6 +45,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const lastCnpjLookup = useRef("");
   // Parcelas/vencimentos do financeiro (digitação manual)
   const [manualInstallments, setManualInstallments] = useState([{ due_date: new Date().toISOString().slice(0, 10), amount: "" }]);
+  // Frete (CT-e/NF-e/NFS-e): documento separado que compõe o custo dos produtos
+  const [freteXml, setFreteXml] = useState(null);
+  const [freteParsing, setFreteParsing] = useState(false);
+  const [freteError, setFreteError] = useState("");
+  const [freteOpId, setFreteOpId] = useState("");
+  const [freteCfop, setFreteCfop] = useState("");
+  const [companyUF, setCompanyUF] = useState("");
+  const freteFileRef = useRef(null);
   const fileRef = useRef(null);
 
   const [manual, setManual] = useState({
@@ -130,6 +138,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     ]).then(([o, op, s, p, l, d, acc, tr]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); setTaxRules(tr); }).catch(() => {});
   }, [user.email]);
 
+  // UF da empresa — base do CFOP do frete (mesma UF → 1xxx, fora → 2xxx)
+  useEffect(() => {
+    base44.entities.ErpCompany.filter({ user_email: user.email }, "-created_date", 20)
+      .then(list => setCompanyUF((list.find(c => c.is_main) || list[0] || {}).uf || ""))
+      .catch(() => setCompanyUF(""));
+  }, [user.email]);
+
   const selectedPo = orders.find(o => o.id === poId);
   const nfTotal = mode === "xml" ? parsed?.totals.total_nota : Number(manual.total_nota || 0);
   const diff = selectedPo ? nfTotal - (selectedPo.total_value || 0) : 0;
@@ -153,10 +168,41 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
-    try { setParsed(parseFiscalXml(await file.text())); }
+    try {
+      const p = parseFiscalXml(await file.text());
+      if (p.model === "57") throw new Error("Este é um XML de CT-e (frete) — importe-o na seção Frete.");
+      setParsed(p);
+    }
     catch (e) { setError(e.message || "Erro ao processar XML."); }
     setParsing(false);
   };
+
+  // XML do frete (CT-e/NF-e/NFS-e): parseia e sugere o CFOP pela UF da transportadora
+  // (mesma UF da empresa → inicia com 1; fora da UF → inicia com 2)
+  const handleFreteFile = async (file) => {
+    setFreteError(""); setFreteParsing(true);
+    try {
+      const p = parseFiscalXml(await file.text());
+      setFreteXml(p);
+      const uf = p.supplier?.uf || "";
+      setFreteCfop(uf && companyUF && uf === companyUF ? "1351" : "2351");
+    } catch (e) { setFreteError(e.message || "Erro ao processar XML do frete."); }
+    setFreteParsing(false);
+  };
+
+  // Impostos do frete: valores do XML; quando zerados, calculados pela operação do frete
+  const freteTaxes = (() => {
+    if (!freteXml) return null;
+    const t = freteXml.totals || {};
+    const icms = Number(t.total_icms) || 0;
+    const pis = Number(t.total_pis) || 0;
+    const cofins = Number(t.total_cofins) || 0;
+    if (icms > 0 || pis > 0 || cofins > 0) return { icms, pis, cofins, source: "xml" };
+    const op = operations.find(o => o.id === freteOpId);
+    if (!op) return null;
+    const c = computeErpFiscalItem({ ncm: "", quantity: 1, unit_price: Number(t.total_nota) || 0 }, { rules: taxRules, operation: op, customerUF: freteXml.supplier?.uf });
+    return c ? { icms: c.icms_value || 0, pis: c.pis_value || 0, cofins: c.cofins_value || 0, source: "calc" } : null;
+  })();
 
   // Cria/atualiza fornecedor a partir do documento; retorna o registro ErpPartner
   const ensureSupplier = async (name, docRaw, uf, address, city, extra) => {
@@ -416,6 +462,32 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         };
       }
 
+      // Frete importado: exige operação e CFOP; a transportadora é cadastrada como fornecedor
+      if (freteXml) {
+        if (!freteOpId) { setSaving(false); setError("Selecione a operação do frete — ela define os impostos e o custo."); return; }
+        if (!String(freteCfop || "").trim()) { setSaving(false); setError("Informe o CFOP do frete."); return; }
+        const fOp = operations.find(o => o.id === freteOpId);
+        const ft = freteTaxes || { icms: 0, pis: 0, cofins: 0 };
+        await ensureSupplier(freteXml.supplier.name, freteXml.supplier.cpf_cnpj, freteXml.supplier.uf, freteXml.supplier.address, freteXml.supplier.city);
+        payload.freight = {
+          doc_model: freteXml.nota.model,
+          doc_number: freteXml.nota.number,
+          doc_series: freteXml.nota.series,
+          chave_acesso: freteXml.nota.chave_acesso,
+          issue_date: freteXml.nota.issue_date ? new Date(freteXml.nota.issue_date).toISOString() : undefined,
+          supplier_name: freteXml.supplier.name,
+          supplier_cnpj: freteXml.supplier.cpf_cnpj,
+          supplier_uf: freteXml.supplier.uf,
+          value: Number(freteXml.totals.total_nota) || 0,
+          icms_value: ft.icms || 0,
+          pis_value: ft.pis || 0,
+          cofins_value: ft.cofins || 0,
+          operation_id: freteOpId,
+          operation_name: fOp?.name || "",
+          cfop: String(freteCfop).trim(),
+        };
+      }
+
       const entry = await base44.entities.ErpFiscalEntry.create(payload);
       // Lançamento automático (movimento contábil + estoque + financeiro) quando a
       // entrada já vem aprovada (sem OC ou valores conferem). Caso contrário segue
@@ -603,6 +675,60 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {/* === FRETE (opcional) === */}
+          {opId && (mode === "xml" ? parsed : mode === "manual") && (
+            <div className="rounded-lg border border-sky-200 bg-sky-50/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold flex items-center gap-2"><Truck className="w-4 h-4 text-sky-600" /> Frete (opcional) — compõe o custo dos produtos</h4>
+                {freteXml && <button type="button" onClick={() => { setFreteXml(null); setFreteCfop(""); setFreteError(""); }} className="text-xs text-red-600 hover:underline">Remover</button>}
+              </div>
+              {!freteXml ? (
+                <div>
+                  <div onClick={() => freteFileRef.current?.click()} className="border-2 border-dashed border-sky-300 rounded-lg p-4 text-center cursor-pointer hover:bg-sky-50">
+                    {freteParsing ? (
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Processando XML do frete...</div>
+                    ) : (
+                      <p className="text-sm text-sky-800">Clique para importar o XML do Frete (CT-e, NF-e ou NFS-e)</p>
+                    )}
+                    <input ref={freteFileRef} type="file" accept=".xml" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFreteFile(f); }} />
+                  </div>
+                  {freteError && <p className="text-xs text-red-600 mt-1">{freteError}</p>}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm bg-white rounded-md border p-2">
+                    <div><span className="text-gray-500 text-xs">Documento:</span> <b>{freteXml.nota.model === "57" ? "CT-e" : freteXml.nota.model === "NFSe" ? "NFS-e" : "NF-e"} {freteXml.nota.number || "—"}</b></div>
+                    <div className="col-span-2"><span className="text-gray-500 text-xs">Transportadora:</span> {freteXml.supplier.name}</div>
+                    <div><span className="text-gray-500 text-xs">UF:</span> {freteXml.supplier.uf || "—"}</div>
+                    <div><span className="text-gray-500 text-xs">Total:</span> <b className="text-sky-700">{fmtMoney(freteXml.totals.total_nota)}</b></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Operação do Frete *</label>
+                      <select value={freteOpId} onChange={e => setFreteOpId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
+                        <option value="">Selecione a operação...</option>
+                        {operations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">CFOP do Frete *</label>
+                      <input value={freteCfop} onChange={e => setFreteCfop(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm mt-1" />
+                      <p className="text-[10px] text-gray-400 mt-0.5">Mesma UF da empresa ({companyUF || "não cadastrada"}) → inicia com 1 (ex: 1351); fora da UF → inicia com 2 (ex: 2351).</p>
+                    </div>
+                  </div>
+                  {freteTaxes && (
+                    <div className="rounded-md border bg-emerald-50 border-emerald-200 p-2 text-xs text-emerald-800 flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5" />
+                      <span>
+                        Impostos do frete ({freteTaxes.source === "xml" ? "do XML" : "calculados pela operação"}): ICMS <b>{fmtMoney(freteTaxes.icms)}</b> • PIS <b>{fmtMoney(freteTaxes.pis)}</b> • COFINS <b>{fmtMoney(freteTaxes.cofins)}</b> — o valor líquido será rateado no custo dos produtos e gera contas a pagar para a transportadora.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

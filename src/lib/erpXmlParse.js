@@ -1,4 +1,4 @@
-// Parser de XML fiscal (NF-e / NFC-e / NFS-e ABRASF / NFS-e Nacional SPED v1.01) para o navegador.
+// Parser de XML fiscal (NF-e / NFC-e / CT-e / NFS-e ABRASF / NFS-e Nacional SPED v1.01) para o navegador.
 // Retorna estrutura normalizada { model, nota, supplier, totals, items }.
 
 function getText(parent, tag) {
@@ -261,18 +261,67 @@ function parseNfse(doc) {
   };
 }
 
+// CT-e (modelo 57) — Conhecimento de Transporte eletrônico (raiz cteProc/CTe).
+// Normaliza para a mesma estrutura de NF-e: transportadora como "supplier" e
+// o valor da prestação (vTPrest) como total do documento.
+function parseCte(doc) {
+  const infCte = doc.getElementsByTagName("infCte")[0] || doc.getElementsByTagName("*:infCte")[0];
+  if (!infCte) throw new Error("Registro infCte não encontrado. Verifique se é um XML de CT-e válido.");
+  const ide = infCte.getElementsByTagName("ide")[0] || infCte.getElementsByTagName("*:ide")[0];
+  const emit = infCte.getElementsByTagName("emit")[0] || infCte.getElementsByTagName("*:emit")[0];
+  const enderEmit = emit?.getElementsByTagName("enderEmit")[0] || emit?.getElementsByTagName("*:enderEmit")[0];
+  const imp = infCte.getElementsByTagName("imp")[0] || infCte.getElementsByTagName("*:imp")[0];
+  const idAttr = infCte.getAttribute("Id") || "";
+  const chave = /^CTe\d{44}$/.test(idAttr) ? idAttr.substring(3) : "";
+  const vTPrest = num(getText(infCte, "vTPrest"));
+
+  return {
+    model: "57",
+    nota: {
+      number: getText(ide, "nCT"),
+      series: getText(ide, "serie") || getText(ide, "nSerie"),
+      model: "57",
+      issue_date: getText(ide, "dhEmi"),
+      nature_operation: getText(ide, "natOp") || "Prestação de Serviço de Transporte",
+      cfop: getText(ide, "CFOP"),
+      chave_acesso: chave,
+    },
+    supplier: {
+      name: getText(emit, "xNome"),
+      cpf_cnpj: getText(emit, "CNPJ") || getText(emit, "CPF"),
+      ie: getText(emit, "IE"),
+      city: getText(enderEmit, "xMun"),
+      uf: getText(enderEmit, "UF"),
+    },
+    totals: {
+      total_products: vTPrest,
+      total_icms: num(getText(imp, "vICMS")) + num(getText(imp, "vICMSOutraUF")),
+      total_ipi: 0,
+      total_pis: num(getText(imp, "vPIS")),
+      total_cofins: num(getText(imp, "vCOFINS")),
+      total_nota: vTPrest,
+      despesas: 0,
+      descontos: 0,
+    },
+    retentions: { irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 },
+    items: [],
+  };
+}
+
 export function parseFiscalXml(xmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "text/xml");
   if (doc.querySelector("parsererror")) throw new Error("XML inválido ou mal formatado.");
 
-  // Detecta NF-e/NFC-e, NFS-e Nacional (SPED) ou NFS-e ABRASF
+  // Detecta NF-e/NFC-e, CT-e, NFS-e Nacional (SPED) ou NFS-e ABRASF
   const hasNfe = doc.getElementsByTagName("infNFe").length > 0 || doc.getElementsByTagName("*:infNFe").length > 0;
+  const hasCte = doc.getElementsByTagName("infCte").length > 0 || doc.getElementsByTagName("*:infCte").length > 0;
   const hasNfseNacional = doc.getElementsByTagName("infNFSe").length > 0 || doc.getElementsByTagName("*:infNFSe").length > 0;
   const hasNfse = doc.getElementsByTagName("InfNfse").length > 0 || doc.getElementsByTagName("*:InfNfse").length > 0;
 
   if (hasNfe) return parseNfe(doc);
+  if (hasCte) return parseCte(doc);
   if (hasNfseNacional) return parseNfseNacional(doc);
   if (hasNfse) return parseNfse(doc);
-  throw new Error("XML não reconhecido como NF-e/NFC-e nem NFS-e.");
+  throw new Error("XML não reconhecido como NF-e/NFC-e, CT-e ou NFS-e.");
 }

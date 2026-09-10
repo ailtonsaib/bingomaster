@@ -1,5 +1,5 @@
 import { base44 } from "@/api/base44Client";
-import { gerarLancamentoEntrada } from "@/lib/erpJournal";
+import { gerarLancamentoEntrada, gerarLancamentoFrete } from "@/lib/erpJournal";
 
 // Gera o lançamento contábil de uma despesa (ErpFiscalEntry entry_kind=despesa).
 // Requer: entry.apportionments, entry.retentions, accounts (ErpChartAccount analíticas), param (ErpExpenseParameter).
@@ -84,6 +84,18 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
       due_date: due,
     });
   }
+  // Frete (CT-e/NF-e/NFS importado): título próprio para a transportadora
+  if (entry.freight && (Number(entry.freight.value) || 0) > 0) {
+    payables.push({
+      user_email: user.email,
+      description: `Frete ${entry.freight.doc_number || ""} - ${entry.freight.supplier_name || ""} (NF ${entry.nota_number})`,
+      beneficiary: entry.freight.supplier_name || "",
+      amount: Number(entry.freight.value) || 0,
+      category: "Frete",
+      status: "aberto",
+      due_date: due,
+    });
+  }
   await base44.entities.ErpPayable.bulkCreate(payables);
   await base44.entities.ErpFiscalEntry.update(entry.id, { financeiro_gerado: true });
   return payables.length;
@@ -112,13 +124,19 @@ export async function lancarEntradaNF(user, entry, accounts) {
   // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
   const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
   const byId = new Map(products.map(p => [p.id, p]));
+  // Frete: valor líquido (deduzidos os créditos) rateado no custo pelo valor dos itens
+  const fr = entry.freight;
+  const freightNet = fr ? (Number(fr.value) || 0) - (Number(fr.icms_value) || 0) - (Number(fr.pis_value) || 0) - (Number(fr.cofins_value) || 0) : 0;
+  const itemsGrossTotal = (entry.items || []).reduce((s, it) => s + (Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0)), 0);
   for (const it of entry.items || []) {
     const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
     if (prod) {
-      // Custo do produto sem os impostos a creditar (ICMS/IPI/PIS/COFINS)
+      // Custo do produto sem os impostos a creditar (ICMS/IPI/PIS/COFINS) + frete líquido
       const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0);
       const qty = Number(it.quantity) || 0;
-      const netCost = qty > 0 ? (Number(it.unit_price) || 0) - credited / qty : Number(it.unit_price) || 0;
+      const gross = Number(it.total) || qty * (Number(it.unit_price) || 0);
+      const freteShare = freightNet > 0 && itemsGrossTotal > 0 ? freightNet * (gross / itemsGrossTotal) : 0;
+      const netCost = qty > 0 ? (Number(it.unit_price) || 0) - credited / qty + freteShare / qty : Number(it.unit_price) || 0;
       await base44.entities.ErpProduct.update(prod.id, {
         stock: (prod.stock || 0) + qty,
         cost_price: netCost > 0 ? netCost : (prod.cost_price || 0),
@@ -131,6 +149,23 @@ export async function lancarEntradaNF(user, entry, accounts) {
     journal_entry_id: je.id,
     journal_entry_number: je.number,
   });
+
+  // Lançamento do frete (transportadora): impostos a recuperar + custo líquido x fornecedor de frete
+  if (entry.freight && (Number(entry.freight.value) || 0) > 0) {
+    let freteParam = null;
+    if (entry.freight.operation_id) {
+      try {
+        const aps = await base44.entities.ErpOperationAccounting.filter({ user_email: user.email, operation_id: entry.freight.operation_id }, "-created_date", 10);
+        freteParam = aps[0] || null;
+      } catch (e) { freteParam = null; }
+    }
+    try {
+      const fje = await gerarLancamentoFrete(user, entry, accounts, freteParam ? { acctParam: freteParam } : {});
+      await base44.entities.ErpFiscalEntry.update(entry.id, { freight: { ...entry.freight, journal_entry_id: fje.id, journal_entry_number: fje.number } });
+    } catch (e) {
+      alert(`Lançamento do frete não gerado: ${e.message}`);
+    }
+  }
 
   // Financeiro — contas a pagar com o vencimento informado na entrada
   if (!entry.financeiro_gerado) {
