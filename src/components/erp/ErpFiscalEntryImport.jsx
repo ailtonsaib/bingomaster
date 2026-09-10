@@ -33,6 +33,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [poId, setPoId] = useState("");
   const [opId, setOpId] = useState("");
   const [departments, setDepartments] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [manualApportionments, setManualApportionments] = useState([]);
   const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
@@ -143,7 +144,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
       base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 500),
       base44.entities.ErpTaxRule.filter({ user_email: user.email }, "-created_date", 500),
-    ]).then(([o, op, s, p, l, d, acc, tr]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); setTaxRules(tr); }).catch(() => {});
+      base44.entities.ErpSector.filter({ user_email: user.email, is_active: true }, "name", 500),
+    ]).then(([o, op, s, p, l, d, acc, tr, sec]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); setTaxRules(tr); setSectors(sec); }).catch(() => {});
   }, [user.email]);
 
   // UF da empresa — base do CFOP do frete (mesma UF → 1xxx, fora → 2xxx)
@@ -186,6 +188,18 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     const existing = suppliers.find(s => s.document === digits(parsed.supplier.cpf_cnpj));
     setForn({ id: existing?.id || "", name: parsed.supplier.name, cnpj: parsed.supplier.cpf_cnpj, uf: parsed.supplier.uf || "" });
   }, [parsed]);
+
+  // OC selecionada (digitação manual): traz os produtos do pedido para a entrada
+  useEffect(() => {
+    if (mode !== "manual" || !poId || !selectedPo) return;
+    if (!(selectedPo.items || []).length) return;
+    setManualItems(selectedPo.items.map(it => ({
+      product_id: it.product_id || "",
+      product_name: it.product_name || "",
+      quantity: it.quantity || 1,
+      unit_price: it.unit_cost || 0,
+    })));
+  }, [poId, mode]);
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
@@ -326,13 +340,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     const op = operations.find(o => o.id === opId);
     // A operação de entrada é obrigatória — base do cálculo dos impostos
     if (!op) { setError("Selecione a operação de entrada — ela define os impostos e o custo do produto."); return; }
-    // Entrada sem OC: exige rateio (setor + conta) preenchido e soma 100%
-    if (!hasPo) {
-      const aps = manualApportionments.filter(a => a.department_id && a.account_id);
-      if (aps.length === 0) { setError("Informe o setor e a conta contábil do rateio — entrada sem ordem de compra."); return; }
-      const pctSum = aps.reduce((s, a) => s + (Number(a.percent) || 0), 0);
-      if (Math.abs(pctSum - 100) > 0.01) { setError(`A soma do rateio (${pctSum.toFixed(2)}%) deve ser 100%.`); return; }
-    }
+    // Operação com ordem de compra obrigatória: não permite entrada sem OC
+    if (op.exige_ordem_compra && !poId) { setError("Esta operação exige ordem de compra — selecione o pedido (os produtos e o rateio vêm da OC)."); return; }
     setSaving(true);
     try {
       // 1. Garante o fornecedor (pesquisado no cadastro ou informado por CNPJ no passo 2)
@@ -407,6 +416,10 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         if (!manual.nota_number.trim()) { setSaving(false); setError("Informe o número do documento."); return; }
         if (!forn.name.trim()) { setSaving(false); setError("Informe o fornecedor (passo 2) — pesquise no cadastro ou informe o CNPJ."); return; }
         if (!manual.total_nota || Number(manual.total_nota) <= 0) { setSaving(false); setError("Informe o total do documento."); return; }
+        if (!hasPo) {
+          const validItems = manualItems.filter(it => it.product_name.trim() && (Number(it.quantity) || 0) > 0);
+          if (validItems.length === 0) { setSaving(false); setError("Informe ao menos um item — busque um produto cadastrado ou digite a descrição do item."); return; }
+        }
         const total = Number(manual.total_nota);
         // Itens sem produto cadastrado: pergunta se quer cadastrar agora (abre o
         // cadastro de produto); se não, mantém apenas a descrição no item
@@ -497,6 +510,41 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           status: !hasPo || valuesMatch ? "aprovada" : "pendente",
           approval_status: !hasPo || valuesMatch ? "nao_aplica" : "aguardando_aprovacao",
         };
+      }
+
+      // Entrada sem OC: itens com produto cadastrado trazem a própria conta contábil e
+      // setor para o rateio do lançamento (rateio automático); itens não cadastrados
+      // exigem o rateio informado manualmente (setor + conta contábil)
+      if (!hasPo) {
+        const entryItems = payload.items || [];
+        const totalItems = entryItems.reduce((s, it) => s + (Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0)), 0);
+        const manualFilled = (payload.apportionments || []).some(a => a.department_id && a.account_id);
+        const autoAps = [];
+        let missing = false;
+        let pctSumAuto = 0;
+        entryItems.forEach(it => {
+          const prod = (it.product_id && products.find(p => p.id === it.product_id)) || null;
+          const sector = prod?.stock_sector_id ? sectors.find(s => s.id === prod.stock_sector_id) : null;
+          if (!prod?.account_estoque_id || !sector?.department_id) { missing = true; return; }
+          const gross = Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+          const pct = totalItems > 0 ? Math.round((gross / totalItems) * 10000) / 100 : 0;
+          pctSumAuto += pct;
+          const acc = accounts.find(a => a.id === prod.account_estoque_id);
+          autoAps.push({
+            department_id: sector.department_id, department_name: sector.department_name,
+            account_id: prod.account_estoque_id, account_code: acc?.code || "", account_name: prod.account_estoque_name || acc?.name || "",
+            rateio_type: "percent", percent: pct, value: 0,
+          });
+        });
+        if (!missing && autoAps.length > 0 && !manualFilled) {
+          autoAps[autoAps.length - 1].percent = Math.round((autoAps[autoAps.length - 1].percent + (100 - pctSumAuto)) * 100) / 100;
+          payload.apportionments = autoAps;
+        } else {
+          const aps = (payload.apportionments || []).filter(a => a.department_id && a.account_id);
+          if (aps.length === 0) { setSaving(false); setError("Há item sem produto cadastrado (conta contábil + setor): informe o rateio do lançamento abaixo ou cadastre/vincule o produto."); return; }
+          const pctSum = aps.reduce((s, a) => s + (Number(a.percent) || 0), 0);
+          if (Math.abs(pctSum - 100) > 0.01) { setSaving(false); setError(`A soma do rateio (${pctSum.toFixed(2)}%) deve ser 100%.`); return; }
+        }
       }
 
       // CFOP da operação: resolvido pela UF do fornecedor (mesma UF da empresa → dentro
@@ -835,12 +883,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                 <b>Operação selecionada:</b> {operations.find(o => o.id === opId)?.name || "—"} — os impostos e o custo dos produtos são calculados pelas regras fiscais desta operação.
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Ordem de Compra (opcional)</label>
+                <label className="text-xs font-medium text-gray-600">Ordem de Compra {selectedOp?.exige_ordem_compra ? "*" : "(opcional)"}</label>
                 <select value={poId} onChange={e => setPoId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                   <option value="">Sem ordem de compra (despesa/serviço)</option>
                   {orders.map(o => <option key={o.id} value={o.id}>{o.order_number} — {o.supplier_name || "—"} ({fmtMoney(o.total_value)})</option>)}
                 </select>
-                {!poId && <p className="text-[11px] text-amber-600 mt-1">Entrada avulsa: informe abaixo o setor e a conta contábil para o lançamento.</p>}
+                {!poId && (selectedOp?.exige_ordem_compra
+                  ? <p className="text-[11px] text-red-600 mt-1">Obrigatória nesta operação — selecione o pedido: os produtos e o rateio (contas + setor) vêm da ordem de compra.</p>
+                  : <p className="text-[11px] text-amber-600 mt-1">Entrada avulsa: informe ao menos um item — produtos cadastrados trazem a conta contábil e o setor automaticamente; itens não cadastrados exigem o rateio abaixo.</p>)}
               </div>
 
               {selectedPo && (
@@ -864,7 +914,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
                     <AlertTriangle className="w-4 h-4" />
-                    Entrada sem ordem de compra — despesa/serviço sem controle de estoque. Informe o rateio (setor + conta contábil) para o lançamento contábil.
+                    Entrada sem ordem de compra — informe ao menos um item. Itens com produto cadastrado trazem a conta contábil e o setor automaticamente para o lançamento; itens não cadastrados exigem o rateio abaixo.
                   </div>
                   <ErpApportionmentEditor
                     apportionments={manualApportionments}
@@ -883,7 +933,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         <div className="flex justify-end gap-2 p-4 border-t sticky bottom-0 bg-white">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {opId && (mode === "xml" ? parsed : true) && (
-            <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
+            <Button onClick={handleSave} disabled={saving || (selectedOp?.exige_ordem_compra && !poId)} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />} Dar Entrada
             </Button>
           )}

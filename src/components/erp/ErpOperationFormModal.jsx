@@ -30,6 +30,7 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
     cfop_dentro_estado: operation?.cfop_dentro_estado || "",
     cfop_fora_estado: operation?.cfop_fora_estado || "",
     cfop_importacao: operation?.cfop_importacao || "",
+    exige_ordem_compra: !!operation?.exige_ordem_compra,
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
@@ -55,6 +56,7 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
       cfop_dentro_estado: onlyDigits(form.cfop_dentro_estado) || undefined,
       cfop_fora_estado: onlyDigits(form.cfop_fora_estado) || undefined,
       cfop_importacao: onlyDigits(form.cfop_importacao) || undefined,
+      exige_ordem_compra: form.exige_ordem_compra,
       is_patrimonio: form.is_patrimonio,
       is_active: form.is_active,
     };
@@ -107,6 +109,8 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.flag_financeiro} onChange={e => set("flag_financeiro", e.target.checked)} className="w-4 h-4" /> Financeiro</label>
             </div>
             <p className="text-[11px] text-gray-500">Contábil: gera lançamento contábil. Fiscal: exige CFOP e envia ao fiscal (SPEDs fiscais). Financeiro: gera as parcelas no contas a pagar.</p>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.exige_ordem_compra} onChange={e => set("exige_ordem_compra", e.target.checked)} className="w-4 h-4" /> Exigir ordem de compra na entrada</label>
+            <p className="text-[11px] text-gray-500">Marcada: a entrada só é permitida com ordem de compra vinculada — os produtos e o rateio (contas contábeis + setor) vêm do pedido. Desmarcada: exige itens — produto cadastrado traz automaticamente a conta contábil e o setor para o rateio; item não cadastrado exige rateio informado.</p>
             <div className="grid grid-cols-3 gap-2">
               <div><Label className="text-xs">CFOP dentro do estado</Label><Input value={form.cfop_dentro_estado} onChange={e => set("cfop_dentro_estado", onlyDigits(e.target.value).slice(0, 4))} placeholder="ex: 1102" /></div>
               <div><Label className="text-xs">CFOP fora do estado</Label><Input value={form.cfop_fora_estado} onChange={e => set("cfop_fora_estado", onlyDigits(e.target.value).slice(0, 4))} placeholder="ex: 2102" /></div>
