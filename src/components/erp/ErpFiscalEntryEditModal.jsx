@@ -171,7 +171,7 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
           <h3 className="font-bold flex items-center gap-2"><Wrench className="w-5 h-5 text-indigo-600" /> Manutenção da Entrada — NF {entry.nota_number}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
