@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock, RotateCcw } from "lucide-react";
+import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock, RotateCcw, Wrench } from "lucide-react";
 import ErpFiscalEntryImport from "./ErpFiscalEntryImport";
+import ErpFiscalEntryEditModal from "./ErpFiscalEntryEditModal";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { lancarEntradaNF, reabrirEntradaNF } from "@/lib/erpDespesa";
 
@@ -20,6 +21,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [showImport, setShowImport] = useState(false);
+  const [showEdit, setShowEdit] = useState(null);
   const [busy, setBusy] = useState(null);
 
   const load = async () => {
@@ -118,9 +120,14 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
                     </td>
                     <td className="p-2 text-right whitespace-nowrap">
                       {i.status === "aprovada" && (
-                        <button onClick={() => handleLancar(i)} disabled={busy === i.id} title="Atualizar Lançamento" className="p-1 hover:bg-blue-50 rounded disabled:opacity-50">
-                          {busy === i.id ? <Clock className="w-4 h-4 text-gray-400 animate-spin" /> : <ArrowDownToLine className="w-4 h-4 text-blue-600" />}
-                        </button>
+                        <>
+                          <button onClick={() => setShowEdit(i)} title="Manutenção da Entrada (editar dados, itens e impostos)" className="p-1 hover:bg-indigo-50 rounded">
+                            <Wrench className="w-4 h-4 text-indigo-600" />
+                          </button>
+                          <button onClick={() => handleLancar(i)} disabled={busy === i.id} title="Atualizar Lançamento" className="p-1 hover:bg-blue-50 rounded disabled:opacity-50">
+                            {busy === i.id ? <Clock className="w-4 h-4 text-gray-400 animate-spin" /> : <ArrowDownToLine className="w-4 h-4 text-blue-600" />}
+                          </button>
+                        </>
                       )}
                       {i.status === "pendente" && <span className="text-[10px] text-amber-600" title="Aguardando aprovação do admin">aguarda aprovação</span>}
                       {i.status === "nao_aprovada" && <XCircle className="w-4 h-4 text-red-500 inline" />}
@@ -143,6 +150,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
       </div>
 
       {showImport && <ErpFiscalEntryImport user={user} onClose={() => setShowImport(false)} onSaved={load} onGoToProducts={onGoToProducts} />}
+      {showEdit && <ErpFiscalEntryEditModal user={user} entry={showEdit} onClose={() => setShowEdit(null)} onSaved={load} />}
     </div>
   );
 }
