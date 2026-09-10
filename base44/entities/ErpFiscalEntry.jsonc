@@ -129,6 +129,21 @@
       "default": 0,
       "description": "ICMS do ativo imobilizado \u2014 CIAP longo prazo (ap\u00f3s 1 ano)"
     },
+    "icms_frete_value": {
+      "type": "number",
+      "default": 0,
+      "description": "ICMS destacado sobre o frete (a creditar \u2014 conta ICMS Frete da parametriza\u00e7\u00e3o)"
+    },
+    "pis_frete_value": {
+      "type": "number",
+      "default": 0,
+      "description": "PIS destacado sobre o frete (a creditar \u2014 conta PIS s/ Frete da parametriza\u00e7\u00e3o)"
+    },
+    "cofins_frete_value": {
+      "type": "number",
+      "default": 0,
+      "description": "COFINS destacado sobre o frete (a creditar \u2014 conta COFINS s/ Frete da parametriza\u00e7\u00e3o)"
+    },
     "items": {
       "type": "array",
       "default": [],

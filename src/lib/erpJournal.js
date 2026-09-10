@@ -114,6 +114,9 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     { key: "despesas", value: Number(entry.despesas_value) || 0, label: "DESPESAS" },
     { key: "ciap_curto_prazo", value: Number(entry.ciap_curto_value) || 0, label: "CIAP CURTO PRAZO" },
     { key: "ciap_longo_prazo", value: Number(entry.ciap_longo_value) || 0, label: "CIAP LONGO PRAZO" },
+    { key: "icms_frete", value: Number(entry.icms_frete_value) || 0, label: "ICMS FRETE" },
+    { key: "pis_frete", value: Number(entry.pis_frete_value) || 0, label: "PIS S/ FRETE" },
+    { key: "cofins_frete", value: Number(entry.cofins_frete_value) || 0, label: "COFINS S/ FRETE" },
   ];
   const extraCreditSpecs = [
     { key: "dif_aliquota", value: Number(entry.dif_aliquota_value) || 0, label: "DIF. ALIQUOTA" },

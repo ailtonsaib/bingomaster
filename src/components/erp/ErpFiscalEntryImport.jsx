@@ -51,6 +51,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     nota_number: "", supplier_name: "", supplier_cnpj: "", supplier_uf: "",
     issue_date: new Date().toISOString().slice(0, 10), nature_operation: "", cfop: "", total_nota: "",
     dif_aliquota_value: "", despesas_value: "", descontos_value: "", ciap_curto_value: "", ciap_longo_value: "",
+    icms_frete_value: "", pis_frete_value: "", cofins_frete_value: "",
   });
   const [manualItems, setManualItems] = useState([{ product_name: "", product_id: "", quantity: 1, unit_price: 0 }]);
   const setM = (k, v) => setManual(p => ({ ...p, [k]: v }));
@@ -398,6 +399,9 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           descontos_value: Number(manual.descontos_value) || 0,
           ciap_curto_value: Number(manual.ciap_curto_value) || 0,
           ciap_longo_value: Number(manual.ciap_longo_value) || 0,
+          icms_frete_value: Number(manual.icms_frete_value) || 0,
+          pis_frete_value: Number(manual.pis_frete_value) || 0,
+          cofins_frete_value: Number(manual.cofins_frete_value) || 0,
           items,
           purchase_order_id: hasPo ? po.id : undefined,
           purchase_order_number: hasPo ? po.order_number : undefined,
@@ -543,12 +547,15 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600">Outros valores (opcional) — contabilizados nas contas da parametrização da operação</label>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-1">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
                   <div><input type="number" step="0.01" value={manual.dif_aliquota_value} onChange={e => setM("dif_aliquota_value", e.target.value)} placeholder="Dif. Alíquota" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">Dif. Alíquota</p></div>
                   <div><input type="number" step="0.01" value={manual.despesas_value} onChange={e => setM("despesas_value", e.target.value)} placeholder="Despesas" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">Despesas Acessórias</p></div>
                   <div><input type="number" step="0.01" value={manual.descontos_value} onChange={e => setM("descontos_value", e.target.value)} placeholder="Descontos" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">Descontos</p></div>
                   <div><input type="number" step="0.01" value={manual.ciap_curto_value} onChange={e => setM("ciap_curto_value", e.target.value)} placeholder="CIAP curto" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">CIAP Curto Prazo</p></div>
                   <div><input type="number" step="0.01" value={manual.ciap_longo_value} onChange={e => setM("ciap_longo_value", e.target.value)} placeholder="CIAP longo" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">CIAP Longo Prazo</p></div>
+                  <div><input type="number" step="0.01" value={manual.icms_frete_value} onChange={e => setM("icms_frete_value", e.target.value)} placeholder="ICMS frete" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">ICMS Frete</p></div>
+                  <div><input type="number" step="0.01" value={manual.pis_frete_value} onChange={e => setM("pis_frete_value", e.target.value)} placeholder="PIS frete" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">PIS s/ Frete</p></div>
+                  <div><input type="number" step="0.01" value={manual.cofins_frete_value} onChange={e => setM("cofins_frete_value", e.target.value)} placeholder="COFINS frete" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">COFINS s/ Frete</p></div>
                 </div>
               </div>
               {supplierLookup.msg && (
