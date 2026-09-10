@@ -96,7 +96,7 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
 export async function lancarEntradaNF(user, entry, accounts) {
   const passivo = accounts.find(a => a.account_type === "passivo" && /fornecedor|contas a pagar/i.test(a.name));
   if (!passivo) throw new Error("Cadastre uma conta de passivo 'Fornecedores' (ou 'Contas a Pagar') para gerar o lançamento.");
-  if (!entry.apportionments?.length) throw new Error("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio ou informe o rateio.");
+  if (!entry.apportionments?.length && entry.entry_kind !== "nf_entrada") throw new Error("Sem rateio vinculado à nota. Vincule uma ordem de compra com rateio ou informe o rateio.");
 
   // Parametrização contábil da operação de entrada (ErpOperationAccounting) —
   // contas do lançamento definidas por operação (fornecedores/impostos a recuperar)

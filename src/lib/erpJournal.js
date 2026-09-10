@@ -36,8 +36,26 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
       "Configure a conta credora (Fornecedores/Contas a Pagar) no parâmetro de despesas ou cadastre uma conta de passivo 'Fornecedores'."
     );
   }
-  if (!entry.apportionments || entry.apportionments.length === 0) {
-    throw new Error("Sem rateio vinculado à nota. Informe o setor e a conta contábil.");
+  // Entrada de estoque (nf_entrada): o valor líquido de cada item vai ao débito da
+  // conta de estoque do cadastro do produto, junto com o seu setor da estrutura
+  // orçamentária. Itens sem conta de estoque permanecem no rateio.
+  const stockItems = [];
+  if (entry.entry_kind === "nf_entrada" && (entry.items || []).length) {
+    const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500).catch(() => []);
+    const byId = new Map(products.map((p) => [p.id, p]));
+    for (const it of entry.items) {
+      const prod = (it.product_id && byId.get(it.product_id)) || products.find((p) => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
+      if (!prod?.account_estoque_id) continue;
+      const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0);
+      const gross = Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+      const net = gross - credited;
+      if (net > 0) stockItems.push({ prod, net, name: it.product_name || prod.name });
+    }
+  }
+  const stockNetTotal = stockItems.reduce((s, x) => s + x.net, 0);
+
+  if ((!entry.apportionments || entry.apportionments.length === 0) && stockItems.length === 0) {
+    throw new Error("Sem rateio vinculado à nota e sem itens com conta de estoque no cadastro do produto.");
   }
 
   // Retenções: resolve a conta de cada retenção (do parâmetro) se não vier informada
@@ -90,12 +108,27 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   }
 
   const lines = [];
-  // Débito despesa (rateio) sobre a base líquida (total_nota − créditos − outras)
-  for (const ap of entry.apportionments) {
+  // Débito nas contas de estoque dos produtos (entrada de estoque)
+  for (const s of stockItems) {
+    const acc = accounts.find((a) => a.id === s.prod.account_estoque_id);
+    lines.push({
+      account_id: s.prod.account_estoque_id,
+      account_code: acc?.code || "",
+      account_name: s.prod.account_estoque_name || acc?.name || "",
+      debit: s.net,
+      credit: 0,
+      sector_id: s.prod.stock_sector_id || "",
+      sector_name: s.prod.stock_sector_name || "",
+      complement: `Entrada estoque ${s.name}${s.prod.stock_sector_name ? ` — setor ${s.prod.stock_sector_name}` : ""} NF ${entry.nota_number}`,
+    });
+  }
+  // Débito despesa (rateio) sobre a base líquida restante (total_nota − créditos − estoque)
+  const rateioBase = despesaBase - stockNetTotal;
+  for (const ap of entry.apportionments || []) {
     const val =
       ap.rateio_type === "value"
         ? ap.value
-        : despesaBase * ((ap.percent || 0) / 100);
+        : rateioBase * ((ap.percent || 0) / 100);
     if (val > 0 && ap.account_id) {
       lines.push({
         account_id: ap.account_id,

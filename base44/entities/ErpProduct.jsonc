@@ -80,6 +80,14 @@
       "type": "string",
       "description": "Nome da conta de estoque (cache)"
     },
+    "stock_sector_id": {
+      "type": "string",
+      "description": "ID do setor da estrutura or\u00e7ament\u00e1ria (ErpSector) \u2014 usado na entrada da NF de estoque"
+    },
+    "stock_sector_name": {
+      "type": "string",
+      "description": "Nome do setor da estrutura or\u00e7ament\u00e1ria (cache)"
+    },
     "account_venda_id": {
       "type": "string",
       "description": "ID da conta cont\u00e1bil de venda/receita (ErpChartAccount)"

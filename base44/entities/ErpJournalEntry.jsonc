@@ -54,6 +54,14 @@
           "complement": {
             "type": "string",
             "description": "Hist\u00f3rico complementar"
+          },
+          "sector_id": {
+            "type": "string",
+            "description": "ID do setor da estrutura or\u00e7ament\u00e1ria (ErpSector) \u2014 linha de entrada de estoque"
+          },
+          "sector_name": {
+            "type": "string",
+            "description": "Nome do setor da estrutura or\u00e7ament\u00e1ria (cache)"
           }
         }
       },

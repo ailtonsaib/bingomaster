@@ -14,6 +14,7 @@ const empty = {
   is_active: true, notes: "",
   subgroup_id: "", subgroup_name: "",
   account_estoque_id: "", account_estoque_name: "",
+  stock_sector_id: "", stock_sector_name: "",
   account_venda_id: "", account_venda_name: "",
   account_devolucao_id: "", account_devolucao_name: "",
   account_transferencia_id: "", account_transferencia_name: "",
@@ -23,6 +24,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
   const [form, setForm] = useState({ ...empty, ...(product || {}) });
   const [saving, setSaving] = useState(false);
   const [subgroups, setSubgroups] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [accountsEstoque, setAccountsEstoque] = useState([]);
   const [accountsVenda, setAccountsVenda] = useState([]);
   const [accountsDevolucao, setAccountsDevolucao] = useState([]);
@@ -30,6 +32,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
 
   useEffect(() => {
     base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "-created_date", 500).then(setSubgroups).catch(() => setSubgroups([]));
+    base44.entities.ErpSector.filter({ user_email: user.email, is_active: true }, "name", 500).then(setSectors).catch(() => setSectors([]));
     base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "estoque" }, "-created_date", 500).then(setAccountsEstoque).catch(() => setAccountsEstoque([]));
     base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "venda" }, "-created_date", 500).then(setAccountsVenda).catch(() => setAccountsVenda([]));
     base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, tipo_gerencial: "devolucao" }, "-created_date", 500).then(setAccountsDevolucao).catch(() => setAccountsDevolucao([]));
@@ -62,6 +65,8 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       subgroup_name: form.subgroup_name || undefined,
       account_estoque_id: form.account_estoque_id || undefined,
       account_estoque_name: form.account_estoque_name || undefined,
+      stock_sector_id: form.stock_sector_id || undefined,
+      stock_sector_name: form.stock_sector_name || undefined,
       account_venda_id: form.account_venda_id || undefined,
       account_venda_name: form.account_venda_name || undefined,
       account_devolucao_id: form.account_devolucao_id || undefined,
@@ -115,6 +120,17 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
             }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
               <option value="">Selecione o subgrupo...</option>
               {subgroups.map(s => <option key={s.id} value={s.id}>{s.name}{s.group_name ? ` (${s.group_name})` : ""}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>Setor da Estrutura Orçamentária</Label>
+            <select value={form.stock_sector_id} onChange={e => {
+              const opt = sectors.find(s => s.id === e.target.value);
+              set("stock_sector_id", e.target.value);
+              set("stock_sector_name", opt ? opt.name : "");
+            }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <option value="">Selecione o setor...</option>
+              {sectors.map(s => <option key={s.id} value={s.id}>{s.name}{s.department_name ? ` (${s.department_name})` : ""}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">

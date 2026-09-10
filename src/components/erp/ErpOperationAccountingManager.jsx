@@ -100,7 +100,7 @@ export default function ErpOperationAccountingManager({ user }) {
   return (
     <div className="space-y-3">
       <h2 className="font-semibold text-base flex items-center gap-2"><BookOpen className="w-4 h-4 text-indigo-600" /> Contabilização da NF de Entrada por Operação</h2>
-      <p className="text-xs text-gray-500">Define as contas contábeis do lançamento gerado no cadastro da NF de entrada. Os valores dos impostos são jogados nas contas abaixo conforme as regras fiscais da operação; o valor líquido sempre vai ao débito das contas do rateio da entrada.</p>
+      <p className="text-xs text-gray-500">Define as contas contábeis do lançamento gerado no cadastro da NF de entrada. Os valores dos impostos são jogados nas contas abaixo conforme as regras fiscais da operação. O valor líquido vai ao débito da conta de estoque do produto (entrada de estoque) e o restante, quando houver, ao rateio da entrada.</p>
 
       <div className="flex items-center gap-2 flex-wrap">
         <select value={opSel} onChange={e => selectOp(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm min-w-[280px]">
