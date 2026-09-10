@@ -14,8 +14,12 @@ const ROWS = [
   { key: "pis", type: "D", label: "PIS A RECUP", required: true, hint: "Débito pelo PIS a creditar" },
   { key: "cofins", type: "D", label: "COFINS A RECUP", required: true, hint: "Débito pelo COFINS a creditar" },
   { key: "ipi", type: "D", label: "IPI A RECUP", required: false, hint: "Débito pelo IPI a creditar (opcional)" },
-  { key: "dif_aliquota", type: "C", label: "DIF. ALIQUOTA", required: false, hint: "Crédito pela diferença de alíquota (opcional)" },
+  { key: "dif_aliquota", type: "C", label: "DIF. ALIQUOTA", required: false, hint: "Crédito pela diferença de alíquota a recolher (opcional)" },
   { key: "frete", type: "C", label: "FORN. FRET", required: false, hint: "Crédito pelo frete do fornecedor (opcional)" },
+  { key: "despesas", type: "D", label: "DESPESAS", required: false, hint: "Débito pelas despesas acessórias da nota — saem do rateio (opcional)" },
+  { key: "descontos", type: "C", label: "DESCONTOS", required: false, hint: "Crédito pelos descontos obtidos — custo gravado bruto (opcional)" },
+  { key: "ciap_curto_prazo", type: "D", label: "CIAP CURTO PRAZO", required: false, hint: "Débito pelo ICMS do ativo imobilizado — CIAP curto prazo (opcional)" },
+  { key: "ciap_longo_prazo", type: "D", label: "CIAP LONGO PRAZO", required: false, hint: "Débito pelo ICMS do ativo imobilizado — CIAP longo prazo (opcional)" },
 ];
 
 // Parametrização contábil das operações de entrada: define as contas contábeis

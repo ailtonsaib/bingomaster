@@ -50,6 +50,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [manual, setManual] = useState({
     nota_number: "", supplier_name: "", supplier_cnpj: "", supplier_uf: "",
     issue_date: new Date().toISOString().slice(0, 10), nature_operation: "", cfop: "", total_nota: "",
+    dif_aliquota_value: "", despesas_value: "", descontos_value: "", ciap_curto_value: "", ciap_longo_value: "",
   });
   const [manualItems, setManualItems] = useState([{ product_name: "", product_id: "", quantity: 1, unit_price: 0 }]);
   const setM = (k, v) => setManual(p => ({ ...p, [k]: v }));
@@ -304,6 +305,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_ipi: parsed.totals.total_ipi,
           total_pis: parsed.totals.total_pis,
           total_cofins: parsed.totals.total_cofins,
+          despesas_value: parsed.totals.despesas || 0,
+          descontos_value: parsed.totals.descontos || 0,
           items: resolvedItems,
           purchase_order_id: hasPo ? po.id : undefined,
           purchase_order_number: hasPo ? po.order_number : undefined,
@@ -390,6 +393,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_ipi: items.reduce((s, it) => s + (it.ipi_value || 0), 0),
           total_pis: items.reduce((s, it) => s + (it.pis_value || 0), 0),
           total_cofins: items.reduce((s, it) => s + (it.cofins_value || 0), 0),
+          dif_aliquota_value: Number(manual.dif_aliquota_value) || 0,
+          despesas_value: Number(manual.despesas_value) || 0,
+          descontos_value: Number(manual.descontos_value) || 0,
+          ciap_curto_value: Number(manual.ciap_curto_value) || 0,
+          ciap_longo_value: Number(manual.ciap_longo_value) || 0,
           items,
           purchase_order_id: hasPo ? po.id : undefined,
           purchase_order_number: hasPo ? po.order_number : undefined,
@@ -532,6 +540,16 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                 <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Fornecedor *</label><input value={manual.supplier_name} onChange={e => setM("supplier_name", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">CNPJ/CPF</label><input value={manual.supplier_cnpj} onChange={e => handleManualCnpj(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">UF</label><input value={manual.supplier_uf} onChange={e => setM("supplier_uf", e.target.value.toUpperCase().slice(0, 2))} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Outros valores (opcional) — contabilizados nas contas da parametrização da operação</label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-1">
+                  <div><input type="number" step="0.01" value={manual.dif_aliquota_value} onChange={e => setM("dif_aliquota_value", e.target.value)} placeholder="Dif. Alíquota" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">Dif. Alíquota</p></div>
+                  <div><input type="number" step="0.01" value={manual.despesas_value} onChange={e => setM("despesas_value", e.target.value)} placeholder="Despesas" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">Despesas Acessórias</p></div>
+                  <div><input type="number" step="0.01" value={manual.descontos_value} onChange={e => setM("descontos_value", e.target.value)} placeholder="Descontos" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">Descontos</p></div>
+                  <div><input type="number" step="0.01" value={manual.ciap_curto_value} onChange={e => setM("ciap_curto_value", e.target.value)} placeholder="CIAP curto" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">CIAP Curto Prazo</p></div>
+                  <div><input type="number" step="0.01" value={manual.ciap_longo_value} onChange={e => setM("ciap_longo_value", e.target.value)} placeholder="CIAP longo" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">CIAP Longo Prazo</p></div>
+                </div>
               </div>
               {supplierLookup.msg && (
                 <div className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${supplierLookup.status === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierLookup.status === "new" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>

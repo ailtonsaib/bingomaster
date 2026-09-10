@@ -99,6 +99,8 @@ function parseNfe(doc) {
       total_pis: num(getText(icmsTot, "vPIS")),
       total_cofins: num(getText(icmsTot, "vCOFINS")),
       total_nota: num(getText(icmsTot, "vNF")),
+      despesas: num(getText(icmsTot, "vOutro")) + num(getText(icmsTot, "vSeg")),
+      descontos: num(getText(icmsTot, "vDesc")),
     },
     retentions: { irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0, iss: 0 },
     items,

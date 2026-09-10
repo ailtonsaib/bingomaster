@@ -17,7 +17,7 @@
     "lines": {
       "type": "array",
       "default": [],
-      "description": "Contas cont\u00e1beis parametrizadas para o lan\u00e7amento da entrada fiscal: fornecedores (C, total da nota), impostos a recuperar (D) e contas opcionais (C). O rateio da entrada sempre gera o d\u00e9bito do valor l\u00edquido nas contas do pr\u00f3prio rateio",
+      "description": "Contas cont\u00e1beis parametrizadas para o lan\u00e7amento da entrada fiscal: fornecedores (C, total da nota), impostos a recuperar (D) e contas opcionais. O rateio da entrada sempre gera o d\u00e9bito do valor l\u00edquido nas contas do pr\u00f3prio rateio",
       "items": {
         "type": "object",
         "properties": {
@@ -30,9 +30,13 @@
               "cofins",
               "ipi",
               "dif_aliquota",
-              "frete"
+              "frete",
+              "despesas",
+              "descontos",
+              "ciap_curto_prazo",
+              "ciap_longo_prazo"
             ],
-            "description": "Linha: fornecedores (C total), icms/pis/cofins/ipi (D a recuperar), dif_aliquota/frete (C opcionais)"
+            "description": "Linha: fornecedores (C total), icms/pis/cofins/ipi (D a recuperar), dif_aliquota/descontos (C opcionais), despesas (D opcional), ciap_curto_prazo/ciap_longo_prazo (D opcional), frete (C opcional)"
           },
           "type": {
             "type": "string",

@@ -107,6 +107,35 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     }
   }
 
+  // Linhas opcionais da parametrização da operação: despesas acessórias e CIAP
+  // (débito — saem do rateio para a conta configurada) e dif. alíquota/descontos
+  // (crédito — geram custo bruto com contrapartida de imposto a recolher/descontos obtidos).
+  const extraDebitSpecs = [
+    { key: "despesas", value: Number(entry.despesas_value) || 0, label: "DESPESAS" },
+    { key: "ciap_curto_prazo", value: Number(entry.ciap_curto_value) || 0, label: "CIAP CURTO PRAZO" },
+    { key: "ciap_longo_prazo", value: Number(entry.ciap_longo_value) || 0, label: "CIAP LONGO PRAZO" },
+  ];
+  const extraCreditSpecs = [
+    { key: "dif_aliquota", value: Number(entry.dif_aliquota_value) || 0, label: "DIF. ALIQUOTA" },
+    { key: "descontos", value: Number(entry.descontos_value) || 0, label: "DESCONTOS" },
+  ];
+  const extraDebitLines = [];
+  const extraCreditLines = [];
+  for (const o of extraDebitSpecs) {
+    const pl = acctLine(o.key);
+    if (!pl || !(o.value > 0)) continue;
+    const acc = byIdOrCache(pl);
+    extraDebitLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: o.value, credit: 0, complement: pl.history_text || `${o.label} NF ${entry.nota_number}` });
+    despesaBase -= o.value;
+  }
+  for (const o of extraCreditSpecs) {
+    const pl = acctLine(o.key);
+    if (!pl || !(o.value > 0)) continue;
+    const acc = byIdOrCache(pl);
+    extraCreditLines.push({ account_id: acc.id, account_code: acc.code, account_name: acc.name, debit: 0, credit: o.value, complement: pl.history_text || `${o.label} NF ${entry.nota_number}` });
+    despesaBase += o.value;
+  }
+
   const lines = [];
   // Débito nas contas de estoque dos produtos (entrada de estoque)
   for (const s of stockItems) {
@@ -140,13 +169,16 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
       });
     }
   }
-  // Débito dos impostos (créditos a recuperar + outras de impostos)
+  // Débito dos impostos (créditos a recuperar + outras de impostos) e linhas opcionais (despesas/CIAP)
   for (const l of debitTaxLines) lines.push(l);
+  for (const l of extraDebitLines) lines.push(l);
 
   const totalDebit = lines.reduce((a, l) => a + l.debit, 0);
 
   // Crédito credora (Fornecedores/Contas a Pagar) pelo restante + créditos das retenções
-  const credoraCredit = totalDebit - retentionsValueWithAcct;
+  // e das linhas opcionais de crédito (dif. alíquota / descontos)
+  const extraCreditTotal = extraCreditLines.reduce((a, l) => a + l.credit, 0);
+  const credoraCredit = totalDebit - retentionsValueWithAcct - extraCreditTotal;
   lines.push({
     account_id: credora.id,
     account_code: credora.code,
@@ -166,6 +198,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
       complement: `Retenção ${r.type} NF ${entry.nota_number}`,
     });
   }
+  for (const l of extraCreditLines) lines.push(l);
 
   const totalCredit = lines.reduce((a, l) => a + l.credit, 0);
 
