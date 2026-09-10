@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Factory, LogOut, Boxes, ShoppingCart, Landmark, Settings, Wrench, Warehouse } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { maskCpfCnpj } from "@/lib/brMasks";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ErpModuleSuprimentos from "@/components/erp/modules/ErpModuleSuprimentos";
 import ErpModuleComercial from "@/components/erp/modules/ErpModuleComercial";
@@ -14,6 +16,16 @@ export default function Erp() {
   const navigate = useNavigate();
   const [user, setUser] = useState(getPortalUser());
   const [activeModule, setActiveModule] = useState("suprimentos");
+  const [company, setCompany] = useState(null);
+
+  // Razão social e CNPJ da empresa (matriz) — cabeçalho do painel
+  useEffect(() => {
+    if (!user?.email) return;
+    base44.entities.ErpCompany.filter({ user_email: user.email }, "-created_date", 20)
+      .then(list => setCompany(list.find(c => c.is_main) || list[0] || null))
+      .catch(() => setCompany(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
 
   if (!user) { navigate("/erp"); return null; }
 
@@ -36,7 +48,10 @@ export default function Erp() {
           <button onClick={() => navigate("/portal")} className="p-1 hover:bg-gray-100 rounded"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
           <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center"><Factory className="w-5 h-5 text-emerald-600" /></div>
           <div>
-            <h1 className="font-bold text-lg">ERP — Indústria & Comércio</h1>
+            <h1 className="font-bold text-lg leading-tight">
+              {company?.razao_social || "ERP — Indústria & Comércio"}
+              {company?.cnpj && <span className="font-normal text-sm text-gray-500"> • CNPJ {maskCpfCnpj(String(company.cnpj))}</span>}
+            </h1>
             <p className="text-xs text-gray-500">{user.name} • Plano {user.erp_plan || "free"}</p>
           </div>
         </div>
