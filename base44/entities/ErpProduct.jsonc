@@ -52,6 +52,16 @@
       "default": "UN",
       "description": "Unidade de medida (UN, KG, LT, M, CX, etc.)"
     },
+    "net_weight": {
+      "type": "number",
+      "default": 0,
+      "description": "Peso l\u00edquido (kg) \u2014 por unidade do produto"
+    },
+    "gross_weight": {
+      "type": "number",
+      "default": 0,
+      "description": "Peso bruto (kg) \u2014 por unidade do produto, com embalagem"
+    },
     "stock": {
       "type": "number",
       "default": 0,

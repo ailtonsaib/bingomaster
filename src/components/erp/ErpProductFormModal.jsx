@@ -11,6 +11,7 @@ import ErpProductSupplierLinks from "@/components/erp/ErpProductSupplierLinks";
 const empty = {
   code: "", barcode: "", name: "", product_type: "mercadoria",
   category: "", ncm: "", unit: "UN", stock: 0, min_stock: 0,
+  net_weight: 0, gross_weight: 0,
   is_active: true, notes: "",
   subgroup_id: "", subgroup_name: "",
   account_estoque_id: "", account_estoque_name: "",
@@ -60,6 +61,8 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       unit: form.unit,
       stock: Number(form.stock) || 0,
       min_stock: Number(form.min_stock) || 0,
+      net_weight: Number(form.net_weight) || 0,
+      gross_weight: Number(form.gross_weight) || 0,
       is_active: form.is_active,
       subgroup_id: form.subgroup_id || undefined,
       subgroup_name: form.subgroup_name || undefined,
@@ -174,6 +177,10 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
             </div>
             <div><Label>Estoque</Label><Input type="number" value={form.stock} onChange={e => set("stock", e.target.value)} /></div>
             <div><Label>Estoque mín.</Label><Input type="number" value={form.min_stock} onChange={e => set("min_stock", e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Peso líquido (kg)</Label><Input type="number" step="0.001" value={form.net_weight} onChange={e => set("net_weight", e.target.value)} /></div>
+            <div><Label>Peso bruto (kg)</Label><Input type="number" step="0.001" value={form.gross_weight} onChange={e => set("gross_weight", e.target.value)} /></div>
           </div>
           <div><Label>Observações</Label><Input value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
           <label className="flex items-center gap-2 text-sm">
