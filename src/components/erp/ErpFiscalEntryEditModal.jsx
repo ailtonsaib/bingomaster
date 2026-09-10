@@ -198,6 +198,9 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
             <div><label className="text-xs font-medium text-gray-600">CFOP</label><input value={form.cfop} onChange={e => setF("cfop", e.target.value.replace(/\D/g, "").slice(0, 4))} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
           </div>
 
+          {/* Capa dos impostos — acima dos itens */}
+          <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} />
+
           {/* Itens */}
           <div className="border rounded-lg overflow-hidden">
             <div className="bg-gray-50 px-3 py-2 border-b flex items-center justify-between">
@@ -220,9 +223,8 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
             </table>
           </div>
 
-          {/* Impostos por item + capa */}
+          {/* Impostos por item */}
           <ErpFiscalItemTaxes items={items} onChange={updItem} />
-          <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} />
 
           {/* Outros valores */}
           <div>

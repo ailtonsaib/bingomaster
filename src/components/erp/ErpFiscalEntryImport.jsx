@@ -917,6 +917,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   <div><input type="number" step="0.01" value={manual.cofins_frete_value} onChange={e => setM("cofins_frete_value", e.target.value)} placeholder="COFINS frete" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">COFINS s/ Frete</p></div>
                 </div>
               </div>
+              {/* Capa dos impostos — acima dos itens */}
+              <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} />
               <div className="border rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-3 py-2 border-b flex items-center justify-between">
                   <h4 className="text-sm font-semibold">Itens</h4>
@@ -944,7 +946,6 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                 </datalist>
               </div>
               <ErpFiscalItemTaxes items={manualItems} onChange={(i, patch) => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, ...patch } : x))} />
-              <ErpFiscalCapaTaxes capa={capa} onChange={(k, v) => setCapa(p => ({ ...p, [k]: v }))} sums={taxSums} />
             </div>
           )}
 
