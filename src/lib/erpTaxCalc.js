@@ -4,6 +4,9 @@
 
 export const num = (v) => Number(v) || 0;
 
+// Arredonda valores monetários para 2 casas decimais
+const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+
 // Alíquotas internas de ICMS por UF (valores comuns praticados em 2024/2025).
 export const ICMS_INTERNAL_RATES = {
   AC: 19, AL: 18, AP: 18, AM: 18, BA: 18, CE: 18, DF: 18, ES: 17, GO: 17, MA: 18,
@@ -60,13 +63,13 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
   const unit = num(product.unit_price != null ? product.unit_price : product.sale_price || 0);
   const total = qty * unit;
   const ipiPct = ipiRate != null ? num(ipiRate) : num(rule?.ipi_rate);
-  const ipiValue = total * ipiPct / 100;
+  const ipiValue = r2(total * ipiPct / 100);
 
   const icmsRate = num(rule?.icms_rate);
   const icmsRed = num(rule?.icms_reduction_base) || 100;
-  const baseICMS = total * (icmsRed / 100);
-  const icmsValue = baseICMS * icmsRate / 100;
-  const fcpValue = baseICMS * num(rule?.fcp_rate) / 100;
+  const baseICMS = r2(total * (icmsRed / 100));
+  const icmsValue = r2(baseICMS * icmsRate / 100);
+  const fcpValue = r2(baseICMS * num(rule?.fcp_rate) / 100);
 
   // PIS/COFINS — base deduz o ICMS destacado quando deduz_icms_pis_cofins = true (Tema 69 STJ)
   const pisRate = num(rule?.pis_rate);
@@ -75,20 +78,20 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
   const cofinsRed = num(rule?.cofins_reduction_base) || 100;
   const deduzIcms = !!rule?.deduz_icms_pis_cofins;
   const baseSemIcms = deduzIcms ? Math.max(0, total - icmsValue) : total;
-  const pisBase = baseSemIcms * (pisRed / 100);
-  const cofinsBase = baseSemIcms * (cofinsRed / 100);
-  const pisValue = pisBase * pisRate / 100;
-  const cofinsValue = cofinsBase * cofinsRate / 100;
+  const pisBase = r2(baseSemIcms * (pisRed / 100));
+  const cofinsBase = r2(baseSemIcms * (cofinsRed / 100));
+  const pisValue = r2(pisBase * pisRate / 100);
+  const cofinsValue = r2(cofinsBase * cofinsRate / 100);
 
   // CBS/IBS — reforma tributária (base = valor da operação * redução)
   const cbsRate = num(rule?.cbs_rate);
   const cbsRed = num(rule?.cbs_reduction_base) || 100;
   const ibsRate = num(rule?.ibs_rate);
   const ibsRed = num(rule?.ibs_reduction_base) || 100;
-  const cbsBase = total * (cbsRed / 100);
-  const ibsBase = total * (ibsRed / 100);
-  const cbsValue = cbsBase * cbsRate / 100;
-  const ibsValue = ibsBase * ibsRate / 100;
+  const cbsBase = r2(total * (cbsRed / 100));
+  const ibsBase = r2(total * (ibsRed / 100));
+  const cbsValue = r2(cbsBase * cbsRate / 100);
+  const ibsValue = r2(ibsBase * ibsRate / 100);
 
   const result = {
     rule_id: rule?.id || null,
@@ -112,14 +115,14 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
     const aliqInte = num(rule.aliq_interestadual) || interestadualRate(customerUF);
     const fcpDest = num(rule.fcp_destino_rate);
     const pctDest = num(rule.difal_percent_destination) || 100;
-    const difalTotal = baseICMS * (aliqInt - aliqInte) / 100;
+    const difalTotal = r2(baseICMS * (aliqInt - aliqInte) / 100);
     result.difal = {
       aliq_interna_destino: aliqInt,
       aliq_interestadual: aliqInte,
       difal_total: difalTotal,
-      difal_origin: difalTotal * (100 - pctDest) / 100,
-      difal_destination: difalTotal * pctDest / 100,
-      fcp_destination: baseICMS * fcpDest / 100,
+      difal_origin: r2(difalTotal * (100 - pctDest) / 100),
+      difal_destination: r2(difalTotal * pctDest / 100),
+      fcp_destination: r2(baseICMS * fcpDest / 100),
     };
   }
 
@@ -135,10 +138,10 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
       method === "pauta" ? pauta * qty :
       method === "agregada" ? (total + ipiValue) :
       (total + ipiValue) * (1 + mva / 100);
-    baseST = baseST * (stRed / 100);
-    const icmsST = baseST * stRate / 100;
-    const icmsSTRecolher = Math.max(0, icmsST - icmsValue);
-    const fcpSTValue = baseST * fcpSt / 100;
+    baseST = r2(baseST * (stRed / 100));
+    const icmsST = r2(baseST * stRate / 100);
+    const icmsSTRecolher = r2(Math.max(0, icmsST - icmsValue));
+    const fcpSTValue = r2(baseST * fcpSt / 100);
     result.st = {
       method,
       cst_icms_st: rule.cst_icms_st || "10",
@@ -149,7 +152,7 @@ export function computeErpFiscalItem(product, { rules, operation, customerUF, co
       icms_proprio_credit: icmsValue,
       icms_st_recolher: icmsSTRecolher,
       fcp_st: fcpSTValue,
-      total_st: icmsSTRecolher + fcpSTValue,
+      total_st: r2(icmsSTRecolher + fcpSTValue),
     };
   }
 
@@ -182,8 +185,9 @@ export function computeErpTotals(items) {
     total_difal: 0, total_difal_destination: 0, total_fcp_destination: 0,
     total_st: 0, total_st_recolher: 0,
   });
-  t.total_nota = t.total_products + t.total_ipi;
-  t.total_impostos = t.total_icms + t.total_fcp + t.total_ipi + t.total_pis + t.total_cofins + t.total_cbs + t.total_ibs + t.total_difal + t.total_st;
-  t.total_geral = t.total_nota + t.total_impostos - t.total_ipi;
+  t.total_nota = r2(t.total_products + t.total_ipi);
+  t.total_impostos = r2(t.total_icms + t.total_fcp + t.total_ipi + t.total_pis + t.total_cofins + t.total_cbs + t.total_ibs + t.total_difal + t.total_st);
+  t.total_geral = r2(t.total_nota + t.total_impostos - t.total_ipi);
+  Object.keys(t).forEach(k => { t[k] = r2(t[k]); });
   return t;
 }
