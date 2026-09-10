@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Loader2, BookOpen, Info } from "lucide-react";
+import ErpCombobox from "@/components/erp/ErpCombobox";
 
 // Estrutura fixa do lançamento da entrada fiscal (uma linha por conta parametrizada).
 // O valor de cada linha é calculado no lançamento: fornecedores = total da nota (C),
@@ -96,6 +97,7 @@ export default function ErpOperationAccountingManager({ user }) {
   };
 
   const compareChartCode = (a, b) => String(a.code || "").localeCompare(String(b.code || ""), "pt-BR", { numeric: true });
+  const accountOptions = useMemo(() => [...accounts].sort(compareChartCode).map(a => ({ id: a.id, label: `${a.code ? `${a.code} — ` : ""}${a.name}` })), [accounts]);
 
   return (
     <div className="space-y-3">
@@ -135,10 +137,13 @@ export default function ErpOperationAccountingManager({ user }) {
                       {!r.required && <span className="text-[10px] text-gray-400 block">opcional</span>}
                     </td>
                     <td className="p-2">
-                      <select value={lines[r.key]?.account_id || ""} onChange={e => setAccount(r.key, e.target.value)} className="w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs">
-                        <option value="">Selecione a conta...</option>
-                        {[...accounts].sort(compareChartCode).map(a => <option key={a.id} value={a.id}>{a.code ? `${a.code} — ` : ""}{a.name}</option>)}
-                      </select>
+                      <ErpCombobox
+                        value={lines[r.key]?.account_id || ""}
+                        onValueChange={(id) => setAccount(r.key, id)}
+                        options={accountOptions}
+                        placeholder="Digite o código ou a descrição da conta..."
+                        clearable
+                      />
                     </td>
                     <td className="p-2">
                       <select value={lines[r.key]?.history_id || ""} onChange={e => setHistory(r.key, e.target.value)} className="w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs">
