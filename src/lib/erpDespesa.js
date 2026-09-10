@@ -119,9 +119,54 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
       due_date: due,
     });
   }
-  await base44.entities.ErpPayable.bulkCreate(payables);
+  await base44.entities.ErpPayable.bulkCreate(payables.map(p => ({ ...p, fiscal_entry_id: entry.id })));
   await base44.entities.ErpFiscalEntry.update(entry.id, { financeiro_gerado: true });
   return payables.length;
+}
+
+// Reabre o lançamento de uma entrada de NF: exclui o lançamento contábil (e o do
+// frete), as contas a pagar geradas em aberto e estorna a quantidade em estoque,
+// voltando a entrada para "aprovada" — ao lançar novamente nada é duplicado.
+export async function reabrirEntradaNF(user, entry) {
+  const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+
+  // 1. Lançamentos contábeis (principal e do frete)
+  let journals = 0;
+  for (const id of [entry.journal_entry_id, entry.freight?.journal_entry_id].filter(Boolean)) {
+    try { await base44.entities.ErpJournalEntry.delete(id); journals++; } catch (e) { console.error(e); }
+  }
+
+  // 2. Contas a pagar geradas: pelo vínculo fiscal_entry_id; para as geradas antes
+  // do vínculo, pela descrição (NF/Despesa + número) — somente as em aberto
+  const esc = String(entry.nota_number).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pat = new RegExp(`(NF|Despesa) ${esc}([^0-9]|$)`);
+  const payables = await base44.entities.ErpPayable.filter({ user_email: user.email, status: "aberto" }, "-created_date", 500);
+  const linked = payables.filter(p => p.fiscal_entry_id === entry.id || (!p.fiscal_entry_id && pat.test(p.description || "")));
+  let deletedPayables = 0;
+  for (const p of linked) {
+    try { await base44.entities.ErpPayable.delete(p.id); deletedPayables++; } catch (e) { console.error(e); }
+  }
+
+  // 3. Estorna a quantidade em estoque entrada pelos itens (o custo é recalculado no novo lançamento)
+  const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
+  const byId = new Map(products.map(p => [p.id, p]));
+  for (const it of entry.items || []) {
+    const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
+    if (!prod) continue;
+    const qty = Number(it.quantity) || 0;
+    if (qty > 0) await base44.entities.ErpProduct.update(prod.id, { stock: r2(Math.max(0, (prod.stock || 0) - qty)) });
+  }
+
+  // 4. Volta a entrada para aprovada — pronta para correção e novo lançamento
+  await base44.entities.ErpFiscalEntry.update(entry.id, {
+    status: "aprovada",
+    journal_entry_id: "",
+    journal_entry_number: "",
+    financeiro_gerado: false,
+    ...(entry.freight ? { freight: { ...entry.freight, journal_entry_id: "", journal_entry_number: "" } } : {}),
+  });
+
+  return { journals, payables: deletedPayables };
 }
 
 // Lança uma entrada de NF (ErpFiscalEntry entry_kind=nf_entrada): gera o movimento

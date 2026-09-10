@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, Search, Trash2, FileText, ArrowDownToLine, CheckCircle2, XCircle, Clock, RotateCcw } from "lucide-react";
 import ErpFiscalEntryImport from "./ErpFiscalEntryImport";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
-import { lancarEntradaNF } from "@/lib/erpDespesa";
+import { lancarEntradaNF, reabrirEntradaNF } from "@/lib/erpDespesa";
 
 const STATUS = {
   pendente: { label: "Pendente", color: "text-amber-700 bg-amber-100" },
@@ -52,6 +52,19 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
     setBusy(entry.id);
     try {
       await lancarEntradaNF(user, entry, accounts);
+      load();
+    } catch (e) { alert(e.message); }
+    setBusy(null);
+  };
+
+  // "Reabrir Lançamento": exclui contábil, financeiro e estoque da entrada para
+  // corrigir e lançar novamente sem duplicar movimentações
+  const handleReabrir = async (entry) => {
+    if (!confirm(`Reabrir o lançamento da NF ${entry.nota_number}?\n\nO lançamento contábil, as contas a pagar em aberto e a entrada em estoque serão excluídos. Corrija e lance novamente.`)) return;
+    setBusy(entry.id);
+    try {
+      const res = await reabrirEntradaNF(user, entry);
+      alert(`Lançamento reaberto: ${res.journals} lançamento(s) contábil(is) e ${res.payables} conta(s) a pagar excluídos, estoque estornado.`);
       load();
     } catch (e) { alert(e.message); }
     setBusy(null);
@@ -111,7 +124,14 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
                       )}
                       {i.status === "pendente" && <span className="text-[10px] text-amber-600" title="Aguardando aprovação do admin">aguarda aprovação</span>}
                       {i.status === "nao_aprovada" && <XCircle className="w-4 h-4 text-red-500 inline" />}
-                      {i.status === "lancada" && <CheckCircle2 className="w-4 h-4 text-blue-600 inline" title="Lançamento gerado" />}
+                      {i.status === "lancada" && (
+                        <>
+                          <button onClick={() => handleReabrir(i)} disabled={busy === i.id} title="Reabrir Lançamento (exclui contábil, financeiro e estoque)" className="p-1 hover:bg-amber-50 rounded disabled:opacity-50">
+                            {busy === i.id ? <Clock className="w-4 h-4 text-gray-400 animate-spin" /> : <RotateCcw className="w-4 h-4 text-amber-600" />}
+                          </button>
+                          <CheckCircle2 className="w-4 h-4 text-blue-600 inline" title="Lançamento gerado" />
+                        </>
+                      )}
                       <button onClick={() => handleDelete(i)} className="p-1 hover:bg-red-50 rounded ml-1"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
                   </tr>
