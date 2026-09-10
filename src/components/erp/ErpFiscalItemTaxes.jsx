@@ -18,6 +18,12 @@ function recompute(item, field) {
     const v = r2(n("pauta_pis_cofins") * (Number(item.quantity) || 0));
     return { pis_value: v, cofins_value: v };
   }
+  if (field === "cbs_rate") {
+    return { cbs_value: r2(n("quantity") * n("unit_price") * n("cbs_rate") / 100) };
+  }
+  if (field === "ibs_rate") {
+    return { ibs_value: r2(n("quantity") * n("unit_price") * n("ibs_rate") / 100) };
+  }
   return {};
 }
 
@@ -62,6 +68,12 @@ export default function ErpFiscalItemTaxes({ items, onChange }) {
             {numInput(i, "pauta_pis_cofins", "Pauta R$/un")}
             {numInput(i, "pis_value", "Vlr PIS", "font-medium")}
             {numInput(i, "cofins_value", "Vlr COFINS", "font-medium")}
+            {cstInput(i, "cst_cbs", "CST CBS")}
+            {numInput(i, "cbs_rate", "Alíq. CBS %")}
+            {numInput(i, "cbs_value", "Vlr CBS")}
+            {cstInput(i, "cst_ibs", "CST IBS")}
+            {numInput(i, "ibs_rate", "Alíq. IBS %")}
+            {numInput(i, "ibs_value", "Vlr IBS")}
           </div>
         </div>
       ))}

@@ -138,6 +138,20 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     );
   };
 
+  // Troca de operação: re-aplica a regra fiscal — limpa os impostos calculados
+  // automaticamente (mantém os editados manualmente) e zera a capa para re-preencher
+  const handleOpChange = (value) => {
+    setOpId(value);
+    setError("");
+    setCapa({ base_icms: "", aliq_icms: "", aliq_reducao_icms: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "", difal_value: "" });
+    setManualItems(prev => prev.map(it => it._taxEdited ? it : {
+      ...it,
+      cst_icms: "", base_icms: "", icms_rate: "", aliq_reducao_icms: "", icms_value: "", difal_value: "",
+      cst_pis: "", cst_cofins: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "", pis_value: "", cofins_value: "",
+      cst_cbs: "", cbs_rate: "", cbs_value: "", cst_ibs: "", ibs_rate: "", ibs_value: "",
+    }));
+  };
+
   useEffect(() => {
     Promise.all([
       base44.entities.ErpPurchaseOrder.filter({ user_email: user.email, status: { $ne: "cancelada" } }, "-emission_date", 200),
@@ -215,6 +229,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       pis_value: Math.round(s("pis_value") * 100) / 100,
       cofins_value: Math.round(s("cofins_value") * 100) / 100,
       difal_value: Math.round(s("difal_value") * 100) / 100,
+      cbs_value: Math.round(s("cbs_value") * 100) / 100,
+      ibs_value: Math.round(s("ibs_value") * 100) / 100,
     };
   })();
 
@@ -246,11 +262,38 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           aliq_pis_cofins: calc.pis_rate || 0,
           pis_value: Math.round((calc.pis_value || 0) * 100) / 100,
           cofins_value: Math.round((calc.cofins_value || 0) * 100) / 100,
+          cst_cbs: calc.cst_cbs || "",
+          cbs_rate: calc.cbs_rate || 0,
+          cbs_value: Math.round((calc.cbs_value || 0) * 100) / 100,
+          cst_ibs: calc.cst_ibs || "",
+          ibs_rate: calc.ibs_rate || 0,
+          ibs_value: Math.round((calc.ibs_value || 0) * 100) / 100,
         };
       });
       return changed ? next : prev;
     });
   }, [opId, forn.uf, taxRules, manualItems.length, mode, itemsSignature]);
+
+  // Capa: alíquotas preenchidas automaticamente pela regra fiscal da operação e
+  // bases/DIFAL pela soma dos impostos calculados nos itens — o preenchido pelo
+  // usuário é preservado, os campos vazios podem ser mantidos para ajuste manual
+  useEffect(() => {
+    if (mode !== "manual" || !opId) return;
+    const first = manualItems.find(it => it.product_name?.trim() && (Number(it.quantity) || 0) > 0);
+    if (!first) return;
+    const calc = calcManualItem(first);
+    setCapa(prev => {
+      const isEmpty = (v) => v === undefined || v === null || String(v).trim() === "";
+      const next = {};
+      if (isEmpty(prev.base_icms) && taxSums.base_icms > 0) next.base_icms = taxSums.base_icms;
+      if (isEmpty(prev.aliq_icms) && (calc?.icms_rate || 0) > 0) next.aliq_icms = calc.icms_rate;
+      if (isEmpty(prev.base_pis_cofins) && taxSums.base_pis_cofins > 0) next.base_pis_cofins = taxSums.base_pis_cofins;
+      if (isEmpty(prev.aliq_pis_cofins) && (calc?.pis_rate || 0) > 0) next.aliq_pis_cofins = calc.pis_rate;
+      if (isEmpty(prev.difal_value) && taxSums.difal_value > 0) next.difal_value = taxSums.difal_value;
+      if (Object.keys(next).length === 0) return prev;
+      return { ...prev, ...next };
+    });
+  }, [opId, mode, taxSums.base_icms, taxSums.base_pis_cofins, taxSums.difal_value, manualItems.length, itemsSignature]);
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
@@ -523,6 +566,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             pauta_pis_cofins: Number(it.pauta_pis_cofins) || 0,
             pis_value: taxOr(it.pis_value, calc?.pis_value),
             cofins_value: taxOr(it.cofins_value, calc?.cofins_value),
+            cst_cbs: it.cst_cbs || calc?.cst_cbs || "",
+            cbs_rate: taxOr(it.cbs_rate, calc?.cbs_rate),
+            cbs_value: taxOr(it.cbs_value, calc?.cbs_value),
+            cst_ibs: it.cst_ibs || calc?.cst_ibs || "",
+            ibs_rate: taxOr(it.ibs_rate, calc?.ibs_rate),
+            ibs_value: taxOr(it.ibs_value, calc?.ibs_value),
             ipi_value: calc?.ipi_value || 0,
           };
         });
@@ -564,6 +613,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           total_ipi: items.reduce((s, it) => s + (it.ipi_value || 0), 0),
           total_pis: items.reduce((s, it) => s + (it.pis_value || 0), 0),
           total_cofins: items.reduce((s, it) => s + (it.cofins_value || 0), 0),
+          total_cbs: items.reduce((s, it) => s + (it.cbs_value || 0), 0),
+          total_ibs: items.reduce((s, it) => s + (it.ibs_value || 0), 0),
           base_icms: capaNum.base_icms > 0 ? capaNum.base_icms : Math.round(taxSumOf("base_icms") * 100) / 100,
           aliq_icms: Number(capa.aliq_icms) || 0,
           aliq_reducao_icms: Number(capa.aliq_reducao_icms) || 0,
@@ -693,7 +744,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           {/* 1º passo: operação de entrada — base do cálculo dos impostos */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1.5">
             <label className="text-sm font-semibold text-indigo-900 flex items-center gap-2"><ArrowDownToLine className="w-4 h-4" /> 1. Operação de Entrada *</label>
-            <select value={opId} onChange={e => { setOpId(e.target.value); setError(""); }} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm">
+            <select value={opId} onChange={e => handleOpChange(e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm">
               <option value="">Selecione a operação de entrada usada no cálculo dos impostos...</option>
               {operations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select>

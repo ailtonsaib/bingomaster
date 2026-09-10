@@ -43,6 +43,8 @@ export default function ErpFiscalCapaTaxes({ capa, onChange, sums }) {
         {readOnly("Vlr ICMS (itens)", sums?.icms_value || 0)}
         {readOnly("Vlr PIS (itens)", sums?.pis_value || 0)}
         {readOnly("Vlr COFINS (itens)", sums?.cofins_value || 0)}
+        {readOnly("Vlr CBS (itens)", sums?.cbs_value || 0)}
+        {readOnly("Vlr IBS (itens)", sums?.ibs_value || 0)}
       </div>
       <p className="text-[10px] text-gray-500 mt-1.5">Campos vazios usam a soma dos itens automaticamente — preencher divergindo dos itens bloqueia a entrada.</p>
     </div>

@@ -10,7 +10,8 @@ import { fmtMoney } from "@/lib/erpUtils";
 const EMPTY_ITEM = { product_id: "", product_name: "", product_code: "", quantity: 1, unit_price: 0,
   cst_icms: "", base_icms: "", icms_rate: "", aliq_reducao_icms: "", icms_value: "", difal_value: "",
   cst_pis: "", cst_cofins: "", base_pis_cofins: "", aliq_pis_cofins: "", pauta_pis_cofins: "",
-  pis_value: "", cofins_value: "", ipi_value: "" };
+  pis_value: "", cofins_value: "", ipi_value: "",
+  cst_cbs: "", cbs_rate: "", cbs_value: "", cst_ibs: "", ibs_rate: "", ibs_value: "" };
 
 // Manutenção de uma entrada de NF reaberta: corrige dados da nota, itens,
 // impostos (capa e por item) e rateio — depois basta lançar novamente.
@@ -72,6 +73,8 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
       pis_value: Math.round(s("pis_value") * 100) / 100,
       cofins_value: Math.round(s("cofins_value") * 100) / 100,
       difal_value: Math.round(s("difal_value") * 100) / 100,
+      cbs_value: Math.round(s("cbs_value") * 100) / 100,
+      ibs_value: Math.round(s("ibs_value") * 100) / 100,
     };
   })();
 
@@ -96,6 +99,8 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
       base_pis_cofins: Number(it.base_pis_cofins) || 0, aliq_pis_cofins: Number(it.aliq_pis_cofins) || 0,
       pauta_pis_cofins: Number(it.pauta_pis_cofins) || 0,
       pis_value: Number(it.pis_value) || 0, cofins_value: Number(it.cofins_value) || 0,
+      cst_cbs: it.cst_cbs || "", cbs_rate: Number(it.cbs_rate) || 0, cbs_value: Number(it.cbs_value) || 0,
+      cst_ibs: it.cst_ibs || "", ibs_rate: Number(it.ibs_rate) || 0, ibs_value: Number(it.ibs_value) || 0,
       ipi_value: Number(it.ipi_value) || 0,
     }));
     // Capa x itens: os valores dos impostos da capa devem fechar com a soma dos itens
@@ -126,6 +131,8 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
         total_ipi: Math.round(taxSumOf("ipi_value") * 100) / 100,
         total_pis: Math.round(taxSumOf("pis_value") * 100) / 100,
         total_cofins: Math.round(taxSumOf("cofins_value") * 100) / 100,
+        total_cbs: Math.round(taxSumOf("cbs_value") * 100) / 100,
+        total_ibs: Math.round(taxSumOf("ibs_value") * 100) / 100,
         base_icms: capaNum.base_icms > 0 ? capaNum.base_icms : Math.round(taxSumOf("base_icms") * 100) / 100,
         aliq_icms: Number(capa.aliq_icms) || 0,
         aliq_reducao_icms: Number(capa.aliq_reducao_icms) || 0,
