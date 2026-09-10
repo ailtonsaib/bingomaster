@@ -56,7 +56,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const fileRef = useRef(null);
 
   const [manual, setManual] = useState({
-    nota_number: "", supplier_name: "", supplier_cnpj: "", supplier_uf: "",
+    nota_number: "",
     issue_date: new Date().toISOString().slice(0, 10), nature_operation: "", cfop: "", total_nota: "",
     dif_aliquota_value: "", despesas_value: "", descontos_value: "", ciap_curto_value: "", ciap_longo_value: "",
     icms_frete_value: "", pis_frete_value: "", cofins_frete_value: "",
@@ -64,11 +64,19 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const [manualItems, setManualItems] = useState([{ product_name: "", product_id: "", quantity: 1, unit_price: 0 }]);
   const setM = (k, v) => setManual(p => ({ ...p, [k]: v }));
 
-  // CNPJ informado na digitação manual: se o fornecedor não estiver cadastrado,
-  // busca os dados na Receita Federal e importa para o cadastro de fornecedores.
-  const handleManualCnpj = async (raw) => {
+  // Fornecedor da entrada (passo 2): pesquisável no cadastro ou informado por CNPJ.
+  // CNPJ não cadastrado → consulta a Receita Federal e cadastra ao dar entrada.
+  const [forn, setForn] = useState({ id: "", name: "", cnpj: "", uf: "" });
+  const setF = (patch) => setForn(p => ({ ...p, ...patch }));
+  const pickForn = (id) => {
+    const s = suppliers.find(x => x.id === id);
+    if (!s) { setForn({ id: "", name: "", cnpj: "", uf: "" }); setSupplierLookup({ busy: false, msg: "", status: "", data: null }); return; }
+    setForn({ id: s.id, name: s.name, cnpj: maskCpfCnpj(String(s.document || "")), uf: s.uf || "" });
+    setSupplierLookup({ busy: false, status: "exists", msg: `Fornecedor cadastrado: ${s.name}`, data: null });
+  };
+  const handleFornCnpj = async (raw) => {
     const masked = maskCpfCnpj(raw);
-    setM("supplier_cnpj", masked);
+    setF({ cnpj: masked });
     const doc = digits(masked);
     if (doc.length !== 14) { setSupplierLookup({ busy: false, msg: "", status: "", data: null }); return; }
     if (doc === lastCnpjLookup.current) return;
@@ -76,7 +84,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     const existing = suppliers.find(s => s.document === doc);
     if (existing) {
       setSupplierLookup({ busy: false, status: "exists", msg: `Fornecedor já cadastrado: ${existing.name}`, data: null });
-      setManual(p => ({ ...p, supplier_name: p.supplier_name || existing.name, supplier_uf: p.supplier_uf || existing.uf || "" }));
+      setForn(p => ({ id: existing.id, name: existing.name, cnpj: masked, uf: existing.uf || p.uf }));
       return;
     }
     setSupplierLookup({ busy: true, status: "", msg: "Consultando CNPJ na Receita Federal...", data: null });
@@ -85,7 +93,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       setSupplierLookup({ busy: false, status: "", msg: `CNPJ não cadastrado — não foi possível consultar a Receita Federal (${res.error}). O fornecedor será criado com os dados informados.`, data: null });
       return;
     }
-    setManual(p => ({ ...p, supplier_name: p.supplier_name || res.razao_social, supplier_uf: p.supplier_uf || res.uf || "" }));
+    setForn(p => ({ id: "", name: p.name || res.razao_social, cnpj: masked, uf: p.uf || res.uf || "" }));
     setSupplierLookup({ busy: false, status: "new", msg: `Dados obtidos da Receita Federal — o fornecedor "${res.razao_social}" será cadastrado automaticamente ao dar entrada.`, data: res });
   };
 
@@ -121,7 +129,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     if (!op) return null;
     return computeErpFiscalItem(
       { ncm: "", quantity: Number(it.quantity) || 0, unit_price: Number(it.unit_price) || 0 },
-      { rules: taxRules, operation: op, customerUF: manual.supplier_uf }
+      { rules: taxRules, operation: op, customerUF: forn.uf }
     );
   };
 
@@ -150,6 +158,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const diff = selectedPo ? nfTotal - (selectedPo.total_value || 0) : 0;
   const match = selectedPo ? Math.abs(diff) < 0.01 : false;
 
+  // CFOP da operação pela UF do fornecedor: mesma UF da empresa → dentro do estado; fora → fora do estado; EX → importação
+  const selectedOp = operations.find(o => o.id === opId);
+  const cfopAuto = (() => {
+    if (!selectedOp || !forn.uf) return "";
+    if (forn.uf === "EX") return selectedOp.cfop_importacao || "";
+    return companyUF && forn.uf === companyUF ? (selectedOp.cfop_dentro_estado || "") : (selectedOp.cfop_fora_estado || "");
+  })();
+
   // Resolve fornecedor e vínculos por item quando o XML é parseado
   useEffect(() => {
     if (mode !== "xml" || !parsed) { setSupplierStatus(""); setItemChoices([]); return; }
@@ -164,7 +180,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     }));
   }, [parsed, mode, suppliers, links]);
 
-  const supplierDoc = parsed ? digits(parsed.supplier.cpf_cnpj) : digits(manual.supplier_cnpj);
+  // XML parseado: preenche o fornecedor da entrada com o emitente da nota
+  useEffect(() => {
+    if (!parsed) return;
+    const existing = suppliers.find(s => s.document === digits(parsed.supplier.cpf_cnpj));
+    setForn({ id: existing?.id || "", name: parsed.supplier.name, cnpj: parsed.supplier.cpf_cnpj, uf: parsed.supplier.uf || "" });
+  }, [parsed]);
 
   const handleFile = async (file) => {
     setError(""); setParsed(null); setParsing(true);
@@ -314,13 +335,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     }
     setSaving(true);
     try {
-      // 1. Garante o fornecedor (XML ou manual)
+      // 1. Garante o fornecedor (pesquisado no cadastro ou informado por CNPJ no passo 2)
       let supplier = null;
-      if (mode === "xml" && parsed) {
-        supplier = await ensureSupplier(parsed.supplier.name, parsed.supplier.cpf_cnpj, parsed.supplier.uf, parsed.supplier.address, parsed.supplier.city);
-      } else if (mode === "manual" && manual.supplier_name.trim()) {
+      if (forn.name.trim() || digits(forn.cnpj)) {
         const rd = supplierLookup.data;
-        supplier = await ensureSupplier(manual.supplier_name, manual.supplier_cnpj, manual.supplier_uf, rd?.address, rd?.city, rd);
+        const addr = mode === "xml" && parsed
+          ? { address: parsed.supplier.address, city: parsed.supplier.city }
+          : { address: rd?.address, city: rd?.city };
+        supplier = await ensureSupplier(forn.name, forn.cnpj, forn.uf, addr.address, addr.city, mode === "xml" ? null : rd);
       }
 
       let payload;
@@ -356,9 +378,9 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           issue_date: parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
           due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-          supplier_name: parsed.supplier.name,
-          supplier_cnpj: parsed.supplier.cpf_cnpj,
-          supplier_uf: parsed.supplier.uf,
+          supplier_name: forn.name || parsed.supplier.name,
+          supplier_cnpj: forn.cnpj || parsed.supplier.cpf_cnpj,
+          supplier_uf: forn.uf || parsed.supplier.uf,
           nature_operation: parsed.nota.nature_operation,
           cfop: parsed.nota.cfop,
           total_products: parsed.totals.total_products,
@@ -383,7 +405,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         };
       } else {
         if (!manual.nota_number.trim()) { setSaving(false); setError("Informe o número do documento."); return; }
-        if (!manual.supplier_name.trim()) { setSaving(false); setError("Informe o fornecedor."); return; }
+        if (!forn.name.trim()) { setSaving(false); setError("Informe o fornecedor (passo 2) — pesquise no cadastro ou informe o CNPJ."); return; }
         if (!manual.total_nota || Number(manual.total_nota) <= 0) { setSaving(false); setError("Informe o total do documento."); return; }
         const total = Number(manual.total_nota);
         // Itens sem produto cadastrado: pergunta se quer cadastrar agora (abre o
@@ -444,11 +466,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             due_date: it.due_date ? new Date(`${it.due_date}T12:00:00`).toISOString() : undefined,
             amount: Number(it.amount) || 0,
           })) : undefined,
-          supplier_name: manual.supplier_name,
-          supplier_cnpj: manual.supplier_cnpj,
-          supplier_uf: manual.supplier_uf,
+          supplier_name: forn.name,
+          supplier_cnpj: forn.cnpj,
+          supplier_uf: forn.uf,
           nature_operation: manual.nature_operation || "Documento Não Fiscal",
-          cfop: manual.cfop,
+          cfop: manual.cfop || cfopAuto || undefined,
           total_products: items.reduce((a, it) => a + it.total, 0),
           total_nota: total,
           total_icms: items.reduce((s, it) => s + (it.icms_value || 0), 0),
@@ -477,16 +499,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         };
       }
 
-      // Operação marcada como Fiscal: o CFOP é obrigatório e vai para os livros/SPEDs fiscais
-      if (op?.flag_fiscal && !payload.cfop) {
-        const uf = mode === "xml" ? (parsed?.supplier?.uf || "") : manual.supplier_uf;
-        const cfopOp = (!uf || uf === "EX")
-          ? (op.cfop_importacao || "")
-          : (uf && companyUF && uf === companyUF
-            ? (op.cfop_dentro_estado || op.cfop_fora_estado || "")
-            : (op.cfop_fora_estado || op.cfop_dentro_estado || ""));
-        if (!cfopOp) { setSaving(false); setError("Operação fiscal exige CFOP — cadastre o CFOP (dentro/fora do estado ou importação) no cadastro da operação."); return; }
-        payload.cfop = cfopOp;
+      // CFOP da operação: resolvido pela UF do fornecedor (mesma UF da empresa → dentro
+      // do estado; fora → fora do estado; EX → importação). Operação fiscal exige CFOP.
+      if (!payload.cfop && op) {
+        const uf = forn.uf || parsed?.supplier?.uf || "";
+        const cfopOp = (!uf || uf === "EX") ? (op.cfop_importacao || "") : cfopAuto;
+        if (cfopOp) payload.cfop = cfopOp;
+        else if (op.flag_fiscal) { setSaving(false); setError("Operação fiscal exige CFOP — cadastre o CFOP (dentro/fora do estado ou importação) no cadastro da operação."); return; }
       }
 
       // Frete importado: exige operação e CFOP; a transportadora é cadastrada como fornecedor
@@ -551,6 +570,51 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             </select>
             <p className="text-xs text-indigo-600">A operação define as regras fiscais (ICMS/IPI/PIS/COFINS) e o custo do produto — deduzidos os impostos a creditar. Selecione-a antes de importar o XML ou digitar o documento.</p>
           </div>
+
+          {/* 2º passo: fornecedor — pesquisar no cadastro ou informar CNPJ (cadastra se não existir) */}
+          {opId && (
+            <div className="bg-white border rounded-lg p-3 space-y-2">
+              <label className="text-sm font-semibold flex items-center gap-2"><UserPlus className="w-4 h-4 text-indigo-600" /> 2. Fornecedor *</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-600">Pesquisar fornecedor cadastrado</label>
+                  <select value={forn.id} onChange={e => pickForn(e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm">
+                    <option value="">— Outro / informar CNPJ abaixo —</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}{s.document ? ` — ${maskCpfCnpj(String(s.document))}` : ""}{s.uf ? ` (${s.uf})` : ""}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">CNPJ/CPF</label>
+                  <input value={forn.cnpj} onChange={e => handleFornCnpj(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">UF</label>
+                  <input value={forn.uf} onChange={e => setF({ uf: e.target.value.toUpperCase().slice(0, 2) })} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                </div>
+                <div className="col-span-2 md:col-span-4">
+                  <label className="text-xs font-medium text-gray-600">Fornecedor (Razão Social) *</label>
+                  <input value={forn.name} onChange={e => setF({ name: e.target.value, id: "" })} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                </div>
+              </div>
+              {supplierLookup.msg && (
+                <div className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${supplierLookup.status === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierLookup.status === "new" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+                  {supplierLookup.busy ? <Loader2 className="w-4 h-4 animate-spin" /> : supplierLookup.status === "exists" ? <CheckCircle2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                  {supplierLookup.msg}
+                </div>
+              )}
+              {cfopAuto ? (
+                <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-2 text-xs text-emerald-800 flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 mt-0.5" />
+                  <span>Fornecedor {companyUF && forn.uf === companyUF ? `da mesma UF da empresa (${companyUF})` : `de outra UF (${forn.uf} ≠ ${companyUF || "não cadastrada"})`} — o CFOP <b>{cfopAuto}</b> ({companyUF && forn.uf === companyUF ? "dentro do estado" : "fora do estado"}) da operação será usado automaticamente.</span>
+                </div>
+              ) : selectedOp?.flag_fiscal && forn.uf ? (
+                <div className="rounded-lg border bg-amber-50 border-amber-200 p-2 text-xs text-amber-700 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 mt-0.5" />
+                  <span>Operação fiscal sem CFOP cadastrado para {companyUF && forn.uf === companyUF ? "dentro" : "fora"} do estado — cadastre o CFOP no cadastro da operação.</span>
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {opId && (
           <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
@@ -634,15 +698,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           {/* === MODO MANUAL === */}
           {opId && mode === "manual" && (
             <div className="space-y-3">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.). Informe o CNPJ: se o fornecedor não estiver cadastrado, os dados são buscados na Receita Federal e ele é cadastrado automaticamente.</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">Use este modo para documentos não fiscais (recibo, cupom, fatura manual, etc.). O fornecedor é informado na etapa 2 — se o CNPJ não estiver cadastrado, os dados são buscados na Receita Federal e ele é cadastrado automaticamente ao dar entrada.</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div><label className="text-xs font-medium text-gray-600">Número do Doc. *</label><input value={manual.nota_number} onChange={e => setM("nota_number", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Data de Emissão</label><input type="date" value={manual.issue_date} onChange={e => setM("issue_date", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Total (R$) *</label><input type="number" step="0.01" value={manual.total_nota} onChange={e => setM("total_nota", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Natureza/CFOP</label><input value={manual.nature_operation} onChange={e => setM("nature_operation", e.target.value)} placeholder="Operação" className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
-                <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Fornecedor *</label><input value={manual.supplier_name} onChange={e => setM("supplier_name", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
-                <div><label className="text-xs font-medium text-gray-600">CNPJ/CPF</label><input value={manual.supplier_cnpj} onChange={e => handleManualCnpj(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
-                <div><label className="text-xs font-medium text-gray-600">UF</label><input value={manual.supplier_uf} onChange={e => setM("supplier_uf", e.target.value.toUpperCase().slice(0, 2))} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600">Outros valores (opcional) — contabilizados nas contas da parametrização da operação</label>
@@ -657,12 +718,6 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   <div><input type="number" step="0.01" value={manual.cofins_frete_value} onChange={e => setM("cofins_frete_value", e.target.value)} placeholder="COFINS frete" className="w-full h-9 rounded-md border border-input px-3 text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">COFINS s/ Frete</p></div>
                 </div>
               </div>
-              {supplierLookup.msg && (
-                <div className={`flex items-center gap-2 rounded-lg border p-2 text-xs ${supplierLookup.status === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierLookup.status === "new" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
-                  {supplierLookup.busy ? <Loader2 className="w-4 h-4 animate-spin" /> : supplierLookup.status === "exists" ? <CheckCircle2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                  {supplierLookup.msg}
-                </div>
-              )}
               <div className="border rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-3 py-2 border-b flex items-center justify-between">
                   <h4 className="text-sm font-semibold">Itens</h4>
