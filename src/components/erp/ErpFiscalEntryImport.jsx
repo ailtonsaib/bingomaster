@@ -703,7 +703,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                 <div><label className="text-xs font-medium text-gray-600">Número do Doc. *</label><input value={manual.nota_number} onChange={e => setM("nota_number", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Data de Emissão</label><input type="date" value={manual.issue_date} onChange={e => setM("issue_date", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
                 <div><label className="text-xs font-medium text-gray-600">Total (R$) *</label><input type="number" step="0.01" value={manual.total_nota} onChange={e => setM("total_nota", e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
-                <div><label className="text-xs font-medium text-gray-600">Natureza/CFOP</label><input value={manual.nature_operation} onChange={e => setM("nature_operation", e.target.value)} placeholder="Operação" className="w-full h-9 rounded-md border border-input px-3 text-sm" /></div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">CFOP {cfopAuto && <span className="text-emerald-600 font-normal">(automático — {companyUF && forn.uf === companyUF ? "mesma UF" : "UF diferente"})</span>}</label>
+                  <input value={manual.cfop || cfopAuto} onChange={e => setM("cfop", e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder={cfopAuto ? "" : "Definido pela UF do fornecedor"} className={`w-full h-9 rounded-md border px-3 text-sm ${cfopAuto ? "border-emerald-300 bg-emerald-50" : "border-input"}`} />
+                  {cfopAuto && <p className="text-[10px] text-emerald-600 mt-0.5">CFOP {companyUF && forn.uf === companyUF ? "dentro" : "fora"} do estado — conforme a UF do fornecedor ({forn.uf})</p>}
+                </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600">Outros valores (opcional) — contabilizados nas contas da parametrização da operação</label>
