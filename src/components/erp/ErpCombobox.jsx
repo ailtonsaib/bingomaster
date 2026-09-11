@@ -31,7 +31,6 @@ export default function ErpCombobox({ value, onValueChange, options, placeholder
       const r = inputRef.current.getBoundingClientRect();
       setRect({ top: r.bottom + 4, left: r.left, width: r.width });
     }
-    setQuery("");
     setOpen(true);
   };
 
@@ -46,8 +45,8 @@ export default function ErpCombobox({ value, onValueChange, options, placeholder
         type="text"
         disabled={disabled}
         value={open ? query : (selected?.label || "")}
-        onFocus={openList}
-        onChange={e => { setQuery(e.target.value); openList(); }}
+        onFocus={() => { setQuery(""); openList(); }}
+        onChange={e => { setQuery(e.target.value); if (!open) openList(); }}
         placeholder={placeholder}
         className="w-full h-9 rounded-md border border-input bg-white px-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
