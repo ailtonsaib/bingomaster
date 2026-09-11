@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Loader2, BookOpen, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import ErpCombobox from "@/components/erp/ErpCombobox";
 
 // Estrutura fixa do lançamento da entrada fiscal (uma linha por conta parametrizada).
@@ -14,6 +15,8 @@ const ROWS = [
   { key: "pis", type: "D", label: "PIS A RECUP", required: true, hint: "Débito pelo PIS a creditar" },
   { key: "cofins", type: "D", label: "COFINS A RECUP", required: true, hint: "Débito pelo COFINS a creditar" },
   { key: "ipi", type: "D", label: "IPI A RECUP", required: false, hint: "Débito pelo IPI a creditar (opcional)" },
+  { key: "cbs", type: "D", label: "CBS A RECUP", required: false, hint: "Débito pelo CBS a creditar — reforma tributária (opcional)" },
+  { key: "ibs", type: "D", label: "IBS A RECUP", required: false, hint: "Débito pelo IBS a creditar — reforma tributária (opcional)" },
   { key: "icms_frete", type: "D", label: "ICMS FRETE", required: false, hint: "Débito pelo ICMS do frete a creditar (opcional)" },
   { key: "pis_frete", type: "D", label: "PIS S/ FRETE", required: false, hint: "Débito pelo PIS do frete a creditar (opcional)" },
   { key: "cofins_frete", type: "D", label: "COFINS S/ FRETE", required: false, hint: "Débito pelo COFINS do frete a creditar (opcional)" },
@@ -103,6 +106,16 @@ export default function ErpOperationAccountingManager({ user }) {
     setSaving(false);
   };
 
+  // Gera contábil: flag da própria operação (ErpOperation.flag_contabil) — o motor
+  // de lançamento já respeita: desligada, a entrada não gera movimento contábil
+  const selectedOperation = operations.find(o => o.id === opSel);
+  const toggleContabil = async (checked) => {
+    try {
+      const upd = await base44.entities.ErpOperation.update(opSel, { flag_contabil: checked });
+      setOperations(prev => prev.map(o => o.id === opSel ? upd : o));
+    } catch (e) { alert(e.message); }
+  };
+
   const compareChartCode = (a, b) => String(a.code || "").localeCompare(String(b.code || ""), "pt-BR", { numeric: true });
   const accountOptions = useMemo(() => [...accounts].sort(compareChartCode).map(a => ({ id: a.id, label: `${a.code ? `${a.code} — ` : ""}${a.name}` })), [accounts]);
 
@@ -123,57 +136,18 @@ export default function ErpOperationAccountingManager({ user }) {
       ) : !opSel ? (
         <div className="bg-white rounded-xl border p-8 text-center text-sm text-gray-400">Selecione uma operação de entrada para parametrizar as contas contábeis.</div>
       ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 text-gray-500 text-xs">
-                <tr>
-                  <th className="p-2 text-left w-14">Tipo</th>
-                  <th className="p-2 text-left">Descrição</th>
-                  <th className="p-2 text-left">Conta Contábil</th>
-                  <th className="p-2 text-left w-52">Histórico Padrão</th>
-                  <th className="p-2 text-left w-56">Valor no Lançamento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ROWS.map(r => (
-                  <tr key={r.key} className="border-t hover:bg-gray-50">
-                    <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full font-bold ${r.type === "D" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>{r.type}</span></td>
-                    <td className="p-2">
-                      <span className="font-medium">{r.label}</span>
-                      {!r.required && <span className="text-[10px] text-gray-400 block">opcional</span>}
-                    </td>
-                    <td className="p-2">
-                      <ErpCombobox
-                        value={lines[r.key]?.account_id || ""}
-                        onValueChange={(id) => setAccount(r.key, id)}
-                        options={accountOptions}
-                        placeholder="Digite o código ou a descrição da conta..."
-                        clearable
-                      />
-                    </td>
-                    <td className="p-2">
-                      <select value={lines[r.key]?.history_id || ""} onChange={e => setHistory(r.key, e.target.value)} className="w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs">
-                        <option value="">Sem histórico padrão</option>
-                        {histories.map(h => <option key={h.id} value={h.id}>{h.code ? `${h.code} — ` : ""}{h.description}</option>)}
-                      </select>
-                    </td>
-                    <td className="p-2 text-xs text-gray-500">{r.hint}</td>
-                  </tr>
-                ))}
-                <tr className="border-t bg-gray-50">
-                  <td className="p-2"><span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">D</span></td>
-                  <td className="p-2 font-medium">CONTA DO RATEIO</td>
-                  <td className="p-2 text-xs text-gray-500" colSpan={2}><span className="flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Sempre serão as contas do rateio da própria entrada (setor/conta)</span></td>
-                  <td className="p-2 text-xs text-gray-500">Valor líquido (total − impostos a creditar)</td>
-                </tr>
-              </tbody>
-            </table>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 bg-white rounded-xl border p-3">
+            <Switch checked={selectedOperation?.flag_contabil !== false} onCheckedChange={toggleContabil} />
+            <div>
+              <p className="text-sm font-medium">Gerar lançamento contábil</p>
+              <p className="text-xs text-gray-500">Desligado, a entrada com esta operação não gera movimento contábil (estoque e financeiro continuam sendo gerados).</p>
+            </div>
           </div>
-          <div className="p-3 border-t flex justify-end">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Salvar Parametrização
-            </Button>
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <div className="overflow-x-auto">
+...
+            </div>
           </div>
         </div>
       )}

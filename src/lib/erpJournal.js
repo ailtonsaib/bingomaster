@@ -75,6 +75,8 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     { type: "PIS", value: entry.total_pis || 0 },
     { type: "COFINS", value: entry.total_cofins || 0 },
     { type: "IPI", value: entry.total_ipi || 0 },
+    { type: "CBS", value: entry.total_cbs || 0 },
+    { type: "IBS", value: entry.total_ibs || 0 },
   ];
   let despesaBase = entry.total_nota;
   const debitTaxLines = [];

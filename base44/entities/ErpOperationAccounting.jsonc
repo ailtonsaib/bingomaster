@@ -29,6 +29,8 @@
               "pis",
               "cofins",
               "ipi",
+              "cbs",
+              "ibs",
               "dif_aliquota",
               "frete",
               "despesas",
@@ -39,7 +41,7 @@
               "pis_frete",
               "cofins_frete"
             ],
-            "description": "Linha: fornecedores (C total), icms/pis/cofins/ipi e icms_frete/pis_frete/cofins_frete (D a recuperar), dif_aliquota/descontos (C opcionais), despesas (D opcional), ciap_curto_prazo/ciap_longo_prazo (D opcional), frete (C opcional)"
+            "description": "Linha: fornecedores (C total), icms/pis/cofins/ipi/cbs/ibs e icms_frete/pis_frete/cofins_frete (D a recuperar), dif_aliquota/descontos (C opcionais), despesas (D opcional), ciap_curto_prazo/ciap_longo_prazo (D opcional), frete (C opcional)"
           },
           "type": {
             "type": "string",
