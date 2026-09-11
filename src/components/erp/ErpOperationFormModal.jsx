@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,24 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  // Novo cadastro: gera o código sequencial a partir do último registro
+  useEffect(() => {
+    if (operation?.id) return;
+    let active = true;
+    base44.entities.ErpOperation.filter({ user_email: user.email }, "-created_date", 500)
+      .then((ops) => {
+        if (!active) return;
+        const last = ops.reduce((max, o) => {
+          const n = Number(String(o.code || "").replace(/\D/g, ""));
+          return Number.isFinite(n) && n > max ? n : max;
+        }, 0);
+        setForm(prev => prev.code ? prev : { ...prev, code: String(last + 1).padStart(3, "0") });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome da operação."); return; }
@@ -86,7 +104,7 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
                 {OP_TYPE_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
-            <div><Label>Código</Label><Input value={form.code} onChange={e => set("code", e.target.value)} /></div>
+            <div><Label>Código</Label><Input value={form.code} readOnly={!operation?.id} className={!operation?.id ? "bg-gray-50 text-gray-500" : ""} onChange={e => set("code", e.target.value)} /><p className="text-[11px] text-gray-500 mt-1">{!operation?.id && "Gerado automaticamente (sequencial)"}</p></div>
           </div>
           <div><Label>Nome da Operação *</Label><Input value={form.name} onChange={e => set("name", e.target.value)} /></div>
 
