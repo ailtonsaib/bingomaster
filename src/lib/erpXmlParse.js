@@ -70,6 +70,17 @@ function parseNfe(doc) {
     });
   }
 
+  // Condições de pagamento (cobrança) — duplicatas com número, vencimento e valor
+  const cobr = infNFe.getElementsByTagName("cobr")[0] || infNFe.getElementsByTagName("*:cobr")[0];
+  const dupNodes = cobr?.getElementsByTagName("dup") || [];
+  const duplicatas = [];
+  for (let i = 0; i < dupNodes.length; i++) {
+    const d = dupNodes[i];
+    const due = getText(d, "dVenc").slice(0, 10);
+    const amt = num(getText(d, "vDup"));
+    if (due && amt > 0) duplicatas.push({ number: getText(d, "nDup"), due_date: due, amount: amt });
+  }
+
   return {
     model: getText(ide, "mod") || "55",
     nota: {
@@ -81,6 +92,7 @@ function parseNfe(doc) {
       cfop: items[0]?.cfop || "",
       chave_acesso: chave,
     },
+    duplicatas,
     supplier: {
       name: getText(emit, "xNome"),
       cpf_cnpj: getText(emit, "CNPJ") || getText(emit, "CPF"),

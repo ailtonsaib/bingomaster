@@ -50,6 +50,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   const lastCnpjLookup = useRef("");
   // Parcelas/vencimentos do financeiro (digitação manual)
   const [manualInstallments, setManualInstallments] = useState([{ due_date: new Date().toISOString().slice(0, 10), amount: "" }]);
+  // XML com condições de pagamento (duplicatas/cobrança): importa como parcelas
+  const [xmlInstalls, setXmlInstalls] = useState(false);
   // Frete (CT-e/NF-e/NFS-e): documento separado que compõe o custo dos produtos
   const [frete, setFrete] = useState(null);
   const [freteModal, setFreteModal] = useState(false);
@@ -205,6 +207,14 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     const existing = suppliers.find(s => s.document === digits(parsed.supplier.cpf_cnpj));
     setForn({ id: existing?.id || "", name: parsed.supplier.name, cnpj: parsed.supplier.cpf_cnpj, uf: parsed.supplier.uf || "" });
   }, [parsed]);
+
+  // XML com duplicatas (cobrança): importa as condições de vencimento como parcelas
+  useEffect(() => {
+    if (mode !== "xml" || !parsed) { setXmlInstalls(false); return; }
+    const dups = parsed.duplicatas || [];
+    setXmlInstalls(dups.length > 0);
+    if (dups.length) setManualInstallments(dups.map(d => ({ due_date: d.due_date, amount: String(d.amount) })));
+  }, [parsed, mode]);
 
   // OC selecionada (digitação manual): traz os produtos do pedido para a entrada
   useEffect(() => {
@@ -462,7 +472,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           chave_acesso: parsed.nota.chave_acesso,
           issue_date: parsed.nota.issue_date ? new Date(parsed.nota.issue_date).toISOString() : new Date().toISOString(),
           entry_date: new Date().toISOString(),
-          due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+          due_date: xmlInstalls
+            ? (manualInstallments[0]?.due_date ? new Date(`${manualInstallments[0].due_date}T12:00:00`).toISOString() : undefined)
+            : (dueDate ? new Date(dueDate).toISOString() : undefined),
+          installments: xmlInstalls ? manualInstallments.filter(it => it.due_date && (Number(it.amount) || 0) > 0).map(it => ({
+            due_date: new Date(`${it.due_date}T12:00:00`).toISOString(),
+            amount: Number(it.amount) || 0,
+          })) : undefined,
           supplier_name: forn.name || parsed.supplier.name,
           supplier_cnpj: forn.cnpj || parsed.supplier.cpf_cnpj,
           supplier_uf: forn.uf || parsed.supplier.uf,
@@ -974,12 +990,19 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           {opId && (mode === "xml" ? parsed : mode === "manual") && (
             <div className="space-y-3">
               {mode === "xml" ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-600">Vencimento (financeiro)</label>
-                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                xmlInstalls ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Condições de pagamento importadas do XML (cobrança) — ajuste se necessário</p>
+                    <ErpManualInstallments value={manualInstallments} onChange={setManualInstallments} onAdd={addParcela} total={nfTotal} />
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Vencimento (financeiro)</label>
+                      <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-9 rounded-md border border-input px-3 text-sm" />
+                    </div>
+                  </div>
+                )
               ) : (
                 <ErpManualInstallments value={manualInstallments} onChange={setManualInstallments} onAdd={addParcela} total={Number(manual.total_nota) || 0} />
               )}
