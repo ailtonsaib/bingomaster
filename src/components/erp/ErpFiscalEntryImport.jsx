@@ -6,7 +6,7 @@ import { parseFiscalXml } from "@/lib/erpXmlParse";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { maskCpfCnpj } from "@/lib/brMasks";
 import { lookupCnpj } from "@/lib/cnpjLookup";
-import { computeErpFiscalItem } from "@/lib/erpTaxCalc";
+import { computeErpFiscalItem, applyErpRuleToXmlItem, resolveErpXmlTaxSource } from "@/lib/erpTaxCalc";
 import ErpProductFormModal from "@/components/erp/ErpProductFormModal";
 import ErpManualInstallments from "@/components/erp/ErpManualInstallments";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
@@ -431,15 +431,25 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           if (supplier && product) {
             await ensureLink(supplier, product, it);
           }
+          // Impostos do item: regra fiscal configurada como "regra" (ou XML sem
+          // nenhum imposto destacado) → recalculados pela regra da operação;
+          // caso contrário, mantém os impostos destacados no XML
+          const src = applyErpRuleToXmlItem(it, {
+            rules: taxRules, operation: op,
+            supplierUF: forn.uf || parsed.supplier?.uf || "",
+            companyUF,
+          });
           resolvedItems.push({
-            ...it,
+            ...src,
             product_id: product?.id || undefined,
-            product_code: product?.code || it.product_code,
-            base_icms: r2(it.base_icms), icms_value: r2(it.icms_value), difal_value: r2(it.difal_value),
-            base_pis_cofins: r2(it.base_pis_cofins), pis_value: r2(it.pis_value), cofins_value: r2(it.cofins_value),
-            ipi_value: r2(it.ipi_value),
+            product_code: product?.code || src.product_code,
+            base_icms: r2(src.base_icms), icms_value: r2(src.icms_value), difal_value: r2(src.difal_value || 0),
+            base_pis_cofins: r2(src.base_pis_cofins), pis_value: r2(src.pis_value), cofins_value: r2(src.cofins_value),
+            ipi_value: r2(src.ipi_value),
           });
         }
+        // Capa de impostos: sempre a soma dos itens gravados (fechamento garantido)
+        const taxSumOf = (k) => resolvedItems.reduce((s, it) => s + (Number(it[k]) || 0), 0);
         const valueDiff = parsed.totals.total_nota - (po?.total_value || 0);
         const valuesMatch = Math.abs(valueDiff) < 0.01;
         payload = {
@@ -458,11 +468,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           cfop: parsed.nota.cfop,
           total_products: parsed.totals.total_products,
           total_nota: parsed.totals.total_nota,
-          total_icms: r2(parsed.totals.total_icms),
-          total_ipi: r2(parsed.totals.total_ipi),
-          total_pis: r2(parsed.totals.total_pis),
-          total_cofins: r2(parsed.totals.total_cofins),
-          base_icms: r2((parsed.items || []).reduce((s, it) => s + (Number(it.icms_rate) > 0 ? (Number(it.icms_value) || 0) / (Number(it.icms_rate) / 100) : 0), 0)),
+          total_icms: r2(taxSumOf("icms_value")),
+          total_ipi: r2(taxSumOf("ipi_value")),
+          total_pis: r2(taxSumOf("pis_value")),
+          total_cofins: r2(taxSumOf("cofins_value")),
+          base_icms: r2(taxSumOf("base_icms")),
           despesas_value: parsed.totals.despesas || 0,
           descontos_value: parsed.totals.descontos || 0,
           items: resolvedItems,
@@ -839,6 +849,9 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                               <div className="font-mono text-[11px] text-gray-500">{it.product_code}</div>
                               <div className="text-gray-800">{it.product_name}</div>
                               <div className="text-[10px] text-gray-400">NCM {it.ncm} • CFOP {it.cfop}</div>
+                              {resolveErpXmlTaxSource(it, { rules: taxRules, operation: selectedOp, supplierUF: forn.uf || parsed.supplier?.uf || "" }).source === "regra" && (
+                                <span className="text-[10px] text-indigo-600 flex items-center gap-1 mt-0.5"><CheckCircle2 className="w-3 h-3" /> impostos pela regra fiscal</span>
+                              )}
                             </td>
                             <td className="p-2">
                               <select value={choice} onChange={e => setItemChoices(p => p.map((c, idx) => idx === i ? e.target.value : c))} className={`w-full h-9 rounded-md border px-2 text-xs ${matched ? "border-emerald-300 bg-emerald-50" : "border-input"}`}>

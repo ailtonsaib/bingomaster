@@ -191,3 +191,39 @@ export function computeErpTotals(items) {
   Object.keys(t).forEach(k => { t[k] = r2(t[k]); });
   return t;
 }
+
+// Origem dos impostos de um item de XML de entrada:
+// - "regra": recalcula pela regra fiscal (tax_source = "regra", ou XML sem
+//   nenhum imposto destacado — fallback pela regra da operação)
+// - "xml": mantém os impostos destacados na própria nota
+export function resolveErpXmlTaxSource(xmlItem, { rules, operation, supplierUF }) {
+  const rule = lookupErpTaxRule(rules, operation?.id, xmlItem.ncm, supplierUF);
+  if (!rule) return { rule: null, source: "xml" };
+  const hasXmlTaxes = ["icms_value", "pis_value", "cofins_value", "ipi_value", "difal_value"].some(k => num(xmlItem[k]) > 0);
+  return { rule, source: rule.tax_source === "regra" || !hasXmlTaxes ? "regra" : "xml" };
+}
+
+// Aplica a regra fiscal a um item de XML de entrada quando a origem é "regra":
+// recalcula CST, bases, alíquotas e valores (ICMS, DIFAL, IPI, PIS/COFINS, CBS/IBS)
+// pela regra da operação — ignorando os impostos destacados no XML.
+export function applyErpRuleToXmlItem(xmlItem, { rules, operation, supplierUF, companyUF }) {
+  const { source } = resolveErpXmlTaxSource(xmlItem, { rules, operation, supplierUF });
+  if (source !== "regra") return xmlItem;
+  const calc = computeErpFiscalItem(
+    { ncm: xmlItem.ncm, quantity: num(xmlItem.quantity), unit_price: num(xmlItem.unit_price) },
+    { rules, operation, customerUF: supplierUF, companyUF }
+  );
+  return {
+    ...xmlItem,
+    cst_icms: calc.cst_icms || xmlItem.cst_icms || "",
+    base_icms: calc.icms_base, icms_rate: calc.icms_rate, icms_value: calc.icms_value,
+    difal_value: r2(calc.difal?.difal_total || 0),
+    cst_pis: calc.cst_pis || "", cst_cofins: calc.cst_cofins || "",
+    base_pis_cofins: calc.pis_base, aliq_pis_cofins: calc.pis_rate,
+    aliq_pis: calc.pis_rate, aliq_cofins: calc.cofins_rate,
+    pis_value: calc.pis_value, cofins_value: calc.cofins_value,
+    ipi_value: calc.ipi_value,
+    cst_cbs: calc.cst_cbs || "", cbs_rate: calc.cbs_rate, cbs_value: calc.cbs_value,
+    cst_ibs: calc.cst_ibs || "", ibs_rate: calc.ibs_rate, ibs_value: calc.ibs_value,
+  };
+}

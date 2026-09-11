@@ -128,7 +128,7 @@ function Toggle({ label, checked, onChange }) {
 export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSaved }) {
   const blank = {
     operation_id: "", operation_name: "", operation_type: "", cfop: "",
-    ncm: "", uf: "", destinatario_tipo: "contribuinte", description: "",
+    ncm: "", uf: "", destinatario_tipo: "contribuinte", tax_source: "xml", description: "",
     cst_icms: "00", icms_rate: 0, icms_reduction_base: 100, fcp_rate: 0,
     cst_pis: "01", pis_rate: 0, pis_reduction_base: 100,
     cst_cofins: "01", cofins_rate: 0, cofins_reduction_base: 100,
@@ -336,6 +336,14 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                     <Button type="button" variant="outline" size="sm" onClick={recomputeCfop} title="Sugerir CFOP automaticamente" className="px-2"><Sparkles className="w-4 h-4 text-amber-500" /></Button>
                   </div>
                 </Field>
+                {op?.type === "entrada" && (
+                  <Field label="Impostos na Entrada por XML (NF-e)">
+                    <select value={form.tax_source || "xml"} onChange={e => set("tax_source", e.target.value)} className={selInput}>
+                      <option value="xml">Respeitar o XML — usar os impostos destacados na nota</option>
+                      <option value="regra">Respeitar a regra fiscal — recalcular os impostos pela regra</option>
+                    </select>
+                  </Field>
+                )}
                 <Field label="Descrição" full>
                   <Input value={form.description} onChange={e => set("description", e.target.value)} className="h-9 text-sm" placeholder="Observação sobre a regra" />
                 </Field>

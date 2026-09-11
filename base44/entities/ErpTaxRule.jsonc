@@ -40,6 +40,15 @@
       "default": "contribuinte",
       "description": "Tipo do destinat\u00e1rio: contribuinte (ICMS normal), nao_contribuinte (aplica DIFAL interestadual), pessoa_fisica (consumidor final \u2014 DIFAL + cobran\u00e7a por dentro)"
     },
+    "tax_source": {
+      "type": "string",
+      "enum": [
+        "xml",
+        "regra"
+      ],
+      "default": "xml",
+      "description": "Origem dos impostos na entrada de NF-e por XML: xml = respeitar o XML (usa os impostos destacados na nota; se a nota n\u00e3o tiver impostos, aplica a regra como fallback) ou regra = respeitar a regra fiscal (recalcula CST, bases, al\u00edquotas e valores pela regra, ignorando os destacados no XML)"
+    },
     "description": {
       "type": "string"
     },
