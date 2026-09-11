@@ -139,6 +139,7 @@ export default function ErpOperationAccountingManager({ user }) {
 
   const compareChartCode = (a, b) => String(a.code || "").localeCompare(String(b.code || ""), "pt-BR", { numeric: true });
   const accountOptions = useMemo(() => [...accounts].sort(compareChartCode).map(a => ({ id: a.id, label: `${a.code ? `${a.code} — ` : ""}${a.name}` })), [accounts]);
+  const historyOptions = useMemo(() => histories.map(h => ({ id: h.id, label: `${h.code ? `${h.code} — ` : ""}${h.description}` })), [histories]);
 
   return (
     <div className="space-y-3">
@@ -174,7 +175,55 @@ export default function ErpOperationAccountingManager({ user }) {
           </div>
           <div className="bg-white rounded-xl border overflow-hidden">
             <div className="overflow-x-auto">
-...
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="p-2 text-left">Linha</th>
+                    <th className="p-2 text-left w-80">Conta Contábil</th>
+                    <th className="p-2 text-left w-80">Histórico Padrão</th>
+                    <th className="p-2 text-center w-12">Tipo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ROWS.map(r => (
+                    <tr key={r.key} className="border-b last:border-0">
+                      <td className="p-2">
+                        <p className="font-medium flex items-center gap-1">
+                          {r.label}
+                          {r.required && <span className="text-red-500">*</span>}
+                        </p>
+                        <p className="text-[10px] text-gray-400 flex items-center gap-1"><Info className="w-3 h-3" /> {r.hint}</p>
+                      </td>
+                      <td className="p-2">
+                        <ErpCombobox
+                          value={lines[r.key]?.account_id || ""}
+                          options={accountOptions}
+                          onValueChange={(id) => setAccount(r.key, id)}
+                          placeholder="Selecione a conta..."
+                          clearable
+                        />
+                      </td>
+                      <td className="p-2">
+                        <ErpCombobox
+                          value={lines[r.key]?.history_id || ""}
+                          options={historyOptions}
+                          onValueChange={(id) => setHistory(r.key, id)}
+                          placeholder="Selecione o histórico..."
+                          clearable
+                        />
+                      </td>
+                      <td className="p-2 text-center">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${r.type === "D" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>{r.type}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-3 border-t flex justify-end">
+              <Button size="sm" onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Salvar Parametrização
+              </Button>
             </div>
           </div>
         </div>
