@@ -22,12 +22,11 @@ export default function ErpStockKardexReport({ user }) {
       base44.entities.ErpFiscalEntry.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       base44.entities.ErpSalesOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
-      base44.entities.ErpWarehouseRequisition.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
     ]).then(d => setData({
       products: d[0], entries: d[1], sales: d[2], productions: d[3],
-      requisitions: d[4], moves: d[5], inventories: d[6],
+      moves: d[4], inventories: d[5],
     })).then(() => setLoading(false));
   }, [user.email]);
 
@@ -39,9 +38,15 @@ export default function ErpStockKardexReport({ user }) {
   const rows = useMemo(() => {
     if (!data || !product) return [];
     const rows = [];
-    // Entradas de NF (lançadas — o estoque foi atualizado no lançamento)
+    // Entradas de NF (lançadas — o estoque foi atualizado no lançamento).
+    // Reconhece o produto pelo vínculo (ID), código, código de barras ou descrição
+    // — mesmo critério usado na baixa de estoque do lançamento.
+    const sameProd = (it) => it.product_id === product.id
+      || (it.product_code && it.product_code === product.code)
+      || (it.barcode && it.barcode === product.barcode)
+      || (it.product_name || "").trim().toLowerCase() === (product.name || "").trim().toLowerCase();
     data.entries.filter(e => e.status === "lancada" && e.entry_kind !== "despesa").forEach(e => {
-      (e.items || []).filter(it => it.product_id === product.id || (it.product_code && it.product_code === product.code)).forEach(it => {
+      (e.items || []).filter(sameProd).forEach(it => {
         rows.push({ date: e.entry_date || e.issue_date || e.created_date, doc: `NF ${e.nota_number}`, hist: `Entrada de nota — ${e.supplier_name || ""}`, in: Number(it.quantity) || 0, out: 0 });
       });
     });
@@ -61,12 +66,8 @@ export default function ErpStockKardexReport({ user }) {
         rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Produção concluída — produto acabado", in: Number(o.produced_quantity) || 0, out: 0 });
       }
     });
-    // Requisições ao almoxarifado atendidas
-    data.requisitions.filter(r => r.status === "atendida").forEach(r => {
-      (r.items || []).filter(it => it.product_id === product.id).forEach(it => {
-        rows.push({ date: r.request_date || r.created_date, doc: `REQ ${r.number}`, hist: "Requisição ao almoxarifado", in: 0, out: Number(it.quantity) || 0 });
-      });
-    });
+    // Requisições ao almoxarifado NÃO movimentam o estoque (a baixa dos insumos
+    // acontece na conclusão da OP) — não entram no kardex para não duplicar
     // Movimentações WMS de entrada/saída (transferência não altera o saldo do produto)
     data.moves.filter(m => m.product_id === product.id && m.move_type !== "transferencia").forEach(m => {
       rows.push({
@@ -169,7 +170,10 @@ export default function ErpStockKardexReport({ user }) {
                   </tr>
                 ) : null}
                 {view.list.length === 0 && !loading && (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-400">Nenhuma movimentação no período.</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-400">
+                    Nenhuma movimentação que afete o estoque neste período.<br />
+                    <span className="text-[11px]">As movimentações são registradas quando: a NF de entrada é <b>lançada</b> (status "lancada"), a venda é <b>faturada</b>, a produção é <b>concluída</b> (consumo dos insumos e entrada do acabado), há movimentação <b>WMS</b> de entrada/saída ou o inventário é <b>ajustado</b>. Ordens de produção em andamento e requisições pendentes ainda não movimentam o estoque.</span>
+                  </td></tr>
                 )}
                 {view.list.map((r, i) => (
                   <tr key={i} className="border-t hover:bg-gray-50">
