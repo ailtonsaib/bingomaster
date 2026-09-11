@@ -212,7 +212,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
       account_name: acc.name,
       debit: 0,
       credit: r.value,
-      complement: `Retenção ${r.type} NF ${entry.nota_number}`,
+      complement: r.history_text || `Retenção ${r.type} NF ${entry.nota_number}`,
     });
   }
   for (const l of extraCreditLines) lines.push(l);

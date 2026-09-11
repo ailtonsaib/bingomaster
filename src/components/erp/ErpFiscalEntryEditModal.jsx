@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { X, Wrench, Loader2, Plus, Trash2 } from "lucide-react";
@@ -6,6 +6,17 @@ import ErpFiscalItemTaxes from "@/components/erp/ErpFiscalItemTaxes";
 import ErpFiscalCapaTaxes from "@/components/erp/ErpFiscalCapaTaxes";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
 import { fmtMoney } from "@/lib/erpUtils";
+
+// Vencimento do imposto retido: dia do mês parametrizado na operação, no mês da emissão da nota
+const defaultRetDueDate = (day, isoDate) => {
+  const d = Number(day) || 0;
+  if (!d) return "";
+  const base = isoDate ? new Date(`${isoDate}T12:00:00`) : new Date();
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const last = new Date(year, month + 1, 0).getDate();
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+};
 
 const EMPTY_ITEM = { product_id: "", product_name: "", product_code: "", quantity: 1, unit_price: 0,
   cst_icms: "", base_icms: "", icms_rate: "", aliq_reducao_icms: "", icms_value: "", difal_value: "",
@@ -64,6 +75,15 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
     ciap_longo_value: entry.ciap_longo_value || "",
   });
   const [apportionments, setApportionments] = useState(entry.apportionments || []);
+  // Estado das retenções por tipo de imposto: selecionada (reter ou não), valor e vencimento
+  const [retState, setRetState] = useState(() => {
+    const st = {};
+    (entry.retentions || []).forEach(r => {
+      if (r.type) st[r.type] = { selected: true, value: r2(Number(r.value) || 0), due_date: (r.due_date || "").slice(0, 10) };
+    });
+    return st;
+  });
+  const setRet = (type, patch) => setRetState(prev => ({ ...prev, [type]: { ...(prev[type] || {}), ...patch } }));
 
   useEffect(() => {
     Promise.all([
@@ -92,6 +112,42 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
   const updItem = (i, patch) => setItems(p => p.map((x, idx) => idx === i ? { ...x, ...patch } : x));
   // Operação patrimonial (imobilizado): exibe o ICMS CIAP na capa e nos itens
   const isPatrimonio = !!operations.find(o => o.id === form.operation_id)?.is_patrimonio;
+
+  // Retenções da nota: linhas da parametrização da operação (com alíquota, fornecedor,
+  // vencimento, conta contábil e histórico) + retenções vindas do XML sem parâmetro
+  const selectedOp = operations.find(o => o.id === form.operation_id);
+  const retParams = selectedOp?.tem_retencao ? (selectedOp.retention_params || []) : [];
+  const retentionRows = useMemo(() => {
+    const rows = retParams.map(p => {
+      const st = retState[p.tax_type] || {};
+      const value = st.value !== undefined ? st.value : r2((Number(p.rate) || 0) / 100 * (Number(form.total_nota) || 0));
+      return {
+        key: p.tax_type, tax_type: p.tax_type,
+        selected: st.selected ?? true,
+        value,
+        due_date: st.due_date || defaultRetDueDate(p.due_day, form.issue_date),
+        partner_id: p.supplier_id || "", partner_name: p.supplier_name || "", supplier_code: p.supplier_code || "",
+        account_id: p.account_id || "", account_code: p.account_code || "", account_name: p.account_name || "",
+        history_id: p.history_id || "", history_code: p.history_code || "", history_text: p.history_text || "",
+      };
+    });
+    for (const r of entry.retentions || []) {
+      if (rows.some(x => x.tax_type === r.type)) continue;
+      const st = retState[r.type] || {};
+      rows.push({
+        key: `nota_${r.type}`, tax_type: r.type,
+        selected: st.selected ?? true,
+        value: st.value !== undefined ? st.value : r2(Number(r.value) || 0),
+        due_date: st.due_date || (r.due_date || "").slice(0, 10),
+        partner_id: r.partner_id || "", partner_name: r.partner_name || "", supplier_code: r.supplier_code || "",
+        account_id: r.account_id || "", account_code: r.account_code || "", account_name: r.account_name || "",
+        history_id: r.history_id || "", history_code: r.history_code || "", history_text: r.history_text || "",
+      });
+    }
+    return rows;
+  }, [form.operation_id, form.total_nota, form.issue_date, operations, retState]);
+  const totalRetido = retentionRows.filter(r => r.selected).reduce((s, r) => s + (Number(r.value) || 0), 0);
+  const liquidoFornecedor = (Number(form.total_nota) || 0) - totalRetido;
 
   const handleSave = async () => {
     setError("");
@@ -131,6 +187,23 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
         setError(`${label} da capa (${fmtMoney(capaNum[k])}) não fecha com a soma dos itens (${fmtMoney(taxSumOf(k))}).`); return;
       }
     }
+    // Retenções selecionadas: cada uma gera financeiro próprio (conta a pagar com o
+    // vencimento informado) e crédito contábil na conta configurada — a soma é abatida do fornecedor
+    const rets = retentionRows.filter(r => r.selected && (Number(r.value) || 0) > 0).map(r => ({
+      type: r.tax_type,
+      value: r2(Number(r.value) || 0),
+      partner_id: r.partner_id || "",
+      partner_name: r.partner_name || "",
+      supplier_code: r.supplier_code || "",
+      due_date: r.due_date ? new Date(`${r.due_date}T12:00:00`).toISOString() : "",
+      account_id: r.account_id || "",
+      account_code: r.account_code || "",
+      account_name: r.account_name || "",
+      history_id: r.history_id || "",
+      history_code: r.history_code || "",
+      history_text: r.history_text || "",
+    }));
+    const retTotal = rets.reduce((s, r) => s + (r.value || 0), 0);
     setSaving(true);
     try {
       await base44.entities.ErpFiscalEntry.update(entry.id, {
@@ -166,6 +239,8 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
         cofins_frete_value: Number(form.cofins_frete_value) || 0,
         items: mapped,
         apportionments,
+        retentions: rets,
+        net_value: r2((Number(form.total_nota) || 0) - retTotal),
         notes: form.notes,
       });
       onSaved?.();
@@ -243,6 +318,42 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
               ))}
             </div>
           </div>
+
+          {/* Retenções da operação — seleciona o que será ou não retido */}
+          {retentionRows.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-3 py-2 border-b">
+                <h4 className="text-sm font-semibold">Retenções da Nota</h4>
+                <p className="text-[11px] text-gray-500">Selecione os impostos a reter e ajuste valor e vencimento — a soma dos retidos é abatida do fornecedor e cada imposto gera financeiro e contábil próprios.</p>
+              </div>
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b"><tr>
+                  <th className="p-2 text-center w-14">Reter</th>
+                  <th className="p-2 text-left">Imposto</th>
+                  <th className="p-2 text-left">Fornecedor Destinatário</th>
+                  <th className="p-2 text-right w-28">Valor (R$)</th>
+                  <th className="p-2 text-left w-36">Vencimento</th>
+                  <th className="p-2 text-left">Conta Contábil</th>
+                </tr></thead>
+                <tbody>
+                  {retentionRows.map(r => (
+                    <tr key={r.key} className="border-b last:border-0">
+                      <td className="p-2 text-center"><input type="checkbox" checked={r.selected} onChange={e => setRet(r.tax_type, { selected: e.target.checked })} className="w-4 h-4" /></td>
+                      <td className="p-2 font-medium">{r.tax_type}</td>
+                      <td className="p-2">{r.partner_name || "—"}{r.supplier_code ? ` (${r.supplier_code})` : ""}</td>
+                      <td className="p-2"><input type="number" step="0.01" value={r.value} onChange={e => setRet(r.tax_type, { value: r2(Number(e.target.value) || 0) })} className="w-24 h-8 rounded border border-input px-2 text-right text-xs" /></td>
+                      <td className="p-2"><input type="date" value={r.due_date} onChange={e => setRet(r.tax_type, { due_date: e.target.value })} className="h-8 rounded border border-input px-2 text-xs" /></td>
+                      <td className="p-2 text-gray-600">{r.account_code ? `${r.account_code} — ${r.account_name || ""}` : (r.account_name || "—")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-3 py-2 bg-gray-50 border-t text-xs flex justify-end gap-4">
+                <span className="text-gray-600">Total Retido: <b className="text-red-600">{fmtMoney(totalRetido)}</b></span>
+                <span className="text-gray-600">Líquido ao Fornecedor: <b className="text-emerald-700">{fmtMoney(liquidoFornecedor)}</b></span>
+              </div>
+            </div>
+          )}
 
           {/* Rateio */}
           <ErpApportionmentEditor apportionments={apportionments} onChange={setApportionments} sectors={sectors} accounts={accounts} title="Rateio do Lançamento (Setor / Conta Contábil)" />

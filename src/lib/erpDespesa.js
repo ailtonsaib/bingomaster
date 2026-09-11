@@ -87,12 +87,12 @@ export async function gerarFinanceiroDespesa(user, entry, opts = {}) {
       for (const r of retList) {
         payables.push({
           user_email: user.email,
-          description: `Retenção ${r.type} - NF ${entry.nota_number} (${entry.supplier_name || ""})`,
+          description: `Retenção ${r.type} - NF ${entry.nota_number} (${r.partner_name || entry.supplier_name || ""})`,
           beneficiary: r.partner_name,
           amount: r.value,
           category: `Retenção ${r.type}`,
           status: "aberto",
-          due_date: due,
+          due_date: r.due_date || due,
         });
       }
     } else {

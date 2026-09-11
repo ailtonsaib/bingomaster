@@ -80,6 +80,79 @@
       "default": false,
       "description": "Se a opera\u00e7\u00e3o de entrada gera bem patrimonial (imobilizado)"
     },
+    "tem_retencao": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a opera\u00e7\u00e3o de entrada tem reten\u00e7\u00e3o de impostos (IRRF, PIS, COFINS, CSLL, INSS, ISS) \u2014 parametrizada por imposto com fornecedor destinat\u00e1rio, dia de vencimento, conta cont\u00e1bil e hist\u00f3rico padr\u00e3o"
+    },
+    "retention_params": {
+      "type": "array",
+      "default": [],
+      "description": "Impostos retidos na opera\u00e7\u00e3o: cada imposto selecionado na entrada da nota gera financeiro (conta a pagar pr\u00f3pria) e lan\u00e7amento cont\u00e1bil com a conta e o hist\u00f3rico configurados, abatendo o valor retido do fornecedor",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tax_type": {
+            "type": "string",
+            "enum": [
+              "IRRF",
+              "PIS",
+              "COFINS",
+              "CSLL",
+              "INSS",
+              "ISS"
+            ],
+            "description": "Imposto retido"
+          },
+          "rate": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota da reten\u00e7\u00e3o (%) aplicada sobre o total da nota"
+          },
+          "supplier_id": {
+            "type": "string",
+            "description": "ID do fornecedor destinat\u00e1rio da reten\u00e7\u00e3o (ErpPartner)"
+          },
+          "supplier_code": {
+            "type": "string",
+            "description": "C\u00f3digo do fornecedor destinat\u00e1rio da reten\u00e7\u00e3o"
+          },
+          "supplier_name": {
+            "type": "string",
+            "description": "Fornecedor destinat\u00e1rio da reten\u00e7\u00e3o (cache)"
+          },
+          "due_day": {
+            "type": "number",
+            "default": 0,
+            "description": "Dia do m\u00eas do vencimento do imposto retido (financeiro)"
+          },
+          "account_id": {
+            "type": "string",
+            "description": "ID da conta cont\u00e1bil da reten\u00e7\u00e3o (ErpChartAccount)"
+          },
+          "account_code": {
+            "type": "string",
+            "description": "C\u00f3digo da conta cont\u00e1bil (cache)"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "Nome da conta cont\u00e1bil (cache)"
+          },
+          "history_id": {
+            "type": "string",
+            "description": "ID do hist\u00f3rico padr\u00e3o (ErpStandardHistory)"
+          },
+          "history_code": {
+            "type": "string",
+            "description": "C\u00f3digo do hist\u00f3rico padr\u00e3o (cache)"
+          },
+          "history_text": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o do hist\u00f3rico padr\u00e3o (cache)"
+          }
+        }
+      }
+    },
     "is_active": {
       "type": "boolean",
       "default": true

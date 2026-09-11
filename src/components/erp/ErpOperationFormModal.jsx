@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { KIND_LABELS } from "@/lib/erpCfopSuggest";
+import ErpOperationRetentionModal from "./ErpOperationRetentionModal";
 
 const OP_TYPE_OPTS = [
   { value: "entrada", label: "Entrada" },
@@ -23,6 +24,7 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
     nature_operation: operation?.nature_operation || "",
     description: operation?.description || "",
     is_patrimonio: !!operation?.is_patrimonio,
+    tem_retencao: !!operation?.tem_retencao,
     is_active: operation?.is_active !== false,
     flag_contabil: operation?.flag_contabil !== false,
     flag_fiscal: operation?.flag_fiscal !== false,
@@ -33,6 +35,8 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
     exige_ordem_compra: !!operation?.exige_ordem_compra,
   });
   const [saving, setSaving] = useState(false);
+  const [retentionParams, setRetentionParams] = useState(operation?.retention_params || []);
+  const [showRetention, setShowRetention] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
   // Novo cadastro: gera o código sequencial a partir do último registro
@@ -76,6 +80,8 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
       cfop_importacao: onlyDigits(form.cfop_importacao) || undefined,
       exige_ordem_compra: form.exige_ordem_compra,
       is_patrimonio: form.is_patrimonio,
+      tem_retencao: form.tem_retencao,
+      retention_params: form.tem_retencao ? retentionParams : [],
       is_active: form.is_active,
     };
     try {
@@ -139,6 +145,23 @@ export default function ErpOperationFormModal({ user, operation, onClose, onSave
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.is_patrimonio} onChange={e => set("is_patrimonio", e.target.checked)} className="w-4 h-4" /> Gera bem patrimonial (imobilizado)
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.tem_retencao} onChange={e => set("tem_retencao", e.target.checked)} className="w-4 h-4" /> Tem retenção de impostos na entrada
+          </label>
+          {form.tem_retencao && (
+            <div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowRetention(true)} className="gap-1.5">Configurar Retenções ({retentionParams.length})</Button>
+              <p className="text-[11px] text-gray-500 mt-1">Impostos retidos na entrada (IRRF, PIS, COFINS, CSLL, INSS, ISS): fornecedor destinatário, vencimento, conta contábil e histórico para gerar o financeiro e o contábil de cada imposto retido.</p>
+            </div>
+          )}
+          {showRetention && (
+            <ErpOperationRetentionModal
+              user={user}
+              params={retentionParams}
+              onClose={() => setShowRetention(false)}
+              onSave={(p) => { setRetentionParams(p); setShowRetention(false); }}
+            />
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Ativa
           </label>
