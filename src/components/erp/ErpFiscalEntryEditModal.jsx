@@ -5,6 +5,7 @@ import { X, Wrench, Loader2, Plus, Trash2 } from "lucide-react";
 import ErpFiscalItemTaxes from "@/components/erp/ErpFiscalItemTaxes";
 import ErpFiscalCapaTaxes from "@/components/erp/ErpFiscalCapaTaxes";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
+import ErpRetentionGuidesModal from "@/components/erp/ErpRetentionGuidesModal";
 import { fmtMoney } from "@/lib/erpUtils";
 
 // Vencimento do imposto retido: dia do mês parametrizado na operação, no mês da emissão da nota
@@ -34,6 +35,8 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
   const [accounts, setAccounts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Guias de recolhimento geradas após salvar retenções
+  const [guides, setGuides] = useState(null);
   const [form, setForm] = useState({
     nota_number: entry.nota_number || "",
     issue_date: (entry.issue_date || "").slice(0, 10) || new Date().toISOString().slice(0, 10),
@@ -244,7 +247,12 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
         notes: form.notes,
       });
       onSaved?.();
-      onClose();
+      // Nota com retenções: abre as guias de recolhimento de cada imposto para impressão
+      if (rets.length > 0) {
+        setGuides(rets);
+      } else {
+        onClose();
+      }
     } catch (e) { setError(e.message); }
     setSaving(false);
   };
@@ -371,6 +379,15 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
           </Button>
         </div>
       </div>
+
+      {guides && (
+        <ErpRetentionGuidesModal
+          user={user}
+          entry={{ nota_number: form.nota_number, supplier_name: form.supplier_name, supplier_cnpj: form.supplier_cnpj, issue_date: form.issue_date }}
+          retentions={guides}
+          onClose={() => { setGuides(null); onClose(); }}
+        />
+      )}
     </div>
   );
 }
