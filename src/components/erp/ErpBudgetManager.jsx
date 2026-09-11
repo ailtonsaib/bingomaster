@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ErpCombobox from "@/components/erp/ErpCombobox";
 import { Search, Plus, Pencil, Trash2, Loader2, PieChart } from "lucide-react";
 import { fmtMoney } from "@/lib/erpUtils";
 import { maskMoney, parseMoney } from "@/lib/brMasks";
@@ -20,6 +21,7 @@ export default function ErpBudgetManager({ user }) {
   const [items, setItems] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [sectors, setSectors] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
@@ -28,12 +30,13 @@ export default function ErpBudgetManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [b, d, s] = await Promise.all([
+      const [b, d, s, accs] = await Promise.all([
         base44.entities.ErpBudget.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpDepartment.filter({ user_email: user.email }, "name", 500),
         base44.entities.ErpSector.filter({ user_email: user.email }, "name", 500),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
       ]);
-      setItems(b); setDepartments(d.filter(x => x.is_active !== false)); setSectors(s);
+      setItems(b); setDepartments(d.filter(x => x.is_active !== false)); setSectors(s); setAccounts(accs);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -107,6 +110,7 @@ export default function ErpBudgetManager({ user }) {
           user={user}
           departments={departments}
           sectors={sectors}
+          accounts={accounts}
           editing={editing}
           onClose={() => setShowForm(false)}
           onSaved={load}
@@ -116,7 +120,7 @@ export default function ErpBudgetManager({ user }) {
   );
 }
 
-function ErpBudgetForm({ user, departments, sectors, editing, onClose, onSaved }) {
+function ErpBudgetForm({ user, departments, sectors, accounts, editing, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: editing?.name || "", year: editing?.year || new Date().getFullYear(),
     month: editing?.month ?? 0, category: editing?.category || "",
@@ -131,6 +135,16 @@ function ErpBudgetForm({ user, departments, sectors, editing, onClose, onSaved }
     return r;
   });
   const [saving, setSaving] = useState(false);
+
+  const accountOptions = useMemo(() => [...accounts].sort((a, b) => String(a.code || "").localeCompare(String(b.code || ""), "pt-BR", { numeric: true })).map(a => ({ id: a.id, label: `${a.code ? `${a.code} — ` : ""}${a.name}` })), [accounts]);
+  const categoryId = useMemo(() => {
+    const acc = accounts.find(a => (a.code ? `${a.code} — ${a.name}` : a.name) === form.category);
+    return acc?.id || "";
+  }, [accounts, form.category]);
+  const onAccountChange = (id) => {
+    const acc = accounts.find(a => a.id === id);
+    set("category", acc ? (acc.code ? `${acc.code} — ${acc.name}` : acc.name) : "");
+  };
 
   const deptSectors = sectors.filter(s => s.department_id === form.department_id && s.is_active !== false);
   const totalPct = deptSectors.reduce((s, sec) => s + (Number(rates[sec.id]) || 0), 0);
@@ -245,7 +259,15 @@ function ErpBudgetForm({ user, departments, sectors, editing, onClose, onSaved }
 
           <div>
             <Label className="text-xs font-medium text-gray-600">Categoria / Conta</Label>
-            <Input value={form.category} onChange={e => set("category", e.target.value)} placeholder="Código/nome da conta contábil" className="mt-1" />
+            <div className="mt-1">
+              <ErpCombobox
+                value={categoryId}
+                options={accountOptions}
+                onValueChange={onAccountChange}
+                placeholder="Digite o código ou nome da conta contábil"
+                clearable
+              />
+            </div>
           </div>
           <div className="flex items-end">
             <label className="flex items-center gap-2 text-sm">
