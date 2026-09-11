@@ -11,12 +11,12 @@ import ErpCombobox from "@/components/erp/ErpCombobox";
 // débito das contas do rateio da própria entrada.
 const ROWS = [
   { key: "fornecedores", type: "C", label: "FORNECEDORES", required: true, hint: "Crédito pelo total da nota" },
-  { key: "icms", type: "D", label: "ICMS A RECUP", required: true, hint: "Débito pelo ICMS a creditar" },
-  { key: "pis", type: "D", label: "PIS A RECUP", required: true, hint: "Débito pelo PIS a creditar" },
-  { key: "cofins", type: "D", label: "COFINS A RECUP", required: true, hint: "Débito pelo COFINS a creditar" },
-  { key: "ipi", type: "D", label: "IPI A RECUP", required: false, hint: "Débito pelo IPI a creditar (opcional)" },
-  { key: "cbs", type: "D", label: "CBS A RECUP", required: false, hint: "Débito pelo CBS a creditar — reforma tributária (opcional)" },
-  { key: "ibs", type: "D", label: "IBS A RECUP", required: false, hint: "Débito pelo IBS a creditar — reforma tributária (opcional)" },
+  { key: "icms", type: "D", label: "ICMS A RECUPERAR", required: true, hint: "Débito pelo ICMS a creditar" },
+  { key: "pis", type: "D", label: "PIS A RECUPERAR", required: true, hint: "Débito pelo PIS a creditar" },
+  { key: "cofins", type: "D", label: "COFINS A RECUPERAR", required: true, hint: "Débito pelo COFINS a creditar" },
+  { key: "ipi", type: "D", label: "IPI A RECUPERAR", required: false, hint: "Débito pelo IPI a creditar (opcional)" },
+  { key: "cbs", type: "D", label: "CBS A RECUPERAR", required: false, hint: "Débito pelo CBS a creditar — reforma tributária (opcional)" },
+  { key: "ibs", type: "D", label: "IBS A RECUPERAR", required: false, hint: "Débito pelo IBS a creditar — reforma tributária (opcional)" },
   { key: "icms_frete", type: "D", label: "ICMS FRETE", required: false, hint: "Débito pelo ICMS do frete a creditar (opcional)" },
   { key: "pis_frete", type: "D", label: "PIS S/ FRETE", required: false, hint: "Débito pelo PIS do frete a creditar (opcional)" },
   { key: "cofins_frete", type: "D", label: "COFINS S/ FRETE", required: false, hint: "Débito pelo COFINS do frete a creditar (opcional)" },
