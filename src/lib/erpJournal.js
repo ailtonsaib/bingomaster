@@ -86,6 +86,9 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   };
   for (const t of taxes) {
     if (!(t.value > 0)) continue;
+    // CBS/IBS: a parametrização da operação pode desativar a contabilização —
+    // desligada, não gera débito a recuperar e o valor permanece no custo
+    if ((t.type === "CBS" || t.type === "IBS") && acctParam?.gerar_contabil_cbs_ibs === false) continue;
     const pl = acctLine(String(t.type).toLowerCase());
     if (pl) { pushTaxLine(byIdOrCache(pl), t, pl.history_text || `Crédito ${t.type} NF ${entry.nota_number}`); continue; }
     const cc = (param?.credit_accounts || []).find((c) => c.type === t.type && c.account_id);

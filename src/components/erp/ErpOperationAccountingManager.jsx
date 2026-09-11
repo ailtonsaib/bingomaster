@@ -40,6 +40,7 @@ export default function ErpOperationAccountingManager({ user }) {
   const [lines, setLines] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cbsIbsOn, setCbsIbsOn] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -62,6 +63,7 @@ export default function ErpOperationAccountingManager({ user }) {
     const p = params.find(x => x.operation_id === id);
     (p?.lines || []).forEach(l => { st[l.key] = l; });
     setLines(st);
+    setCbsIbsOn(p?.gerar_contabil_cbs_ibs !== false);
   };
 
   const setAccount = (key, accId) => {
@@ -83,6 +85,7 @@ export default function ErpOperationAccountingManager({ user }) {
       user_email: user.email,
       operation_id: opSel,
       operation_name: operations.find(o => o.id === opSel)?.name || "",
+      gerar_contabil_cbs_ibs: cbsIbsOn,
       lines: ROWS.filter(r => lines[r.key]?.account_id).map(r => ({
         key: r.key, type: r.type, label: r.label,
         account_id: lines[r.key].account_id || "",
@@ -116,6 +119,24 @@ export default function ErpOperationAccountingManager({ user }) {
     } catch (e) { alert(e.message); }
   };
 
+  // Contabilização de CBS/IBS: gravada na própria parametrização da operação
+  const toggleCbsIbs = async (checked) => {
+    setCbsIbsOn(checked);
+    try {
+      if (current) {
+        const upd = await base44.entities.ErpOperationAccounting.update(current.id, { gerar_contabil_cbs_ibs: checked });
+        setParams(prev => prev.map(p => p.id === current.id ? upd : p));
+      } else {
+        const created = await base44.entities.ErpOperationAccounting.create({
+          user_email: user.email, operation_id: opSel,
+          operation_name: operations.find(o => o.id === opSel)?.name || "",
+          gerar_contabil_cbs_ibs: checked, lines: [],
+        });
+        setParams(prev => [...prev, created]);
+      }
+    } catch (e) { alert(e.message); }
+  };
+
   const compareChartCode = (a, b) => String(a.code || "").localeCompare(String(b.code || ""), "pt-BR", { numeric: true });
   const accountOptions = useMemo(() => [...accounts].sort(compareChartCode).map(a => ({ id: a.id, label: `${a.code ? `${a.code} — ` : ""}${a.name}` })), [accounts]);
 
@@ -142,6 +163,13 @@ export default function ErpOperationAccountingManager({ user }) {
             <div>
               <p className="text-sm font-medium">Gerar lançamento contábil</p>
               <p className="text-xs text-gray-500">Desligado, a entrada com esta operação não gera movimento contábil (estoque e financeiro continuam sendo gerados).</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-white rounded-xl border p-3">
+            <Switch checked={cbsIbsOn} onCheckedChange={toggleCbsIbs} />
+            <div>
+              <p className="text-sm font-medium">Gerar lançamento contábil de CBS/IBS</p>
+              <p className="text-xs text-gray-500">Desligado, os valores de CBS e IBS destacados na nota não geram débito a recuperar — permanecem no custo dos produtos/rateio.</p>
             </div>
           </div>
           <div className="bg-white rounded-xl border overflow-hidden">
