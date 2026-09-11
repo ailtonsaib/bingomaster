@@ -24,7 +24,7 @@ export default function ErpApportionmentEditor({ apportionments, onChange, setor
       aps[i].department_id = s?.department_id || "";
       aps[i].department_name = s?.department_name || "";
     }
-    if (field === "department_id" && !setorList) { const d = setores.find(d => d.id === value); aps[i].department_name = d?.name || ""; }
+    if (field === "department_id" && !setorList) { const d = (setores || []).find(d => d.id === value); aps[i].department_name = d?.name || ""; }
     if (field === "account_id") { const a = accounts.find(a => a.id === value); aps[i].account_code = a?.code || ""; aps[i].account_name = a?.name || ""; }
     onChange(aps);
   };
@@ -40,7 +40,7 @@ export default function ErpApportionmentEditor({ apportionments, onChange, setor
     <div className="border rounded-lg overflow-hidden">
       <div className={`flex items-center justify-between p-2 ${headerBg} border-b`}>
         <span className={`text-sm font-semibold ${headerText} flex items-center gap-1.5`}><PieChart className="w-4 h-4" /> {title}</span>
-        {!readOnly && <Button size="sm" variant="outline" onClick={add} className="h-7 gap-1" disabled={!setores.length || !accounts.length}><Plus className="w-3.5 h-3.5" /> Rateio</Button>}
+        {!readOnly && <Button size="sm" variant="outline" onClick={add} className="h-7 gap-1" disabled={!setorOptions.length || !accounts.length}><Plus className="w-3.5 h-3.5" /> Rateio</Button>}
       </div>
       <div className="p-2 space-y-1.5">
         {list.length === 0 && <p className="text-center text-xs text-gray-400 py-2">{readOnly ? "Sem rateio." : "Nenhum rateio. Clique em \"Rateio\"."}</p>}
