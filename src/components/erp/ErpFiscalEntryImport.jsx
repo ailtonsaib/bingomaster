@@ -556,12 +556,17 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
         for (let i = 0; i < updatedItems.length; i++) {
           const it = updatedItems[i];
           if (!it.product_name.trim() || (Number(it.quantity) || 0) <= 0 || it.product_id) continue;
-          const cadastrar = window.confirm(`O produto "${it.product_name}" não está no cadastro.\n\nOK = cadastrar agora (abre o cadastro de produtos)\nCancelar = manter apenas a descrição no item`);
-          if (!cadastrar) continue;
+          // Opção do item: cadastrar o produto (abre o cadastro) ou manter apenas a descrição
+          if (it._prodChoice !== "new") continue;
           const created = await askNewProduct({ name: it.product_name });
           if (created) {
             updatedItems[i] = { ...it, product_id: created.id, product_name: created.name || it.product_name };
             setProducts(p => p.some(x => x.id === created.id) ? p : [...p, created]);
+            // Vínculo fornecedor ↔ produto: mesmo produto de outro fornecedor é outro
+            // produto — o relacionamento é sempre pelo fornecedor + código do produto
+            if (supplier) {
+              await ensureLink(supplier, created, { product_code: created.code || "", product_name: it.product_name, unit: created.unit || "UN", unit_price: it.unit_price });
+            }
           }
         }
         setManualItems(updatedItems);
@@ -994,6 +999,17 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                         <td className="p-2">
                           <input list="manual-products-list" value={it.product_name} onChange={e => onManualItemName(i, e.target.value)} placeholder="Descrição — busque produto cadastrado" className="w-full h-8 rounded border border-input px-2 text-xs" />
                           {it.product_id && <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-0.5"><Link2 className="w-3 h-3" /> produto cadastrado</span>}
+                          {!it.product_id && (
+                            <select
+                              value={it._prodChoice || ""}
+                              onChange={e => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, _prodChoice: e.target.value } : x))}
+                              className="mt-0.5 h-7 rounded border border-input px-1 text-[10px] text-gray-600 bg-white"
+                              title="Opte por cadastrar o produto ou manter apenas a descrição (notas de serviço)"
+                            >
+                              <option value="">Não cadastrar — apenas descrição (serviço)</option>
+                              <option value="new">Cadastrar produto (abre o cadastro)</option>
+                            </select>
+                          )}
                         </td>
                         <td className="p-2"><input type="number" step="0.01" value={it.quantity} onChange={e => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, quantity: Number(e.target.value) || 0 } : x))} className="w-16 h-8 rounded border border-input px-2 text-right text-xs" /></td>
                         <td className="p-2"><input type="number" step="0.01" value={it.unit_price} onChange={e => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, unit_price: Number(e.target.value) || 0 } : x))} className="w-24 h-8 rounded border border-input px-2 text-right text-xs" /></td>

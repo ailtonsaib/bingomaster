@@ -12,7 +12,7 @@ const empty = {
   code: "", barcode: "", name: "", product_type: "mercadoria",
   category: "", ncm: "", unit: "UN", stock: 0, min_stock: 0,
   net_weight: 0, gross_weight: 0,
-  is_active: true, notes: "",
+  is_active: true, controla_estoque: true, notes: "",
   subgroup_id: "", subgroup_name: "",
   account_estoque_id: "", account_estoque_name: "",
   stock_sector_id: "", stock_sector_name: "",
@@ -48,7 +48,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome do produto."); return; }
-    if (!form.ncm) { alert("Selecione o NCM do produto."); return; }
+    if (form.product_type !== "servico" && !form.ncm) { alert("Selecione o NCM do produto."); return; }
     setSaving(true);
     const payload = {
       user_email: user.email,
@@ -64,6 +64,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       net_weight: Number(form.net_weight) || 0,
       gross_weight: Number(form.gross_weight) || 0,
       is_active: form.is_active,
+      controla_estoque: form.controla_estoque !== false,
       subgroup_id: form.subgroup_id || undefined,
       subgroup_name: form.subgroup_name || undefined,
       account_estoque_id: form.account_estoque_id || undefined,
@@ -108,7 +109,7 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Tipo</Label>
-              <select value={form.product_type} onChange={e => set("product_type", e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+              <select value={form.product_type} onChange={e => { set("product_type", e.target.value); if (e.target.value === "servico") set("controla_estoque", false); }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
                 {PRODUCT_TYPES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
               </select>
             </div>
@@ -185,6 +186,13 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
           <div><Label>Observações</Label><Input value={form.notes} onChange={e => set("notes", e.target.value)} /></div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.is_active} onChange={e => set("is_active", e.target.checked)} className="w-4 h-4" /> Produto ativo
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={form.controla_estoque !== false} onChange={e => set("controla_estoque", e.target.checked)} className="w-4 h-4 mt-0.5" />
+            <span>
+              Controlar estoque
+              <span className="block text-xs text-gray-500">Desmarcado (ex.: serviços): não alimenta o módulo de estoque e não aparece na relação de produtos.</span>
+            </span>
           </label>
           {product?.id && <ErpProductSupplierLinks user={user} product={{ ...product, ...form }} />}
         </div>

@@ -13,6 +13,7 @@ export default function ErpProductManager({ user }) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [showNoStock, setShowNoStock] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -26,8 +27,10 @@ export default function ErpProductManager({ user }) {
 
   const filtered = items.filter(p => {
     const okType = typeFilter === "all" || p.product_type === typeFilter;
+    // Produtos sem controle de estoque (serviços) ficam fora da relação por padrão
+    const okStock = showNoStock || p.controla_estoque !== false;
     const t = (p.name + " " + (p.code || "") + " " + (p.barcode || "")).toLowerCase();
-    return okType && t.includes(search.toLowerCase());
+    return okType && okStock && t.includes(search.toLowerCase());
   });
 
   const handleDelete = async (p) => {
@@ -55,6 +58,9 @@ export default function ErpProductManager({ user }) {
           <option value="insumo">Insumo</option>
           <option value="servico">Serviço</option>
         </select>
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 whitespace-nowrap">
+          <input type="checkbox" checked={showNoStock} onChange={e => setShowNoStock(e.target.checked)} className="w-4 h-4" /> Sem estoque
+        </label>
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
           <Plus className="w-4 h-4" /> Novo Produto
         </Button>

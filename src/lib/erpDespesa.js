@@ -152,7 +152,7 @@ export async function reabrirEntradaNF(user, entry) {
   const byId = new Map(products.map(p => [p.id, p]));
   for (const it of entry.items || []) {
     const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
-    if (!prod) continue;
+    if (!prod || prod.controla_estoque === false) continue;
     const qty = Number(it.quantity) || 0;
     if (qty > 0) await base44.entities.ErpProduct.update(prod.id, { stock: r2(Math.max(0, (prod.stock || 0) - qty)) });
   }
@@ -207,8 +207,9 @@ export async function lancarEntradaNF(user, entry, accounts) {
   const itemsGrossTotal = (entry.items || []).reduce((s, it) => s + (Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0)), 0);
   for (const it of entry.items || []) {
     const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
-    if (prod) {
+    if (prod && prod.controla_estoque !== false) {
       // Custo do produto sem os impostos a creditar (ICMS/IPI/PIS/COFINS) + frete líquido
+      // Produto sem controle de estoque (serviço) não alimenta o módulo de estoque
       const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0) + (Number(it.difal_value) || 0);
       const qty = Number(it.quantity) || 0;
       const gross = Number(it.total) || qty * (Number(it.unit_price) || 0);

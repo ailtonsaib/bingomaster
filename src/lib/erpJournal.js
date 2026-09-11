@@ -46,7 +46,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     const byId = new Map(products.map((p) => [p.id, p]));
     for (const it of entry.items) {
       const prod = (it.product_id && byId.get(it.product_id)) || products.find((p) => (p.code && p.code === it.product_code) || (p.barcode && p.barcode === it.barcode) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
-      if (!prod?.account_estoque_id) continue;
+      if (!prod?.account_estoque_id || prod.controla_estoque === false) continue;
       const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0) + (Number(it.difal_value) || 0);
       const gross = Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
       const net = r2(gross - credited);
