@@ -20,6 +20,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   const byIdOrCache = (l) => accounts.find((a) => a.id === l.account_id) || { id: l.account_id, code: l.account_code, name: l.account_name };
   const retentions = opts.retentions || entry.retentions || [];
   const complement = opts.complement || `Entrada NF ${entry.nota_number}`;
+  const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
   // Conta credora: parametrização da operação, parâmetro de despesa ou detecção automática (passivo Fornecedores/Contas a Pagar)
   let credora = null;
@@ -48,7 +49,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
       if (!prod?.account_estoque_id) continue;
       const credited = (Number(it.icms_value) || 0) + (Number(it.ipi_value) || 0) + (Number(it.pis_value) || 0) + (Number(it.cofins_value) || 0) + (Number(it.difal_value) || 0);
       const gross = Number(it.total) || (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
-      const net = gross - credited;
+      const net = r2(gross - credited);
       if (net > 0) stockItems.push({ prod, net, name: it.product_name || prod.name });
     }
   }
@@ -161,12 +162,12 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
     });
   }
   // Débito despesa (rateio) sobre a base líquida restante (total_nota − créditos − estoque)
-  const rateioBase = despesaBase - stockNetTotal;
+  const rateioBase = r2(despesaBase - stockNetTotal);
   for (const ap of entry.apportionments || []) {
     const val =
       ap.rateio_type === "value"
-        ? ap.value
-        : rateioBase * ((ap.percent || 0) / 100);
+        ? r2(ap.value)
+        : r2(rateioBase * ((ap.percent || 0) / 100));
     if (val > 0 && ap.account_id) {
       lines.push({
         account_id: ap.account_id,
@@ -184,12 +185,12 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   for (const l of debitTaxLines) lines.push(l);
   for (const l of extraDebitLines) lines.push(l);
 
-  const totalDebit = lines.reduce((a, l) => a + l.debit, 0);
+  const totalDebit = r2(lines.reduce((a, l) => a + l.debit, 0));
 
   // Crédito credora (Fornecedores/Contas a Pagar) pelo restante + créditos das retenções
   // e das linhas opcionais de crédito (dif. alíquota / descontos)
   const extraCreditTotal = extraCreditLines.reduce((a, l) => a + l.credit, 0);
-  const credoraCredit = totalDebit - retentionsValueWithAcct - extraCreditTotal;
+  const credoraCredit = r2(totalDebit - retentionsValueWithAcct - extraCreditTotal);
   lines.push({
     account_id: credora.id,
     account_code: credora.code,
@@ -211,7 +212,7 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
   }
   for (const l of extraCreditLines) lines.push(l);
 
-  const totalCredit = lines.reduce((a, l) => a + l.credit, 0);
+  const totalCredit = r2(lines.reduce((a, l) => a + l.credit, 0));
 
   const history =
     opts.history ||

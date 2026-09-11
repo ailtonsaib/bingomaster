@@ -11,6 +11,7 @@ export default function ErpJournalEntryManager({ user }) {
   const [items, setItems] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [costCenters, setCostCenters] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -19,12 +20,13 @@ export default function ErpJournalEntryManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [j, a, c] = await Promise.all([
+      const [j, a, c, s] = await Promise.all([
         base44.entities.ErpJournalEntry.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true, is_active: true }, "code", 500),
         base44.entities.ErpCostCenter.filter({ user_email: user.email }, "code", 200),
+        base44.entities.ErpSector.filter({ user_email: user.email, is_active: true }, "name", 500),
       ]);
-      setItems(j); setAccounts(a); setCostCenters(c);
+      setItems(j); setAccounts(a); setCostCenters(c); setSectors(s);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -74,12 +76,12 @@ export default function ErpJournalEntryManager({ user }) {
           </table>
         </div>
       </div>
-      {showForm && <ErpJournalEntryForm user={user} editing={editing} accounts={accounts} costCenters={costCenters} nextNumber={items.length + 1} onClose={() => setShowForm(false)} onSaved={load} />}
+      {showForm && <ErpJournalEntryForm user={user} editing={editing} accounts={accounts} costCenters={costCenters} sectors={sectors} nextNumber={items.length + 1} onClose={() => setShowForm(false)} onSaved={load} />}
     </div>
   );
 }
 
-function ErpJournalEntryForm({ user, editing, accounts, costCenters, nextNumber, onClose, onSaved }) {
+function ErpJournalEntryForm({ user, editing, accounts, costCenters, sectors, nextNumber, onClose, onSaved }) {
   const [form, setForm] = useState({
     number: editing?.number || `LCT ${String(nextNumber).padStart(4, "0")}/${new Date().getFullYear()}`,
     date: (editing?.date || new Date().toISOString()).slice(0, 10),
@@ -90,7 +92,7 @@ function ErpJournalEntryForm({ user, editing, accounts, costCenters, nextNumber,
     status: editing?.status || "rascunho",
     notes: editing?.notes || "",
   });
-  const [lines, setLines] = useState(editing?.lines?.map(l => ({ ...l, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })) || [{ account_id: "", account_code: "", account_name: "", debit: 0, credit: 0, complement: "" }]);
+  const [lines, setLines] = useState(editing?.lines?.map(l => ({ ...l, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })) || [{ account_id: "", account_code: "", account_name: "", debit: 0, credit: 0, complement: "", sector_id: "", sector_name: "" }]);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -100,7 +102,8 @@ function ErpJournalEntryForm({ user, editing, accounts, costCenters, nextNumber,
 
   const setLine = (idx, patch) => setLines(prev => prev.map((l, i) => i === idx ? { ...l, ...patch } : l));
   const onAccount = (idx, id) => { const a = accounts.find(a => a.id === id); setLine(idx, { account_id: id, account_code: a?.code || "", account_name: a?.name || "" }); };
-  const addLine = () => setLines(prev => [...prev, { account_id: "", account_code: "", account_name: "", debit: 0, credit: 0, complement: "" }]);
+  const onSector = (idx, id) => { const s = (sectors || []).find(x => x.id === id); setLine(idx, { sector_id: id || "", sector_name: s?.name || "" }); };
+  const addLine = () => setLines(prev => [...prev, { account_id: "", account_code: "", account_name: "", debit: 0, credit: 0, complement: "", sector_id: "", sector_name: "" }]);
   const removeLine = (idx) => setLines(prev => prev.filter((_, i) => i !== idx));
   const onCost = (id) => { const c = costCenters.find(c => c.id === id); set("cost_center_id", id); set("cost_center_name", c?.name || ""); };
 
@@ -156,7 +159,7 @@ function ErpJournalEntryForm({ user, editing, accounts, costCenters, nextNumber,
               <table className="w-full text-sm">
                 <thead className="text-gray-500 text-xs">
                   <tr>
-                    <th className="p-1.5 text-left">Conta</th><th className="p-1.5 text-right w-28">Débito</th><th className="p-1.5 text-right w-28">Crédito</th><th className="p-1.5 text-left">Histórico Compl.</th><th className="p-1.5 w-10"></th>
+                    <th className="p-1.5 text-left">Conta</th><th className="p-1.5 text-left w-40">Setor</th><th className="p-1.5 text-right w-28">Débito</th><th className="p-1.5 text-right w-28">Crédito</th><th className="p-1.5 text-left">Histórico Compl.</th><th className="p-1.5 w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -166,6 +169,12 @@ function ErpJournalEntryForm({ user, editing, accounts, costCenters, nextNumber,
                         <select value={l.account_id} onChange={e => onAccount(idx, e.target.value)} className="w-full h-8 rounded border border-input px-1 text-xs">
                           <option value="">Selecione...</option>
                           {accounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                        </select>
+                      </td>
+                      <td className="p-1.5">
+                        <select value={l.sector_id || ""} onChange={e => onSector(idx, e.target.value)} className="w-full h-8 rounded border border-input px-1 text-xs">
+                          <option value="">Sem setor</option>
+                          {(sectors || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       </td>
                       <td className="p-1.5"><input type="number" step="0.01" value={l.debit} onChange={e => setLine(idx, { debit: Number(e.target.value) || 0, credit: 0 })} className="w-24 h-8 rounded border border-input px-2 text-right text-xs" /></td>
