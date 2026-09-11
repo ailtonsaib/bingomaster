@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingCart, ClipboardList, Gavel, Package, PackagePlus, UserCheck, FileInput, ShieldCheck, Wallet, Receipt, Settings2 } from "lucide-react";
+import { ShoppingCart, ClipboardList, Gavel, Package, PackagePlus, UserCheck, FileInput, ShieldCheck, Wallet, Receipt, Settings2, Boxes, ArrowLeftRight } from "lucide-react";
 import ErpProductManager from "@/components/erp/ErpProductManager";
 import ErpPurchasePanel from "@/components/erp/ErpPurchasePanel";
 import ErpWarehouseRequisitionPanel from "@/components/erp/ErpWarehouseRequisitionPanel";
@@ -10,6 +10,8 @@ import ErpFiscalEntryPanel from "@/components/erp/ErpFiscalEntryPanel";
 import ErpFiscalApprovalPanel from "@/components/erp/ErpFiscalApprovalPanel";
 import ErpExpenseEntryPanel from "@/components/erp/ErpExpenseEntryPanel";
 import ErpExpenseParameterManager from "@/components/erp/ErpExpenseParameterManager";
+import ErpStockInventoryReport from "@/components/erp/ErpStockInventoryReport";
+import ErpStockKardexReport from "@/components/erp/ErpStockKardexReport";
 
 const SUBTABS = [
   { id: "almoxarifado", label: "Cadastro de Produtos", icon: Package },
@@ -21,6 +23,8 @@ const SUBTABS = [
   { id: "aprovadores", label: "Aprovadores", icon: UserCheck },
   { id: "despesas", label: "Despesas", icon: Wallet },
   { id: "requisicoes_almox", label: "Requisições ao Almoxarifado", icon: PackagePlus },
+  { id: "rel_inventario", label: "Rel. Inventário", icon: Boxes },
+  { id: "rel_kardex", label: "Movimentação Estoque", icon: ArrowLeftRight },
 ];
 
 export default function ErpModuleSuprimentos({ user }) {
@@ -47,6 +51,8 @@ export default function ErpModuleSuprimentos({ user }) {
         </div>
       )}
       {sub === "requisicoes_almox" && <ErpWarehouseRequisitionPanel user={user} />}
+      {sub === "rel_inventario" && <ErpStockInventoryReport user={user} />}
+      {sub === "rel_kardex" && <ErpStockKardexReport user={user} />}
     </div>
   );
 }
