@@ -1,16 +1,26 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { fmtMoney } from "@/lib/erpUtils";
+import { printElements } from "@/lib/printUtils";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const num = (v) => Number(v) || 0;
 
-// Comparativo do orçamento: Orçado (planejado), Empenhado (notas lançadas —
-// independente de pagas ou não) e Realizado (somente documentos pagos no financeiro).
+// Pares de comparação do relatório — o usuário escolhe quais exibir/imprimir
+const PAIR_DEFS = [
+  { key: "orc_empenhado", label: "Orçado x Empenhado", aKey: "planned", aLabel: "Orçado", bKey: "committed", bLabel: "Empenhado" },
+  { key: "orc_realizado", label: "Orçado x Realizado", aKey: "planned", aLabel: "Orçado", bKey: "realized", bLabel: "Realizado" },
+  { key: "empenhado_realizado", label: "Empenhado x Realizado", aKey: "committed", aLabel: "Empenhado", bKey: "realized", bLabel: "Realizado" },
+];
+
+// Relatório comparativo do orçamento: Orçado (planejado), Empenhado (notas
+// lançadas — independente de pagas ou não) e Realizado (somente documentos pagos).
 export default function ErpBudgetComparisonPanel({ user }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [pairs, setPairs] = useState(["orc_empenhado"]);
   const [budgets, setBudgets] = useState([]);
   const [journals, setJournals] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -34,6 +44,9 @@ export default function ErpBudgetComparisonPanel({ user }) {
       setLoading(false);
     })();
   }, [user.email]);
+
+  const togglePair = (key) =>
+    setPairs(p => p.includes(key) ? p.filter(x => x !== key) : [...p, key]);
 
   const yearBudgets = budgets.filter(b => num(b.year) === year && b.is_active !== false);
   const yearJournals = journals.filter(j => j.status === "definitivo" && (j.date || "").startsWith(String(year)));
@@ -73,6 +86,14 @@ export default function ErpBudgetComparisonPanel({ user }) {
     const isReceita = matched.some(m => m.account_type === "receita");
     const linked = matched.length > 0 || (b.allocation_mode === "setor" && !!b.sector_id);
     const planned = num(b.planned_value);
+    const base = {
+      id: b.id, name: b.name, category: b.category, department_name: b.department_name || "",
+      sectorCell: b.allocation_mode === "setor" ? (b.sector_name || "—")
+        : (b.sector_allocations || []).length ? `${b.sector_allocations.length} setor(es) — rateio` : "—",
+      sectorTitle: (b.sector_allocations || []).map(a => `${a.sector_name}: ${a.percent}% = ${fmtMoney(a.value)}`).join(" • "),
+      monthLabel: num(b.month) > 0 ? MONTHS[num(b.month)] : "Ano todo",
+      planned, linked, isReceita,
+    };
 
     // Orçamento de receita: sem empenho — realizado pelos lançamentos contábeis (créditos)
     if (isReceita) {
@@ -83,15 +104,7 @@ export default function ErpBudgetComparisonPanel({ user }) {
         if (monthPrefix && !(j.date || "").startsWith(monthPrefix)) return;
         (j.lines || []).forEach(l => { if (ids.has(l.account_id)) real += num(l.credit); });
       });
-      return {
-        id: b.id, name: b.name, category: b.category, department_name: b.department_name || "",
-        sectorCell: b.allocation_mode === "setor" ? (b.sector_name || "—")
-          : (b.sector_allocations || []).length ? `${b.sector_allocations.length} setor(es) — rateio` : "—",
-        sectorTitle: (b.sector_allocations || []).map(a => `${a.sector_name}: ${a.percent}% = ${fmtMoney(a.value)}`).join(" • "),
-        monthLabel: num(b.month) > 0 ? MONTHS[num(b.month)] : "Ano todo",
-        planned, committed: 0, realized: real, linked: true, isReceita: true,
-        saldo: planned, diff: planned - real,
-      };
+      return { ...base, committed: 0, realized: real };
     }
 
     const shares = linked ? entryShares(b, matched) : [];
@@ -105,76 +118,125 @@ export default function ErpBudgetComparisonPanel({ user }) {
       const ratio = tot > 0 ? Math.min(1, paid / tot) : 0;
       return s + x.value * ratio;
     }, 0);
-    return {
-      id: b.id, name: b.name, category: b.category, department_name: b.department_name || "",
-      sectorCell: b.allocation_mode === "setor" ? (b.sector_name || "—")
-        : (b.sector_allocations || []).length ? `${b.sector_allocations.length} setor(es) — rateio` : "—",
-      sectorTitle: (b.sector_allocations || []).map(a => `${a.sector_name}: ${a.percent}% = ${fmtMoney(a.value)}`).join(" • "),
-      monthLabel: num(b.month) > 0 ? MONTHS[num(b.month)] : "Ano todo",
-      planned, committed, realized, linked, isReceita: false,
-      saldo: planned - committed, diff: planned - realized,
-    };
+    return { ...base, committed, realized };
   });
+
   const totPlanned = rows.reduce((s, r) => s + r.planned, 0);
   const totCommitted = rows.reduce((s, r) => s + r.committed, 0);
   const totReal = rows.reduce((s, r) => s + r.realized, 0);
+  const selPairs = PAIR_DEFS.filter(p => pairs.includes(p.key));
 
   if (loading) return <div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="font-semibold text-sm">Comparativo Orçado x Empenhado x Realizado</h2>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Exercício</label>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-8 rounded-md border border-input bg-white px-2 text-sm">
-            {[currentYear, currentYear - 1, currentYear + 1].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+      {/* Filtros — fora da área de impressão */}
+      <div className="flex items-center justify-between flex-wrap gap-2 no-print">
+        <h2 className="font-semibold text-sm">Relatório Comparativo do Orçamento</h2>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500">Exercício</label>
+            <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-8 rounded-md border border-input bg-white px-2 text-sm">
+              {[currentYear, currentYear - 1, currentYear + 1].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {PAIR_DEFS.map(p => (
+              <label key={p.key} className="flex items-center gap-1 text-xs text-gray-700 bg-white border rounded-md px-2 py-1.5">
+                <input type="checkbox" checked={pairs.includes(p.key)} onChange={() => togglePair(p.key)} className="w-3.5 h-3.5" /> {p.label}
+              </label>
+            ))}
+          </div>
+          <Button size="sm" variant="outline" onClick={() => printElements(["budget-report-area"])} className="gap-1.5">
+            <Printer className="w-4 h-4" /> Imprimir
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Total Orçado ({year})</p><p className="text-xl font-bold">{fmtMoney(totPlanned)}</p></div>
-        <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Total Empenhado (notas lançadas)</p><p className="text-xl font-bold text-blue-600">{fmtMoney(totCommitted)}</p></div>
-        <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Total Realizado (documentos pagos)</p><p className="text-xl font-bold text-emerald-600">{fmtMoney(totReal)}</p></div>
-        <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Saldo (Orçado − Empenhado)</p><p className={`text-xl font-bold ${totPlanned - totCommitted < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmtMoney(totPlanned - totCommitted)}</p></div>
-      </div>
-
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-gray-500 text-xs">
-              <tr>
-                <th className="p-2 text-left">Orçamento</th><th className="p-2 text-left">Categoria / Conta</th><th className="p-2 text-left">Departamento</th><th className="p-2 text-left">Setor</th><th className="p-2 text-left">Mês</th>
-                <th className="p-2 text-right">Orçado</th><th className="p-2 text-right">Empenhado</th><th className="p-2 text-right">Realizado</th>
-                <th className="p-2 text-right">Saldo</th><th className="p-2 text-right">% Executado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? <tr><td colSpan={10} className="p-8 text-center text-gray-400">Nenhum orçamento ativo para {year}. Cadastre na aba "Cadastro de Orçamentos".</td></tr>
-                : rows.map(r => (
-                  <tr key={r.id} className="border-t hover:bg-gray-50">
-                    <td className="p-2 font-medium">{r.name}</td>
-                    <td className="p-2 text-xs">{r.category || "—"}</td>
-                    <td className="p-2">{r.department_name || "—"}</td>
-                    <td className="p-2 text-xs" title={r.sectorTitle}>{r.sectorCell}</td>
-                    <td className="p-2 text-xs">{r.monthLabel}</td>
-                    <td className="p-2 text-right">{fmtMoney(r.planned)}</td>
-                    <td className="p-2 text-right text-blue-600">{!r.linked ? <span className="text-gray-400 text-xs">sem vínculo</span> : r.isReceita ? "—" : fmtMoney(r.committed)}</td>
-                    <td className="p-2 text-right text-emerald-600">{!r.linked ? <span className="text-gray-400 text-xs">sem vínculo</span> : fmtMoney(r.realized)}</td>
-                    <td className={`p-2 text-right ${!r.linked ? "" : r.saldo < 0 ? "text-red-600" : "text-emerald-700"}`}>{!r.linked ? "—" : fmtMoney(r.saldo)}</td>
-                    <td className="p-2 text-right text-xs">{!r.linked || r.planned <= 0 ? "—" : `${(r.realized / r.planned * 100).toFixed(1)}%`}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+      {/* Área do relatório (impressão) */}
+      <div id="budget-report-area" className="space-y-4">
+        <div className="border-b pb-2">
+          <h3 className="font-bold text-base">Relatório Comparativo do Orçamento — Exercício {year}</h3>
+          <p className="text-xs text-gray-500">
+            Orçado: valor planejado • Empenhado: notas lançadas (pagas ou não) • Realizado: somente documentos pagos —
+            Emissão: {new Date().toLocaleDateString("pt-BR")}
+          </p>
         </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Total Orçado ({year})</p><p className="text-xl font-bold">{fmtMoney(totPlanned)}</p></div>
+          <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Total Empenhado (notas lançadas)</p><p className="text-xl font-bold text-blue-600">{fmtMoney(totCommitted)}</p></div>
+          <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Total Realizado (documentos pagos)</p><p className="text-xl font-bold text-emerald-600">{fmtMoney(totReal)}</p></div>
+          <div className="bg-white rounded-xl border p-3"><p className="text-xs text-gray-500">Saldo (Orçado − Empenhado)</p><p className={`text-xl font-bold ${totPlanned - totCommitted < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmtMoney(totPlanned - totCommitted)}</p></div>
+        </div>
+
+        {selPairs.length === 0 && (
+          <p className="text-center text-sm text-gray-400 py-6 no-print">Selecione ao menos um comparativo acima (Orçado x Empenhado, Orçado x Realizado ou Empenhado x Realizado).</p>
+        )}
+
+        {selPairs.map(def => {
+          const totA = rows.reduce((s, r) => s + (r.linked ? r[def.aKey] : 0), 0);
+          const totB = rows.reduce((s, r) => s + (r.linked ? r[def.bKey] : 0), 0);
+          return (
+            <div key={def.key} className="space-y-2">
+              <h4 className="font-semibold text-sm text-gray-700">{def.label}</h4>
+              <div className="bg-white rounded-xl border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100 text-gray-500 text-xs">
+                      <tr>
+                        <th className="p-2 text-left">Orçamento</th><th className="p-2 text-left">Categoria / Conta</th><th className="p-2 text-left">Departamento</th><th className="p-2 text-left">Setor</th><th className="p-2 text-left">Mês</th>
+                        <th className="p-2 text-right">{def.aLabel}</th><th className="p-2 text-right">{def.bLabel}</th>
+                        <th className="p-2 text-right">Variação</th><th className="p-2 text-right">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.length === 0 ? <tr><td colSpan={9} className="p-6 text-center text-gray-400">Nenhum orçamento ativo para {year}. Cadastre na aba "Cadastro de Orçamentos".</td></tr>
+                        : rows.map(r => {
+                          const a = r[def.aKey];
+                          const b = r[def.bKey];
+                          const bNa = def.bKey === "committed" && r.isReceita; // empenho não se aplica a receita
+                          return (
+                            <tr key={r.id} className="border-t hover:bg-gray-50">
+                              <td className="p-2 font-medium">{r.name}</td>
+                              <td className="p-2 text-xs">{r.category || "—"}</td>
+                              <td className="p-2">{r.department_name || "—"}</td>
+                              <td className="p-2 text-xs" title={r.sectorTitle}>{r.sectorCell}</td>
+                              <td className="p-2 text-xs">{r.monthLabel}</td>
+                              <td className="p-2 text-right">{fmtMoney(a)}</td>
+                              <td className={`p-2 text-right ${def.bKey === "committed" ? "text-blue-600" : "text-emerald-600"}`}>
+                                {!r.linked ? <span className="text-gray-400 text-xs">sem vínculo</span> : bNa ? "—" : fmtMoney(b)}
+                              </td>
+                              <td className={`p-2 text-right ${!r.linked || bNa ? "" : (a - b) < 0 ? "text-red-600" : "text-emerald-700"}`}>
+                                {!r.linked || bNa ? "—" : fmtMoney(a - b)}
+                              </td>
+                              <td className="p-2 text-right text-xs">{!r.linked || bNa || a <= 0 ? "—" : `${(b / a * 100).toFixed(1)}%`}</td>
+                            </tr>
+                          );
+                        })}
+                      {rows.length > 0 && (
+                        <tr className="border-t bg-gray-50 font-semibold">
+                          <td className="p-2" colSpan={5}>Total</td>
+                          <td className="p-2 text-right">{fmtMoney(rows.reduce((s, r) => s + (r.linked ? r[def.aKey] : 0), 0))}</td>
+                          <td className={`p-2 text-right ${def.bKey === "committed" ? "text-blue-600" : "text-emerald-600"}`}>{fmtMoney(totB)}</td>
+                          <td className={`p-2 text-right ${(totA - totB) < 0 ? "text-red-600" : "text-emerald-700"}`}>{fmtMoney(totA - totB)}</td>
+                          <td className="p-2 text-right text-xs">{totA > 0 ? `${(totB / totA * 100).toFixed(1)}%` : "—"}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <p className="text-xs text-gray-400">
+          Empenhado: valor das notas lançadas atribuído ao orçamento pelo rateio da entrada (conta da categoria ou setor), independente de pagas ou não.
+          Realizado: parcela dos documentos efetivamente pagos (baixados no financeiro). Orçamentos de receita seguem pelos créditos dos lançamentos contábeis.
+          Preencha a categoria com o código/nome da conta contábil para vincular.
+        </p>
       </div>
-      <p className="text-xs text-gray-400">
-        Empenhado: valor das notas lançadas atribuído ao orçamento pelo rateio da entrada (conta da categoria ou setor), independente de pagas ou não.
-        Realizado: parcela dos documentos efetivamente pagos (baixados no financeiro). Orçamentos de receita seguem pelos créditos dos lançamentos contábeis.
-        Preencha a categoria com o código/nome da conta contábil para vincular.
-      </p>
     </div>
   );
 }
