@@ -87,6 +87,7 @@ export default function ErpOperationRetentionModal({ user, params, onClose, onSa
         </div>
         <div className="p-4 space-y-3">
           <p className="text-xs text-gray-500">Cada imposto retido gera, na entrada da nota, uma conta a pagar própria (com o vencimento no dia informado) e o crédito contábil na conta configurada — o valor retido é abatido do fornecedor da nota.</p>
+          <p className="text-xs text-gray-500">O <b>Código</b> é o código de recolhimento do imposto retido junto ao órgão destinatário (ex.: DARF 0561 — IRRF, 2172 — PIS, 2172/2372 — COFINS, 2089 — CSLL). A conta contábil e o histórico podem ser buscados digitando o código ou a descrição.</p>
 
           {loading ? (
             <div className="p-6 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin inline" /></div>
@@ -124,7 +125,7 @@ export default function ErpOperationRetentionModal({ user, params, onClose, onSa
                             {partners.map(p => <option key={p.id} value={p.id}>{p.name}{p.document ? ` (${p.document})` : ""}</option>)}
                           </select>
                         </td>
-                        <td className="p-2"><input value={r.supplier_code} onChange={e => update(i, { supplier_code: e.target.value })} placeholder="Código" className={inputCls} /></td>
+                        <td className="p-2"><input value={r.supplier_code} onChange={e => update(i, { supplier_code: e.target.value })} placeholder="Ex: 0561" title="Código de recolhimento do imposto (ex.: DARF 0561 — IRRF)" className={inputCls} /></td>
                         <td className="p-2"><input type="number" min="1" max="31" value={r.due_day || ""} onChange={e => update(i, { due_day: Number(e.target.value) || 0 })} className={`${inputCls} text-right`} /></td>
                         <td className="p-2"><ErpCombobox value={r.account_id} options={accountOptions} onValueChange={(id) => setAccount(i, id)} placeholder="Selecione a conta..." clearable /></td>
                         <td className="p-2"><ErpCombobox value={r.history_id} options={historyOptions} onValueChange={(id) => setHistory(i, id)} placeholder="Selecione o histórico..." clearable /></td>
