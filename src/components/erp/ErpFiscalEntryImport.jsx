@@ -327,6 +327,8 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       address: address || undefined,
       city: city || undefined,
       ...(extra?.nome_fantasia ? { nome_fantasia: extra.nome_fantasia } : {}),
+      ...(extra?.ie ? { ie: extra.ie } : {}),
+      ...(extra?.number ? { number: extra.number } : {}),
       ...(extra?.cep ? { cep: extra.cep } : {}),
       ...(extra?.district ? { district: extra.district } : {}),
       ...(extra?.phone ? { phone: extra.phone } : {}),
@@ -404,11 +406,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       // 1. Garante o fornecedor (pesquisado no cadastro ou informado por CNPJ no passo 2)
       let supplier = null;
       if (forn.name.trim() || digits(forn.cnpj)) {
+        // Fornecedor não cadastrado: na importação XML os dados vêm do próprio XML
+        // (CNPJ, IE, endereço completo, telefone e email); no modo manual, da Receita
         const rd = supplierLookup.data;
-        const addr = mode === "xml" && parsed
-          ? { address: parsed.supplier.address, city: parsed.supplier.city }
-          : { address: rd?.address, city: rd?.city };
-        supplier = await ensureSupplier(forn.name, forn.cnpj, forn.uf, addr.address, addr.city, mode === "xml" ? null : rd);
+        const sData = mode === "xml" && parsed ? parsed.supplier : rd;
+        supplier = await ensureSupplier(forn.name, forn.cnpj, forn.uf, sData?.address, sData?.city, sData);
       }
 
       let payload;
@@ -817,7 +819,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
               {/* Status do fornecedor */}
               <div className={`rounded-lg p-2.5 border flex items-center gap-2 text-xs ${supplierStatus === "exists" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : supplierStatus === "will_create" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
                 {supplierStatus === "exists" ? <CheckCircle2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                {supplierStatus === "exists" ? `Fornecedor já cadastrado: ${parsed.supplier.name}` : supplierStatus === "will_create" ? `Fornecedor não cadastrado — será criado automaticamente: ${parsed.supplier.name} (CNPJ ${parsed.supplier.cpf_cnpj})` : "Analisando fornecedor..."}
+                {supplierStatus === "exists" ? `Fornecedor já cadastrado: ${parsed.supplier.name}` : supplierStatus === "will_create" ? `Fornecedor não cadastrado — será criado automaticamente ao dar entrada com os dados do XML: ${parsed.supplier.name} (CNPJ ${parsed.supplier.cpf_cnpj}) — IE, endereço, telefone e email` : "Analisando fornecedor..."}
               </div>
 
               <div className="bg-gray-50 rounded-lg p-3">
