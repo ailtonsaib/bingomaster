@@ -10,6 +10,7 @@ import { computeErpFiscalItem, applyErpRuleToXmlItem, resolveErpXmlTaxSource } f
 import ErpProductFormModal from "@/components/erp/ErpProductFormModal";
 import ErpManualInstallments from "@/components/erp/ErpManualInstallments";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
+import ErpCombobox from "@/components/erp/ErpCombobox";
 import ErpFiscalItemTaxes from "@/components/erp/ErpFiscalItemTaxes";
 import ErpFiscalCapaTaxes from "@/components/erp/ErpFiscalCapaTaxes";
 import ErpFreteModal from "@/components/erp/ErpFreteModal";
@@ -223,6 +224,17 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
   });
   const totalRetido = retentionRows.filter(r => r.selected).reduce((s, r) => s + (Number(r.value) || 0), 0);
 
+  // Opções de produto destino (busca): produtos vinculados a este fornecedor
+  // aparecem primeiro com ★ — a busca filtra por código ou descrição
+  const productDestOptions = (() => {
+    const doc = digits(mode === "xml" && parsed ? parsed.supplier.cpf_cnpj : forn.cnpj);
+    const linkedIds = new Set(links.filter(l => digits(l.supplier_document) === doc).map(l => l.product_id));
+    const label = p => `${p.code ? `${p.code} — ` : ""}${p.name}`;
+    const linked = products.filter(p => linkedIds.has(p.id)).map(p => ({ id: p.id, label: `★ ${label(p)}` }));
+    const others = products.filter(p => !linkedIds.has(p.id)).map(p => ({ id: p.id, label: label(p) }));
+    return [{ id: "new", label: "+ Criar novo produto" }, ...linked, ...others];
+  })();
+
   // Resolve fornecedor e vínculos por item quando o XML é parseado
   useEffect(() => {
     if (mode !== "xml" || !parsed) { setSupplierStatus(""); setItemChoices([]); return; }
@@ -385,13 +397,19 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     return created;
   };
 
-  // Cria um novo produto a partir do item da NF
-  const createProductFromItem = async (it) => {
-    const code = it.product_code || `NF${Date.now().toString().slice(-6)}`;
-    const barcode = it.barcode && /^\d+$/.test(it.barcode) ? it.barcode : undefined;
+  // Cria um novo produto a partir do item da NF — evita duplicação: se já houver
+  // produto criado nesta mesma nota ou cadastrado com a mesma descrição/código de
+  // barras, reaproveita em vez de criar outro (o vínculo por fornecedor continua)
+  const createProductFromItem = async (it, createdInNote = []) => {
+    const barcode = it.barcode && /^\d+$/.test(it.barcode) ? it.barcode : "";
+    const nameKey = (it.product_name || "").trim().toLowerCase();
+    const dup = createdInNote.find(p => (barcode && p.barcode === barcode) || (nameKey && (p.name || "").trim().toLowerCase() === nameKey))
+      || products.find(p => (barcode && p.barcode === barcode) || (nameKey && (p.name || "").trim().toLowerCase() === nameKey));
+    if (dup) return { product: dup, isNew: false };
     const created = await base44.entities.ErpProduct.create({
       user_email: user.email,
-      code, barcode,
+      code: it.product_code || `NF${Date.now().toString().slice(-6)}`,
+      barcode: barcode || undefined,
       name: it.product_name || "Produto sem descrição",
       product_type: "mercadoria",
       ncm: it.ncm || undefined,
@@ -402,16 +420,25 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       notes: "Cadastrado automaticamente na entrada de NF — ajuste categoria e contas.",
     });
     setProducts(p => [...p, created]);
-    return created;
+    return { product: created, isNew: true };
   };
 
-  // Cria/atualiza o vínculo fornecedor↔produto (cProd)
+  // Cria/atualiza o vínculo fornecedor↔produto pelo código do XML (cProd) —
+  // um vínculo por fornecedor + cProd: reaproveita o link existente em vez de
+  // duplicar e reponta para o produto destino escolhido na nota
   const ensureLink = async (supplier, product, item) => {
     const doc = digits(supplier.document);
-    const existing = links.find(l => digits(l.supplier_document) === doc && l.product_id === product.id);
+    const code = item.product_code || "";
+    const byCode = code
+      ? links.find(l => digits(l.supplier_document) === doc && (l.supplier_product_code || "") === code)
+      : null;
+    const existing = byCode || links.find(l => digits(l.supplier_document) === doc && l.product_id === product.id);
     if (existing) {
       const updated = await base44.entities.ErpProductSupplier.update(existing.id, {
-        supplier_product_code: item.product_code || existing.supplier_product_code,
+        ...(byCode && byCode.product_id !== product.id
+          ? { product_id: product.id, product_code: product.code, product_name: product.name }
+          : {}),
+        supplier_product_code: code || existing.supplier_product_code,
         supplier_product_name: item.product_name || existing.supplier_product_name,
         unit: item.unit || existing.unit,
         last_unit_cost: item.unit_price || existing.last_unit_cost,
@@ -464,15 +491,18 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
 
       if (mode === "xml") {
         if (!parsed) { setSaving(false); setError("Importe um XML."); return; }
-        // 2. Resolve cada item → produto meu + vínculo
+        // 2. Resolve cada item → produto meu + vínculo (produtos criados nesta
+        // nota são reaproveitados entre itens repetidos — sem duplicar cadastro)
         const resolvedItems = [];
+        const createdNow = [];
         for (let i = 0; i < parsed.items.length; i++) {
           const it = parsed.items[i];
           const choice = itemChoices[i] || "new";
           let product = null;
           if (choice === "new") {
-            product = await createProductFromItem(it);
-            newProductsCount++;
+            const res = await createProductFromItem(it, createdNow);
+            product = res.product;
+            if (res.isNew) { newProductsCount++; createdNow.push(product); }
           } else {
             product = products.find(p => p.id === choice) || null;
           }
@@ -942,10 +972,12 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                               )}
                             </td>
                             <td className="p-2">
-                              <select value={choice} onChange={e => setItemChoices(p => p.map((c, idx) => idx === i ? e.target.value : c))} className={`w-full h-9 rounded-md border px-2 text-xs ${matched ? "border-emerald-300 bg-emerald-50" : "border-input"}`}>
-                                <option value="new">+ Criar novo produto</option>
-                                {products.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
-                              </select>
+                              <ErpCombobox
+                                value={choice}
+                                onValueChange={v => setItemChoices(p => p.map((c, idx) => idx === i ? (v || "new") : c))}
+                                options={productDestOptions}
+                                placeholder="Buscar produto destino..."
+                              />
                               {matched && <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-0.5"><Link2 className="w-3 h-3" /> vinculado</span>}
                             </td>
                             <td className="p-2 text-right">{it.quantity}</td>
@@ -956,7 +988,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                     </tbody>
                   </table>
                 </div>
-                <div className="bg-gray-50 px-3 py-2 border-t text-[11px] text-gray-500 flex items-center gap-1.5"><Package className="w-3.5 h-3.5" /> Itens sem vínculo criarão um novo produto automaticamente vinculado ao código do fornecedor. Na próxima NF deste fornecedor, o sistema reconhecerá o produto pelo cProd.</div>
+                <div className="bg-gray-50 px-3 py-2 border-t text-[11px] text-gray-500 flex items-center gap-1.5"><Package className="w-3.5 h-3.5" /> Itens sem vínculo criarão um novo produto automaticamente vinculado ao código do fornecedor (cProd) — na próxima NF deste fornecedor o produto é reconhecido pelo cProd. Produtos já cadastrados com a mesma descrição/código de barras são reaproveitados (sem duplicar). Na busca, os produtos vinculados a este fornecedor aparecem primeiro (★).</div>
               </div>
             </div>
           )}
@@ -1020,7 +1052,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   </tbody>
                 </table>
                 <datalist id="manual-products-list">
-                  {products.map(p => <option key={p.id} value={p.name}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
+                  {(() => {
+                    const doc = digits(forn.cnpj);
+                    const linkedIds = new Set(links.filter(l => digits(l.supplier_document) === doc).map(l => l.product_id));
+                    return [...products].sort((a, b) => (linkedIds.has(b.id) ? 1 : 0) - (linkedIds.has(a.id) ? 1 : 0));
+                  })().map(p => <option key={p.id} value={p.name}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
                 </datalist>
               </div>
               <ErpFiscalItemTaxes items={manualItems} onChange={(i, patch) => setManualItems(p => p.map((x, idx) => idx === i ? { ...x, ...patch } : x))} isPatrimonio={!!selectedOp?.is_patrimonio} />
