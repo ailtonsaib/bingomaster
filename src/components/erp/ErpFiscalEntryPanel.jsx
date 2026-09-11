@@ -93,15 +93,15 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
                 <th className="p-2 text-left">Nota</th><th className="p-2 text-left">Fornecedor</th><th className="p-2 text-left">OC</th>
-                <th className="p-2 text-right">Total NF</th><th className="p-2 text-right">Total OC</th><th className="p-2 text-right">Dif.</th>
+                <th className="p-2 text-right">Total NF</th><th className="p-2 text-right">Total OC</th><th className="p-2 text-right">Dif.</th><th className="p-2 text-right">Retido / Líquido</th>
                 <th className="p-2 text-left">Status</th><th className="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={9} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-gray-400"><FileText className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma entrada de nota fiscal.</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-gray-400"><FileText className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma entrada de nota fiscal.</td></tr>
               ) : filtered.map(i => {
                 const st = STATUS[i.status] || { label: i.status, color: "text-gray-700 bg-gray-100" };
                 return (
@@ -115,6 +115,16 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
                     <td className="p-2 text-right font-medium">{fmtMoney(i.total_nota)}</td>
                     <td className="p-2 text-right text-gray-600">{fmtMoney(i.po_total_value)}</td>
                     <td className={`p-2 text-right font-medium ${i.values_match ? "text-emerald-600" : "text-amber-600"}`}>{fmtMoney(i.value_diff)}</td>
+                    <td className="p-2 text-right">
+                      {(i.retentions || []).length > 0 ? (
+                        <>
+                          <div className="font-medium text-red-600" title={(i.retentions || []).map(r => `${r.type}: ${fmtMoney(r.value)}`).join(" • ")}>
+                            {fmtMoney((i.retentions || []).reduce((s, r) => s + (r.value || 0), 0))}
+                          </div>
+                          <div className="text-[10px] text-emerald-700">Líquido: {fmtMoney(i.net_value)}</div>
+                        </>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="p-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
                       {i.journal_entry_number && <div className="text-[10px] text-gray-400 mt-0.5">LCT: {i.journal_entry_number}</div>}
