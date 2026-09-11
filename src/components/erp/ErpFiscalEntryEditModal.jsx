@@ -19,7 +19,7 @@ const EMPTY_ITEM = { product_id: "", product_name: "", product_code: "", quantit
 // impostos (capa e por item) e rateio — depois basta lançar novamente.
 export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved }) {
   const [operations, setOperations] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -68,9 +68,9 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
   useEffect(() => {
     Promise.all([
       base44.entities.ErpOperation.filter({ user_email: user.email, type: "entrada", is_active: true }, "name", 200),
-      base44.entities.ErpDepartment.filter({ user_email: user.email, is_active: true }, "name", 500),
+      base44.entities.ErpSector.filter({ user_email: user.email, is_active: true }, "name", 500),
       base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 500),
-    ]).then(([op, d, acc]) => { setOperations(op); setDepartments(d); setAccounts(acc); }).catch(() => {});
+    ]).then(([op, sec, acc]) => { setOperations(op); setSectors(sec); setAccounts(acc); }).catch(() => {});
   }, [user.email]);
 
   // Soma dos impostos dos itens — base de comparação com a capa
@@ -245,7 +245,7 @@ export default function ErpFiscalEntryEditModal({ user, entry, onClose, onSaved 
           </div>
 
           {/* Rateio */}
-          <ErpApportionmentEditor apportionments={apportionments} onChange={setApportionments} setores={departments} accounts={accounts} title="Rateio do Lançamento (Setor / Conta Contábil)" />
+          <ErpApportionmentEditor apportionments={apportionments} onChange={setApportionments} sectors={sectors} accounts={accounts} title="Rateio do Lançamento (Setor / Conta Contábil)" />
 
           <div>
             <label className="text-xs font-medium text-gray-600">Observações</label>

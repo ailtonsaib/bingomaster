@@ -6,13 +6,25 @@ import { Button } from "@/components/ui/button";
 // Editor de rateio (setor + conta contábil) reutilizável.
 // Usado na Tomada de Preço e no Pedido de Compra para garantir que o rateio
 // acompanhe o fluxo até a entrada da nota (lançamento contábil).
-export default function ErpApportionmentEditor({ apportionments, onChange, setores, accounts, readOnly = false, title = "Rateio (Setor / Conta Contábil)", accent = "indigo" }) {
+export default function ErpApportionmentEditor({ apportionments, onChange, setores, sectors, accounts, readOnly = false, title = "Rateio (Setor / Conta Contábil)", accent = "indigo" }) {
   const list = apportionments || [];
-  const add = () => onChange([...list, { department_id: "", department_name: "", account_id: "", account_code: "", account_name: "", rateio_type: "percent", percent: 0, value: 0 }]);
+  // Modo setor (estrutura orçamentária — ErpSector): quando `sectors` é informado, o
+  // dropdown Setor lista os setores e grava sector_id/sector_name (com o cache do
+  // departamento do setor); sem `sectors`, mantém o comportamento antigo (a lista
+  // recebida em `setores` é usada como sempre foi).
+  const setorList = sectors?.length ? sectors : null;
+  const setorOptions = setorList || setores || [];
+  const add = () => onChange([...list, { department_id: "", department_name: "", sector_id: "", sector_name: "", account_id: "", account_code: "", account_name: "", rateio_type: "percent", percent: 0, value: 0 }]);
   const remove = (i) => onChange(list.filter((_, idx) => idx !== i));
   const update = (i, field, value) => {
     const aps = list.map((a, idx) => idx === i ? { ...a, [field]: value } : a);
-    if (field === "department_id") { const d = setores.find(d => d.id === value); aps[i].department_name = d?.name || ""; }
+    if (field === "sector_id" && setorList) {
+      const s = setorList.find(x => x.id === value);
+      aps[i].sector_name = s?.name || "";
+      aps[i].department_id = s?.department_id || "";
+      aps[i].department_name = s?.department_name || "";
+    }
+    if (field === "department_id" && !setorList) { const d = setores.find(d => d.id === value); aps[i].department_name = d?.name || ""; }
     if (field === "account_id") { const a = accounts.find(a => a.id === value); aps[i].account_code = a?.code || ""; aps[i].account_name = a?.name || ""; }
     onChange(aps);
   };
@@ -37,9 +49,9 @@ export default function ErpApportionmentEditor({ apportionments, onChange, setor
             <div className="col-span-4">
               <Label className="text-[10px]">Setor</Label>
               {readOnly
-                ? <p className="text-xs h-8 flex items-center">{a.department_name || "—"}</p>
-                : <select value={a.department_id} onChange={e => update(i, "department_id", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs">
-                    <option value="">Selecione...</option>{setores.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                ? <p className="text-xs h-8 flex items-center">{a.sector_name || a.department_name || "—"}</p>
+                : <select value={setorList ? (a.sector_id || "") : a.department_id} onChange={e => update(i, setorList ? "sector_id" : "department_id", e.target.value)} className="w-full h-8 rounded border border-input px-2 text-xs">
+                    <option value="">Selecione...</option>{setorOptions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>}
             </div>
             <div className="col-span-4">
@@ -66,7 +78,7 @@ export default function ErpApportionmentEditor({ apportionments, onChange, setor
             <span className={pctOk ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>Soma: {pctSum.toFixed(2)}% {pctOk ? "✓" : "(deve ser 100%)"}</span>
           </div>
         )}
-        {!readOnly && (!setores.length || !accounts.length) && (
+        {!readOnly && (!setorOptions.length || !accounts.length) && (
           <p className="text-[11px] text-amber-600">Cadastre setores e contas contábeis analíticas antes de informar o rateio.</p>
         )}
       </div>

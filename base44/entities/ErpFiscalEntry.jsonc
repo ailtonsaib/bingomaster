@@ -46,7 +46,7 @@
     "installments": {
       "type": "array",
       "default": [],
-      "description": "Parcelas de pagamento (digita\u00e7\u00e3o manual) \u2014 cada parcela gera uma conta a pagar no financeiro com seu vencimento e valor",
+      "description": "Parcelas de pagamento (digita\u00e7\u00e3o manual ou condi\u00e7\u00f5es de pagamento do XML \u2014 cobran\u00e7a) \u2014 cada parcela gera uma conta a pagar no financeiro com seu vencimento e valor",
       "items": {
         "type": "object",
         "properties": {
@@ -503,6 +503,14 @@
       "items": {
         "type": "object",
         "properties": {
+          "sector_id": {
+            "type": "string",
+            "description": "ID do setor da estrutura or\u00e7ament\u00e1ria (ErpSector) vinculado ao rateio"
+          },
+          "sector_name": {
+            "type": "string",
+            "description": "Nome do setor (cache)"
+          },
           "department_id": {
             "type": "string"
           },

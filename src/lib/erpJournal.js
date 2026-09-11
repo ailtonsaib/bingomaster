@@ -174,6 +174,8 @@ export async function gerarLancamentoEntrada(user, entry, accounts, opts = {}) {
         account_name: ap.account_name,
         debit: val,
         credit: 0,
+        sector_id: ap.sector_id || "",
+        sector_name: ap.sector_name || "",
         complement,
       });
     }

@@ -668,6 +668,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           pctSumAuto += pct;
           const acc = accounts.find(a => a.id === prod.account_estoque_id);
           autoAps.push({
+            sector_id: sector.id, sector_name: sector.name,
             department_id: sector.department_id, department_name: sector.department_name,
             account_id: prod.account_estoque_id, account_code: acc?.code || "", account_name: prod.account_estoque_name || acc?.name || "",
             rateio_type: "percent", percent: pct, value: 0,
@@ -677,7 +678,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           autoAps[autoAps.length - 1].percent = Math.round((autoAps[autoAps.length - 1].percent + (100 - pctSumAuto)) * 100) / 100;
           payload.apportionments = autoAps;
         } else {
-          const aps = (payload.apportionments || []).filter(a => a.department_id && a.account_id);
+          const aps = (payload.apportionments || []).filter(a => (a.sector_id || a.department_id) && a.account_id);
           if (aps.length === 0) { setSaving(false); setError("Há item sem produto cadastrado (conta contábil + setor): informe o rateio do lançamento abaixo ou cadastre/vincule o produto."); return; }
           const pctSum = aps.reduce((s, a) => s + (Number(a.percent) || 0), 0);
           if (Math.abs(pctSum - 100) > 0.01) { setSaving(false); setError(`A soma do rateio (${pctSum.toFixed(2)}%) deve ser 100%.`); return; }
@@ -1046,7 +1047,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   <ErpApportionmentEditor
                     apportionments={manualApportionments}
                     onChange={setManualApportionments}
-                    setores={departments}
+                    sectors={sectors}
                     accounts={accounts}
                     accent="amber"
                     title="Rateio do Lançamento (Setor / Conta Contábil)"
