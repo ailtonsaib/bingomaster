@@ -101,9 +101,30 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
   });
 
   const onType = (t) => { const opt = TYPE_OPTS.find(o => o.value === t); setForm(p => ({ ...p, account_type: t, nature: opt.nature || p.nature })); };
-  const onRef = (code) => {
+
+  // Sequencial da referência por grupo do referencial: conta do grupo 1 (Ativo)
+  // continua do último número das referências que iniciam com 1, grupo 2 (Passivo)
+  // do último do 2, grupo 3 (PL) do último do 3, grupo 4 (Receitas) do último do 4 —
+  // e assim sucessivamente para os demais grupos do referencial
+  const nextReferencia = (groupDigit) => {
+    const nums = accounts
+      .map(a => String(a.referencia || "").trim())
+      .filter(r => /^\d+$/.test(r) && r[0] === groupDigit)
+      .map(Number);
+    const last = nums.length ? Math.max(...nums) : Number(groupDigit) * 1000;
+    return String(last + 1);
+  };
+  const applyReferencia = (p, code) => {
     const r = refItems.find(r => r.code === code);
-    setForm(p => ({ ...p, referential_code: code, referential_name: r?.name || "" }));
+    const next = { ...p, referential_code: code, referential_name: r?.name || "" };
+    if (!editing && r) {
+      const g = String(code).replace(/\D/g, "")[0];
+      if (g) next.referencia = nextReferencia(g);
+    }
+    return next;
+  };
+  const onRef = (code) => {
+    setForm(p => applyReferencia(p, code));
     setShowRefSearch(false);
   };
 
@@ -185,6 +206,7 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
 
             <Field label="Referência">
               <Input value={form.referencia} onChange={e => set("referencia", e.target.value)} placeholder="1000" />
+              {!editing && <p className="text-[10px] text-gray-400 mt-0.5">Sequencial automático: ao escolher a conta referencial, continua do último número do grupo (1-Ativo, 2-Passivo, 3-PL, 4-Receitas...).</p>}
               {errors.referencia && <p className="text-xs text-red-500 mt-0.5">{errors.referencia}</p>}
             </Field>
             <Field label="Máscara Sugerida *">
@@ -241,7 +263,7 @@ export default function ErpChartAccountForm({ user, editing, accounts, refItems,
               <div className="relative">
                 <Input
                   value={form.referential_code}
-                  onChange={e => { set("referential_code", e.target.value); set("referential_name", ""); }}
+                  onChange={e => setForm(p => applyReferencia({ ...p, referential_name: "" }, e.target.value))}
                   placeholder={form.tipo === "sintetica" ? "Null (sintética)" : "1.01.01.01.01"}
                   disabled={form.tipo === "sintetica"}
                   className={form.tipo === "sintetica" ? "bg-gray-100 text-gray-400" : "pr-9"}
