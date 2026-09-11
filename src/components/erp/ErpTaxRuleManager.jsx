@@ -53,13 +53,13 @@ export default function ErpTaxRuleManager({ user }) {
 
   return (
     <div className="space-y-3">
-      <div><h2 className="font-semibold text-base">Regras Fiscais por Operação</h2>
-        <p className="text-xs text-gray-500">ICMS, PIS, COFINS, IPI, CBS e IBS — por operação, UF, NCM e tipo de destinatário</p>
+      <div><h2 className="font-semibold text-base">Regras Fiscais por NCM</h2>
+        <p className="text-xs text-gray-500">ICMS, PIS, COFINS, IPI, CBS e IBS — por NCM, tipo de operação (entrada/saída), UF e tipo de destinatário — o NCM de cada produto define a regra aplicada na nota</p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por operação, CFOP, NCM ou destinatário..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por NCM, operação, CFOP ou destinatário..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Regra</Button>
       </div>
@@ -69,10 +69,10 @@ export default function ErpTaxRuleManager({ user }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
-                <th className="p-2 text-left">Operação</th>
-                <th className="p-2 text-left">Tipo</th>
-                <th className="p-2 text-left">CFOP</th>
                 <th className="p-2 text-left">NCM</th>
+                <th className="p-2 text-left">Tipo</th>
+                <th className="p-2 text-left">Operação</th>
+                <th className="p-2 text-left">CFOP</th>
                 <th className="p-2 text-left">UF</th>
                 <th className="p-2 text-left">Destinatário</th>
                 <th className="p-2 text-left">ICMS</th>
@@ -91,10 +91,10 @@ export default function ErpTaxRuleManager({ user }) {
                 </td></tr>
               ) : filtered.map(r => (
                 <tr key={r.id} className="border-t hover:bg-gray-50">
-                  <td className="p-2 font-medium">{r.operation_name || "—"}</td>
-                  <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${opBadge(r.operation_type)}`}>{r.operation_type}</span></td>
+                  <td className="p-2 font-mono text-xs font-medium">{r.ncm || "Geral"}</td>
+                  <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${opBadge(r.operation_type)}`}>{r.operation_type === "entrada" ? "Entrada" : r.operation_type === "saida" ? "Saída" : "Ambas"}</span></td>
+                  <td className="p-2">{r.operation_name || "Todas"}</td>
                   <td className="p-2 font-mono text-xs">{r.cfop || "—"}</td>
-                  <td className="p-2 font-mono text-xs">{r.ncm || "Geral"}</td>
                   <td className="p-2 font-mono text-xs">{r.uf || "Todas"}{r.difal_enabled ? <span className="ml-1 text-blue-600" title="Aplica DIFAL">⚡</span> : ""}{r.st_enabled ? <span className="ml-1 text-amber-600" title="Aplica ST">ST</span> : ""}</td>
                   <td className="p-2"><span className={`text-[10px] px-2 py-0.5 rounded-full ${DEST_BADGE[r.destinatario_tipo] || "text-gray-600 bg-gray-100"}`}>{DEST_LABEL[r.destinatario_tipo] || "—"}</span></td>
                   <td className="p-2 text-xs">{r.cst_icms} · {r.icms_rate}%</td>

@@ -202,7 +202,8 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
     const op = operations.find(o => o.id === id);
     const newType = op?.type || "";
     setForm(prev => {
-      const next = { ...prev, operation_id: id, operation_name: op?.name || "", operation_type: newType };
+      // Sem operação selecionada: o tipo (entrada/saída) fica por conta do próprio campo
+      const next = { ...prev, operation_id: id, operation_name: op?.name || "", ...(op ? { operation_type: newType } : {}) };
       const list = newType === "entrada" ? CST_PIS_COFINS_ENTRADA : CST_PIS_COFINS_SAIDA;
       if (!list.some(o => o.value === next.cst_pis)) next.cst_pis = list[0]?.value || "";
       if (!list.some(o => o.value === next.cst_cofins)) next.cst_cofins = list[0]?.value || "";
@@ -228,7 +229,8 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
   };
 
   const handleSave = async () => {
-    if (!form.operation_id) { alert("Selecione uma operação."); return; }
+    if (!form.ncm) { alert("Informe o NCM da regra fiscal — ela é aplicada pelo NCM do produto."); return; }
+    if (!form.operation_id && !form.operation_type) { alert("Selecione a operação ou informe o tipo (entrada/saída) da regra."); return; }
     setSaving(true);
     try {
       const main = buildPayload();
@@ -278,7 +280,7 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
             <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/15"><Percent className="w-5 h-5" /></span>
             <div>
               <h3 className="font-heading font-semibold leading-tight">{isEdit ? "Editar Regra Fiscal" : "Nova Regra Fiscal"}</h3>
-              <p className="text-xs text-primary-foreground/80">Parâmetros de alíquota por operação</p>
+              <p className="text-xs text-primary-foreground/80">Regra de impostos por NCM — aplicada na entrada e na saída</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-white/15 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
@@ -286,7 +288,7 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
 
         {/* Info chips */}
         <div className="px-5 py-2.5 bg-muted/50 border-b flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary"><Layers className="w-3 h-3" /> {form.operation_name ? `${op?.type === "entrada" ? "Entrada" : "Saída"} · ${form.operation_name}` : "Sem operação"} {form.cfop && `(${form.cfop})`}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary"><Layers className="w-3 h-3" /> {form.operation_name ? `${op?.type === "entrada" ? "Entrada" : "Saída"} · ${form.operation_name}` : (form.operation_type === "entrada" ? "Entrada" : form.operation_type === "saida" ? "Saída" : "Entrada e saída")} {form.cfop && `(${form.cfop})`}</span>
           <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800"><Receipt className="w-3 h-3" /> NCM: {form.ncm || "Geral"}</span>
           <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-100 text-sky-800"><MapPin className="w-3 h-3" /> {form.uf || "Todas UFs"}</span>
           <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"><Building2 className="w-3 h-3" /> {destLabel}</span>
@@ -310,9 +312,19 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
           {tab === "geral" && (
             <>
               <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4">
-                <Field label="Operação *">
+                <Field label="NCM * — a regra é aplicada pelo NCM do produto">
+                  <ErpNcmPicker value={form.ncm || ""} onChange={code => set("ncm", code)} allowClear />
+                </Field>
+                <Field label="Tipo de operação (vazio = entrada e saída)">
+                  <select value={form.operation_type || ""} onChange={e => set("operation_type", e.target.value)} disabled={!!form.operation_id} className={selInput}>
+                    <option value="">Ambas (entrada e saída)</option>
+                    <option value="entrada">Entrada</option>
+                    <option value="saida">Saída</option>
+                  </select>
+                </Field>
+                <Field label="Operação (opcional — vazio = todas)">
                   <select value={form.operation_id} onChange={e => onOp(e.target.value)} className={selInput}>
-                    <option value="">Selecione...</option>
+                    <option value="">Todas as operações</option>
                     {operations.map(o => <option key={o.id} value={o.id}>{o.type === "entrada" ? "Entrada" : "Saída"} — {o.name} ({o.cfop})</option>)}
                   </select>
                 </Field>
@@ -320,9 +332,6 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                   <select value={form.destinatario_tipo} onChange={e => set("destinatario_tipo", e.target.value)} className={selInput}>
                     {DESTINATARIO_TIPOS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                   </select>
-                </Field>
-                <Field label="NCM específico (busca)">
-                  <ErpNcmPicker value={form.ncm || ""} onChange={code => set("ncm", code)} allowClear />
                 </Field>
                 <Field label="UF de destino">
                   <select value={form.uf} onChange={e => set("uf", e.target.value)} className={selInput}>
@@ -336,7 +345,7 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                     <Button type="button" variant="outline" size="sm" onClick={recomputeCfop} title="Sugerir CFOP automaticamente" className="px-2"><Sparkles className="w-4 h-4 text-amber-500" /></Button>
                   </div>
                 </Field>
-                {op?.type === "entrada" && (
+                {form.operation_type === "entrada" && (
                   <Field label="Impostos na Entrada por XML (NF-e)">
                     <select value={form.tax_source || "xml"} onChange={e => set("tax_source", e.target.value)} className={selInput}>
                       <option value="xml">Respeitar o XML — usar os impostos destacados na nota</option>
@@ -456,7 +465,7 @@ export default function ErpTaxRuleForm({ user, rule, operations, onClose, onSave
                 </div>
               </div>
 
-              {form.operation_id && <AutoFiscalPreview form={form} operations={operations} />}
+              {(form.operation_id || form.operation_type) && <AutoFiscalPreview form={form} operations={operations} />}
             </>
           )}
         </div>

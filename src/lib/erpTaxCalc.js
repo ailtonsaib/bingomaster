@@ -1,6 +1,7 @@
 // Cálculo fiscal do ERP (NF-e/NFC-e) com base nas regras fiscais (ErpTaxRule).
 // Aplica ICMS, DIFAL (interestadual a consumidor final) e Substituição Tributária
-// (MVA / Pauta / Base agregada) automaticamente conforme UF e operação escolhidas.
+// (MVA / Pauta / Base agregada) automaticamente conforme NCM do produto, UF e
+// tipo da operação (entrada/saída).
 
 export const num = (v) => Number(v) || 0;
 
@@ -31,24 +32,32 @@ export function isInterestadual(cfopOrOperation, companyUF, customerUF) {
   return false;
 }
 
-// Seleciona a regra fiscal mais específica para a operação/NCM/UF/destinatário.
-export function lookupErpTaxRule(rules, operationId, ncm, uf, destinatarioTipo) {
-  if (!rules?.length || !operationId) return null;
-  const active = rules.filter(r => r.operation_id === operationId && r.is_active !== false);
-  if (!active.length) return null;
-  const hasDest = destinatarioTipo ? active.some(r => r.destinatario_tipo === destinatarioTipo) : false;
-  const byDest = hasDest ? (r) => r.destinatario_tipo === destinatarioTipo : () => true;
-  return (
-    active.find(r => r.ncm === ncm && r.uf === uf && byDest(r)) ||
-    active.find(r => r.ncm === ncm && !r.uf && byDest(r)) ||
-    active.find(r => !r.ncm && r.uf === uf && byDest(r)) ||
-    active.find(r => !r.ncm && !r.uf && byDest(r)) ||
-    active.find(r => r.ncm === ncm && r.uf === uf) ||
-    active.find(r => r.ncm === ncm && !r.uf) ||
-    active.find(r => !r.ncm && r.uf === uf) ||
-    active.find(r => !r.ncm && !r.uf) ||
-    active[0]
-  );
+// Seleciona a regra fiscal pelo NCM do produto (+ tipo de operação, UF e
+// destinatário). A regra é cadastrada por NCM — vale para entrada e saída:
+//   - NCM completo (8 dígitos) = regra específica do produto;
+//   - NCM parcial (ex: "84", "8412") = regra do capítulo/posição (prefixo do NCM);
+//   - NCM vazio = regra geral (fallback).
+// Regra com tipo de operação (entrada/saida) só vale para esse tipo; regra com UF
+// só vale para essa UF. A regra mais específica (NCM mais longo, com UF e com o
+// tipo de destinatário exato) tem prioridade.
+export function lookupErpTaxRule(rules, operationId, ncm, uf, destinatarioTipo, operationType) {
+  if (!rules?.length) return null;
+  const prodNcm = String(ncm || "").replace(/\D/g, "");
+  const pool = rules
+    .filter(r => r.is_active !== false)
+    .filter(r => !r.operation_type || !operationType || r.operation_type === operationType)
+    .filter(r => !r.uf || r.uf === uf)
+    .filter(r => {
+      const rn = String(r.ncm || "").replace(/\D/g, "");
+      return !rn || (!!prodNcm && prodNcm.startsWith(rn));
+    });
+  if (!pool.length) return null;
+  const hasDest = destinatarioTipo ? pool.some(r => r.destinatario_tipo === destinatarioTipo) : false;
+  const rank = (r) => {
+    const rn = String(r.ncm || "").replace(/\D/g, "");
+    return (rn.length * 100) + (r.uf ? 10 : 0) + (hasDest && r.destinatario_tipo === destinatarioTipo ? 5 : 0);
+  };
+  return pool.reduce((best, r) => (!best || rank(r) > rank(best) ? r : best), null);
 }
 
 // product: { ncm, quantity, unit_price (ou sale_price) }
@@ -57,7 +66,7 @@ export function lookupErpTaxRule(rules, operationId, ncm, uf, destinatarioTipo) 
 // customerUF, companyUF: siglas
 // ipiRate: % IPI opcional (sobrescreve a regra)
 export function computeErpFiscalItem(product, { rules, operation, customerUF, companyUF, ipiRate, destinatarioTipo }) {
-  const rule = lookupErpTaxRule(rules, operation?.id, product.ncm, customerUF, destinatarioTipo);
+  const rule = lookupErpTaxRule(rules, operation?.id, product.ncm, customerUF, destinatarioTipo, operation?.type);
   const cfop = String(rule?.cfop || operation?.cfop || "");
   const qty = num(product.quantity || 1);
   const unit = num(product.unit_price != null ? product.unit_price : product.sale_price || 0);
@@ -197,7 +206,7 @@ export function computeErpTotals(items) {
 //   nenhum imposto destacado — fallback pela regra da operação)
 // - "xml": mantém os impostos destacados na própria nota
 export function resolveErpXmlTaxSource(xmlItem, { rules, operation, supplierUF }) {
-  const rule = lookupErpTaxRule(rules, operation?.id, xmlItem.ncm, supplierUF);
+  const rule = lookupErpTaxRule(rules, operation?.id, xmlItem.ncm, supplierUF, undefined, operation?.type);
   if (!rule) return { rule: null, source: "xml" };
   const hasXmlTaxes = ["icms_value", "pis_value", "cofins_value", "ipi_value", "difal_value"].some(k => num(xmlItem[k]) > 0);
   return { rule, source: rule.tax_source === "regra" || !hasXmlTaxes ? "regra" : "xml" };

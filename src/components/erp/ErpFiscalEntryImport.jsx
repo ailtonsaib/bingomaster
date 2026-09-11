@@ -146,12 +146,15 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     });
   };
 
-  // Calcula os impostos do item pela regra fiscal da operação de entrada selecionada
+  // Calcula os impostos do item pela regra fiscal do NCM do produto (entrada).
+  // Produto cadastrado traz o NCM do cadastro; item sem cadastro usa o NCM digitado.
   const calcManualItem = (it) => {
     const op = operations.find(o => o.id === opId);
     if (!op) return null;
+    const prod = it.product_id ? products.find(p => p.id === it.product_id) : null;
+    const ncm = prod?.ncm || it.ncm || "";
     return computeErpFiscalItem(
-      { ncm: "", quantity: Number(it.quantity) || 0, unit_price: Number(it.unit_price) || 0 },
+      { ncm, quantity: Number(it.quantity) || 0, unit_price: Number(it.unit_price) || 0 },
       { rules: taxRules, operation: op, customerUF: forn.uf }
     );
   };
@@ -623,7 +626,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
             quantity: qty,
             unit_price: unit,
             total: qty * unit,
-            ncm: "", cfop: calc?.cfop || "", unit: "UN",
+            ncm: (it.product_id ? (products.find(p => p.id === it.product_id)?.ncm || "") : "") || it.ncm || "", cfop: calc?.cfop || "", unit: "UN",
             cst_icms: it.cst_icms || calc?.cst_icms || "",
             base_icms: taxOr(it.base_icms, calc?.icms_base),
             icms_rate: taxOr(it.icms_rate, calc?.icms_rate),

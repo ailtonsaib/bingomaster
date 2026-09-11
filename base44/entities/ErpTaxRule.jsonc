@@ -8,7 +8,7 @@
     },
     "operation_id": {
       "type": "string",
-      "description": "ID da opera\u00e7\u00e3o vinculada (ErpOperation)"
+      "description": "ID da opera\u00e7\u00e3o vinculada (ErpOperation) \u2014 opcional; vazio = vale para todas as opera\u00e7\u00f5es do tipo"
     },
     "operation_name": {
       "type": "string",
@@ -16,7 +16,7 @@
     },
     "operation_type": {
       "type": "string",
-      "description": "Tipo da opera\u00e7\u00e3o (cache: entrada/saida)"
+      "description": "Tipo de opera\u00e7\u00e3o a que a regra se aplica: entrada ou saida \u2014 vazio = ambas (entrada e sa\u00edda)"
     },
     "cfop": {
       "type": "string",
@@ -24,7 +24,7 @@
     },
     "ncm": {
       "type": "string",
-      "description": "NCM espec\u00edfico (opcional \u2014 se vazio, regra geral da opera\u00e7\u00e3o)"
+      "description": "NCM da regra \u2014 a regra \u00e9 aplicada pelo NCM do produto: NCM completo (8 d\u00edgitos), cap\u00edtulo (ex: 84) ou vazio (regra geral de fallback)"
     },
     "uf": {
       "type": "string",
@@ -223,7 +223,7 @@
   },
   "required": [
     "user_email",
-    "operation_id"
+    "ncm"
   ],
   "rls": {
     "create": {
