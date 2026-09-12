@@ -175,7 +175,7 @@ export default function ErpWmsInventoryPanel({ user }) {
                     </td>
                     <td className="p-2 text-right whitespace-nowrap">
                       {it.status !== "ajustado" && (
-                        <button title="Registrar Contagem" onClick={() => { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); }} className="p-1 hover:bg-blue-50 rounded"><ClipboardList className="w-4 h-4 text-blue-500" /></button>
+                        <button title="Registrar Contagem" onClick={() => { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-700"><ClipboardList className="w-3.5 h-3.5" /> Contar</button>
                       )}
                       <button title="Excluir" onClick={async () => { if (confirm("Excluir esta contagem?")) { await base44.entities.ErpWmsInventory.delete(it.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
