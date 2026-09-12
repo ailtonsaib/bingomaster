@@ -94,8 +94,16 @@ export default function ErpProductionPanel({ user }) {
     if (!confirm(`Concluir produção de ${produced} un. de "${o.output_product_name}"? Os insumos serão consumidos do estoque.`)) return;
     setBusy(o.id);
     try {
+      // Requisição ao almoxarifado já atendida baixou os insumos do estoque — não baixa duas vezes
+      let skipConsume = false;
+      if (o.requisition_id) {
+        try {
+          const r = await base44.entities.ErpWarehouseRequisition.get(o.requisition_id);
+          skipConsume = r?.status === "atendida";
+        } catch (e) { /* requisição indisponível — segue com o consumo padrão */ }
+      }
       // Verifica estoque suficiente de insumos
-      for (const b of (o.bom_items || [])) {
+      if (!skipConsume) for (const b of (o.bom_items || [])) {
         if (!b.product_id) continue;
         const need = (Number(b.quantity_per_unit) || 0) * produced;
         const p = await base44.entities.ErpProduct.get(b.product_id);
@@ -106,7 +114,7 @@ export default function ErpProductionPanel({ user }) {
         }
       }
       // Consome insumos
-      for (const b of (o.bom_items || [])) {
+      if (!skipConsume) for (const b of (o.bom_items || [])) {
         if (!b.product_id) continue;
         const need = (Number(b.quantity_per_unit) || 0) * produced;
         const p = await base44.entities.ErpProduct.get(b.product_id);

@@ -78,8 +78,31 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
 
   const changeStatus = async (status) => {
     if (status === "cancelada" && !confirm(`Cancelar a requisição ${req.number}?`)) return;
+    if (status === "atendida" && !confirm(`Marcar a requisição ${req.number} como atendida? Os itens solicitados serão baixados do estoque.`)) return;
     setBusy(true);
     try {
+      if (status === "atendida") {
+        // Baixa do estoque: os itens entregues pelo almoxarifado saem do saldo dos produtos
+        for (const it of (req.items || [])) {
+          if (!it.product_id || !(Number(it.quantity) > 0)) continue;
+          const p = await base44.entities.ErpProduct.get(it.product_id);
+          await base44.entities.ErpProduct.update(it.product_id, {
+            stock: Math.round((((Number(p.stock) || 0) - Number(it.quantity)) + Number.EPSILON) * 1000) / 1000,
+          });
+          await base44.entities.ErpWmsMove.create({
+            user_email: req.user_email,
+            move_type: "saida",
+            product_id: it.product_id,
+            product_code: it.product_code || "",
+            product_name: it.product_name || "",
+            unit: it.unit || "",
+            quantity: Number(it.quantity),
+            document: `Requisição ${req.number}`,
+            move_date: new Date().toISOString(),
+            notes: `Saída por requisição ao almoxarifado${req.production_order_number ? ` — OP ${req.production_order_number}` : ""}`,
+          });
+        }
+      }
       await base44.entities.ErpWarehouseRequisition.update(req.id, { status });
       onSaved();
       onClose();
