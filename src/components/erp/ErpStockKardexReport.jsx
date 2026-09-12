@@ -24,9 +24,10 @@ export default function ErpStockKardexReport({ user }) {
       base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      base44.entities.ErpWarehouseRequisition.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
     ]).then(d => setData({
       products: d[0], entries: d[1], sales: d[2], productions: d[3],
-      moves: d[4], inventories: d[5],
+      moves: d[4], inventories: d[5], requisitions: d[6],
     })).then(() => setLoading(false));
   }, [user.email]);
 
@@ -56,20 +57,28 @@ export default function ErpStockKardexReport({ user }) {
         rows.push({ date: o.emission_date || o.created_date, doc: `PV ${o.number}`, hist: `Venda — ${o.customer_name || ""}`, in: 0, out: Number(it.quantity) || 0 });
       });
     });
-    // Ordens de produção concluídas: consumo de insumos + produto acabado
+    // Ordens de produção concluídas: consumo de insumos + produto acabado.
+    // Quando a requisição ao almoxarifado foi atendida, os insumos já saíram do
+    // estoque na baixa da requisição (linha "Requisição ..." das movimentações
+    // WMS) — o consumo não é repetido aqui.
     data.productions.filter(o => o.status === "concluida").forEach(o => {
       const d = o.completion_date || o.created_date;
-      (o.bom_items || []).filter(b => b.product_id === product.id && (Number(b.total_consumed) || 0) > 0).forEach(b => {
+      const reqAtendida = (data.requisitions || []).some(r => r.id === o.requisition_id && r.status === "atendida");
+      if (!reqAtendida) (o.bom_items || []).filter(b => b.product_id === product.id && (Number(b.total_consumed) || 0) > 0).forEach(b => {
         rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Consumo de insumos — ordem de produção", in: 0, out: Number(b.total_consumed) || 0 });
       });
       if (o.output_product_id === product.id && (Number(o.produced_quantity) || 0) > 0) {
         rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Produção concluída — produto acabado", in: Number(o.produced_quantity) || 0, out: 0 });
       }
     });
-    // Requisições ao almoxarifado NÃO movimentam o estoque (a baixa dos insumos
-    // acontece na conclusão da OP) — não entram no kardex para não duplicar
-    // Movimentações WMS de entrada/saída (transferência não altera o saldo do produto)
-    data.moves.filter(m => m.product_id === product.id && m.move_type !== "transferencia").forEach(m => {
+    // Requisições atendidas ao almoxarifado movimentam o estoque (saída por
+    // requisição). Ajustes de inventário têm linha própria (INV) — a movimentação
+    // WMS espelho é ignorada para não duplicar. Transferência não altera o saldo.
+    data.moves.filter(m =>
+      m.product_id === product.id &&
+      m.move_type !== "transferencia" &&
+      !(m.notes || "").startsWith("Ajuste de inventário")
+    ).forEach(m => {
       rows.push({
         date: m.move_date || m.created_date, doc: m.document || "WMS",
         hist: `${m.move_type === "entrada" ? "Entrada" : "Saída"} WMS${m.warehouse_name ? ` — ${m.warehouse_name}` : ""}${m.notes ? ` (${m.notes})` : ""}`,
