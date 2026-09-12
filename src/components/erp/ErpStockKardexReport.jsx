@@ -74,10 +74,11 @@ export default function ErpStockKardexReport({ user }) {
     // Requisições atendidas ao almoxarifado movimentam o estoque (saída por
     // requisição). Ajustes de inventário têm linha própria (INV) — a movimentação
     // WMS espelho é ignorada para não duplicar. Transferência não altera o saldo.
+    const isInvMove = (m) => (m.notes || "").includes("Ajuste de inventário") || String(m.document || "").startsWith("Inventário");
     data.moves.filter(m =>
       m.product_id === product.id &&
       m.move_type !== "transferencia" &&
-      !(m.notes || "").startsWith("Ajuste de inventário")
+      !isInvMove(m)
     ).forEach(m => {
       rows.push({
         date: m.move_date || m.created_date, doc: m.document || "WMS",
