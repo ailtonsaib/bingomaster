@@ -61,6 +61,11 @@
       "type": "string",
       "description": "Data da contagem (ISO)"
     },
+    "unit_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo unit\u00e1rio informado na contagem (R$) \u2014 usado no ajuste quando o produto n\u00e3o tem custo cadastrado; usado tamb\u00e9m o valor informado na importa\u00e7\u00e3o da contagem"
+    },
     "adjust_account_id": {
       "type": "string",
       "description": "ID da conta cont\u00e1bil do ajuste (sobras/quebras de invent\u00e1rio \u2014 ErpChartAccount)"
@@ -76,7 +81,7 @@
     "adjust_value": {
       "type": "number",
       "default": 0,
-      "description": "Valor cont\u00e1bil do ajuste (diferen\u00e7a \u00d7 custo do produto)"
+      "description": "Valor cont\u00e1bil do ajuste (diferen\u00e7a \u00d7 custo unit\u00e1rio informado ou do produto)"
     },
     "journal_entry_id": {
       "type": "string",

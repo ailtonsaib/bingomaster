@@ -4,11 +4,13 @@ import { genOrderNumber } from "@/lib/erpUtils";
 // Lançamento contábil do ajuste de inventário (confronto físico × sistema).
 // Sobra (ajuste para mais): D conta de estoque do produto × C conta informada.
 // Quebra (ajuste para menos): D conta informada × C conta de estoque do produto.
-// Valor = |diferença| × custo do produto.
-export async function gerarLancamentoAjusteInventario(user, { product, account, accounts = [], diff, countDate }) {
+// Valor = |diferença| × custo unitário informado na contagem (ou custo do produto).
+export async function gerarLancamentoAjusteInventario(user, { product, account, accounts = [], diff, countDate, unitCost }) {
   const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
   const quantity = Math.abs(Number(diff) || 0);
-  const value = r2(quantity * (Number(product?.cost_price) || 0));
+  // Custo unitário: valor informado na contagem (importação/lançamento manual) tem prioridade;
+  // sem valor informado usa o custo cadastrado no produto
+  const value = r2(quantity * (Number(unitCost) > 0 ? Number(unitCost) : (Number(product?.cost_price) || 0)));
   if (quantity <= 0 || value <= 0) {
     throw new Error("Ajuste sem valor contábil — diferença zerada ou produto sem custo cadastrado.");
   }

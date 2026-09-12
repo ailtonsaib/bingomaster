@@ -2,7 +2,7 @@ import JSZip from "jszip";
 
 // Gera um arquivo .xlsx válido (mínimo) a partir de headers + rows.
 // headers: string[]  ->  rows: (string|number)[][]
-export async function buildXlsxBlob(headers, rows) {
+export async function buildXlsxBlob(headers, rows, sheetName = "Plano de Contas") {
   const zip = new JSZip();
 
   // Shared strings (todas as strings únicas usadas nas células)
@@ -50,7 +50,7 @@ ${strings.map(s => `<si><t xml:space="preserve">${escapeXml(s)}</t></si>`).join(
 
   const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets><sheet name="Plano de Contas" sheetId="1" r:id="rId1"/></sheets>
+<sheets><sheet name="${escapeXml(sheetName)}" sheetId="1" r:id="rId1"/></sheets>
 </workbook>`;
 
   const workbookRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
