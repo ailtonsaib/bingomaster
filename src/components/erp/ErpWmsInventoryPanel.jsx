@@ -183,7 +183,12 @@ export default function ErpWmsInventoryPanel({ user }) {
           countDate: counting.count_date ? new Date(`${(counting.count_date).slice(0, 10)}T12:00:00`).toISOString() : undefined,
         });
         adjustValue = Math.round(Math.abs(diff) * unitCost * 100) / 100;
-        if (product) await base44.entities.ErpProduct.update(product.id, { stock: counted });
+        // O custo unitário informado na contagem passa a ser o custo do produto —
+        // reflete no kardex, nos relatórios e nos demais módulos
+        if (product) await base44.entities.ErpProduct.update(product.id, {
+          stock: counted,
+          ...(unitCost > 0 ? { cost_price: Math.round(unitCost * 10000) / 10000 } : {}),
+        });
         await base44.entities.ErpWmsMove.create({
           user_email: user.email,
           move_type: diff > 0 ? "entrada" : "saida",
@@ -348,8 +353,9 @@ export default function ErpWmsInventoryPanel({ user }) {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-600">Custo Unitário (R$)</Label>
-                        <Input type="number" step="0.0001" value={countForm.unit_cost} onChange={e => setCountForm(p => ({ ...p, unit_cost: e.target.value }))} className="mt-1 h-8 text-sm" />
-                      </div>
+                          <Input type="number" step="0.0001" value={countForm.unit_cost} onChange={e => setCountForm(p => ({ ...p, unit_cost: e.target.value }))} className="mt-1 h-8 text-sm" />
+                          <p className="text-[10px] text-amber-700 mt-0.5">Se informado, atualiza o custo do produto.</p>
+                        </div>
                       <div>
                         <Label className="text-xs font-medium text-gray-600">Custo Total do Ajuste</Label>
                         <p className="mt-2 text-sm font-semibold text-amber-800">{fmtMoney(val)}</p>
