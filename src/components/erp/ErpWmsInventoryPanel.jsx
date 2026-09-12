@@ -233,7 +233,7 @@ export default function ErpWmsInventoryPanel({ user }) {
                           value={countForm.account_id}
                           onValueChange={v => setCountForm(p => ({ ...p, account_id: v }))}
                           options={accounts.map(a => ({ id: a.id, label: `${a.code} — ${a.name}` }))}
-                          placeholder="Buscar conta de sobras/quebras de inventário..."
+                          placeholder="Digite o número ou o nome da conta..."
                         />
                       </div>
                       {acc && <p className="text-[11px] text-emerald-700 mt-1">Lançamento: {d > 0 ? `D ${prod?.account_estoque_name || "estoque"} × C ${acc.name}` : `D ${acc.name} × C ${prod?.account_estoque_name || "estoque"}`}</p>}

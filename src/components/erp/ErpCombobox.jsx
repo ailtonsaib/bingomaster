@@ -34,8 +34,10 @@ export default function ErpCombobox({ value, onValueChange, options, placeholder
     setOpen(true);
   };
 
+  // Busca: digitar pelo código ou pelo nome — ignora maiúsculas e acentos
+  const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const filtered = query
-    ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
+    ? options.filter(o => norm(o.label).includes(norm(query)))
     : options;
 
   return (
