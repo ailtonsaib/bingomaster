@@ -25,6 +25,8 @@ export default function ErpWmsInventoryPanel({ user }) {
   const [warehouses, setWarehouses] = useState([]);
   const [locations, setLocations] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [subgroups, setSubgroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -36,14 +38,16 @@ export default function ErpWmsInventoryPanel({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [inv, p, w, l, acc] = await Promise.all([
+      const [inv, p, w, l, acc, gr, sg] = await Promise.all([
         base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpWarehouse.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpWmsLocation.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 500),
+        base44.entities.ErpStockGroup.filter({ user_email: user.email }, "code", 500),
+        base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "code", 500),
       ]);
-      setItems(inv); setProducts(p); setWarehouses(w); setLocations(l); setAccounts(acc);
+      setItems(inv); setProducts(p); setWarehouses(w); setLocations(l); setAccounts(acc); setGroups(gr); setSubgroups(sg);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -185,7 +189,7 @@ export default function ErpWmsInventoryPanel({ user }) {
 
       {showForm && (
         <InventoryForm
-          user={user} products={products} warehouses={warehouses} locations={locations}
+          user={user} products={products} warehouses={warehouses} locations={locations} groups={groups} subgroups={subgroups}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); load(); }}
         />
@@ -253,19 +257,58 @@ export default function ErpWmsInventoryPanel({ user }) {
   );
 }
 
-function InventoryForm({ user, products, warehouses, locations, onClose, onSaved }) {
+function InventoryForm({ user, products, warehouses, locations, groups, subgroups, onClose, onSaved }) {
   const [form, setForm] = useState({
-    inventory_type: "fisico", product_id: "", warehouse_id: "", location_id: "", count_date: todayISO(), notes: "",
+    inventory_type: "fisico", group_id: "", subgroup_id: "", product_id: "", warehouse_id: "", location_id: "", count_date: todayISO(), notes: "",
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => {
     const next = { ...prev, [k]: v };
     if (k === "warehouse_id") { next.location_id = ""; }
+    if (k === "group_id") { next.subgroup_id = ""; next.product_id = ""; }
+    if (k === "subgroup_id") { next.product_id = ""; }
     return next;
   });
 
+  // Produtos do filtro: grupo (via subgrupo vinculado) ou subgrupo — apenas produtos com controle de estoque ativos
+  const filteredSubgroups = subgroups.filter(s => !form.group_id || s.group_id === form.group_id);
+  const listProducts = products.filter(p =>
+    p.controla_estoque !== false && p.is_active !== false &&
+    (!form.subgroup_id || p.subgroup_id === form.subgroup_id) &&
+    (!form.group_id || filteredSubgroups.some(s => s.id === p.subgroup_id))
+  );
   const selectedProduct = products.find(p => p.id === form.product_id);
   const whLocations = locations.filter(l => l.warehouse_id === form.warehouse_id);
+
+  // Abre a contagem para todos os produtos do filtro de uma só vez
+  const openAll = async () => {
+    if (!form.warehouse_id) return alert("Selecione o armazém para abrir as contagens.");
+    if (listProducts.length === 0) return alert("Nenhum produto no filtro selecionado.");
+    if (!confirm(`Iniciar inventário abrindo contagem para ${listProducts.length} produto(s) do filtro?`)) return;
+    setSaving(true);
+    try {
+      const loc = locations.find(l => l.id === form.location_id);
+      const wh = warehouses.find(w => w.id === form.warehouse_id);
+      await base44.entities.ErpWmsInventory.bulkCreate(listProducts.map(p => ({
+        user_email: user.email,
+        inventory_type: form.inventory_type,
+        product_id: p.id,
+        product_code: p.code || "",
+        product_name: p.name || "",
+        unit: p.unit || "",
+        warehouse_id: form.warehouse_id,
+        warehouse_name: wh?.name || "",
+        location_id: form.location_id || "",
+        location_code: loc?.code || "",
+        system_qty: Number(p.stock) || 0,
+        count_date: form.count_date,
+        notes: form.notes || "",
+        status: "aberto",
+      })));
+      onSaved();
+    } catch (e) { alert(e.message); }
+    setSaving(false);
+  };
 
   const save = async () => {
     if (!form.product_id) return alert("Selecione o produto.");
@@ -291,7 +334,7 @@ function InventoryForm({ user, products, warehouses, locations, onClose, onSaved
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
           <h2 className="font-bold">Nova Contagem de Inventário</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500">✕</button>
@@ -303,13 +346,49 @@ function InventoryForm({ user, products, warehouses, locations, onClose, onSaved
               {INV_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-          <div className="col-span-2">
-            <Label className="text-xs font-medium text-gray-600">Produto *</Label>
-            <select value={form.product_id} onChange={e => set("product_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
-              <option value="">Selecione...</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.code ? p.code + " — " : ""}{p.name} (saldo: {Number(p.stock || 0).toLocaleString("pt-BR")})</option>)}
+          <div>
+            <Label className="text-xs font-medium text-gray-600">Grupo de Estoque</Label>
+            <select value={form.group_id} onChange={e => set("group_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
+              <option value="">Todos os grupos</option>
+              {groups.map(g => <option key={g.id} value={g.id}>{g.code ? g.code + " — " : ""}{g.name}</option>)}
             </select>
           </div>
+          <div>
+            <Label className="text-xs font-medium text-gray-600">Subgrupo de Estoque</Label>
+            <select value={form.subgroup_id} onChange={e => set("subgroup_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" disabled={subgroups.length === 0}>
+              <option value="">Todos os subgrupos</option>
+              {filteredSubgroups.map(s => <option key={s.id} value={s.id}>{s.code ? s.code + " — " : ""}{s.name}</option>)}
+            </select>
+          </div>
+          <div className="col-span-2">
+            <Label className="text-xs font-medium text-gray-600">Produto * {listProducts.length > 0 && <span className="font-normal text-gray-400">({listProducts.length} no filtro)</span>}</Label>
+            <select value={form.product_id} onChange={e => set("product_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
+              <option value="">Selecione...</option>
+              {listProducts.map(p => <option key={p.id} value={p.id}>{p.code ? p.code + " — " : ""}{p.name} (saldo: {Number(p.stock || 0).toLocaleString("pt-BR")})</option>)}
+            </select>
+          </div>
+          {(form.group_id || form.subgroup_id) && (
+            <div className="col-span-2 border rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600">Produtos do filtro ({listProducts.length})</div>
+              <div className="max-h-40 overflow-y-auto">
+                {listProducts.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-gray-400">Nenhum produto encontrado no grupo/subgrupo selecionado.</p>
+                ) : (
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {listProducts.map(p => (
+                        <tr key={p.id} className="border-t">
+                          <td className="px-3 py-1 font-mono">{p.code || ""}</td>
+                          <td className="px-3 py-1">{p.name}</td>
+                          <td className="px-3 py-1 text-right whitespace-nowrap">{Number(p.stock || 0).toLocaleString("pt-BR")} {p.unit || ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
           <div>
             <Label className="text-xs font-medium text-gray-600">Armazém *</Label>
             <select value={form.warehouse_id} onChange={e => set("warehouse_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
@@ -338,6 +417,9 @@ function InventoryForm({ user, products, warehouses, locations, onClose, onSaved
         </div>
         <div className="p-4 border-t flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+          {listProducts.length > 0 && (
+            <Button variant="secondary" size="sm" disabled={saving} onClick={openAll} title="Abre contagem para todos os produtos do filtro do grupo/subgrupo">Iniciar Inventário — Todos ({listProducts.length})</Button>
+          )}
           <Button size="sm" disabled={saving} onClick={save} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Salvando..." : "Abrir Contagem"}</Button>
         </div>
       </div>
