@@ -152,7 +152,11 @@ export default function ErpWmsInventoryPanel({ user }) {
                 const so = STATUS_OPTS.find(s => s.value === it.status);
                 const to = INV_TYPES.find(t => t.value === it.inventory_type);
                 return (
-                  <tr key={it.id} className="border-t hover:bg-gray-50">
+                  <tr
+                    key={it.id}
+                    className={`border-t hover:bg-gray-50 ${it.status !== "ajustado" ? "cursor-pointer" : ""}`}
+                    onClick={() => { if (it.status !== "ajustado") { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); } }}
+                  >
                     <td className="p-2 text-xs">{(it.count_date || "").slice(0, 10) || "—"}</td>
                     <td className="p-2 text-xs">{to ? to.label : it.inventory_type}</td>
                     <td className="p-2">{it.product_code ? <span className="font-mono text-xs mr-1">{it.product_code}</span> : null}{it.product_name || "—"}</td>
@@ -177,7 +181,7 @@ export default function ErpWmsInventoryPanel({ user }) {
                       {it.status !== "ajustado" && (
                         <button title="Registrar Contagem" onClick={() => { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-700"><ClipboardList className="w-3.5 h-3.5" /> Contar</button>
                       )}
-                      <button title="Excluir" onClick={async () => { if (confirm("Excluir esta contagem?")) { await base44.entities.ErpWmsInventory.delete(it.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                      <button title="Excluir" onClick={async e => { e.stopPropagation(); if (confirm("Excluir esta contagem?")) { await base44.entities.ErpWmsInventory.delete(it.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
                   </tr>
                 );
@@ -415,6 +419,7 @@ function InventoryForm({ user, products, warehouses, locations, groups, subgroup
             <p className="col-span-2 text-xs text-gray-500">Saldo atual em sistema: <b>{Number(selectedProduct.stock || 0).toLocaleString("pt-BR")} {selectedProduct.unit || ""}</b> (capturado na abertura da contagem)</p>
           )}
         </div>
+        <p className="px-4 pb-2 text-[11px] text-gray-500">Após abrir a contagem, os produtos aparecem na listagem de inventário (abaixo) — clique na linha ou no botão <b>Contar</b> para digitar a quantidade física contada.</p>
         <div className="p-4 border-t flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
           {listProducts.length > 0 && (
