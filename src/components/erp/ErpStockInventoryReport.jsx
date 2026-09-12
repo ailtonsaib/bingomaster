@@ -12,16 +12,27 @@ export default function ErpStockInventoryReport({ user }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [onlyBelowMin, setOnlyBelowMin] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [subgroups, setSubgroups] = useState([]);
+  const [groupId, setGroupId] = useState("");
+  const [subgroupId, setSubgroupId] = useState("");
 
   useEffect(() => {
-    base44.entities.ErpProduct.filter({ user_email: user.email }, "name", 500)
-      .then(list => setProducts(list.filter(p => p.controla_estoque !== false && p.is_active !== false)))
-      .catch(() => {})
-      .then(() => setLoading(false));
+    Promise.all([
+      base44.entities.ErpProduct.filter({ user_email: user.email }, "name", 500).catch(() => []),
+      base44.entities.ErpStockGroup.filter({ user_email: user.email }, "code", 500).catch(() => []),
+      base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "code", 500).catch(() => []),
+    ]).then(([p, g, s]) => {
+      setProducts(p.filter(x => x.controla_estoque !== false && x.is_active !== false));
+      setGroups(g);
+      setSubgroups(s);
+    }).catch(() => {}).then(() => setLoading(false));
   }, [user.email]);
 
   const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
   const rows = products.filter(p => {
+    if (subgroupId && p.subgroup_id !== subgroupId) return false;
+    if (!subgroupId && groupId && !subgroups.some(s => s.group_id === groupId && s.id === p.subgroup_id)) return false;
     if (onlyBelowMin && !((Number(p.stock) || 0) < (Number(p.min_stock) || 0))) return false;
     const t = `${p.code || ""} ${p.name || ""} ${p.category || ""}`.toLowerCase();
     return t.includes(search.toLowerCase());
@@ -38,6 +49,14 @@ export default function ErpStockInventoryReport({ user }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto, código ou categoria..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
         </div>
+        <select value={groupId} onChange={e => { setGroupId(e.target.value); setSubgroupId(""); }} className="h-9 rounded-md border border-input bg-white px-3 text-sm">
+          <option value="">Grupo — todos</option>
+          {groups.map(g => <option key={g.id} value={g.id}>{g.code ? g.code + " — " : ""}{g.name}</option>)}
+        </select>
+        <select value={subgroupId} onChange={e => setSubgroupId(e.target.value)} className="h-9 rounded-md border border-input bg-white px-3 text-sm" disabled={subgroups.length === 0}>
+          <option value="">Subgrupo — todos</option>
+          {subgroups.filter(s => !groupId || s.group_id === groupId).map(s => <option key={s.id} value={s.id}>{s.code ? s.code + " — " : ""}{s.name}</option>)}
+        </select>
         <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
           <input type="checkbox" checked={onlyBelowMin} onChange={e => setOnlyBelowMin(e.target.checked)} className="w-4 h-4" />
           Apenas abaixo do mínimo
@@ -57,7 +76,9 @@ export default function ErpStockInventoryReport({ user }) {
           <Boxes className="w-5 h-5 text-indigo-600" />
           <div>
             <h3 className="text-sm font-semibold">Relatório de Inventário — Posição de Estoque</h3>
-            <p className="text-[11px] text-gray-500">Emitido em {today} — produtos com controle de estoque</p>
+            <p className="text-[11px] text-gray-500">
+              Emitido em {today} — {subgroupId ? `Subgrupo: ${subgroups.find(s => s.id === subgroupId)?.name || ""}` : groupId ? `Grupo: ${groups.find(g => g.id === groupId)?.name || ""}` : "produtos com controle de estoque"}
+            </p>
           </div>
         </div>
         <div className="overflow-x-auto">
