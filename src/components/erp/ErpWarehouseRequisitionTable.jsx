@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, ClipboardList } from "lucide-react";
+import { CheckCircle2, XCircle, ClipboardList, PackageMinus } from "lucide-react";
 import { fmtDate } from "@/lib/erpUtils";
 
 const REQ_STATUS = {
@@ -61,6 +61,7 @@ export default function RequisitionsTable({ reqs, loading, search, onOpen }) {
 export function RequisitionDetailModal({ req, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState([]);
+  const [jaBaixado, setJaBaixado] = useState(null);
   const st = REQ_STATUS[req.status] || { label: req.status, color: "text-gray-700 bg-gray-100" };
 
   // Saldo atual do produto (reflete ajustes de inventário posteriores à requisição)
@@ -76,34 +77,59 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
     return p ? Number(p.stock) || 0 : null;
   };
 
+  // Requisição já atendida: verifica se a baixa do estoque já foi registrada
+  useEffect(() => {
+    if (req.status !== "atendida") { setJaBaixado(null); return; }
+    let alive = true;
+    base44.entities.ErpWmsMove.filter({ user_email: req.user_email, document: `Requisição ${req.number}` }, "-created_date", 100)
+      .then(list => { if (alive) setJaBaixado((list || []).length > 0); })
+      .catch(() => { if (alive) setJaBaixado(false); });
+    return () => { alive = false; };
+  }, [req.id, req.status, req.number]);
+
+  // Baixa do estoque: os itens entregues pelo almoxarifado saem do saldo dos produtos
+  const baixarEstoque = async () => {
+    for (const it of (req.items || [])) {
+      if (!it.product_id || !(Number(it.quantity) > 0)) continue;
+      const p = await base44.entities.ErpProduct.get(it.product_id);
+      await base44.entities.ErpProduct.update(it.product_id, {
+        stock: Math.round((((Number(p.stock) || 0) - Number(it.quantity)) + Number.EPSILON) * 1000) / 1000,
+      });
+      await base44.entities.ErpWmsMove.create({
+        user_email: req.user_email,
+        move_type: "saida",
+        product_id: it.product_id,
+        product_code: it.product_code || "",
+        product_name: it.product_name || "",
+        unit: it.unit || "",
+        quantity: Number(it.quantity),
+        document: `Requisição ${req.number}`,
+        move_date: new Date().toISOString(),
+        notes: `Saída por requisição ao almoxarifado${req.production_order_number ? ` — OP ${req.production_order_number}` : ""}`,
+      });
+    }
+  };
+
   const changeStatus = async (status) => {
     if (status === "cancelada" && !confirm(`Cancelar a requisição ${req.number}?`)) return;
     if (status === "atendida" && !confirm(`Marcar a requisição ${req.number} como atendida? Os itens solicitados serão baixados do estoque.`)) return;
     setBusy(true);
     try {
-      if (status === "atendida") {
-        // Baixa do estoque: os itens entregues pelo almoxarifado saem do saldo dos produtos
-        for (const it of (req.items || [])) {
-          if (!it.product_id || !(Number(it.quantity) > 0)) continue;
-          const p = await base44.entities.ErpProduct.get(it.product_id);
-          await base44.entities.ErpProduct.update(it.product_id, {
-            stock: Math.round((((Number(p.stock) || 0) - Number(it.quantity)) + Number.EPSILON) * 1000) / 1000,
-          });
-          await base44.entities.ErpWmsMove.create({
-            user_email: req.user_email,
-            move_type: "saida",
-            product_id: it.product_id,
-            product_code: it.product_code || "",
-            product_name: it.product_name || "",
-            unit: it.unit || "",
-            quantity: Number(it.quantity),
-            document: `Requisição ${req.number}`,
-            move_date: new Date().toISOString(),
-            notes: `Saída por requisição ao almoxarifado${req.production_order_number ? ` — OP ${req.production_order_number}` : ""}`,
-          });
-        }
-      }
+      if (status === "atendida") await baixarEstoque();
       await base44.entities.ErpWarehouseRequisition.update(req.id, { status });
+      onSaved();
+      onClose();
+    } catch (e) { alert("Erro: " + e.message); }
+    setBusy(false);
+  };
+
+  // Requisição atendida antes da baixa automática: permite baixar o estoque agora
+  const baixarAgora = async () => {
+    if (!confirm(`Baixar do estoque os itens da requisição ${req.number}?`)) return;
+    setBusy(true);
+    try {
+      await baixarEstoque();
+      alert("Estoque baixado com sucesso.");
       onSaved();
       onClose();
     } catch (e) { alert("Erro: " + e.message); }
@@ -156,6 +182,14 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
             <div className="flex gap-2 justify-end pt-2 border-t">
               <Button size="sm" variant="outline" disabled={busy} onClick={() => changeStatus("cancelada")} className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50"><XCircle className="w-4 h-4" /> Cancelar</Button>
               <Button size="sm" disabled={busy} onClick={() => changeStatus("atendida")} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="w-4 h-4" /> Marcar como Atendida</Button>
+            </div>
+          )}
+          {req.status === "atendida" && (
+            <div className="flex gap-2 items-center justify-end pt-2 border-t">
+              {jaBaixado === false && (
+                <Button size="sm" disabled={busy} onClick={baixarAgora} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><PackageMinus className="w-4 h-4" /> Baixar do Estoque</Button>
+              )}
+              {jaBaixado && <p className="text-xs text-emerald-700">Estoque já baixado para os itens desta requisição.</p>}
             </div>
           )}
         </div>
