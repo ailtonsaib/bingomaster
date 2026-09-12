@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, ClipboardList } from "lucide-react";
@@ -60,7 +60,21 @@ export default function RequisitionsTable({ reqs, loading, search, onOpen }) {
 
 export function RequisitionDetailModal({ req, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
+  const [products, setProducts] = useState([]);
   const st = REQ_STATUS[req.status] || { label: req.status, color: "text-gray-700 bg-gray-100" };
+
+  // Saldo atual do produto (reflete ajustes de inventário posteriores à requisição)
+  useEffect(() => {
+    let alive = true;
+    base44.entities.ErpProduct.filter({ user_email: req.user_email }, "-created_date", 500)
+      .then(list => { if (alive) setProducts(list); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [req.user_email]);
+  const currentStock = (productId) => {
+    const p = products.find(p => p.id === productId);
+    return p ? Number(p.stock) || 0 : null;
+  };
 
   const changeStatus = async (status) => {
     if (status === "cancelada" && !confirm(`Cancelar a requisição ${req.number}?`)) return;
@@ -89,19 +103,29 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
           <div>
             <p className="font-semibold mb-1">Itens solicitados:</p>
             {req.items?.length ? (
+              <>
               <table className="w-full text-xs border rounded">
-                <thead className="bg-gray-100"><tr><th className="p-1.5 text-left">Insumo</th><th className="p-1.5 text-left">Un.</th><th className="p-1.5 text-right">Solicitado</th><th className="p-1.5 text-right">Estoque na ocasião</th></tr></thead>
+                <thead className="bg-gray-100"><tr><th className="p-1.5 text-left">Insumo</th><th className="p-1.5 text-left">Un.</th><th className="p-1.5 text-right">Solicitado</th><th className="p-1.5 text-right">Estoque na ocasião</th><th className="p-1.5 text-right">Saldo Atual</th></tr></thead>
                 <tbody>
-                  {req.items.map((it, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="p-1.5">{it.product_name}</td>
-                      <td className="p-1.5">{it.unit}</td>
-                      <td className="p-1.5 text-right font-medium">{it.quantity}</td>
-                      <td className="p-1.5 text-right">{it.stock_at_request}</td>
-                    </tr>
-                  ))}
+                  {req.items.map((it, i) => {
+                    const cur = currentStock(it.product_id);
+                    const changed = cur !== null && Number(cur) !== Number(it.stock_at_request || 0);
+                    return (
+                      <tr key={i} className="border-t">
+                        <td className="p-1.5">{it.product_name}</td>
+                        <td className="p-1.5">{it.unit}</td>
+                        <td className="p-1.5 text-right font-medium">{it.quantity}</td>
+                        <td className="p-1.5 text-right text-gray-500">{it.stock_at_request}</td>
+                        <td className={`p-1.5 text-right font-medium ${changed ? "text-indigo-600" : ""}`}>
+                          {cur === null ? "—" : <span title={changed ? "Saldo corrigido após a geração da requisição (ex.: ajuste de inventário)" : ""}>{cur.toLocaleString("pt-BR")}</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <p className="text-[11px] text-gray-400 mt-1">O estoque na ocasião é o saldo no momento em que a requisição foi gerada; o saldo atual reflete os ajustes posteriores (ex.: inventário).</p>
+              </>
             ) : <p className="text-gray-400">Sem itens.</p>}
           </div>
           {req.notes && <div><span className="text-gray-500">Obs: </span>{req.notes}</div>}
