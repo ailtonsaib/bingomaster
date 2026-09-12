@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Plus, Trash2, ClipboardList } from "lucide-react";
+import ErpCombobox from "@/components/erp/ErpCombobox";
+import { fmtMoney } from "@/lib/erpUtils";
+import { gerarLancamentoAjusteInventario } from "@/lib/erpInventoryAdjust";
 
 const STATUS_OPTS = [
   { value: "aberto", label: "Aberto", color: "bg-blue-100 text-blue-700" },
@@ -21,24 +24,26 @@ export default function ErpWmsInventoryPanel({ user }) {
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [counting, setCounting] = useState(null);
-  const [countForm, setCountForm] = useState({ counted_qty: 0, adjust: true });
+  const [countForm, setCountForm] = useState({ counted_qty: 0, adjust: true, account_id: "" });
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [inv, p, w, l] = await Promise.all([
+      const [inv, p, w, l, acc] = await Promise.all([
         base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpWarehouse.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpWmsLocation.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpChartAccount.filter({ user_email: user.email, accepts_entries: true }, "code", 500),
       ]);
-      setItems(inv); setProducts(p); setWarehouses(w); setLocations(l);
+      setItems(inv); setProducts(p); setWarehouses(w); setLocations(l); setAccounts(acc);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -57,8 +62,19 @@ export default function ErpWmsInventoryPanel({ user }) {
       const systemQty = Number(counting.system_qty) || 0;
       const diff = counted - systemQty;
       const adjust = countForm.adjust && diff !== 0;
+      const product = products.find(p => p.id === counting.product_id);
+      let je = null;
+      let adjustValue = 0;
       if (adjust) {
-        const product = products.find(p => p.id === counting.product_id);
+        // Confronto com o estoque real: exige a conta contábil do ajuste e gera o
+        // lançamento na contabilidade antes de mexer no saldo do estoque
+        const account = accounts.find(a => a.id === countForm.account_id);
+        if (!account) { alert("Informe a conta contábil do ajuste (sobra/quebra de inventário)."); setSaving(false); return; }
+        je = await gerarLancamentoAjusteInventario(user, {
+          product, account, accounts, diff,
+          countDate: counting.count_date ? new Date(`${(counting.count_date).slice(0, 10)}T12:00:00`).toISOString() : undefined,
+        });
+        adjustValue = Math.round(Math.abs(diff) * (Number(product?.cost_price) || 0) * 100) / 100;
         if (product) await base44.entities.ErpProduct.update(product.id, { stock: counted });
         await base44.entities.ErpWmsMove.create({
           user_email: user.email,
@@ -74,12 +90,18 @@ export default function ErpWmsInventoryPanel({ user }) {
           location_code: counting.location_code || "",
           document: `Inventário ${(counting.count_date || "").slice(0, 10)}`,
           move_date: todayISO(),
-          notes: "Ajuste de inventário",
+          notes: `Ajuste de inventário — ${diff > 0 ? "sobra" : "quebra"}${je?.number ? ` (${je.number})` : ""}`,
         });
       }
       await base44.entities.ErpWmsInventory.update(counting.id, {
         counted_qty: counted,
         status: adjust ? "ajustado" : "contado",
+        adjust_account_id: adjust ? countForm.account_id : "",
+        adjust_account_code: adjust ? (accounts.find(a => a.id === countForm.account_id)?.code || "") : "",
+        adjust_account_name: adjust ? (accounts.find(a => a.id === countForm.account_id)?.name || "") : "",
+        adjust_value: adjust ? adjustValue : 0,
+        journal_entry_id: je?.id || "",
+        journal_entry_number: je?.number || "",
       });
       setCounting(null); load();
     } catch (e) { alert(e.message); }
@@ -92,7 +114,7 @@ export default function ErpWmsInventoryPanel({ user }) {
         <h2 className="font-semibold text-base">Inventário (Físico / Cíclico)</h2>
         <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Contagem</Button>
       </div>
-      <p className="text-xs text-gray-500 -mt-1">Contagem física por produto/endereço. Divergências podem ser ajustadas automaticamente: o saldo do produto é corrigido e a diferença é registrada como movimentação de estoque.</p>
+      <p className="text-xs text-gray-500 -mt-1">Contagem física por produto/endereço. Divergências podem ser ajustadas automaticamente: o saldo do produto é corrigido, a diferença é registrada como movimentação de estoque e o confronto com o estoque real gera o lançamento contábil (sobra: D estoque × C conta informada; quebra: D conta informada × C estoque) pelo valor da diferença × custo do produto.</p>
 
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -112,14 +134,14 @@ export default function ErpWmsInventoryPanel({ user }) {
               <tr>
                 <th className="p-2 text-left">Data</th><th className="p-2 text-left">Tipo</th><th className="p-2 text-left">Produto</th>
                 <th className="p-2 text-left">Armazém</th><th className="p-2 text-left">Endereço</th><th className="p-2 text-right">Qtd Sistema</th>
-                <th className="p-2 text-right">Qtd Contada</th><th className="p-2 text-right">Divergência</th><th className="p-2 text-left">Status</th><th className="p-2 text-right">Ações</th>
+                <th className="p-2 text-right">Qtd Contada</th><th className="p-2 text-right">Divergência</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Lançamento Contábil</th><th className="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={11} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={10} className="p-8 text-center text-gray-400">Nenhuma contagem de inventário.</td></tr>
+                <tr><td colSpan={11} className="p-8 text-center text-gray-400">Nenhuma contagem de inventário.</td></tr>
               ) : filtered.map(it => {
                 const counted = it.status !== "aberto" ? (Number(it.counted_qty) || 0) : null;
                 const diff = counted !== null ? counted - (Number(it.system_qty) || 0) : null;
@@ -142,9 +164,14 @@ export default function ErpWmsInventoryPanel({ user }) {
                       )}
                     </td>
                     <td className="p-2">{so ? <span className={`text-xs px-2 py-0.5 rounded-full ${so.color}`}>{so.label}</span> : it.status}</td>
+                    <td className="p-2 text-xs text-gray-600">
+                      {it.journal_entry_number ? (
+                        <span className="font-mono text-indigo-700" title={`Conta ${it.adjust_account_code || ""} ${it.adjust_account_name || ""} - ${fmtMoney(it.adjust_value || 0)}`}>{it.journal_entry_number}</span>
+                      ) : (it.status === "ajustado" ? <span className="text-[11px] text-gray-400">sem lançamento</span> : "—")}
+                    </td>
                     <td className="p-2 text-right whitespace-nowrap">
                       {it.status !== "ajustado" && (
-                        <button title="Registrar Contagem" onClick={() => { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true }); }} className="p-1 hover:bg-blue-50 rounded"><ClipboardList className="w-4 h-4 text-blue-500" /></button>
+                        <button title="Registrar Contagem" onClick={() => { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); }} className="p-1 hover:bg-blue-50 rounded"><ClipboardList className="w-4 h-4 text-blue-500" /></button>
                       )}
                       <button title="Excluir" onClick={async () => { if (confirm("Excluir esta contagem?")) { await base44.entities.ErpWmsInventory.delete(it.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
@@ -181,8 +208,39 @@ export default function ErpWmsInventoryPanel({ user }) {
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={countForm.adjust} onChange={e => setCountForm(p => ({ ...p, adjust: e.target.checked }))} className="w-4 h-4" />
-                Ajustar o saldo do estoque automaticamente (gera movimentação da diferença)
+                Ajustar o saldo do estoque automaticamente (gera movimentação da diferença e lançamento contábil)
               </label>
+              {countForm.adjust && (Number(countForm.counted_qty) || 0) !== (Number(counting.system_qty) || 0) && (() => {
+                const d = (Number(countForm.counted_qty) || 0) - (Number(counting.system_qty) || 0);
+                const prod = products.find(p => p.id === counting.product_id);
+                const val = Math.abs(d) * (Number(prod?.cost_price) || 0);
+                const acc = accounts.find(a => a.id === countForm.account_id);
+                return (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                    <p className="text-sm font-medium text-amber-800">
+                      Ajuste para {d > 0 ? "mais (sobra)" : "menos (falta)"}: {d > 0 ? "+" : ""}{d.toLocaleString("pt-BR")} {prod?.unit || "un"} — valor contábil {fmtMoney(val)}
+                    </p>
+                    <p className="text-[11px] text-amber-700">
+                      {d > 0
+                        ? "Débito na conta de estoque do produto × crédito na conta informada (sobras de inventário)."
+                        : "Débito na conta informada (quebras/perdas de inventário) × crédito na conta de estoque do produto."}
+                      {" "}Conta de estoque do produto: <b>{prod?.account_estoque_name || "não configurada no cadastro do produto"}</b>.
+                    </p>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600">Conta Contábil do Ajuste *</Label>
+                      <div className="mt-1">
+                        <ErpCombobox
+                          value={countForm.account_id}
+                          onValueChange={v => setCountForm(p => ({ ...p, account_id: v }))}
+                          options={accounts.map(a => ({ id: a.id, label: `${a.code} — ${a.name}` }))}
+                          placeholder="Buscar conta de sobras/quebras de inventário..."
+                        />
+                      </div>
+                      {acc && <p className="text-[11px] text-emerald-700 mt-1">Lançamento: {d > 0 ? `D ${prod?.account_estoque_name || "estoque"} × C ${acc.name}` : `D ${acc.name} × C ${prod?.account_estoque_name || "estoque"}`}</p>}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="p-4 border-t flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={() => setCounting(null)}>Cancelar</Button>
