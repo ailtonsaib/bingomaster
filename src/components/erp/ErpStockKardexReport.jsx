@@ -4,79 +4,9 @@ import { Printer, Loader2, ArrowLeftRight, AlertTriangle } from "lucide-react";
 import { fmtDate, fmtMoney } from "@/lib/erpUtils";
 import { printElements } from "@/lib/printUtils";
 import ErpCombobox from "@/components/erp/ErpCombobox";
+import { buildKardexRows, applyPeriod, kardexAverageCost } from "@/lib/erpKardex";
 
 const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
-
-// Movimentações de um produto — entradas de NF, vendas faturadas, produção
-// (consumo e acabado), requisições ao almoxarifado, movimentações WMS e ajustes
-// de inventário — ordenadas por data e documento, com saldo acumulado.
-function buildKardexRows(data, product) {
-  const rows = [];
-  // Reconhece o produto pelo vínculo (ID), código, código de barras ou descrição
-  // — mesmo critério usado na baixa de estoque do lançamento.
-  const sameProd = (it) => it.product_id === product.id
-    || (it.product_code && it.product_code === product.code)
-    || (it.barcode && it.barcode === product.barcode)
-    || (it.product_name || "").trim().toLowerCase() === (product.name || "").trim().toLowerCase();
-  data.entries.filter(e => e.status === "lancada" && e.entry_kind !== "despesa").forEach(e => {
-    (e.items || []).filter(sameProd).forEach(it => {
-      rows.push({ date: e.entry_date || e.issue_date || e.created_date, doc: `NF ${e.nota_number}`, hist: `Entrada de nota — ${e.supplier_name || ""}`, in: Number(it.quantity) || 0, out: 0 });
-    });
-  });
-  data.sales.filter(o => o.status === "faturado").forEach(o => {
-    (o.items || []).filter(it => it.product_id === product.id).forEach(it => {
-      rows.push({ date: o.emission_date || o.created_date, doc: `PV ${o.number}`, hist: `Venda — ${o.customer_name || ""}`, in: 0, out: Number(it.quantity) || 0 });
-    });
-  });
-  // Ordens de produção concluídas: consumo de insumos + produto acabado.
-  // Quando a requisição ao almoxarifado foi atendida, os insumos já saíram do
-  // estoque na baixa da requisição (linha "Requisição ..." das movimentações
-  // WMS) — o consumo não é repetido aqui.
-  data.productions.filter(o => o.status === "concluida").forEach(o => {
-    const d = o.completion_date || o.created_date;
-    const reqAtendida = (data.requisitions || []).some(r => r.id === o.requisition_id && r.status === "atendida");
-    if (!reqAtendida) (o.bom_items || []).filter(b => b.product_id === product.id && (Number(b.total_consumed) || 0) > 0).forEach(b => {
-      rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Consumo de insumos — ordem de produção", in: 0, out: Number(b.total_consumed) || 0 });
-    });
-    if (o.output_product_id === product.id && (Number(o.produced_quantity) || 0) > 0) {
-      rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Produção concluída — produto acabado", in: Number(o.produced_quantity) || 0, out: 0 });
-    }
-  });
-  // Requisições atendidas ao almoxarifado movimentam o estoque (saída por
-  // requisição). Ajustes de inventário têm linha própria (INV) — a movimentação
-  // WMS espelho é ignorada para não duplicar. Transferência não altera o saldo.
-  const isInvMove = (m) => (m.notes || "").includes("Ajuste de inventário") || String(m.document || "").startsWith("Inventário");
-  data.moves.filter(m =>
-    m.product_id === product.id &&
-    m.move_type !== "transferencia" &&
-    !isInvMove(m)
-  ).forEach(m => {
-    rows.push({
-      date: m.move_date || m.created_date, doc: m.document || "WMS",
-      hist: `${m.move_type === "entrada" ? "Entrada" : "Saída"} WMS${m.warehouse_name ? ` — ${m.warehouse_name}` : ""}${m.notes ? ` (${m.notes})` : ""}`,
-      in: m.move_type === "entrada" ? Number(m.quantity) || 0 : 0,
-      out: m.move_type === "saida" ? Number(m.quantity) || 0 : 0,
-    });
-  });
-  // Ajustes de inventário (contagem: diferença entre contado e sistema)
-  data.inventories.filter(i => i.product_id === product.id && i.status === "ajustado").forEach(i => {
-    const diff = (Number(i.counted_qty) || 0) - (Number(i.system_qty) || 0);
-    if (!diff) return;
-    rows.push({ date: i.count_date || i.created_date, doc: `INV ${i.warehouse_name || ""}`.trim(), hist: `Ajuste de inventário — contado ${i.counted_qty} / sistema ${i.system_qty}`, in: diff > 0 ? diff : 0, out: diff < 0 ? -diff : 0 });
-  });
-  rows.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.doc).localeCompare(String(b.doc)));
-  let saldo = 0;
-  return rows.map(r => { saldo += r.in - r.out; return { ...r, saldo }; });
-}
-
-// Período: saldo anterior acumulado antes da data inicial + linhas do período
-function applyPeriod(rows, from, to) {
-  if (!from && !to) return { prev: null, list: rows };
-  const day = (d) => String(d || "").slice(0, 10);
-  const before = rows.filter(r => from && day(r.date) < from);
-  const list = rows.filter(r => (!from || day(r.date) >= from) && (!to || day(r.date) <= to));
-  return { prev: from && before.length ? { saldo: before[before.length - 1].saldo } : null, list };
-}
 
 // Bloco de kardex de um produto — usado isolado ou em sequência (grupo/subgrupo)
 function KardexBlock({ data, product, from, to }) {
@@ -85,6 +15,7 @@ function KardexBlock({ data, product, from, to }) {
   const totalIn = view.list.reduce((s, r) => s + r.in, 0);
   const totalOut = view.list.reduce((s, r) => s + r.out, 0);
   const finalSaldo = rows.length ? rows[rows.length - 1].saldo : 0;
+  const finalCost = kardexAverageCost(rows, product);
   const stockMismatch = rows.length && r2(finalSaldo) !== r2(product.stock);
   const today = new Date().toLocaleDateString("pt-BR");
 
@@ -101,8 +32,8 @@ function KardexBlock({ data, product, from, to }) {
         <div className="text-right text-xs">
           <p className="text-gray-500">Estoque atual cadastrado: <b>{r2(product.stock)} {product.unit || "UN"}</b></p>
           <p className="text-gray-500">Saldo final (kardex) — qtd: <b>{r2(finalSaldo)} {product.unit || "UN"}</b></p>
-          <p className="text-gray-500">Custo unitário: <b>{fmtMoney(product.cost_price)}</b></p>
-          <p className="text-gray-500">Valor total do saldo: <b>{fmtMoney(r2((Number(finalSaldo) || 0) * (Number(product.cost_price) || 0)))}</b></p>
+          <p className="text-gray-500">Custo unitário (médio): <b>{fmtMoney(finalCost)}</b></p>
+          <p className="text-gray-500">Valor total do saldo: <b>{fmtMoney(r2((Number(finalSaldo) || 0) * finalCost))}</b></p>
         </div>
       </div>
       {stockMismatch && (
@@ -119,6 +50,8 @@ function KardexBlock({ data, product, from, to }) {
               <th className="p-2 text-left">Histórico / Origem</th>
               <th className="p-2 text-right">Entrada</th>
               <th className="p-2 text-right">Saída</th>
+              <th className="p-2 text-right">Custo Unit.</th>
+              <th className="p-2 text-right">Valor Total</th>
               <th className="p-2 text-right">Saldo</th>
             </tr>
           </thead>
@@ -128,11 +61,13 @@ function KardexBlock({ data, product, from, to }) {
                 <td className="p-2" colSpan={3}>{from ? `Saldo anterior a ${fmtDate(from)}` : ""}</td>
                 <td className="p-2 text-right">—</td>
                 <td className="p-2 text-right">—</td>
+                <td className="p-2 text-right">—</td>
+                <td className="p-2 text-right">—</td>
                 <td className="p-2 text-right font-semibold">{r2(view.prev.saldo)}</td>
               </tr>
             ) : null}
             {view.list.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-gray-400">
+              <tr><td colSpan={8} className="p-8 text-center text-gray-400">
                 Nenhuma movimentação que afete o estoque neste período.<br />
                 <span className="text-[11px]">As movimentações são registradas quando: a NF de entrada é <b>lançada</b> (status "lancada"), a venda é <b>faturada</b>, a produção é <b>concluída</b> (consumo dos insumos e entrada do acabado), há movimentação <b>WMS</b> de entrada/saída ou o inventário é <b>ajustado</b>. Ordens de produção em andamento e requisições pendentes ainda não movimentam o estoque.</span>
               </td></tr>
@@ -144,6 +79,8 @@ function KardexBlock({ data, product, from, to }) {
                 <td className="p-2 text-gray-600">{r.hist}</td>
                 <td className="p-2 text-right text-emerald-700 font-medium">{r.in ? r.in.toLocaleString("pt-BR", { maximumFractionDigits: 3 }) : ""}</td>
                 <td className="p-2 text-right text-red-600 font-medium">{r.out ? r.out.toLocaleString("pt-BR", { maximumFractionDigits: 3 }) : ""}</td>
+                <td className="p-2 text-right text-gray-600">{r.unit_cost ? fmtMoney(r.unit_cost) : ""}</td>
+                <td className="p-2 text-right text-gray-600">{fmtMoney(r2((Number(r.saldo) || 0) * (Number(r.avg_cost) || 0)))}</td>
                 <td className="p-2 text-right font-semibold">{r2(r.saldo)}</td>
               </tr>
             ))}
@@ -154,6 +91,8 @@ function KardexBlock({ data, product, from, to }) {
                 <td colSpan={3} className="p-2 text-xs font-semibold">Totais do período</td>
                 <td className="p-2 text-right text-xs font-semibold text-emerald-700">{r2(totalIn)}</td>
                 <td className="p-2 text-right text-xs font-semibold text-red-600">{r2(totalOut)}</td>
+                <td className="p-2 text-right text-xs font-semibold">{fmtMoney(finalCost)}</td>
+                <td className="p-2 text-right text-xs font-semibold">{fmtMoney(r2((Number(finalSaldo) || 0) * finalCost))}</td>
                 <td className="p-2 text-right text-xs font-semibold">{r2(view.list.length ? view.list[view.list.length - 1].saldo : view.prev.saldo)}</td>
               </tr>
             </tfoot>

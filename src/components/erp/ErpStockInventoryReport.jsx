@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Search, Printer, Loader2, Boxes, AlertTriangle } from "lucide-react";
 import { fmtMoney } from "@/lib/erpUtils";
 import { printElements } from "@/lib/printUtils";
+import { buildKardexRows, kardexAverageCost } from "@/lib/erpKardex";
 
 // Relatório de Inventário (posição de estoque): todos os produtos com controle
 // de estoque — quantidade atual, mínimo, custo unitário e valor total em estoque,
@@ -16,20 +17,37 @@ export default function ErpStockInventoryReport({ user }) {
   const [subgroups, setSubgroups] = useState([]);
   const [groupId, setGroupId] = useState("");
   const [subgroupId, setSubgroupId] = useState("");
+  const [movData, setMovData] = useState(null);
 
   useEffect(() => {
     Promise.all([
       base44.entities.ErpProduct.filter({ user_email: user.email }, "name", 500).catch(() => []),
       base44.entities.ErpStockGroup.filter({ user_email: user.email }, "code", 500).catch(() => []),
       base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "code", 500).catch(() => []),
-    ]).then(([p, g, s]) => {
+      base44.entities.ErpFiscalEntry.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      base44.entities.ErpSalesOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      base44.entities.ErpWarehouseRequisition.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+    ]).then(([p, g, s, entries, sales, productions, moves, inventories, requisitions]) => {
       setProducts(p.filter(x => x.controla_estoque !== false && x.is_active !== false));
       setGroups(g);
       setSubgroups(s);
+      setMovData({ entries, sales, productions, moves, inventories, requisitions });
     }).catch(() => {}).then(() => setLoading(false));
   }, [user.email]);
 
   const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+  // Custo médio por produto (média móvel do kardex: entradas de NF, custo do
+  // inventário e saídas ao custo médio) — fallback: custo cadastrado
+  const costMap = useMemo(() => {
+    const map = {};
+    if (movData) products.forEach(p => {
+      map[p.id] = kardexAverageCost(buildKardexRows(movData, p), p);
+    });
+    return map;
+  }, [movData, products]);
   const rows = products.filter(p => {
     if (subgroupId && p.subgroup_id !== subgroupId) return false;
     if (!subgroupId && groupId && !subgroups.some(s => s.group_id === groupId && s.id === p.subgroup_id)) return false;
@@ -37,7 +55,7 @@ export default function ErpStockInventoryReport({ user }) {
     const t = `${p.code || ""} ${p.name || ""} ${p.category || ""}`.toLowerCase();
     return t.includes(search.toLowerCase());
   });
-  const totalValue = rows.reduce((s, p) => s + ((Number(p.stock) || 0) * (Number(p.cost_price) || 0)), 0);
+  const totalValue = rows.reduce((s, p) => s + ((Number(p.stock) || 0) * (costMap[p.id] ?? (Number(p.cost_price) || 0))), 0);
   const totalQty = rows.reduce((s, p) => s + (Number(p.stock) || 0), 0);
   const belowMin = rows.filter(p => (Number(p.stock) || 0) < (Number(p.min_stock) || 0));
   const today = new Date().toLocaleDateString("pt-BR");
@@ -102,6 +120,7 @@ export default function ErpStockInventoryReport({ user }) {
                 <tr><td colSpan={8} className="p-8 text-center text-gray-400">Nenhum produto encontrado.</td></tr>
               ) : rows.map(p => {
                 const below = (Number(p.stock) || 0) < (Number(p.min_stock) || 0);
+                const cost = costMap[p.id] ?? (Number(p.cost_price) || 0);
                 return (
                   <tr key={p.id} className="border-t hover:bg-gray-50">
                     <td className="p-2 font-mono text-xs">{p.code || "—"}</td>
@@ -109,8 +128,8 @@ export default function ErpStockInventoryReport({ user }) {
                     <td className="p-2 text-xs">{p.unit || "UN"}</td>
                     <td className="p-2 text-right font-medium">{r2(p.stock)}</td>
                     <td className="p-2 text-right text-gray-500">{r2(p.min_stock)}</td>
-                    <td className="p-2 text-right">{fmtMoney(p.cost_price)}</td>
-                    <td className="p-2 text-right font-medium text-indigo-700">{fmtMoney(r2((Number(p.stock) || 0) * (Number(p.cost_price) || 0)))}</td>
+                    <td className="p-2 text-right">{fmtMoney(cost)}</td>
+                    <td className="p-2 text-right font-medium text-indigo-700">{fmtMoney(r2((Number(p.stock) || 0) * cost))}</td>
                     <td className="p-2">
                       {below ? (
                         <span className="text-[10px] px-2 py-0.5 rounded-full text-red-700 bg-red-100 flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3" /> Abaixo do mínimo</span>
