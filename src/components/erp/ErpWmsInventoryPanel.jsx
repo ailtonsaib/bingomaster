@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, Trash2, ClipboardList } from "lucide-react";
+import { Search, Plus, Trash2, ClipboardList, FileDown, FileUp } from "lucide-react";
+import { buildXlsxBlob, downloadBlob } from "@/lib/excelTemplate";
+import { parseXlsxRows } from "@/lib/excelParser";
 import ErpCombobox from "@/components/erp/ErpCombobox";
 import { fmtMoney } from "@/lib/erpUtils";
 import { gerarLancamentoAjusteInventario } from "@/lib/erpInventoryAdjust";
@@ -32,8 +34,9 @@ export default function ErpWmsInventoryPanel({ user }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [counting, setCounting] = useState(null);
-  const [countForm, setCountForm] = useState({ counted_qty: 0, adjust: true, account_id: "" });
+  const [countForm, setCountForm] = useState({ counted_qty: 0, adjust: true, account_id: "", unit_cost: 0 });
   const [saving, setSaving] = useState(false);
+  const fileRef = useRef(null);
 
   const load = async () => {
     setLoading(true);
@@ -59,6 +62,106 @@ export default function ErpWmsInventoryPanel({ user }) {
     return t.includes(search.toLowerCase());
   });
 
+  // Abre a janela de contagem com o custo unitário (informado ou do produto)
+  const openCount = (it) => {
+    setCounting(it);
+    setCountForm({
+      counted_qty: it.counted_qty || 0,
+      adjust: true,
+      account_id: "",
+      unit_cost: Number(it.unit_cost) || Number(products.find(p => p.id === it.product_id)?.cost_price) || 0,
+    });
+  };
+
+  // Converte texto do Excel para número (aceita 1.234,56 / 1234.56 / 1234,56)
+  const num = (v) => {
+    const s = String(v ?? "").trim();
+    if (!s) return 0;
+    const n = s.includes(",") ? parseFloat(s.replace(/\./g, "").replace(",", ".")) : parseFloat(s);
+    return Number.isNaN(n) ? 0 : n;
+  };
+
+  // Exporta a listagem de inventário (respeitando o filtro atual) para conferência física
+  const exportExcel = async () => {
+    if (filtered.length === 0) return alert("Nenhuma contagem na lista para exportar.");
+    const rows = filtered.map(it => {
+      const prod = products.find(p => p.id === it.product_id);
+      return [
+        it.id,
+        it.product_code || "",
+        it.product_name || "",
+        it.warehouse_name || "",
+        it.location_code || "",
+        it.unit || "",
+        Number(it.system_qty) || 0,
+        it.status !== "aberto" ? (Number(it.counted_qty) || 0) : "",
+        Number(it.unit_cost) || Number(prod?.cost_price) || 0,
+      ];
+    });
+    const blob = await buildXlsxBlob(
+      ["ID", "Código", "Produto", "Armazém", "Endereço", "Unidade", "Qtd Sistema", "Qtd Contada", "Custo Unitário"],
+      rows, "Inventário"
+    );
+    downloadBlob(blob, `inventario-${todayISO()}.xlsx`);
+  };
+
+  // Importa a planilha de contagem: registra as quantidades contadas por ID/código;
+  // produto contado que não está na listagem gera uma nova contagem
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const rows = await parseXlsxRows(file);
+      const byId = new Map(items.map(it => [it.id, it]));
+      let updated = 0, created = 0, skipped = 0;
+      for (const r of rows) {
+        const countedRaw = String(r.qtd_contada ?? "").trim();
+        if (!countedRaw) { skipped++; continue; }
+        const counted = num(countedRaw);
+        const code = String(r.codigo ?? "").trim();
+        const cost = num(r.custo_unitario);
+        const id = String(r.id ?? "").trim();
+        const target =
+          (id && byId.get(id)) ||
+          items.find(it => it.status !== "ajustado" && String(it.product_code ?? "").trim() === code &&
+            String(it.warehouse_name ?? "") === String(r.armazem ?? "").trim() &&
+            String(it.location_code ?? "") === String(r.endereco ?? "").trim()) ||
+          items.find(it => it.status !== "ajustado" && String(it.product_code ?? "").trim() === code && code);
+        if (target) {
+          await base44.entities.ErpWmsInventory.update(target.id, {
+            counted_qty: counted,
+            status: "contado",
+            ...(cost > 0 ? { unit_cost: cost } : {}),
+          });
+          updated++;
+        } else if (code) {
+          const prod = products.find(p => String(p.code ?? "").trim() === code);
+          if (prod) {
+            await base44.entities.ErpWmsInventory.create({
+              user_email: user.email,
+              inventory_type: "fisico",
+              product_id: prod.id,
+              product_code: prod.code || "",
+              product_name: prod.name || "",
+              unit: prod.unit || "",
+              warehouse_name: String(r.armazem ?? "").trim(),
+              location_code: String(r.endereco ?? "").trim(),
+              system_qty: Number(prod.stock) || 0,
+              counted_qty: counted,
+              count_date: todayISO(),
+              status: "contado",
+              ...(cost > 0 ? { unit_cost: cost } : {}),
+            });
+            created++;
+          } else skipped++;
+        } else skipped++;
+      }
+      alert(`Importação concluída: ${updated} contagem(ns) atualizada(s), ${created} nova(s) contagem(ns) de produto(s) fora da lista, ${skipped} linha(s) ignorada(s). As contagens ficam com status "Contado" — clique em Contar para ajustar o estoque e gerar o lançamento contábil.`);
+      load();
+    } catch (err) { alert(err.message); }
+  };
+
   const saveCount = async () => {
     setSaving(true);
     try {
@@ -67,6 +170,7 @@ export default function ErpWmsInventoryPanel({ user }) {
       const diff = counted - systemQty;
       const adjust = countForm.adjust && diff !== 0;
       const product = products.find(p => p.id === counting.product_id);
+      const unitCost = Number(countForm.unit_cost) || Number(product?.cost_price) || 0;
       let je = null;
       let adjustValue = 0;
       if (adjust) {
@@ -75,10 +179,10 @@ export default function ErpWmsInventoryPanel({ user }) {
         const account = accounts.find(a => a.id === countForm.account_id);
         if (!account) { alert("Informe a conta contábil do ajuste (sobra/quebra de inventário)."); setSaving(false); return; }
         je = await gerarLancamentoAjusteInventario(user, {
-          product, account, accounts, diff,
+          product, account, accounts, diff, unitCost,
           countDate: counting.count_date ? new Date(`${(counting.count_date).slice(0, 10)}T12:00:00`).toISOString() : undefined,
         });
-        adjustValue = Math.round(Math.abs(diff) * (Number(product?.cost_price) || 0) * 100) / 100;
+        adjustValue = Math.round(Math.abs(diff) * unitCost * 100) / 100;
         if (product) await base44.entities.ErpProduct.update(product.id, { stock: counted });
         await base44.entities.ErpWmsMove.create({
           user_email: user.email,
@@ -106,6 +210,7 @@ export default function ErpWmsInventoryPanel({ user }) {
         adjust_value: adjust ? adjustValue : 0,
         journal_entry_id: je?.id || "",
         journal_entry_number: je?.number || "",
+        unit_cost: unitCost,
       });
       setCounting(null); load();
     } catch (e) { alert(e.message); }
@@ -116,7 +221,12 @@ export default function ErpWmsInventoryPanel({ user }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-semibold text-base">Inventário (Físico / Cíclico)</h2>
-        <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Contagem</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={exportExcel} className="gap-1.5"><FileDown className="w-4 h-4" /> Exportar Excel</Button>
+          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5"><FileUp className="w-4 h-4" /> Importar Contagem</Button>
+          <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4" /> Nova Contagem</Button>
+          <input ref={fileRef} type="file" accept=".xlsx" className="hidden" onChange={handleImportFile} />
+        </div>
       </div>
       <p className="text-xs text-gray-500 -mt-1">Contagem física por produto/endereço. Divergências podem ser ajustadas automaticamente: o saldo do produto é corrigido, a diferença é registrada como movimentação de estoque e o confronto com o estoque real gera o lançamento contábil (sobra: D estoque × C conta informada; quebra: D conta informada × C estoque) pelo valor da diferença × custo do produto.</p>
 
@@ -155,7 +265,7 @@ export default function ErpWmsInventoryPanel({ user }) {
                   <tr
                     key={it.id}
                     className={`border-t hover:bg-gray-50 ${it.status !== "ajustado" ? "cursor-pointer" : ""}`}
-                    onClick={() => { if (it.status !== "ajustado") { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); } }}
+                    onClick={() => { if (it.status !== "ajustado") openCount(it); }}
                   >
                     <td className="p-2 text-xs">{(it.count_date || "").slice(0, 10) || "—"}</td>
                     <td className="p-2 text-xs">{to ? to.label : it.inventory_type}</td>
@@ -179,7 +289,7 @@ export default function ErpWmsInventoryPanel({ user }) {
                     </td>
                     <td className="p-2 text-right whitespace-nowrap">
                       {it.status !== "ajustado" && (
-                        <button title="Registrar Contagem" onClick={() => { setCounting(it); setCountForm({ counted_qty: it.counted_qty || 0, adjust: true, account_id: "" }); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-700"><ClipboardList className="w-3.5 h-3.5" /> Contar</button>
+                        <button title="Registrar Contagem" onClick={() => openCount(it)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-700"><ClipboardList className="w-3.5 h-3.5" /> Contar</button>
                       )}
                       <button title="Excluir" onClick={async e => { e.stopPropagation(); if (confirm("Excluir esta contagem?")) { await base44.entities.ErpWmsInventory.delete(it.id); load(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
@@ -221,7 +331,8 @@ export default function ErpWmsInventoryPanel({ user }) {
               {countForm.adjust && (Number(countForm.counted_qty) || 0) !== (Number(counting.system_qty) || 0) && (() => {
                 const d = (Number(countForm.counted_qty) || 0) - (Number(counting.system_qty) || 0);
                 const prod = products.find(p => p.id === counting.product_id);
-                const val = Math.abs(d) * (Number(prod?.cost_price) || 0);
+                const unitCost = Number(countForm.unit_cost) || Number(prod?.cost_price) || 0;
+                const val = Math.abs(d) * unitCost;
                 const acc = accounts.find(a => a.id === countForm.account_id);
                 return (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
@@ -234,6 +345,16 @@ export default function ErpWmsInventoryPanel({ user }) {
                         : "Débito na conta informada (quebras/perdas de inventário) × crédito na conta de estoque do produto."}
                       {" "}Conta de estoque do produto: <b>{prod?.account_estoque_name || "não configurada no cadastro do produto"}</b>.
                     </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Custo Unitário (R$)</Label>
+                        <Input type="number" step="0.0001" value={countForm.unit_cost} onChange={e => setCountForm(p => ({ ...p, unit_cost: e.target.value }))} className="mt-1 h-8 text-sm" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Custo Total do Ajuste</Label>
+                        <p className="mt-2 text-sm font-semibold text-amber-800">{fmtMoney(val)}</p>
+                      </div>
+                    </div>
                     <div>
                       <Label className="text-xs font-medium text-gray-600">Conta Contábil do Ajuste *</Label>
                       <div className="mt-1">
