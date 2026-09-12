@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Printer, Loader2, ArrowLeftRight, AlertTriangle } from "lucide-react";
-import { fmtDate } from "@/lib/erpUtils";
+import { fmtDate, fmtMoney } from "@/lib/erpUtils";
 import { printElements } from "@/lib/printUtils";
 import ErpCombobox from "@/components/erp/ErpCombobox";
 
@@ -100,7 +100,9 @@ function KardexBlock({ data, product, from, to }) {
         </div>
         <div className="text-right text-xs">
           <p className="text-gray-500">Estoque atual cadastrado: <b>{r2(product.stock)} {product.unit || "UN"}</b></p>
-          <p className="text-gray-500">Saldo calculado (kardex): <b>{r2(finalSaldo)}</b></p>
+          <p className="text-gray-500">Saldo final (kardex) — qtd: <b>{r2(finalSaldo)} {product.unit || "UN"}</b></p>
+          <p className="text-gray-500">Custo unitário: <b>{fmtMoney(product.cost_price)}</b></p>
+          <p className="text-gray-500">Valor total do saldo: <b>{fmtMoney(r2((Number(finalSaldo) || 0) * (Number(product.cost_price) || 0)))}</b></p>
         </div>
       </div>
       {stockMismatch && (
