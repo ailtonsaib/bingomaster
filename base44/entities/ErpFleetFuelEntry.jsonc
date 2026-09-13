@@ -1,0 +1,123 @@
+{
+  "name": "ErpFleetFuelEntry",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID do ve\u00edculo (ErpFleetVehicle)"
+    },
+    "vehicle_plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (cache)"
+    },
+    "driver_id": {
+      "type": "string",
+      "description": "ID do motorista (ErpFleetDriver)"
+    },
+    "driver_name": {
+      "type": "string",
+      "description": "Nome do motorista (cache)"
+    },
+    "entry_date": {
+      "type": "string",
+      "description": "Data do abastecimento (ISO)"
+    },
+    "fuel_type": {
+      "type": "string",
+      "enum": [
+        "diesel",
+        "gasolina",
+        "etanol",
+        "gnv"
+      ],
+      "default": "diesel",
+      "description": "Combust\u00edvel abastecido"
+    },
+    "liters": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade abastecida (litros)"
+    },
+    "price_per_liter": {
+      "type": "number",
+      "default": 0,
+      "description": "Pre\u00e7o por litro (R$)"
+    },
+    "total_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do abastecimento (R$)"
+    },
+    "odometer": {
+      "type": "number",
+      "default": 0,
+      "description": "Leitura do od\u00f4metro no abastecimento (km) \u2014 base do controle de km rodado e do consumo"
+    },
+    "gas_station": {
+      "type": "string",
+      "description": "Posto de combust\u00edvel"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "vehicle_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

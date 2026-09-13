@@ -1,0 +1,118 @@
+{
+  "name": "ErpFleetTire",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID do ve\u00edculo (ErpFleetVehicle)"
+    },
+    "vehicle_plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (cache)"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marca do pneu"
+    },
+    "model": {
+      "type": "string",
+      "description": "Modelo do pneu"
+    },
+    "size": {
+      "type": "string",
+      "description": "Medida do pneu (ex.: 295/80R22.5)"
+    },
+    "dot": {
+      "type": "string",
+      "description": "C\u00f3digo DOT (fabrica\u00e7\u00e3o)"
+    },
+    "position": {
+      "type": "string",
+      "description": "Posi\u00e7\u00e3o no ve\u00edculo (ex.: DDE, TIE, PTE)"
+    },
+    "purchase_date": {
+      "type": "string",
+      "description": "Data de compra/instala\u00e7\u00e3o (ISO)"
+    },
+    "purchase_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo de compra/instala\u00e7\u00e3o (R$)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "novo",
+        "em_uso",
+        "reserva",
+        "recapado",
+        "descartado"
+      ],
+      "default": "em_uso",
+      "description": "Situa\u00e7\u00e3o do pneu: novo, em_uso, reserva, recapado ou descartado"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es (sulco, desgaste, Recapagem etc.)"
+    }
+  },
+  "required": [
+    "user_email",
+    "vehicle_id",
+    "brand"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

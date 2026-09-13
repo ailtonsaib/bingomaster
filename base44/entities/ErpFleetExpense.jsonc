@@ -1,0 +1,104 @@
+{
+  "name": "ErpFleetExpense",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID do ve\u00edculo (ErpFleetVehicle)"
+    },
+    "vehicle_plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (cache)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "pedagio",
+        "multa",
+        "seguro",
+        "ipva_licenciamento",
+        "estacionamento",
+        "lavagem",
+        "outros"
+      ],
+      "default": "outros",
+      "description": "Categoria do gasto"
+    },
+    "expense_date": {
+      "type": "string",
+      "description": "Data do gasto (ISO)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do gasto"
+    },
+    "value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor do gasto (R$)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "vehicle_id",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

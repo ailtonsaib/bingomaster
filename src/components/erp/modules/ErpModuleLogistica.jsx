@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Truck, Users } from "lucide-react";
+import { Truck, Users, Fuel, Wrench, CircleDot, Wallet, BarChart3 } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
+import ErpFleetReportsPanel from "@/components/erp/ErpFleetReportsPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const VEHICLE_STATUS = [
@@ -33,6 +34,34 @@ const DRIVER_STATUS = [
 ];
 
 const CNH_CATEGORIES = ["A", "B", "AB", "C", "AC", "D", "AD", "E", "AE"].map(v => ({ value: v, label: v }));
+
+const MAINT_TYPES = [
+  { value: "preventiva", label: "Preventiva", color: "bg-blue-100 text-blue-700" },
+  { value: "corretiva", label: "Corretiva", color: "bg-red-100 text-red-700" },
+];
+
+const MAINT_STATUS = [
+  { value: "planejada", label: "Planejada", color: "bg-amber-100 text-amber-700" },
+  { value: "realizada", label: "Realizada", color: "bg-emerald-100 text-emerald-700" },
+];
+
+const TIRE_STATUS = [
+  { value: "novo", label: "Novo", color: "bg-blue-100 text-blue-700" },
+  { value: "em_uso", label: "Em Uso", color: "bg-emerald-100 text-emerald-700" },
+  { value: "reserva", label: "Reserva", color: "bg-gray-100 text-gray-600" },
+  { value: "recapado", label: "Recapado", color: "bg-amber-100 text-amber-700" },
+  { value: "descartado", label: "Descartado", color: "bg-red-100 text-red-700" },
+];
+
+const EXPENSE_CATEGORIES = [
+  { value: "pedagio", label: "Pedágio", color: "bg-blue-100 text-blue-700" },
+  { value: "multa", label: "Multa", color: "bg-red-100 text-red-700" },
+  { value: "seguro", label: "Seguro", color: "bg-indigo-100 text-indigo-700" },
+  { value: "ipva_licenciamento", label: "IPVA/Licenciamento", color: "bg-purple-100 text-purple-700" },
+  { value: "estacionamento", label: "Estacionamento", color: "bg-gray-100 text-gray-600" },
+  { value: "lavagem", label: "Lavagem", color: "bg-cyan-100 text-cyan-700" },
+  { value: "outros", label: "Outros", color: "bg-amber-100 text-amber-700" },
+];
 
 const CRUD_CONFIGS = {
   veiculos: {
@@ -87,11 +116,116 @@ const CRUD_CONFIGS = {
     ],
     searchKeys: ["name", "cpf", "cnh_number"],
   },
+  abastecimentos: {
+    entityName: "ErpFleetFuelEntry",
+    title: "Controle de Abastecimentos e Combustível",
+    fields: [
+      { key: "vehicle_id", label: "Veículo", type: "entity-select", entity: "ErpFleetVehicle", labelKey: "plate", cacheKey: "vehicle_plate", required: true },
+      { key: "driver_id", label: "Motorista", type: "entity-select", entity: "ErpFleetDriver", cacheKey: "driver_name" },
+      { key: "entry_date", label: "Data", inputType: "date", required: true },
+      { key: "fuel_type", label: "Combustível", type: "select", options: FUEL_TYPES, required: true },
+      { key: "liters", label: "Litros", type: "number", required: true },
+      { key: "price_per_liter", label: "Preço por Litro (R$)", type: "number" },
+      { key: "total_value", label: "Valor Total (R$)", type: "number", required: true },
+      { key: "odometer", label: "Odômetro (km)", type: "number" },
+      { key: "gas_station", label: "Posto" },
+      { key: "notes", label: "Observações", full: true },
+    ],
+    columns: [
+      { key: "entry_date", label: "Data" },
+      { key: "vehicle_plate", label: "Veículo" },
+      { key: "driver_name", label: "Motorista" },
+      { key: "liters", label: "Litros" },
+      { key: "odometer", label: "Odômetro (km)" },
+      { key: "price_per_liter", label: "Preço/L", type: "money" },
+      { key: "total_value", label: "Total", type: "money" },
+      { key: "gas_station", label: "Posto" },
+    ],
+    searchKeys: ["vehicle_plate", "driver_name", "gas_station"],
+  },
+  manutencoes: {
+    entityName: "ErpFleetMaintenance",
+    title: "Cadastro de Manutenção de Veículos",
+    fields: [
+      { key: "vehicle_id", label: "Veículo", type: "entity-select", entity: "ErpFleetVehicle", labelKey: "plate", cacheKey: "vehicle_plate", required: true },
+      { key: "maintenance_type", label: "Tipo", type: "select", options: MAINT_TYPES, required: true },
+      { key: "status", label: "Situação", type: "select", options: MAINT_STATUS, required: true },
+      { key: "service_date", label: "Data do Serviço", inputType: "date", required: true },
+      { key: "odometer", label: "Odômetro no Serviço (km)", type: "number" },
+      { key: "description", label: "Descrição do Serviço", required: true, full: true },
+      { key: "cost", label: "Custo (R$)", type: "number" },
+      { key: "supplier_name", label: "Oficina/Fornecedor" },
+      { key: "next_service_date", label: "Próxima Manutenção (data)", inputType: "date" },
+      { key: "next_odometer", label: "Próxima por Km", type: "number" },
+      { key: "notes", label: "Observações", full: true },
+    ],
+    columns: [
+      { key: "service_date", label: "Data" },
+      { key: "vehicle_plate", label: "Veículo" },
+      { key: "maintenance_type", label: "Tipo", type: "badge", options: MAINT_TYPES },
+      { key: "description", label: "Serviço" },
+      { key: "status", label: "Situação", type: "badge", options: MAINT_STATUS },
+      { key: "cost", label: "Custo", type: "money" },
+      { key: "next_service_date", label: "Próxima" },
+    ],
+    searchKeys: ["vehicle_plate", "description", "supplier_name"],
+  },
+  pneus: {
+    entityName: "ErpFleetTire",
+    title: "Controle de Pneus",
+    fields: [
+      { key: "vehicle_id", label: "Veículo", type: "entity-select", entity: "ErpFleetVehicle", labelKey: "plate", cacheKey: "vehicle_plate", required: true },
+      { key: "brand", label: "Marca", required: true },
+      { key: "model", label: "Modelo" },
+      { key: "size", label: "Medida (ex.: 295/80R22.5)" },
+      { key: "dot", label: "DOT" },
+      { key: "position", label: "Posição (ex.: DDE, TIE)" },
+      { key: "purchase_date", label: "Data de Compra", inputType: "date" },
+      { key: "purchase_cost", label: "Custo (R$)", type: "number" },
+      { key: "status", label: "Situação", type: "select", options: TIRE_STATUS, required: true },
+      { key: "notes", label: "Observações", full: true },
+    ],
+    columns: [
+      { key: "vehicle_plate", label: "Veículo" },
+      { key: "brand", label: "Marca" },
+      { key: "size", label: "Medida" },
+      { key: "position", label: "Posição" },
+      { key: "status", label: "Situação", type: "badge", options: TIRE_STATUS },
+      { key: "purchase_date", label: "Compra" },
+      { key: "purchase_cost", label: "Custo", type: "money" },
+    ],
+    searchKeys: ["vehicle_plate", "brand", "model", "size", "position"],
+  },
+  gastos: {
+    entityName: "ErpFleetExpense",
+    title: "Controle de Gastos da Frota",
+    fields: [
+      { key: "vehicle_id", label: "Veículo", type: "entity-select", entity: "ErpFleetVehicle", labelKey: "plate", cacheKey: "vehicle_plate", required: true },
+      { key: "category", label: "Categoria", type: "select", options: EXPENSE_CATEGORIES, required: true },
+      { key: "expense_date", label: "Data", inputType: "date", required: true },
+      { key: "description", label: "Descrição", required: true },
+      { key: "value", label: "Valor (R$)", type: "number", required: true },
+      { key: "notes", label: "Observações", full: true },
+    ],
+    columns: [
+      { key: "expense_date", label: "Data" },
+      { key: "vehicle_plate", label: "Veículo" },
+      { key: "category", label: "Categoria", type: "badge", options: EXPENSE_CATEGORIES },
+      { key: "description", label: "Descrição" },
+      { key: "value", label: "Valor", type: "money" },
+    ],
+    searchKeys: ["vehicle_plate", "description", "category"],
+  },
 };
 
 const TABS = [
   { id: "veiculos", label: "Veículos", icon: Truck },
   { id: "motoristas", label: "Motoristas", icon: Users },
+  { id: "abastecimentos", label: "Abastecimentos", icon: Fuel },
+  { id: "manutencoes", label: "Manutenções", icon: Wrench },
+  { id: "pneus", label: "Pneus", icon: CircleDot },
+  { id: "gastos", label: "Gastos", icon: Wallet },
+  { id: "relatorios", label: "Relatórios", icon: BarChart3 },
 ];
 
 export default function ErpModuleLogistica({ user }) {
@@ -99,7 +233,9 @@ export default function ErpModuleLogistica({ user }) {
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="purple" />
-      <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />
+      {sub === "relatorios"
+        ? <ErpFleetReportsPanel user={user} />
+        : <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />}
     </div>
   );
 }

@@ -1,0 +1,126 @@
+{
+  "name": "ErpFleetMaintenance",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID do ve\u00edculo (ErpFleetVehicle)"
+    },
+    "vehicle_plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (cache)"
+    },
+    "maintenance_type": {
+      "type": "string",
+      "enum": [
+        "preventiva",
+        "corretiva"
+      ],
+      "default": "preventiva",
+      "description": "Tipo de manuten\u00e7\u00e3o: preventiva ou corretiva"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planejada",
+        "realizada"
+      ],
+      "default": "realizada",
+      "description": "Situa\u00e7\u00e3o: planejada (agendada) ou realizada"
+    },
+    "service_date": {
+      "type": "string",
+      "description": "Data do servi\u00e7o (ISO)"
+    },
+    "odometer": {
+      "type": "number",
+      "default": 0,
+      "description": "Od\u00f4metro no servi\u00e7o (km)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do servi\u00e7o realizado (troca de \u00f3leo, revis\u00e3o, freios etc.)"
+    },
+    "cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo do servi\u00e7o (R$)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Oficina/fornecedor"
+    },
+    "next_service_date": {
+      "type": "string",
+      "description": "Data prevista da pr\u00f3xima manuten\u00e7\u00e3o (ISO)"
+    },
+    "next_odometer": {
+      "type": "number",
+      "default": 0,
+      "description": "Od\u00f4metro previsto para a pr\u00f3xima manuten\u00e7\u00e3o (km)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "vehicle_id",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
