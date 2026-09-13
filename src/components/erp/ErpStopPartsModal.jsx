@@ -9,6 +9,7 @@ import { fmtMoney } from "@/lib/erpUtils";
 const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
 const TYPE_FILTERS = [
+  { value: "consumo", label: "Consumo (escritório, peças, EPIs)" },
   { value: "insumo", label: "Insumo (material de consumo)" },
   { value: "materia_prima", label: "Matéria-Prima" },
   { value: "todos", label: "Todos os produtos" },

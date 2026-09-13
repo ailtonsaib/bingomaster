@@ -26,10 +26,11 @@
         "produto_acabado",
         "produto_em_processo",
         "insumo",
+        "consumo",
         "servico"
       ],
       "default": "mercadoria",
-      "description": "Tipo: materia_prima (ind\u00fastria), mercadoria (revenda/com\u00e9rcio), produto_acabado (ind\u00fastria), produto_em_processo, insumo, servico"
+      "description": "Tipo: materia_prima (ind\u00fastria), mercadoria (revenda/com\u00e9rcio), produto_acabado (ind\u00fastria), produto_em_processo, insumo, consumo (material de escrit\u00f3rio, pe\u00e7as, EPIs e itens de consumo interno), servico"
     },
     "category": {
       "type": "string",

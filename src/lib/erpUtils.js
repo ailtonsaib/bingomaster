@@ -4,6 +4,7 @@ export const PRODUCT_TYPES = [
   { key: "produto_acabado", label: "Produto Acabado", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
   { key: "produto_em_processo", label: "Em Processo", color: "text-purple-700 bg-purple-50 border-purple-200" },
   { key: "insumo", label: "Insumo", color: "text-cyan-700 bg-cyan-50 border-cyan-200" },
+  { key: "consumo", label: "Consumo", color: "text-orange-700 bg-orange-50 border-orange-200" },
   { key: "servico", label: "Serviço", color: "text-gray-700 bg-gray-50 border-gray-200" },
 ];
 
