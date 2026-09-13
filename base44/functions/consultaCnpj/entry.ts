@@ -118,6 +118,29 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: `Não foi possível consultar o CNPJ. ${ultimoErro || ''}`.trim() });
     }
 
+    // Complementa o logradouro e o código IBGE via ViaCEP quando a fonte não retornar o endereço
+    if (!dados.logradouro && dados.cep) {
+      try {
+        const respCep = await fetch(`https://viacep.com.br/ws/${dados.cep}/json/`, {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (respCep.ok) {
+          const c = await respCep.json();
+          if (!c?.erro) {
+            if (c.logradouro) {
+              dados.descricao_tipo_de_logradouro = c.logradouro.split(' ')[0];
+              dados.logradouro = c.logradouro;
+            }
+            if (!dados.codigo_ibge_municipio && c.ibge) dados.codigo_ibge_municipio = String(c.ibge);
+            if (!dados.bairro && c.bairro) dados.bairro = c.bairro;
+            if (!dados.municipio && c.localidade) dados.municipio = c.localidade;
+            if (!dados.uf && c.uf) dados.uf = c.uf;
+          }
+        }
+      } catch (e) { /* best-effort: ignora falha na complementação */ }
+    }
+
     // Complementa o telefone via ReceitaWS quando a BrasilAPI não retornar
     if (!dados.telefone && dados.fonte === 'brasilapi') {
       try {
