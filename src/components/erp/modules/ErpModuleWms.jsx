@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Warehouse, MapPin, ArrowLeftRight, ClipboardList } from "lucide-react";
+import { Warehouse, MapPin, ArrowLeftRight, ClipboardList, ArrowDownCircle } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpWmsMovePanel from "@/components/erp/ErpWmsMovePanel";
 import ErpWmsInventoryPanel from "@/components/erp/ErpWmsInventoryPanel";
+import ErpWmsReceivingPanel from "@/components/erp/ErpWmsReceivingPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const CRUD_CONFIGS = {
@@ -56,6 +57,7 @@ const CRUD_CONFIGS = {
 };
 
 const TABS = [
+  { id: "recebimento", label: "Recebimento NF", icon: ArrowDownCircle },
   { id: "armazens", label: "Armazéns", icon: Warehouse },
   { id: "enderecos", label: "Endereçamento", icon: MapPin },
   { id: "movimentos", label: "Movimentações", icon: ArrowLeftRight },
@@ -63,10 +65,11 @@ const TABS = [
 ];
 
 export default function ErpModuleWms({ user }) {
-  const [sub, setSub] = useState("armazens");
+  const [sub, setSub] = useState("recebimento");
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="indigo" />
+      {sub === "recebimento" && <ErpWmsReceivingPanel user={user} />}
       {sub === "movimentos" && <ErpWmsMovePanel user={user} />}
       {sub === "inventario" && <ErpWmsInventoryPanel user={user} />}
       {(sub === "armazens" || sub === "enderecos") && <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />}
