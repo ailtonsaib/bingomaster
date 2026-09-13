@@ -74,7 +74,7 @@ export default function ErpProductionLineManager({ user }) {
                   <td className="p-2">{ln.stage_name || "—"}</td>
                   <td className="p-2 text-xs text-gray-600">
                     {(ln.products || []).length
-                      ? (ln.products || []).map(p => p.product_name).join(", ")
+                      ? (ln.products || []).map(p => `${p.product_name}${Number(p.units_per_hour) > 0 ? ` (${p.units_per_hour}/h)` : ""}`).join(", ")
                       : <span className="text-gray-400">—</span>}
                   </td>
                   <td className="p-2 text-center">{ln.is_active !== false ? "✅" : "—"}</td>
@@ -117,7 +117,7 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
     if (!productId) return;
     if (items.some(i => i.product_id === productId)) { alert("Este produto já está cadastrado nesta linha."); setProductId(""); return; }
     const p = products.find(x => x.id === productId);
-    setItems(prev => [...prev, { product_id: productId, product_name: p?.name || "", product_code: p?.code || "" }]);
+    setItems(prev => [...prev, { product_id: productId, product_name: p?.name || "", product_code: p?.code || "", units_per_hour: 0 }]);
     setProductId("");
   };
 
@@ -173,8 +173,19 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
             <div className="p-3 space-y-2">
               {items.length === 0 && <p className="text-center text-gray-400 text-xs py-2">Nenhum produto vinculado à linha.</p>}
               {items.map((it, i) => (
-                <div key={i} className="flex items-center justify-between border rounded-md px-2 py-1.5 bg-gray-50/50">
-                  <span className="text-xs">{it.product_code ? `${it.product_code} — ` : ""}{it.product_name}</span>
+                <div key={i} className="flex items-center gap-2 border rounded-md px-2 py-1.5 bg-gray-50/50">
+                  <span className="text-xs flex-1">{it.product_code ? `${it.product_code} — ` : ""}{it.product_name}</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={it.units_per_hour ?? 0}
+                      onChange={e => setItems(prev => prev.map((x, j) => j === i ? { ...x, units_per_hour: Number(e.target.value) || 0 } : x))}
+                      placeholder="0"
+                      title="Velocidade nominal — quantidade produzida por hora"
+                      className="w-24 h-7 rounded-md border border-input bg-white px-2 text-xs text-right"
+                    />
+                    <span className="text-[11px] text-gray-500 whitespace-nowrap">un./hora</span>
+                  </div>
                   <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                 </div>
               ))}
@@ -185,7 +196,7 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
                 </select>
                 <Button size="sm" variant="outline" onClick={addProduct} className="gap-1.5 h-8"><Plus className="w-3.5 h-3.5" /> Adicionar</Button>
               </div>
-              <p className="text-[11px] text-gray-500">O mesmo produto pode ser cadastrado em linhas diferentes — ele apenas não pode repetir dentro da mesma linha.</p>
+              <p className="text-[11px] text-gray-500">O mesmo produto pode ser cadastrado em linhas diferentes — ele apenas não pode repetir dentro da mesma linha. A velocidade nominal (un./hora) é a capacidade de cada produto na linha e serve de base para o cálculo da eficiência de produção: em uma produção de 8 horas, uma linha de 1.000 un./hora deveria produzir 8.000 unidades.</p>
             </div>
           </div>
 
