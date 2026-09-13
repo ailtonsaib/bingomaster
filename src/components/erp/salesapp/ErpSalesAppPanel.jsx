@@ -15,16 +15,21 @@ export default function ErpSalesAppPanel({ user }) {
   const [expanded, setExpanded] = useState(null);
   const [busyId, setBusyId] = useState("");
   const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [sellerFilter, setSellerFilter] = useState("");
+  const [vSearch, setVSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
-      const [os, ps] = await Promise.all([
+      const [os, ps, cs] = await Promise.all([
         base44.entities.ErpSalesAppOrder.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpCustomer.filter({ user_email: user.email }, "-created_date", 500),
       ]);
       setOrders(os);
       setProducts(ps.filter(p => p.is_active !== false));
+      setCustomers(cs.filter(c => c.is_active !== false));
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -112,6 +117,36 @@ export default function ErpSalesAppPanel({ user }) {
     setBusyId("");
   };
 
+  // Acompanhamento de visitas: verde = cliente fez pedido, amarelo = visitado sem venda, cinza = sem visita
+  const VISIT_STATUS = {
+    vendido: { label: "Vendeu", color: "bg-emerald-100 text-emerald-700", border: "border-l-emerald-500" },
+    sem_venda: { label: "Sem venda", color: "bg-amber-100 text-amber-700", border: "border-l-amber-400" },
+    pendente: { label: "Sem visita", color: "bg-gray-100 text-gray-600", border: "border-l-gray-300" },
+  };
+  const VISIT_FREQ = { semanal: "Semanal", bissemanal: "Bissemanal", quinzenal: "Quinzenal", mensal: "Mensal" };
+  const WEEKDAYS = { segunda: "Segunda", terca: "Terça", quarta: "Quarta", quinta: "Quinta", sexta: "Sexta", sabado: "Sábado" };
+
+  // Visita sem venda: o vendedor informa o motivo e o cliente fica amarelo — pode voltar depois e vender
+  const handleNoSale = async (c) => {
+    const reason = prompt(`Motivo da não venda para ${c.name}:`);
+    if (!reason || !reason.trim()) { alert("Informe o motivo da não venda."); return; }
+    setBusyId(c.id);
+    try {
+      await base44.entities.ErpCustomer.update(c.id, {
+        visit_status: "sem_venda",
+        no_sale_reason: reason.trim(),
+        last_visit_date: new Date().toISOString(),
+      });
+      load();
+    } catch (e) { alert(e.message); }
+    setBusyId("");
+  };
+
+  const visitList = customers.filter(c =>
+    (!sellerFilter || c.vendedor_id === sellerFilter) &&
+    [c.name, c.city, c.district, c.vendedor_name].map(v => String(v ?? "")).join(" ").toLowerCase().includes(vSearch.toLowerCase())
+  );
+
   const opLabel = (v) => (OPERATIONS.find(o => o.value === v) || {}).label || v;
 
   const renderCard = (o) => {
@@ -179,6 +214,7 @@ export default function ErpSalesAppPanel({ user }) {
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
           {[
             { id: "pedidos", label: `Pedidos (${orders.length})` },
+            { id: "visitas", label: `Visitas (${customers.length})` },
             { id: "aprovacoes", label: `Aprovações (${pendentes.length})` },
             { id: "empenhos", label: "Saldos / Empenhos" },
           ].map(t => (
@@ -200,6 +236,60 @@ export default function ErpSalesAppPanel({ user }) {
         ) : (
           <div className="grid gap-2 md:grid-cols-2">{orders.map(renderCard)}</div>
         )
+      ) : tab === "visitas" ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={vSearch} onChange={e => setVSearch(e.target.value)} placeholder="Buscar cliente, cidade, bairro..." className="w-full h-9 rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" />
+            </div>
+            <select value={sellerFilter} onChange={e => setSellerFilter(e.target.value)} className="h-9 rounded-md border border-input bg-white px-3 text-sm">
+              <option value="">Vendedor: todos</option>
+              {[...new Set(customers.map(c => c.vendedor_id).filter(Boolean))].map(id => (
+                <option key={id} value={id}>{customers.find(c => c.vendedor_id === id)?.vendedor_name || "—"}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 whitespace-nowrap">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1 align-middle"></span>fez pedido
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 ml-2 mr-1 align-middle"></span>visitado sem venda
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-300 ml-2 mr-1 align-middle"></span>sem visita
+            </p>
+          </div>
+          {visitList.length === 0 ? (
+            <div className="bg-white rounded-xl border p-8 text-center text-gray-400">Nenhum cliente ativo no filtro.</div>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {visitList.map(c => {
+                const st = VISIT_STATUS[c.visit_status] || VISIT_STATUS.pendente;
+                const days = [c.visit_day_1, c.visit_day_2].filter(Boolean).map(d => WEEKDAYS[d] || d).join(" e ");
+                return (
+                  <div key={c.id} className={`bg-white rounded-xl border border-l-4 p-3 space-y-2 ${st.border}`}>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <p className="font-semibold text-sm">{c.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {c.city || "—"}{c.district ? ` / ${c.district}` : ""} · Vendedor: {c.vendedor_name || "—"}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Visita: {VISIT_FREQ[c.visit_frequency] || "não configurada"}{days ? ` — ${days}` : ""}
+                      {c.last_visit_date ? ` · Última: ${fmtDate(c.last_visit_date)}` : ""}
+                    </p>
+                    {c.no_sale_reason && <p className="text-xs text-amber-700">Motivo da não venda: {c.no_sale_reason}</p>}
+                    <div className="flex gap-1.5 flex-wrap pt-2 border-t">
+                      <Button size="sm" className="h-7 bg-emerald-600 hover:bg-emerald-700" onClick={() => setFormOrder({ seller_id: c.vendedor_id || "", customer_id: c.id })}>Fazer Pedido</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-amber-700 border-amber-300" disabled={busyId === c.id} onClick={() => handleNoSale(c)}>
+                        {busyId === c.id ? "Salvando..." : "Visita sem Venda"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       ) : tab === "aprovacoes" ? (
         pendentes.length === 0 ? (
           <div className="bg-white rounded-xl border p-8 text-center text-gray-400">Nenhum pedido aguardando aprovação comercial.</div>

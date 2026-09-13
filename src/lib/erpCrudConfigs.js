@@ -268,10 +268,35 @@ export const ERP_CRUD_CONFIGS = {
         "À vista", "7 dias", "14 dias", "21 dias", "28 dias", "30 dias", "45 dias", "60 dias",
         "15/30 dias", "15/30/45 dias", "21/28/35/42 dias", "30/60 dias", "30/60/90 dias", "30/45/60/75/90 dias",
       ], placeholder: "Selecione uma condição ou digite uma nova" },
+      { key: "visit_frequency", label: "Frequência de Visita", type: "select", options: [
+        { value: "semanal", label: "Semanal" }, { value: "bissemanal", label: "Bissemanal (2× por semana)" },
+        { value: "quinzenal", label: "Quinzenal" }, { value: "mensal", label: "Mensal" },
+      ] },
+      { key: "visit_day_1", label: "Dia de Visita", type: "select", options: [
+        { value: "segunda", label: "Segunda-feira" }, { value: "terca", label: "Terça-feira" }, { value: "quarta", label: "Quarta-feira" },
+        { value: "quinta", label: "Quinta-feira" }, { value: "sexta", label: "Sexta-feira" }, { value: "sabado", label: "Sábado" },
+      ] },
+      { key: "visit_day_2", label: "Dia de Visita 2 (bissemanal)", type: "select", options: [
+        { value: "segunda", label: "Segunda-feira" }, { value: "terca", label: "Terça-feira" }, { value: "quarta", label: "Quarta-feira" },
+        { value: "quinta", label: "Quinta-feira" }, { value: "sexta", label: "Sexta-feira" }, { value: "sabado", label: "Sábado" },
+      ] },
       { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
-    columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ", render: it => it.cpf_cnpj ? maskCpfCnpj(it.cpf_cnpj) : "—" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" }, { key: "is_active", label: "Ativo", type: "bool" }],
-    searchKeys: ["name", "cpf_cnpj", "city", "vendedor_name", "channel_name"],
+    columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ", render: it => it.cpf_cnpj ? maskCpfCnpj(it.cpf_cnpj) : "—" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" },
+      { key: "visit_frequency", label: "Visita", render: it => {
+        const F = { semanal: "Semanal", bissemanal: "Bissemanal", quinzenal: "Quinzenal", mensal: "Mensal" };
+        if (!it.visit_frequency) return "—";
+        const cap = d => ({ segunda: "Segunda", terca: "Terça", quarta: "Quarta", quinta: "Quinta", sexta: "Sexta", sabado: "Sábado" })[d] || d;
+        const days = [it.visit_day_1, it.visit_day_2].filter(Boolean).map(cap).join(" e ");
+        return `${F[it.visit_frequency] || it.visit_frequency}${days ? ` — ${days}` : ""}`;
+      } },
+      { key: "visit_status", label: "Última Visita", type: "badge", options: [
+        { value: "vendido", label: "Vendeu", color: "bg-emerald-100 text-emerald-700" },
+        { value: "sem_venda", label: "Sem venda", color: "bg-amber-100 text-amber-700" },
+        { value: "pendente", label: "Sem visita", color: "bg-gray-100 text-gray-600" },
+      ] },
+      { key: "is_active", label: "Ativo", type: "bool" }],
+    searchKeys: ["name", "cpf_cnpj", "city", "vendedor_name", "channel_name", "no_sale_reason"],
   },
   requisicoes: {
     entityName: "ErpRequisition", title: "Solicitações de Compra",

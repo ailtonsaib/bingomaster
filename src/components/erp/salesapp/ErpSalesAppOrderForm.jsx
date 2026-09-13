@@ -176,6 +176,12 @@ export default function ErpSalesAppOrderForm({ user, order, empenhoMap, onClose,
       };
       if (order?.id) await base44.entities.ErpSalesAppOrder.update(order.id, payload);
       else await base44.entities.ErpSalesAppOrder.create(payload);
+      // Cliente fez pedido — marca em verde no acompanhamento de visitas do App do Vendedor
+      if (customer) await base44.entities.ErpCustomer.update(customer.id, {
+        visit_status: "vendido",
+        no_sale_reason: "",
+        last_visit_date: new Date().toISOString(),
+      });
       onSaved();
     } catch (e) { alert(e.message); }
     setSaving(false);

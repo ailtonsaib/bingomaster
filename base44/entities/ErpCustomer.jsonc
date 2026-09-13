@@ -117,6 +117,59 @@
       "type": "string",
       "description": "N\u00famero SUFRAMA do cliente (zona franca \u2014 usada na NF-e de sa\u00edda)"
     },
+    "visit_frequency": {
+      "type": "string",
+      "enum": [
+        "semanal",
+        "bissemanal",
+        "quinzenal",
+        "mensal"
+      ],
+      "default": "semanal",
+      "description": "Frequ\u00eancia de visita do vendedor ao cliente (estat\u00edsticas de vendas): semanal, bissemanal (2\u00d7 por semana), quinzenal ou mensal"
+    },
+    "visit_day_1": {
+      "type": "string",
+      "enum": [
+        "segunda",
+        "terca",
+        "quarta",
+        "quinta",
+        "sexta",
+        "sabado"
+      ],
+      "description": "Dia da visita do vendedor (semanal, quinzenal, mensal ou 1\u00ba dia da bissemanal)"
+    },
+    "visit_day_2": {
+      "type": "string",
+      "enum": [
+        "segunda",
+        "terca",
+        "quarta",
+        "quinta",
+        "sexta",
+        "sabado"
+      ],
+      "description": "Segundo dia da visita (frequ\u00eancia bissemanal \u2014 ex.: segunda e quinta, ter\u00e7a e sexta, quarta e s\u00e1bado)"
+    },
+    "visit_status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "vendido",
+        "sem_venda"
+      ],
+      "default": "pendente",
+      "description": "Resultado da \u00faltima visita no App do Vendedor: vendido (cliente fez pedido \u2014 marcado em verde), sem_venda (visitado sem venda \u2014 marcado em amarelo) ou pendente"
+    },
+    "no_sale_reason": {
+      "type": "string",
+      "description": "Motivo informado pelo vendedor quando a visita n\u00e3o gerou venda"
+    },
+    "last_visit_date": {
+      "type": "string",
+      "description": "Data da \u00faltima visita/registro do vendedor (ISO)"
+    },
     "is_active": {
       "type": "boolean",
       "default": true
