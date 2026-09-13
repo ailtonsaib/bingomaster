@@ -34,7 +34,15 @@ export const PRODUCTION_STATUS = {
 export const UNITS = ["UN", "KG", "G", "LT", "ML", "M", "M2", "M3", "CX", "PCT", "FD", "PAR", "CJ", "L"];
 
 export function fmtMoney(v) { return "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-export function fmtDate(d) { if (!d) return "—"; try { return new Date(d).toLocaleDateString("pt-BR"); } catch { return d; } }
+// Data no padrão brasileiro (DD/MM/AAAA) — datas puras (sem hora) ou salvas como
+// T00:00:00 são interpretadas literalmente, sem deslocamento de fuso horário
+export function fmtDate(d) {
+  if (!d) return "—";
+  const s = String(d);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T00:00:00)/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  try { return new Date(d).toLocaleDateString("pt-BR"); } catch { return s; }
+}
 export function typeLabel(k) { return (PRODUCT_TYPES.find(t => t.key === k) || {}).label || k; }
 export function typeColor(k) { return (PRODUCT_TYPES.find(t => t.key === k) || {}).color || "text-gray-700 bg-gray-50 border-gray-200"; }
 

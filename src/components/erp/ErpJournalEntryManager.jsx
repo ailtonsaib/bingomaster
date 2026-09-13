@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Trash2, X, ArrowLeftRight } from "lucide-react";
+import { fmtDate } from "@/lib/erpUtils";
 
 const fmtMoney = (v) => "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -60,7 +61,7 @@ export default function ErpJournalEntryManager({ user }) {
               : filtered.map(i => (
                 <tr key={i.id} className="border-t hover:bg-gray-50">
                   <td className="p-2 font-mono text-xs">{i.number}</td>
-                  <td className="p-2 text-xs">{(i.date || "").slice(0, 10)}</td>
+                  <td className="p-2 text-xs">{fmtDate(i.date)}</td>
                   <td className="p-2">{i.history}</td>
                   <td className="p-2 text-xs">{i.document || "—"}</td>
                   <td className="p-2 text-right font-medium">{fmtMoney(i.total_debit)}</td>

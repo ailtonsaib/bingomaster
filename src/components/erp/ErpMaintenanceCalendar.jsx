@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronLeft, ChevronRight, CalendarDays, Zap, AlertTriangle } from "lucide-react";
+import { fmtDate } from "@/lib/erpUtils";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const addDays = (iso, d) => { const dt = new Date(iso + "T00:00:00"); dt.setDate(dt.getDate() + d); return dt.toISOString().slice(0, 10); };
@@ -97,8 +98,8 @@ export default function ErpMaintenanceCalendar({ user }) {
                 <div><span className="text-gray-500">Tipo: </span><b>{TYPE_LABEL[detail.order_type] || detail.order_type}</b></div>
                 <div><span className="text-gray-500">Status: </span><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_OPTS[detail.status]?.color}`}>{STATUS_OPTS[detail.status]?.label}</span></div>
                 <div><span className="text-gray-500">Responsável: </span><b>{detail.responsible || "—"}</b></div>
-                <div><span className="text-gray-500">Abertura: </span><b>{(detail.opened_date || "").slice(0, 10)}</b></div>
-                <div><span className="text-gray-500">Prevista: </span><b>{(detail.scheduled_date || "—").slice(0, 10)}</b></div>
+                <div><span className="text-gray-500">Abertura: </span><b>{fmtDate(detail.opened_date)}</b></div>
+                <div><span className="text-gray-500">Prevista: </span><b>{fmtDate(detail.scheduled_date)}</b></div>
               </div>
               {detail.description && <div className="border-t pt-2"><span className="text-gray-500">Serviço: </span>{detail.description}</div>}
               {detail.notes && <div className="border-t pt-2"><span className="text-gray-500">Laudo/Obs: </span>{detail.notes}</div>}

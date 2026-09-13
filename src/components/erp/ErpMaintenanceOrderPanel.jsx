@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Plus, Trash2, PlayCircle, CheckCircle2, Wrench, Timer } from "lucide-react";
+import { fmtDate } from "@/lib/erpUtils";
 
 const TYPE_OPTS = [
   { value: "preventiva", label: "Preventiva", color: "bg-blue-100 text-blue-700" },
@@ -170,7 +171,7 @@ export default function ErpMaintenanceOrderPanel({ user }) {
                   <td className="p-2 max-w-[220px] truncate" title={o.description}>{o.description || "—"}</td>
                   <td className="p-2">{badge(STATUS_OPTS, o.status)}</td>
                   <td className="p-2">{o.responsible || "—"}</td>
-                  <td className="p-2 text-xs">{(o.opened_date || "").slice(0, 10)}</td>
+                  <td className="p-2 text-xs">{fmtDate(o.opened_date)}</td>
                   <td className="p-2 text-right">{o.downtime_hours || "—"}</td>
                   <td className="p-2 text-right">{o.cost ? Number(o.cost).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}</td>
                   <td className="p-2 text-right whitespace-nowrap">

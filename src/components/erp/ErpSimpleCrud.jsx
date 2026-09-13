@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { lookupCnpj } from "@/lib/cnpjLookup";
-import { genOrderNumber } from "@/lib/erpUtils";
+import { genOrderNumber, fmtDate } from "@/lib/erpUtils";
 import { maskCpfCnpj, maskCep, maskPhone, onlyDigits } from "@/lib/brMasks";
 import ErpSettleModal from "@/components/erp/ErpSettleModal";
 
@@ -246,15 +246,19 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
     }
   };
 
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}([T\s]|$)/;
   const renderCell = (it, col) => {
     const v = it[col.key];
     if (col.type === "money") return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     if (col.type === "bool") return v ? "Sim" : "Não";
+    if (col.type === "date") return fmtDate(v);
     if (col.type === "badge" && col.options) {
       const o = col.options.find(o => o.value === v);
       return o ? <span className={`text-xs px-2 py-0.5 rounded-full ${o.color}`}>{o.label}</span> : v;
     }
     if (col.render) return col.render(it);
+    // datas armazenadas em ISO são exibidas no padrão brasileiro (DD/MM/AAAA)
+    if (typeof v === "string" && ISO_DATE.test(v)) return fmtDate(v);
     return v ?? "—";
   };
 
@@ -361,6 +365,8 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     const o = {};
     fields.forEach(f => {
       o[f.key] = editing?.[f.key] ?? (f.type === "checkbox" ? false : f.type === "number" ? 0 : f.type === "select" ? (f.options?.[0]?.value ?? "") : "");
+      // campo de data: recupera apenas YYYY-MM-DD para o input type="date"
+      if (f.inputType === "date" && o[f.key]) o[f.key] = String(o[f.key]).slice(0, 10);
     });
     return o;
   };
