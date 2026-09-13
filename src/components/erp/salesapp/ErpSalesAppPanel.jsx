@@ -5,6 +5,7 @@ import { genOrderNumber, fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { OPERATIONS, ORDER_STATUS, computeEmpenhoMap, availableStock, r2 } from "@/lib/erpSalesApp";
 import ErpSalesAppOrderForm from "./ErpSalesAppOrderForm";
 import ErpVisitsRoute from "./ErpVisitsRoute";
+import ErpSalesAppTracking from "./ErpSalesAppTracking";
 import { Plus, Loader2, ChevronDown, ChevronRight, Search } from "lucide-react";
 
 export default function ErpSalesAppPanel({ user }) {
@@ -183,6 +184,7 @@ export default function ErpSalesAppPanel({ user }) {
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
           {[
             { id: "pedidos", label: `Pedidos (${orders.length})` },
+            { id: "rastreio", label: "Situação dos Pedidos" },
             { id: "visitas", label: `Visitas (${customers.length})` },
             { id: "aprovacoes", label: `Aprovações (${pendentes.length})` },
             { id: "empenhos", label: "Saldos / Empenhos" },
@@ -205,6 +207,8 @@ export default function ErpSalesAppPanel({ user }) {
         ) : (
           <div className="grid gap-2 md:grid-cols-2">{orders.map(renderCard)}</div>
         )
+      ) : tab === "rastreio" ? (
+        <ErpSalesAppTracking user={user} orders={orders} />
       ) : tab === "visitas" ? (
         <ErpVisitsRoute user={user} customers={customers} onRefresh={load} onNewOrder={o => setFormOrder(o)} />
       ) : tab === "aprovacoes" ? (
