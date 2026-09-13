@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { Factory, FileStack, Workflow } from "lucide-react";
+import { Factory, FileStack, Workflow, Layers, GitBranch } from "lucide-react";
 import ErpProductionPanel from "@/components/erp/ErpProductionPanel";
 import ErpTechnicalSheetManager from "@/components/erp/ErpTechnicalSheetManager";
 import ErpProductionRouteManager from "@/components/erp/ErpProductionRouteManager";
+import ErpProductionStageManager from "@/components/erp/ErpProductionStageManager";
+import ErpProductionLineManager from "@/components/erp/ErpProductionLineManager";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const TABS = [
   { id: "op", label: "Ordens de Produção", icon: Factory },
   { id: "ficha", label: "Ficha Técnica", icon: FileStack },
   { id: "roteiros", label: "Roteiros de Produção", icon: Workflow },
+  { id: "etapas", label: "Etapas de Produção", icon: Layers },
+  { id: "linhas", label: "Linhas de Produção", icon: GitBranch },
 ];
 
 export default function ErpModuleManufatura({ user }) {
@@ -19,6 +23,8 @@ export default function ErpModuleManufatura({ user }) {
       {sub === "op" && <ErpProductionPanel user={user} />}
       {sub === "ficha" && <ErpTechnicalSheetManager user={user} />}
       {sub === "roteiros" && <ErpProductionRouteManager user={user} />}
+      {sub === "etapas" && <ErpProductionStageManager user={user} />}
+      {sub === "linhas" && <ErpProductionLineManager user={user} />}
     </div>
   );
 }
