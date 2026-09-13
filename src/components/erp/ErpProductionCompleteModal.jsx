@@ -72,7 +72,9 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
   const hasComplement = lines.some(l => l.complement > 0);
   const consumedValue = r2(lines.reduce((s, l) => s + l.theoreticalValue, 0));
   const excessValue = r2(lines.reduce((s, l) => s + l.excessValue, 0));
-  const totalCost = r2(consumedValue + (hasExcess && excessMode === "perda" ? excessValue : 0));
+  // Custo extra das paradas do apontamento (mecânicas/elétricas/operacionais)
+  const stopsCost = r2(Number(order.extra_cost_total) || 0);
+  const totalCost = r2(consumedValue + (hasExcess && excessMode === "perda" ? excessValue : 0) + stopsCost);
   const unitCost = producedQty > 0 ? r2(totalCost / producedQty) : 0;
   const loading = req === undefined || !kardexData;
 
@@ -154,6 +156,7 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
       if (lossItems.length) parts.push(`Insumos excedentes registrados como perda: ${fmtMoney(excessValue)} (incluídos no custo de produção).`);
       if (wipItems.length) parts.push(`Insumos excedentes deixados em processo: ${fmtMoney(excessValue)} (fora do custo de produção).`);
       if (reqAtendida && hasExcess && excessMode === "devolver") parts.push(`Insumos excedentes devolvidos ao estoque: ${fmtMoney(excessValue)}.`);
+      if (stopsCost > 0) parts.push(`Custo extra das paradas de produção (apontamento) agregado ao custo: ${fmtMoney(stopsCost)}.`);
       alert(parts.join("\n\n"));
       onSaved();
     } catch (e) { alert("Erro ao concluir produção: " + e.message); }
@@ -245,6 +248,7 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
                 {hasExcess && excessMode === "perda" && <div className="flex justify-between text-xs text-red-600"><span>Perda de insumos excedentes (incluída no custo)</span><b>{fmtMoney(excessValue)}</b></div>}
                 {hasExcess && excessMode === "processo" && <div className="flex justify-between text-xs text-amber-600"><span>Insumos excedentes em processo — WIP (fora do custo)</span><b>{fmtMoney(excessValue)}</b></div>}
                 {hasExcess && excessMode === "devolver" && <div className="flex justify-between text-xs text-emerald-600"><span>Insumos excedentes devolvidos ao estoque (fora do custo)</span><b>{fmtMoney(excessValue)}</b></div>}
+                {stopsCost > 0 && <div className="flex justify-between text-xs text-red-600"><span>Custo extra de paradas de produção (apontamento)</span><b>{fmtMoney(stopsCost)}</b></div>}
                 <div className="flex justify-between text-xs border-t pt-1"><span>Custo total de produção</span><b>{fmtMoney(totalCost)}</b></div>
                 <div className="flex justify-between text-sm"><span>Custo unitário do produto produzido</span><b className="text-indigo-700">{fmtMoney(unitCost)}</b></div>
                 <p className="text-[11px] text-gray-500 pt-1 border-t">O produto acabado entra no estoque valorizado por esse custo — o kardex calcula a média móvel e o custo do produto é atualizado.</p>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus, Calculator } from "lucide-react";
+import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus, Calculator, Timer } from "lucide-react";
 import ErpProductionFormModal from "./ErpProductionFormModal";
 import ErpProductionCompleteModal from "./ErpProductionCompleteModal";
 import ErpProductionRecostModal from "./ErpProductionRecostModal";
+import ErpProductionApontamentoModal, { minsBetween, fmtDuration, fmtDateTime, lunchMinutes } from "./ErpProductionApontamentoModal";
 import { fmtDate, fmtMoney, PRODUCTION_STATUS } from "@/lib/erpUtils";
 import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
 
@@ -22,6 +23,7 @@ export default function ErpProductionPanel({ user }) {
   const [detailReq, setDetailReq] = useState(null);
   const [completing, setCompleting] = useState(null);
   const [recosting, setRecosting] = useState(null);
+  const [apontamento, setApontamento] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -170,6 +172,11 @@ export default function ErpProductionPanel({ user }) {
                           <Calculator className="w-4 h-4 text-amber-600" />
                         </button>
                       )}
+                      {o.status !== "cancelada" && (
+                        <button onClick={() => setApontamento(o)} title="Apontamento — horários e paradas de produção" className="p-1 hover:bg-indigo-50 rounded">
+                          <Timer className="w-4 h-4 text-indigo-600" />
+                        </button>
+                      )}
                       <button onClick={() => { setEditing(o); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><span className="text-xs">✏️</span></button>
                       <button onClick={() => handleDelete(o)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
@@ -191,6 +198,10 @@ export default function ErpProductionPanel({ user }) {
 
       {recosting && (
         <ErpProductionRecostModal user={user} order={recosting} products={products} onClose={() => setRecosting(null)} onSaved={() => { setRecosting(null); load(); }} />
+      )}
+
+      {apontamento && (
+        <ErpProductionApontamentoModal user={user} order={apontamento} onClose={() => setApontamento(null)} onSaved={load} />
       )}
 
       {detail && (
@@ -262,7 +273,39 @@ export default function ErpProductionPanel({ user }) {
                   </table>
                 </div>
               )}
-              {detail.notes && <div><span className="text-gray-500">Obs: </span>{detail.notes}</div>}
+              {(detail.start_datetime || detail.end_datetime || (detail.stops || []).length > 0) && (() => {
+                const grossMin = minsBetween(detail.start_datetime, detail.end_datetime);
+                const lunchMin = grossMin > 0 ? lunchMinutes(detail.lunch_start, detail.lunch_end) : 0;
+                const availableMin = grossMin - lunchMin;
+                const downtimeMin = (detail.stops || []).reduce((s, st) => s + minsBetween(st.start_time, st.end_time), 0);
+                const efficiency = availableMin > 0 ? Math.max(0, Math.round(((availableMin - downtimeMin) / availableMin) * 100)) : null;
+                return (
+                  <div>
+                    <p className="font-semibold mb-1 text-indigo-700">Apontamento de produção:</p>
+                    <div className="text-xs space-y-0.5 pl-2 border-l-2 border-indigo-200">
+                      <div>Início: <b>{fmtDateTime(detail.start_datetime)}</b> — Fim: <b>{fmtDateTime(detail.end_datetime)}</b>{detail.lunch_start && <> (refeição: {detail.lunch_start} às {detail.lunch_end || "—"})</>}</div>
+                      <div>Tempo disponível: <b>{fmtDuration(availableMin)}</b> • Paradas: <b className="text-red-600">{fmtDuration(downtimeMin)}</b> ({(detail.stops || []).length} registro(s)) • Efetivo: <b className="text-emerald-700">{fmtDuration(availableMin - downtimeMin)}</b>{efficiency !== null && <> • Eficiência: <b>{efficiency}%</b></>}</div>
+                      {Number(detail.extra_cost_total) > 0 && <div>Custo extra das paradas (agregado ao custo de produção): <b className="text-red-600">{fmtMoney(detail.extra_cost_total)}</b></div>}
+                      {(detail.stops || []).length > 0 && (
+                        <table className="w-full text-xs border rounded mt-1">
+                          <thead className="bg-gray-100"><tr><th className="p-1.5 text-left">Motivo</th><th className="p-1.5 text-left">Equipamento</th><th className="p-1.5 text-right">Duração</th><th className="p-1.5 text-right">Pessoas</th><th className="p-1.5 text-right">Custo extra</th></tr></thead>
+                          <tbody>
+                            {(detail.stops || []).map((st, i) => (
+                              <tr key={i} className="border-t">
+                                <td className="p-1.5">{(st.type === "mecanica" && "Mecânica") || (st.type === "eletrica" && "Elétrica") || "Operacional"}{st.replaced_part ? " — substituiu peça" : ""}{st.notes ? ` (${st.notes})` : ""}</td>
+                                <td className="p-1.5">{st.equipment_name || "—"}</td>
+                                <td className="p-1.5 text-right">{fmtDuration(minsBetween(st.start_time, st.end_time))}</td>
+                                <td className="p-1.5 text-right">{st.people_count || "—"}</td>
+                                <td className="p-1.5 text-right">{Number(st.extra_cost) > 0 ? fmtMoney(st.extra_cost) : "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -77,6 +77,81 @@
       "type": "string",
       "description": "Data de conclus\u00e3o (ISO)"
     },
+    "start_datetime": {
+      "type": "string",
+      "description": "Data e hora de in\u00edcio da produ\u00e7\u00e3o (apontamento \u2014 YYYY-MM-DDTHH:mm)"
+    },
+    "end_datetime": {
+      "type": "string",
+      "description": "Data e hora do t\u00e9rmino da produ\u00e7\u00e3o (apontamento \u2014 YYYY-MM-DDTHH:mm)"
+    },
+    "lunch_start": {
+      "type": "string",
+      "description": "Hora de in\u00edcio da parada para refei\u00e7\u00e3o (HH:MM) \u2014 abatida do tempo dispon\u00edvel"
+    },
+    "lunch_end": {
+      "type": "string",
+      "description": "Hora de retorno da refei\u00e7\u00e3o (HH:MM)"
+    },
+    "stops": {
+      "type": "array",
+      "default": [],
+      "description": "Paradas de produ\u00e7\u00e3o do apontamento: mec\u00e2nicas, el\u00e9tricas ou operacionais \u2014 com equipamento parado, hor\u00e1rio (dentro do per\u00edodo de produ\u00e7\u00e3o), pessoas envolvidas, troca de pe\u00e7a, custo extra e observa\u00e7\u00f5es \u2014 base do c\u00e1lculo de efici\u00eancia e do custo extra da produ\u00e7\u00e3o",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "mecanica",
+              "eletrica",
+              "operacional"
+            ],
+            "description": "Motivo da parada: mecanica, eletrica ou operacional"
+          },
+          "equipment_id": {
+            "type": "string",
+            "description": "ID do equipamento que parou (ErpEquipment) \u2014 paradas mec\u00e2nicas e el\u00e9tricas"
+          },
+          "equipment_name": {
+            "type": "string",
+            "description": "Nome do equipamento que parou (cache)"
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Data e hora de in\u00edcio da parada (YYYY-MM-DDTHH:mm)"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "Data e hora de conclus\u00e3o da parada/retorno (YYYY-MM-DDTHH:mm)"
+          },
+          "people_count": {
+            "type": "number",
+            "default": 0,
+            "description": "Quantidade de pessoas envolvidas na parada"
+          },
+          "replaced_part": {
+            "type": "boolean",
+            "default": false,
+            "description": "Se foi necess\u00e1rio substituir pe\u00e7a"
+          },
+          "extra_cost": {
+            "type": "number",
+            "default": 0,
+            "description": "Custo extra da parada (pe\u00e7a/m\u00e3o de obra) a agregar ao custo do produto produzido"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Motivo da parada, pe\u00e7a substitu\u00edda e demais observa\u00e7\u00f5es"
+          }
+        }
+      }
+    },
+    "extra_cost_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo extra total das paradas do apontamento \u2014 agregado ao custo de produ\u00e7\u00e3o na conclus\u00e3o da OP"
+    },
     "produced_quantity": {
       "type": "number",
       "default": 0,
@@ -85,12 +160,12 @@
     "input_cost_total": {
       "type": "number",
       "default": 0,
-      "description": "Valor total dos insumos consumidos na produ\u00e7\u00e3o (custo m\u00e9dio \u2014 inclui perdas de insumos)"
+      "description": "Valor total dos insumos consumidos na produ\u00e7\u00e3o (custo m\u00e9dio \u2014 inclui perdas de insumos e custo extra das paradas)"
     },
     "output_unit_cost": {
       "type": "number",
       "default": 0,
-      "description": "Custo unit\u00e1rio do produto produzido (insumos consumidos \u00f7 quantidade produzida) \u2014 usado na valora\u00e7\u00e3o da entrada do produto acabado no kardex"
+      "description": "Custo unit\u00e1rio do produto produzido (custo total \u00f7 quantidade produzida) \u2014 usado na valora\u00e7\u00e3o da entrada do produto acabado no kardex"
     },
     "loss_items": {
       "type": "array",
