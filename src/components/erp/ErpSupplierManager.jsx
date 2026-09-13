@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Pencil, Trash2, Truck } from "lucide-react";
+import { maskCpfCnpj } from "@/lib/brMasks";
 import ErpSupplierFormModal from "./ErpSupplierFormModal";
 
 export default function ErpSupplierManager({ user }) {
@@ -62,7 +63,7 @@ export default function ErpSupplierManager({ user }) {
               ) : filtered.map(s => (
                 <tr key={s.id} className="border-t hover:bg-gray-50">
                   <td className="p-2 font-medium">{s.name}</td>
-                  <td className="p-2 text-gray-600 font-mono text-xs">{s.cnpj || "—"}</td>
+                  <td className="p-2 text-gray-600 font-mono text-xs">{s.cnpj ? maskCpfCnpj(s.cnpj) : "—"}</td>
                   <td className="p-2 text-gray-600">{s.contact_person || "—"} {s.phone ? `• ${s.phone}` : ""}</td>
                   <td className="p-2 text-gray-600">{s.city ? `${s.city}/${s.uf || ""}` : "—"}</td>
                   <td className="p-2 text-right">

@@ -968,7 +968,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
                   <div><span className="text-gray-500">Emissão:</span> {fmtDate(parsed.nota.issue_date)}</div>
                   <div><span className="text-gray-500">Total NF:</span> <b className="text-indigo-700">{fmtMoney(parsed.totals.total_nota)}</b></div>
                   <div className="col-span-2"><span className="text-gray-500">Emitente:</span> {parsed.supplier.name}</div>
-                  <div><span className="text-gray-500">CNPJ:</span> {parsed.supplier.cpf_cnpj}</div>
+                  <div><span className="text-gray-500">CNPJ:</span> {maskCpfCnpj(parsed.supplier.cpf_cnpj)}</div>
                   <div><span className="text-gray-500">UF:</span> {parsed.supplier.uf}</div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 // Configurações reutilizáveis para o ErpSimpleCrud (cadastros simples do ERP)
+import { maskCpfCnpj } from "@/lib/brMasks";
 const REGIME_OPTS = [
   { value: "simples_nacional", label: "Simples Nacional" },
   { value: "lucro_real", label: "Lucro Real" },
@@ -269,7 +270,7 @@ export const ERP_CRUD_CONFIGS = {
       ], placeholder: "Selecione uma condição ou digite uma nova" },
       { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
-    columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" }, { key: "is_active", label: "Ativo", type: "bool" }],
+    columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ", render: it => it.cpf_cnpj ? maskCpfCnpj(it.cpf_cnpj) : "—" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" }, { key: "is_active", label: "Ativo", type: "bool" }],
     searchKeys: ["name", "cpf_cnpj", "city", "vendedor_name", "channel_name"],
   },
   requisicoes: {

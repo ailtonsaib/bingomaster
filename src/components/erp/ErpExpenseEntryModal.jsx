@@ -7,6 +7,7 @@ import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { gerarContabilDespesa, gerarFinanceiroDespesa } from "@/lib/erpDespesa";
 import ErpApportionmentEditor from "@/components/erp/ErpApportionmentEditor";
 import { lookupCnpj } from "@/lib/cnpjLookup";
+import { maskCpfCnpj } from "@/lib/brMasks";
 import ErpPartnerFormModal from "@/components/erp/ErpPartnerFormModal";
 
 const digits = (v) => String(v || "").replace(/\D/g, "");
@@ -346,7 +347,7 @@ export default function ErpExpenseEntryModal({ user, parameters, onClose, onSave
                   <div><span className="text-gray-500">CFOP Parâmetro:</span> <b className="font-mono">{resolveCfop(parsed.nota.model, parsed.supplier.uf) || "—"}</b></div>
                   <div><span className="text-gray-500">Origem:</span> {(parsed.supplier.uf || "").toUpperCase() === companyUf.toUpperCase() ? "Dentro do estado" : `Fora do estado${companyUf ? ` (sua UF: ${companyUf})` : ""}`}</div>
                   <div className="col-span-2"><span className="text-gray-500">Emitente:</span> {parsed.supplier.name}</div>
-                  <div><span className="text-gray-500">CNPJ:</span> {parsed.supplier.cpf_cnpj}</div>
+                  <div><span className="text-gray-500">CNPJ:</span> {maskCpfCnpj(parsed.supplier.cpf_cnpj)}</div>
                   <div><span className="text-gray-500">UF:</span> {parsed.supplier.uf}</div>
                 </div>
               </div>

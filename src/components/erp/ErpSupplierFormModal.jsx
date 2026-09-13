@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
+import { maskCpfCnpj, onlyDigits } from "@/lib/brMasks";
 
 const empty = { name: "", cnpj: "", contact_person: "", phone: "", email: "", address: "", city: "", uf: "", is_active: true };
 
 export default function ErpSupplierFormModal({ user, supplier, onClose, onSaved }) {
-  const [form, setForm] = useState({ ...empty, ...(supplier || {}) });
+  const [form, setForm] = useState({ ...empty, ...(supplier || {}), cnpj: supplier?.cnpj ? maskCpfCnpj(supplier.cnpj) : "" });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -18,7 +19,7 @@ export default function ErpSupplierFormModal({ user, supplier, onClose, onSaved 
     const payload = {
       user_email: user.email,
       name: form.name.trim(),
-      cnpj: form.cnpj || undefined,
+      cnpj: onlyDigits(form.cnpj) || undefined,
       contact_person: form.contact_person || undefined,
       phone: form.phone || undefined,
       email: form.email || undefined,
@@ -46,7 +47,7 @@ export default function ErpSupplierFormModal({ user, supplier, onClose, onSaved 
         <div className="p-4 space-y-3">
           <div><Label>Razão social *</Label><Input value={form.name} onChange={e => set("name", e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => set("cnpj", e.target.value)} /></div>
+            <div><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => set("cnpj", maskCpfCnpj(e.target.value))} placeholder="00.000.000/0000-00" /></div>
             <div><Label>Contato</Label><Input value={form.contact_person} onChange={e => set("contact_person", e.target.value)} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">

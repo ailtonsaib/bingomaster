@@ -5,6 +5,7 @@ import { Search, Loader2, AlertTriangle, ArrowDownCircle, CheckCircle2, FileUp }
 import ErpWmsReceivingItemCard from "./ErpWmsReceivingItemCard";
 import ErpProductFormModal from "./ErpProductFormModal";
 import { fmtMoney, fmtDate, UNITS } from "@/lib/erpUtils";
+import { maskCpfCnpj } from "@/lib/brMasks";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 
 const onlyDigits = (v) => String(v || "").replace(/\D/g, "");
@@ -332,7 +333,7 @@ export default function ErpWmsReceivingPanel({ user }) {
         <>
           <div className="bg-white rounded-xl border p-3 grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
             <div className="col-span-2"><p className="text-xs text-gray-500">Fornecedor</p><p className="font-medium">{entry.supplier_name}</p></div>
-            <div><p className="text-xs text-gray-500">CNPJ</p><p>{entry.supplier_cnpj || "—"}</p></div>
+            <div><p className="text-xs text-gray-500">CNPJ</p><p>{entry.supplier_cnpj ? maskCpfCnpj(entry.supplier_cnpj) : "—"}</p></div>
             <div><p className="text-xs text-gray-500">Emissão</p><p>{fmtDate(entry.issue_date)}</p></div>
             <div><p className="text-xs text-gray-500">Total NF</p><p className="font-bold text-indigo-700">{fmtMoney(entry.total_nota)}</p></div>
             <div className="col-span-2 md:col-span-5"><p className="text-xs text-gray-500">Documento</p><p className="text-xs font-mono">NF {entry.nota_number}{entry.nota_series ? ` (série ${entry.nota_series})` : ""} — chave {onlyDigits(entry.chave_acesso)}{entry.from_xml ? " (dados importados do XML do fornecedor)" : " (dados consultados na SEFAZ)"}</p></div>

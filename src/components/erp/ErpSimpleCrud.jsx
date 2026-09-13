@@ -372,6 +372,10 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
       o[f.key] = editing?.[f.key] ?? (f.type === "checkbox" ? false : f.type === "number" ? 0 : f.type === "select" ? (f.options?.[0]?.value ?? "") : "");
       // campo de data: recupera apenas YYYY-MM-DD para o input type="date"
       if (f.inputType === "date" && o[f.key]) o[f.key] = String(o[f.key]).slice(0, 10);
+      // valores mascarados (CNPJ/CPF, CEP, telefone) são exibidos formatados na edição
+      if (o[f.key] && f.mask === "cnpj") o[f.key] = maskCpfCnpj(o[f.key]);
+      else if (o[f.key] && f.mask === "cep") o[f.key] = maskCep(o[f.key]);
+      else if (o[f.key] && f.mask === "phone") o[f.key] = maskPhone(o[f.key]);
     });
     return o;
   };
