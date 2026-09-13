@@ -7,7 +7,7 @@ import ErpProductionCompleteModal from "./ErpProductionCompleteModal";
 import ErpProductionRecostModal from "./ErpProductionRecostModal";
 import ErpProductionApontamentoModal, { minsBetween, fmtDuration, fmtDateTime, lunchMinutes } from "./ErpProductionApontamentoModal";
 import { fmtDate, fmtMoney, PRODUCTION_STATUS } from "@/lib/erpUtils";
-import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
+import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition, computeLineEfficiency } from "@/lib/erpProductionStock";
 
 export default function ErpProductionPanel({ user }) {
   const [orders, setOrders] = useState([]);
@@ -126,6 +126,7 @@ export default function ErpProductionPanel({ user }) {
                 <th className="p-2 text-left">Produto</th>
                 <th className="p-2 text-right">Qtd</th>
                 <th className="p-2 text-right">Insumos</th>
+                <th className="p-2 text-right">Eficiência</th>
                 <th className="p-2 text-left">Emissão</th>
                 <th className="p-2 text-left">Status</th>
                 <th className="p-2 text-right">Ações</th>
@@ -133,9 +134,9 @@ export default function ErpProductionPanel({ user }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={8} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="p-8 text-center text-gray-400">
+                <tr><td colSpan={8} className="p-8 text-center text-gray-400">
                   <Factory className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhuma ordem de produção.
                 </td></tr>
               ) : filtered.map(o => {
@@ -146,6 +147,16 @@ export default function ErpProductionPanel({ user }) {
                     <td className="p-2 font-medium">{o.output_product_name}</td>
                     <td className="p-2 text-right">{o.output_quantity}</td>
                     <td className="p-2 text-right">{o.bom_items?.length || 0}</td>
+                    {(() => {
+                      const eff = computeLineEfficiency(o);
+                      if (!eff) return <td className="p-2 text-right text-xs text-gray-300">—</td>;
+                      const color = eff.efficiency >= 85 ? "text-emerald-700 bg-emerald-50" : eff.efficiency >= 60 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                      return (
+                        <td className="p-2 text-right text-xs">
+                          <span className={`px-2 py-0.5 rounded-full font-medium ${color}`} title={`Capacidade esperada: ${eff.expected} • Produzido: ${eff.produced}`}>{eff.efficiency}%</span>
+                        </td>
+                      );
+                    })()}
                     <td className="p-2 text-gray-600">{fmtDate(o.emission_date)}</td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></td>
                     <td className="p-2 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
@@ -304,6 +315,19 @@ export default function ErpProductionPanel({ user }) {
                         </table>
                       )}
                     </div>
+                  </div>
+                );
+              })()}
+              {(() => {
+                const eff = computeLineEfficiency(detail);
+                if (!eff) return null;
+                const unit = products.find(p => p.id === detail.output_product_id)?.unit || "";
+                const color = eff.efficiency >= 85 ? "text-emerald-700" : eff.efficiency >= 60 ? "text-amber-600" : "text-red-600";
+                return (
+                  <div className="mt-2 text-xs rounded-lg border border-indigo-200 bg-indigo-50 p-2.5 space-y-1">
+                    <p className="font-semibold text-indigo-700">Eficiência de produção — linha: {detail.production_line_name || "—"}</p>
+                    <div>Velocidade nominal: <b>{detail.units_per_hour} {unit}/hora</b> • Tempo disponível: <b>{fmtDuration(eff.availableMin)}</b> • Capacidade esperada: <b>{eff.expected} {unit}</b> • Produzido: <b>{eff.produced} {unit}</b></div>
+                    <div>Eficiência: <b className={color}>{eff.efficiency}%</b> — quantidade produzida ÷ capacidade nominal da linha no tempo disponível</div>
                   </div>
                 );
               })()}

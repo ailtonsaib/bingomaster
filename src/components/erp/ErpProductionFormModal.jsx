@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +15,35 @@ export default function ErpProductionFormModal({ user, order, products, technica
     output_product_id: order?.output_product_id || "",
     output_quantity: order?.output_quantity || 1,
     emission_date: order?.emission_date || new Date().toISOString().slice(0, 10),
+    production_line_id: order?.production_line_id || "",
+    production_line_name: order?.production_line_name || "",
+    units_per_hour: order?.units_per_hour || 0,
     notes: order?.notes || "",
     bom_items: order?.bom_items || [],
   });
   const [saving, setSaving] = useState(false);
   const [groupReq, setGroupReq] = useState(false);
+  const [lines, setLines] = useState([]);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const hasSheet = (pid) => (technicalSheets || []).some(t => t.product_id === pid && t.is_active !== false);
+
+  // Linhas de produção — a velocidade nominal do produto na linha escolhida é
+  // gravada na OP e usada no cálculo automático de eficiência de produção
+  useEffect(() => {
+    base44.entities.ErpProductionLine.filter({ user_email: user.email }, "name", 500)
+      .then(l => setLines(l.filter(x => x.is_active !== false)))
+      .catch(() => setLines([]));
+  }, [user.email]);
+
+  const uphFor = (lineId, productId) => {
+    const line = lines.find(l => l.id === lineId);
+    const lp = (line?.products || []).find(p => p.product_id === productId);
+    return Number(lp?.units_per_hour) || 0;
+  };
+  const pickLine = (id) => {
+    const line = lines.find(l => l.id === id);
+    setForm(prev => ({ ...prev, production_line_id: id, production_line_name: line?.name || "", units_per_hour: uphFor(id, prev.output_product_id) }));
+  };
 
   // Ao selecionar o produto, preenche automaticamente os insumos pela Ficha Técnica
   const pickProduct = (id) => {
@@ -31,6 +53,7 @@ export default function ErpProductionFormModal({ user, order, products, technica
       setForm(prev => ({
         ...prev,
         output_product_id: id,
+        units_per_hour: uphFor(prev.production_line_id, id),
         bom_items: sheet.items.map((it, i) => ({
           _key: "ft" + i + "-" + it.product_id,
           product_id: it.product_id,
@@ -42,7 +65,7 @@ export default function ErpProductionFormModal({ user, order, products, technica
         })),
       }));
     } else {
-      set("output_product_id", id);
+      setForm(prev => ({ ...prev, output_product_id: id, units_per_hour: uphFor(prev.production_line_id, id) }));
     }
   };
 
@@ -90,6 +113,9 @@ export default function ErpProductionFormModal({ user, order, products, technica
           output_quantity: outQty,
           bom_items: stripSub(bom),
           emission_date: new Date(form.emission_date).toISOString(),
+          production_line_id: form.production_line_id || undefined,
+          production_line_name: form.production_line_name || undefined,
+          units_per_hour: uphFor(form.production_line_id, form.output_product_id),
           produced_quantity: order?.produced_quantity || 0,
           status: order?.status || "rascunho",
           notes: form.notes || undefined,
@@ -135,6 +161,11 @@ export default function ErpProductionFormModal({ user, order, products, technica
             output_quantity: qty,
             bom_items: items,
             emission_date: new Date(form.emission_date).toISOString(),
+            ...(isRoot ? {
+              production_line_id: form.production_line_id || undefined,
+              production_line_name: form.production_line_name || undefined,
+              units_per_hour: uphFor(form.production_line_id, form.output_product_id),
+            } : {}),
             status,
             notes: isRoot ? (form.notes || undefined) : `OP automática de subproduto — origem: ${form.order_number}`,
             parent_order_id: parentId || undefined,
@@ -209,6 +240,24 @@ export default function ErpProductionFormModal({ user, order, products, technica
               </select>
             </div>
             <div><Label>Quantidade a produzir</Label><Input type="number" value={form.output_quantity} onChange={e => set("output_quantity", e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Linha de Produção</Label>
+              <select value={form.production_line_id} onChange={e => pickLine(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1">
+                <option value="">Sem linha definida</option>
+                {lines.map(l => <option key={l.id} value={l.id}>{l.name}{l.stage_name ? ` — ${l.stage_name}` : ""}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end">
+              {form.production_line_id && (() => {
+                const uph = uphFor(form.production_line_id, form.output_product_id);
+                const unit = products.find(p => p.id === form.output_product_id)?.unit || "UN";
+                return uph > 0
+                  ? <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-2 w-full">Velocidade nominal nesta linha: <b>{uph} {unit}/hora</b> — base do cálculo automático de eficiência de produção.</p>
+                  : <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 w-full">Este produto ainda não tem velocidade nominal nesta linha — cadastre na aba "Linhas de Produção" para habilitar o cálculo de eficiência.</p>;
+              })()}
+            </div>
           </div>
           {sheet && (
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-2">

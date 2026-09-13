@@ -74,6 +74,36 @@ export function buildProductionTree(technicalSheets, productId, qty, visited = n
   return node;
 }
 
+// Eficiência de produção pela velocidade nominal da linha: compara a quantidade
+// real produzida com a capacidade esperada (velocidade nominal × tempo
+// disponível, descontada a parada de refeição). Retorna null quando a OP não tem
+// linha com velocidade nominal ou apontamento — a eficiência é sempre calculada
+// a partir dos dados atuais, nunca fica desatualizada.
+const _lunchMinutes = (s, e) => {
+  if (!s || !e) return 0;
+  const [sh, sm] = String(s).split(":").map(Number);
+  const [eh, em] = String(e).split(":").map(Number);
+  return Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+};
+
+export function computeLineEfficiency(order) {
+  const uph = Number(order?.units_per_hour) || 0;
+  const gross = order?.start_datetime && order?.end_datetime
+    ? Math.max(0, Math.round((new Date(order.end_datetime) - new Date(order.start_datetime)) / 60000))
+    : 0;
+  if (!uph || !gross) return null;
+  const availableMin = Math.max(0, gross - _lunchMinutes(order.lunch_start, order.lunch_end));
+  const expected = round3(uph * (availableMin / 60));
+  if (expected <= 0) return null;
+  const produced = Number(order.produced_quantity) || 0;
+  return {
+    availableMin,
+    expected,
+    produced,
+    efficiency: Math.round((produced / expected) * 100),
+  };
+}
+
 // Soma insumos repetidos (verificação de estoque global / requisição agrupada)
 export function sumMaterials(items) {
   const acc = new Map();

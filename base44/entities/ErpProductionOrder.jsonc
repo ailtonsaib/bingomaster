@@ -27,6 +27,19 @@
       "default": 0,
       "description": "Quantidade planejada a produzir"
     },
+    "production_line_id": {
+      "type": "string",
+      "description": "ID da linha de produ\u00e7\u00e3o vinculada (ErpProductionLine)"
+    },
+    "production_line_name": {
+      "type": "string",
+      "description": "Nome da linha de produ\u00e7\u00e3o vinculada (cache)"
+    },
+    "units_per_hour": {
+      "type": "number",
+      "default": 0,
+      "description": "Velocidade nominal cacheada na OP \u2014 quantidade por hora do produto na linha vinculada (base do c\u00e1lculo autom\u00e1tico de efici\u00eancia de produ\u00e7\u00e3o: produzido \u00f7 capacidade nominal no tempo dispon\u00edvel)"
+    },
     "bom_items": {
       "type": "array",
       "items": {
