@@ -220,6 +220,7 @@ export default function ErpProductionPanel({ user }) {
                 {detail.parent_order_number && <div><span className="text-gray-500">OP de origem: </span><b>{detail.parent_order_number}</b></div>}
                 {detail.requisition_number && <div><span className="text-gray-500">Solicitação almoxarifado: </span><b>{detail.requisition_number}</b></div>}
                 {detail.complementary_requisition_number && <div><span className="text-gray-500">Requisição complementar: </span><b>{detail.complementary_requisition_number}</b></div>}
+                {detail.parts_requisition_number && <div><span className="text-gray-500">Req. peças substituídas: </span><b>{detail.parts_requisition_number}</b></div>}
                 {Number(detail.input_cost_total) > 0 && <div><span className="text-gray-500">Custo dos insumos consumidos: </span><b>{fmtMoney(detail.input_cost_total)}</b></div>}
                 {Number(detail.output_unit_cost) > 0 && <div><span className="text-gray-500">Custo unitário produzido: </span><b>{fmtMoney(detail.output_unit_cost)}</b></div>}
               </div>

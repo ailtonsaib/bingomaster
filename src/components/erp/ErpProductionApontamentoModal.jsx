@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Timer } from "lucide-react";
 import ErpStopPartsModal from "./ErpStopPartsModal";
 import { fmtMoney } from "@/lib/erpUtils";
+import { createWarehouseRequisition, sumMaterials } from "@/lib/erpProductionStock";
 
 const STOP_TYPES = { mecanica: "Parada Mecânica", eletrica: "Parada Elétrica", operacional: "Parada Operacional" };
 const STOP_COLORS = { mecanica: "text-amber-700 bg-amber-100", eletrica: "text-blue-700 bg-blue-100", operacional: "text-gray-700 bg-gray-100" };
@@ -99,6 +100,27 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
     }
     setSaving(true);
     try {
+      // Peças substituídas nas paradas: agrupa por produto e gera requisição ao
+      // almoxarifado — o estoque das peças é baixado quando o almoxarifado atende
+      const groupedParts = sumMaterials(stops.flatMap(st => st.parts || []));
+      let partsReq = null;
+      if (groupedParts.length) {
+        if (order.parts_requisition_id) {
+          const existing = await base44.entities.ErpWarehouseRequisition.get(order.parts_requisition_id).catch(() => null);
+          if (existing && existing.status === "pendente") {
+            await base44.entities.ErpWarehouseRequisition.update(existing.id, { items: groupedParts });
+          } else if (existing) {
+            alert("A requisição de peças substituídas já foi atendida pelo almoxarifado — o estoque já foi baixado e a requisição não será alterada.");
+          }
+        } else {
+          partsReq = await createWarehouseRequisition(user, {
+            production_order_id: order.id,
+            production_order_number: order.order_number,
+            items: groupedParts,
+            notes: "Peças substituídas nas paradas de produção (apontamento)",
+          });
+        }
+      }
       await base44.entities.ErpProductionOrder.update(order.id, {
         start_datetime: form.start_datetime || "",
         end_datetime: form.end_datetime || "",
@@ -106,8 +128,9 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
         lunch_end: form.lunch_end || "",
         stops,
         extra_cost_total: stopsExtraCost,
+        ...(partsReq ? { parts_requisition_id: partsReq.id, parts_requisition_number: partsReq.number } : {}),
       });
-      alert("Apontamento salvo.");
+      alert("Apontamento salvo." + (partsReq ? `\n\nRequisição de peças substituídas gerada: ${partsReq.number} — o estoque das peças será baixado quando o almoxarifado atendê-la.` : ""));
       onSaved();
       onClose();
     } catch (e) { alert("Erro ao salvar apontamento: " + e.message); }
