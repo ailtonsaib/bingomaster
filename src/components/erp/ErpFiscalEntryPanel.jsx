@@ -39,11 +39,14 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
   };
   useEffect(() => { load(); }, [user.email]);
 
+  // Notas pré-cadastradas pelo Recebimento WMS (aguardando operação) aparecem
+  // primeiro na lista, destacadas em roxo, para o usuário dar manutenção
   const filtered = items.filter(i => {
     const okF = filter === "all" || i.status === filter;
     const t = (i.nota_number + " " + i.supplier_name + " " + (i.purchase_order_number || "")).toLowerCase();
     return okF && t.includes(search.toLowerCase());
-  });
+  }).sort((a, b) => (b.awaiting_completion ? 1 : 0) - (a.awaiting_completion ? 1 : 0));
+  const awaitingCount = items.filter(i => i.awaiting_completion).length;
 
   const handleDelete = async (i) => {
     if (!confirm(`Excluir a entrada da NF ${i.nota_number}?`)) return;
@@ -88,6 +91,13 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
         <Button size="sm" onClick={() => { setImportDraft(null); setShowImport(true); }} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Plus className="w-4 h-4" /> Nova Entrada</Button>
       </div>
 
+      {awaitingCount > 0 && (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 p-2 text-xs text-purple-800 flex items-center gap-2">
+          <Wrench className="w-4 h-4 shrink-0" />
+          <span><b>{awaitingCount} nota(s) recebida(s) pelo WMS</b> aguardando manutenção — informe a operação de entrada e os demais dados (destacadas em roxo no topo da lista).</span>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -106,7 +116,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
               ) : filtered.map(i => {
                 const st = STATUS[i.status] || { label: i.status, color: "text-gray-700 bg-gray-100" };
                 return (
-                  <tr key={i.id} className="border-t hover:bg-gray-50">
+                  <tr key={i.id} className={`border-t hover:bg-gray-50 ${i.awaiting_completion ? "bg-purple-50 border-l-4 border-l-purple-500" : ""}`}>
                     <td className="p-2">
                       <div className="font-mono text-xs">{i.nota_number}</div>
                       <div className="text-[10px] text-gray-400">{i.nota_model === "NFSe" ? "NFS-e" : i.nota_model === "NDF" ? "Doc. Não Fiscal" : `NF-e ${i.nota_model}`} • {fmtDate(i.issue_date)}</div>
