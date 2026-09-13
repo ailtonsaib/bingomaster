@@ -1,0 +1,141 @@
+{
+  "name": "ErpWmsLabel",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo da etiqueta (ex: ETQ 001/2026) \u2014 usado na bipagem e no QR code"
+    },
+    "label_type": {
+      "type": "string",
+      "enum": [
+        "compra",
+        "producao"
+      ],
+      "description": "Modelo da etiqueta: compra (gerada no recebimento de mercadoria \u2014 NF/fornecedor) ou producao (produto acabado da ordem de produ\u00e7\u00e3o)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto (ErpProduct)"
+    },
+    "product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto (cache)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nome do produto (cache)"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unidade (cache)"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade da etiqueta"
+    },
+    "remaining": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo restante da etiqueta \u2014 consumido no atendimento de requisi\u00e7\u00f5es por bipagem"
+    },
+    "lot": {
+      "type": "string",
+      "description": "Lote do produto"
+    },
+    "fabricacao_date": {
+      "type": "string",
+      "description": "Data de fabrica\u00e7\u00e3o do lote (ISO)"
+    },
+    "expiry_date": {
+      "type": "string",
+      "description": "Data de validade do lote (ISO) \u2014 base do FEFO/FIFO na bipagem do atendimento"
+    },
+    "nota_number": {
+      "type": "string",
+      "description": "Nr. da NF de entrada (etiqueta de compra)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Fornecedor da NF (etiqueta de compra)"
+    },
+    "op_number": {
+      "type": "string",
+      "description": "Nr. da ordem de produ\u00e7\u00e3o (etiqueta de produ\u00e7\u00e3o)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativa",
+        "cancelada"
+      ],
+      "default": "ativa",
+      "description": "Situa\u00e7\u00e3o da etiqueta: ativa ou cancelada"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "code",
+    "label_type",
+    "product_name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

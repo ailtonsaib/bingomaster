@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, ClipboardList, PackageMinus } from "lucide-react";
+import { CheckCircle2, XCircle, ClipboardList, PackageMinus, ScanLine } from "lucide-react";
 import { fmtDate } from "@/lib/erpUtils";
+import ErpWmsFifoAttendant from "./ErpWmsFifoAttendant";
 
 const REQ_STATUS = {
   pendente: { label: "Pendente", color: "text-amber-700 bg-amber-100" },
@@ -67,6 +68,7 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState([]);
   const [jaBaixado, setJaBaixado] = useState(null);
+  const [showFifo, setShowFifo] = useState(false);
   const st = REQ_STATUS[req.status] || { label: req.status, color: "text-gray-700 bg-gray-100" };
 
   // Saldo atual do produto (reflete ajustes de inventário posteriores à requisição)
@@ -141,6 +143,11 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
     setBusy(false);
   };
 
+  // Atendimento por bipagem de etiquetas com validação FIFO (WMS)
+  if (showFifo) {
+    return <ErpWmsFifoAttendant req={req} onClose={() => setShowFifo(false)} onSaved={() => { onSaved(); onClose(); }} />;
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -187,8 +194,9 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
           </div>
           {req.notes && <div><span className="text-gray-500">Obs: </span>{req.notes}</div>}
           {req.status === "pendente" && (
-            <div className="flex gap-2 justify-end pt-2 border-t">
+            <div className="flex gap-2 justify-end pt-2 border-t flex-wrap">
               <Button size="sm" variant="outline" disabled={busy} onClick={() => changeStatus("cancelada")} className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50"><XCircle className="w-4 h-4" /> Cancelar</Button>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => setShowFifo(true)} className="gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50"><ScanLine className="w-4 h-4" /> Atender por Etiquetas (FIFO)</Button>
               <Button size="sm" disabled={busy} onClick={() => changeStatus("atendida")} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="w-4 h-4" /> Marcar como Atendida</Button>
             </div>
           )}

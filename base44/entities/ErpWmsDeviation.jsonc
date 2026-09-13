@@ -1,0 +1,121 @@
+{
+  "name": "ErpWmsDeviation",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "date": {
+      "type": "string",
+      "description": "Data da inconsist\u00eancia (ISO)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "fifo",
+        "produto_invalido"
+      ],
+      "description": "Tipo de inconsist\u00eancia: fifo (bipagem fora da ordem de validade \u2014 confirmada pelo operador) ou produto_invalido (tentativa de bipar etiqueta de produto fora da requisi\u00e7\u00e3o)"
+    },
+    "requisition_number": {
+      "type": "string",
+      "description": "Nr. da requisi\u00e7\u00e3o ao almoxarifado em atendimento"
+    },
+    "product_code": {
+      "type": "string",
+      "description": "C\u00f3digo do produto"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "expected_label_code": {
+      "type": "string",
+      "description": "Etiqueta que deveria ser bipada (c\u00f3digo)"
+    },
+    "expected_lot": {
+      "type": "string",
+      "description": "Lote esperado (menor validade \u2014 FIFO)"
+    },
+    "expected_expiry": {
+      "type": "string",
+      "description": "Validade esperada (ISO)"
+    },
+    "used_label_code": {
+      "type": "string",
+      "description": "Etiqueta efetivamente bipada (c\u00f3digo)"
+    },
+    "used_lot": {
+      "type": "string",
+      "description": "Lote bipado"
+    },
+    "used_expiry": {
+      "type": "string",
+      "description": "Validade bipada (ISO)"
+    },
+    "operator_name": {
+      "type": "string",
+      "description": "Operador que confirmou a inconsist\u00eancia"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "date",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2, AlertTriangle, ArrowDownCircle, CheckCircle2, FileUp } from "lucide-react";
 import ErpWmsReceivingItemCard from "./ErpWmsReceivingItemCard";
 import ErpProductFormModal from "./ErpProductFormModal";
-import { fmtMoney, fmtDate, UNITS } from "@/lib/erpUtils";
+import { fmtMoney, fmtDate, UNITS, genOrderNumber } from "@/lib/erpUtils";
 import { maskCpfCnpj } from "@/lib/brMasks";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 
@@ -248,6 +248,30 @@ export default function ErpWmsReceivingPanel({ user }) {
       }));
       const fresh = await base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500);
       setMoves(fresh);
+      // Etiquetas de compra: uma por lote recebido — produto, NF, fornecedor, qtd, lote e validade (QR code)
+      try {
+        await base44.entities.ErpWmsLabel.bulkCreate(toCreate.map(({ it, prod, factor, lot }) => {
+          const q = r3((Number(lot.quantity) || 0) * factor);
+          return {
+            user_email: user.email,
+            code: genOrderNumber("ETQ"),
+            label_type: "compra",
+            product_id: prod.id,
+            product_code: prod.code || it.product_code || "",
+            product_name: prod.name,
+            unit: prod.unit || "",
+            quantity: q,
+            remaining: q,
+            lot: lot.lot || "",
+            fabricacao_date: lot.fabricacao || "",
+            expiry_date: lot.validade || "",
+            nota_number: String(entry.nota_number || ""),
+            supplier_name: entry.supplier_name || "",
+            status: "ativa",
+            notes: `Etiqueta gerada no recebimento — NF ${entry.nota_number}`,
+          };
+        }));
+      } catch (e) { console.error("Erro ao gerar etiquetas:", e); }
       // Pré-cadastra a nota no módulo Fiscal (Entrada de NF): a entrada fica
       // aberta aguardando o usuário informar a operação e os demais dados —
       // somente após concluída alimenta estoque, contábil e financeiro
