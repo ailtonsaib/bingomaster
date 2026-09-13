@@ -38,7 +38,7 @@ export function buildKardexRows(data, product) {
       rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Consumo de insumos — ordem de produção", in: 0, out: Number(b.total_consumed) || 0 });
     });
     if (o.output_product_id === product.id && (Number(o.produced_quantity) || 0) > 0) {
-      rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Produção concluída — produto acabado", in: Number(o.produced_quantity) || 0, out: 0 });
+      rows.push({ date: d, doc: `OP ${o.order_number}`, hist: "Produção concluída — produto acabado", in: Number(o.produced_quantity) || 0, out: 0, cost: Number(o.output_unit_cost) || 0 });
     }
   });
   // Movimentações WMS (entrada/saída) — o espelho do ajuste de inventário é

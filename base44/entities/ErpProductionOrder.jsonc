@@ -82,6 +82,78 @@
       "default": 0,
       "description": "Quantidade efetivamente produzida"
     },
+    "input_cost_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total dos insumos consumidos na produ\u00e7\u00e3o (custo m\u00e9dio \u2014 inclui perdas de insumos)"
+    },
+    "output_unit_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo unit\u00e1rio do produto produzido (insumos consumidos \u00f7 quantidade produzida) \u2014 usado na valora\u00e7\u00e3o da entrada do produto acabado no kardex"
+    },
+    "loss_items": {
+      "type": "array",
+      "default": [],
+      "description": "Insumos considerados perda na conclus\u00e3o (produ\u00e7\u00e3o menor que a programada sem devolu\u00e7\u00e3o ao estoque) \u2014 o valor entra no custo de produ\u00e7\u00e3o",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_code": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 0
+          },
+          "value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor da perda ao custo m\u00e9dio do insumo"
+          }
+        }
+      }
+    },
+    "wip_items": {
+      "type": "array",
+      "default": [],
+      "description": "Insumos deixados em processo (WIP) na conclus\u00e3o \u2014 sa\u00edram do estoque pela requisi\u00e7\u00e3o e permanecem em processo (n\u00e3o entram no custo de produ\u00e7\u00e3o)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_code": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 0
+          },
+          "value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do insumo em processo ao custo m\u00e9dio"
+          }
+        }
+      }
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -101,6 +173,14 @@
     "requisition_number": {
       "type": "string",
       "description": "N\u00famero da requisi\u00e7\u00e3o ao almoxarifado (cache)"
+    },
+    "complementary_requisition_id": {
+      "type": "string",
+      "description": "ID da requisi\u00e7\u00e3o complementar ao almoxarifado (ErpWarehouseRequisition) \u2014 gerada quando a quantidade produzida excede a planejada"
+    },
+    "complementary_requisition_number": {
+      "type": "string",
+      "description": "N\u00famero da requisi\u00e7\u00e3o complementar (cache)"
     },
     "notes": {
       "type": "string",

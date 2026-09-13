@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus } from "lucide-react";
 import ErpProductionFormModal from "./ErpProductionFormModal";
-import { fmtDate, PRODUCTION_STATUS } from "@/lib/erpUtils";
+import ErpProductionCompleteModal from "./ErpProductionCompleteModal";
+import { fmtDate, fmtMoney, PRODUCTION_STATUS } from "@/lib/erpUtils";
 import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
 
 export default function ErpProductionPanel({ user }) {
@@ -18,6 +19,7 @@ export default function ErpProductionPanel({ user }) {
   const [busy, setBusy] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailReq, setDetailReq] = useState(null);
+  const [completing, setCompleting] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -87,52 +89,9 @@ export default function ErpProductionPanel({ user }) {
     load();
   };
 
-  // Concluir produção: consome insumos e gera produto acabado
-  const handleComplete = async (o) => {
-    const produced = Number(o.output_quantity) || 0;
-    if (produced <= 0) { alert("Quantidade a produzir inválida."); return; }
-    if (!confirm(`Concluir produção de ${produced} un. de "${o.output_product_name}"? Os insumos serão consumidos do estoque.`)) return;
-    setBusy(o.id);
-    try {
-      // Requisição ao almoxarifado já atendida baixou os insumos do estoque — não baixa duas vezes
-      let skipConsume = false;
-      if (o.requisition_id) {
-        try {
-          const r = await base44.entities.ErpWarehouseRequisition.get(o.requisition_id);
-          skipConsume = r?.status === "atendida";
-        } catch (e) { /* requisição indisponível — segue com o consumo padrão */ }
-      }
-      // Verifica estoque suficiente de insumos
-      if (!skipConsume) for (const b of (o.bom_items || [])) {
-        if (!b.product_id) continue;
-        const need = (Number(b.quantity_per_unit) || 0) * produced;
-        const p = await base44.entities.ErpProduct.get(b.product_id);
-        if ((Number(p.stock) || 0) < need) {
-          alert(`Estoque insuficiente de "${p.name}". Disponível: ${p.stock} ${p.unit} | Necessário: ${need} ${p.unit}`);
-          setBusy(null);
-          return;
-        }
-      }
-      // Consome insumos
-      if (!skipConsume) for (const b of (o.bom_items || [])) {
-        if (!b.product_id) continue;
-        const need = (Number(b.quantity_per_unit) || 0) * produced;
-        const p = await base44.entities.ErpProduct.get(b.product_id);
-        await base44.entities.ErpProduct.update(b.product_id, { stock: (Number(p.stock) || 0) - need });
-      }
-      // Gera produto acabado
-      const outProd = await base44.entities.ErpProduct.get(o.output_product_id);
-      await base44.entities.ErpProduct.update(o.output_product_id, { stock: (Number(outProd.stock) || 0) + produced });
-      await base44.entities.ErpProductionOrder.update(o.id, {
-        status: "concluida",
-        produced_quantity: produced,
-        completion_date: new Date().toISOString(),
-        bom_items: (o.bom_items || []).map(b => ({ ...b, total_consumed: (Number(b.quantity_per_unit) || 0) * produced })),
-      });
-      load();
-    } catch (e) { alert("Erro ao concluir produção: " + e.message); }
-    setBusy(null);
-  };
+  // Concluir produção: abre a janela com a quantidade real produzida, o
+  // consumo teórico x requisitado e a valoração pelos insumos consumidos
+  const handleComplete = (o) => setCompleting(o);
 
   return (
     <div className="space-y-3">
@@ -215,6 +174,10 @@ export default function ErpProductionPanel({ user }) {
         <ErpProductionFormModal user={user} order={editing} products={products} technicalSheets={technicalSheets} onClose={() => setShowForm(false)} onSaved={load} />
       )}
 
+      {completing && (
+        <ErpProductionCompleteModal user={user} order={completing} products={products} onClose={() => setCompleting(null)} onSaved={() => { setCompleting(null); load(); }} />
+      )}
+
       {detail && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetail(null)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -230,6 +193,9 @@ export default function ErpProductionPanel({ user }) {
                 <div><span className="text-gray-500">Status: </span><b>{(PRODUCTION_STATUS[detail.status] || {}).label}</b></div>
                 {detail.parent_order_number && <div><span className="text-gray-500">OP de origem: </span><b>{detail.parent_order_number}</b></div>}
                 {detail.requisition_number && <div><span className="text-gray-500">Solicitação almoxarifado: </span><b>{detail.requisition_number}</b></div>}
+                {detail.complementary_requisition_number && <div><span className="text-gray-500">Requisição complementar: </span><b>{detail.complementary_requisition_number}</b></div>}
+                {Number(detail.input_cost_total) > 0 && <div><span className="text-gray-500">Custo dos insumos consumidos: </span><b>{fmtMoney(detail.input_cost_total)}</b></div>}
+                {Number(detail.output_unit_cost) > 0 && <div><span className="text-gray-500">Custo unitário produzido: </span><b>{fmtMoney(detail.output_unit_cost)}</b></div>}
               </div>
               {detailReq && detailReq.items?.length > 0 && (
                 <div>
@@ -248,15 +214,39 @@ export default function ErpProductionPanel({ user }) {
                 <p className="font-semibold mb-1">Insumos consumidos:</p>
                 {detail.bom_items?.length ? (
                   <table className="w-full text-xs border rounded">
-                    <thead className="bg-gray-100"><tr><th className="p-1.5 text-left">Insumo</th><th className="p-1.5 text-right">Por unid.</th><th className="p-1.5 text-right">Total</th></tr></thead>
+                    <thead className="bg-gray-100"><tr><th className="p-1.5 text-left">Insumo</th><th className="p-1.5 text-right">Por unid.</th><th className="p-1.5 text-right">Consumo teórico</th>{detailReq && <th className="p-1.5 text-right">Requisitado</th>}</tr></thead>
                     <tbody>
                       {detail.bom_items.map((b, i) => (
-                        <tr key={i} className="border-t"><td className="p-1.5">{b.product_name}</td><td className="p-1.5 text-right">{b.quantity_per_unit} {b.unit}</td><td className="p-1.5 text-right">{b.total_consumed || (Number(b.quantity_per_unit) * detail.output_quantity)}</td></tr>
+                        <tr key={i} className="border-t"><td className="p-1.5">{b.product_name}</td><td className="p-1.5 text-right">{b.quantity_per_unit} {b.unit}</td><td className="p-1.5 text-right">{b.total_consumed || (Number(b.quantity_per_unit) * detail.output_quantity)}</td>{detailReq && <td className="p-1.5 text-right">{detailReq.items?.find(it => it.product_id === b.product_id)?.quantity ?? "—"}</td>}</tr>
                       ))}
                     </tbody>
                   </table>
                 ) : <p className="text-gray-400">Sem insumos.</p>}
               </div>
+              {detail.loss_items?.length > 0 && (
+                <div>
+                  <p className="font-semibold mb-1 text-red-600">Insumos considerados perda ({fmtMoney(detail.loss_items.reduce((s, l) => s + (Number(l.value) || 0), 0))}):</p>
+                  <table className="w-full text-xs border rounded">
+                    <tbody>
+                      {detail.loss_items.map((l, i) => (
+                        <tr key={i} className="border-t"><td className="p-1.5">{l.product_name}</td><td className="p-1.5 text-right">{l.quantity} {l.unit}</td><td className="p-1.5 text-right text-red-600">{fmtMoney(l.value || 0)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {detail.wip_items?.length > 0 && (
+                <div>
+                  <p className="font-semibold mb-1 text-amber-600">Insumos deixados em processo — WIP ({fmtMoney(detail.wip_items.reduce((s, l) => s + (Number(l.value) || 0), 0))}):</p>
+                  <table className="w-full text-xs border rounded">
+                    <tbody>
+                      {detail.wip_items.map((l, i) => (
+                        <tr key={i} className="border-t"><td className="p-1.5">{l.product_name}</td><td className="p-1.5 text-right">{l.quantity} {l.unit}</td><td className="p-1.5 text-right text-amber-600">{fmtMoney(l.value || 0)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               {detail.notes && <div><span className="text-gray-500">Obs: </span>{detail.notes}</div>}
             </div>
           </div>
