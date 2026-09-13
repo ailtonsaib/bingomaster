@@ -181,6 +181,11 @@
       "default": 0,
       "description": "Total de pallets completos da carga"
     },
+    "total_weight": {
+      "type": "number",
+      "default": 0,
+      "description": "Peso total da carga (kg) \u2014 soma dos volumes \u00d7 peso bruto de cada produto; comparado com a tara do ve\u00edculo"
+    },
     "status": {
       "type": "string",
       "enum": [

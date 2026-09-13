@@ -61,6 +61,11 @@
       "default": 0,
       "description": "Capacidade de carga (kg)"
     },
+    "tara": {
+      "type": "number",
+      "default": 0,
+      "description": "Tara do ve\u00edculo (kg) \u2014 peso m\u00e1ximo de carga permitido na montagem de carga; carga acima da tara \u00e9 marcada como excedida"
+    },
     "current_mileage": {
       "type": "number",
       "default": 0,

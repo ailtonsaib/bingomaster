@@ -4,7 +4,8 @@ import { printElements } from "@/lib/printUtils";
 import { X } from "lucide-react";
 
 // Relatório de Separação e Carregamento — imprime endereço (WMS), lote e paletização
-export default function ErpLoadReportModal({ load, onClose }) {
+export default function ErpLoadReportModal({ load, vehicleTara = 0, onClose }) {
+  const weightOver = vehicleTara > 0 && (Number(load.total_weight) || 0) > vehicleTara;
   const wmsLines = (it) => {
     const w = (it.wms || []).filter(x => Number(x.quantity) > 0);
     if (w.length === 0) return "—";
@@ -36,6 +37,11 @@ export default function ErpLoadReportModal({ load, onClose }) {
               <p><b>Veículo:</b> {load.vehicle_plate || "—"}</p>
               <p><b>Motorista:</b> {load.driver_name || "—"}</p>
               <p><b>Total:</b> {Number(load.total_volumes || 0).toLocaleString("pt-BR")} volumes — {Number(load.total_pallets || 0).toLocaleString("pt-BR")} pallets</p>
+              <p className={weightOver ? "text-red-600 font-bold" : ""}>
+                <b>Peso:</b> {Number(load.total_weight || 0).toLocaleString("pt-BR")} kg
+                {vehicleTara > 0 ? ` / Tara: ${vehicleTara.toLocaleString("pt-BR")} kg` : ""}
+                {weightOver ? " — CARGA EXCEDIDA" : ""}
+              </p>
             </div>
           </div>
 
