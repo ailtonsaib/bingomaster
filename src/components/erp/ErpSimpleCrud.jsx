@@ -391,8 +391,11 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
     setForm(prev => {
       const up = {};
       if (has("razao_social")) up.razao_social = res.razao_social || prev.razao_social;
+      else if (has("name")) up.name = res.razao_social || prev.name;
       if (has("nome_fantasia")) up.nome_fantasia = res.nome_fantasia || prev.nome_fantasia;
+      if (has("email")) up.email = res.email || prev.email;
       if (has("cep")) up.cep = res.cep ? maskCep(res.cep) : prev.cep;
+      else if (has("zip")) up.zip = res.cep ? maskCep(res.cep) : prev.zip;
       if (has("address")) up.address = res.address || prev.address;
       if (has("number")) up.number = res.number || prev.number;
       if (has("district")) up.district = res.district || prev.district;

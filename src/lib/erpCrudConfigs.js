@@ -247,8 +247,8 @@ export const ERP_CRUD_CONFIGS = {
     entityName: "ErpCustomer", title: "Cadastro de Clientes",
     fields: [
       { key: "name", label: "Nome / Razão Social", required: true, full: true },
-      { key: "cpf_cnpj", label: "CPF/CNPJ" }, { key: "email", label: "Email" }, { key: "phone", label: "Telefone" },
-      { key: "address", label: "Endereço", full: true }, { key: "district", label: "Bairro" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "zip", label: "CEP" }, { key: "ibge_code", label: "Cód. IBGE" },
+      { key: "cpf_cnpj", label: "CPF/CNPJ", mask: "cnpj", lookup: "cnpj" }, { key: "email", label: "Email" }, { key: "phone", label: "Telefone", mask: "phone" },
+      { key: "address", label: "Endereço", full: true }, { key: "district", label: "Bairro" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "zip", label: "CEP", mask: "cep" }, { key: "ibge_code", label: "Cód. IBGE" },
       { key: "vendedor_id", label: "Vendedor", type: "entity-select", entity: "ErpSalesTeam", cacheKey: "vendedor_name", optionsFilter: t => t.team_role === "vendedor" },
       { key: "channel_id", label: "Canal", type: "entity-select", entity: "ErpChannel", cacheKey: "channel_name" },
       { key: "activity_sector_id", label: "Ramo de Atividade", type: "entity-select", entity: "ErpActivitySector", cacheKey: "activity_sector_name" },
