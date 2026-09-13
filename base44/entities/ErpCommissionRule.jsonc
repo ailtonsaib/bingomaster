@@ -1,0 +1,108 @@
+{
+  "name": "ErpCommissionRule",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da regra de comiss\u00e3o"
+    },
+    "basis": {
+      "type": "string",
+      "enum": [
+        "vendas_periodo",
+        "vendas_pagas",
+        "volume"
+      ],
+      "description": "Base de c\u00e1lculo da comiss\u00e3o: vendas_periodo (pedidos emitidos no per\u00edodo), vendas_pagas (recebimentos no per\u00edodo) ou volume (quantidade vendida \u2014 atingimento medido pela meta de volume)"
+    },
+    "levels": {
+      "type": "array",
+      "default": [],
+      "maxItems": 3,
+      "description": "Faixas de comiss\u00e3o por atingimento da meta de vendas \u2014 at\u00e9 3 n\u00edveis: atingimento at\u00e9 o limite da faixa paga a comiss\u00e3o da faixa; acima da \u00faltima faixa paga a comiss\u00e3o da \u00faltima",
+      "items": {
+        "type": "object",
+        "properties": {
+          "limit_pct": {
+            "type": "number",
+            "default": 0,
+            "description": "Atingimento da meta at\u00e9 este percentual (limite superior da faixa)"
+          },
+          "commission_pct": {
+            "type": "number",
+            "default": 0,
+            "description": "Comiss\u00e3o (%) aplicada sobre o valor da base de c\u00e1lculo"
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a regra est\u00e1 ativa"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "name",
+    "basis"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

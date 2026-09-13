@@ -1,0 +1,138 @@
+{
+  "name": "ErpCommissionPayment",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "rule_id": {
+      "type": "string",
+      "description": "ID da regra de comiss\u00e3o aplicada (ErpCommissionRule)"
+    },
+    "rule_name": {
+      "type": "string",
+      "description": "Nome da regra de comiss\u00e3o (cache)"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor (ErpSalesTeam)"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor (cache)"
+    },
+    "period": {
+      "type": "string",
+      "description": "Per\u00edodo de apura\u00e7\u00e3o (YYYY-MM)"
+    },
+    "basis_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da base de c\u00e1lculo no per\u00edodo (R$ \u2014 vendas do per\u00edodo, vendas pagas ou valor das vendas quando base volume)"
+    },
+    "basis_volume": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade vendida no per\u00edodo (quando base volume)"
+    },
+    "goal_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta do vendedor no per\u00edodo (R$ ou quantidade, conforme a base)"
+    },
+    "attainment_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Atingimento da meta (%) \u2014 base da faixa de comiss\u00e3o"
+    },
+    "commission_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Comiss\u00e3o da faixa aplicada (%)"
+    },
+    "tier_limit_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Limite de atingimento da faixa aplicada (cache da regra)"
+    },
+    "commission_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da comiss\u00e3o (R$)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "pago"
+      ],
+      "default": "pendente",
+      "description": "Status: pendente ou pago"
+    },
+    "payment_date": {
+      "type": "string",
+      "description": "Data do pagamento da comiss\u00e3o (ISO)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "rule_id",
+    "seller_id",
+    "period"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
