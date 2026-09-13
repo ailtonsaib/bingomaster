@@ -84,6 +84,7 @@ export default function ErpWmsProductionScanPanel({ user }) {
         lot: l.lot || "",
         expiry_date: l.expiry_date || "",
         document: docTag,
+        operator_name: user.name || user.email,
         move_date: new Date().toISOString(),
         notes: `Entrada de produção por bipagem — etiqueta ${l.code}`,
       })));

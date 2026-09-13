@@ -144,6 +144,7 @@ export default function ErpLoadScanPanel({ user }) {
           lot: e.label.lot || "",
           expiry_date: e.label.expiry_date || "",
           document: `Carga ${carga.number}`,
+          operator_name: user.name || user.email,
           move_date: new Date().toISOString(),
           notes: `Separação para carregamento (etiqueta ${e.label.code})`,
         }));
@@ -157,6 +158,7 @@ export default function ErpLoadScanPanel({ user }) {
             unit: a.item.unit || "",
             quantity: Number(a.manual) || 0,
             document: `Carga ${carga.number}`,
+            operator_name: user.name || user.email,
             move_date: new Date().toISOString(),
             notes: "Separação para carregamento (sem etiqueta)",
           });

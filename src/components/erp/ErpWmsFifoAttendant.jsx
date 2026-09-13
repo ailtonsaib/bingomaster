@@ -152,6 +152,7 @@ export default function ErpWmsFifoAttendant({ req, onClose, onSaved }) {
           lot: e.label.lot || "",
           expiry_date: e.label.expiry_date || "",
           document: `Requisição ${req.number}`,
+          operator_name: req.user_email,
           move_date: new Date().toISOString(),
           notes: `Saída por requisição (etiqueta ${e.label.code})${req.production_order_number ? ` — OP ${req.production_order_number}` : ""}`,
         }));
@@ -165,6 +166,7 @@ export default function ErpWmsFifoAttendant({ req, onClose, onSaved }) {
             unit: a.item.unit || "",
             quantity: Number(a.manual) || 0,
             document: `Requisição ${req.number}`,
+            operator_name: req.user_email,
             move_date: new Date().toISOString(),
             notes: `Saída por requisição (sem etiqueta)${req.production_order_number ? ` — OP ${req.production_order_number}` : ""}`,
           });
