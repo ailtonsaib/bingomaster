@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft, Handshake, SlidersHorizontal, ListChecks, History } from "lucide-react";
+import { LayoutDashboard, Building2, Building, Users, ScrollText, Network, GitBranch, Boxes, Layers, ArrowRightLeft, Handshake, SlidersHorizontal, ListChecks, History, MonitorSmartphone } from "lucide-react";
+import ErpAppsColetoresPanel from "@/components/erp/ErpAppsColetoresPanel";
 import ErpDashboard from "@/components/erp/ErpDashboard";
 import ErpAccountingEventManager from "@/components/erp/ErpAccountingEventManager";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
@@ -15,6 +16,7 @@ import { SubNav } from "./ErpModuleSuprimentos";
 
 const SUBTABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "coletores", label: "Aplicativos Coletores", icon: MonitorSmartphone },
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "filiais", label: "Filiais", icon: Building },
   { id: "departamentos", label: "Departamentos", icon: Network },
@@ -56,6 +58,7 @@ export default function ErpModuleGerencial({ user }) {
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="purple" />
       {sub === "dashboard" && (loading ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" /></div> : <ErpDashboard products={products} purchases={purchases} productions={productions} />)}
+      {sub === "coletores" && <ErpAppsColetoresPanel user={user} />}
       {sub === "regras" && <ErpTaxRuleManager user={user} />}
       {sub === "usuarios" && <ErpUserManager user={user} />}
       {sub === "parametros_usuario" && <ErpUserParameterManager user={user} />}
@@ -63,7 +66,7 @@ export default function ErpModuleGerencial({ user }) {
       {sub === "operacoes" && <ErpOperationManager user={user} />}
       {sub === "eventos" && <ErpAccountingEventManager user={user} />}
       {sub === "empresas" && <ErpCompanyManager user={user} />}
-      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && sub !== "eventos" && sub !== "empresas" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
+      {sub !== "dashboard" && sub !== "coletores" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && sub !== "eventos" && sub !== "empresas" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
 }

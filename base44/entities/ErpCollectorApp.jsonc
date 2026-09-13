@@ -1,0 +1,95 @@
+{
+  "name": "ErpCollectorApp",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "app_id": {
+      "type": "string",
+      "enum": [
+        "vendedor",
+        "compras",
+        "producao",
+        "logistica"
+      ],
+      "description": "Aplicativo do coletor de dados: vendedor (App do Vendedor), compras (bipagem de recebimento/etiquetas de compra), producao (bipagem do ch\u00e3o de f\u00e1brica) ou logistica (em desenvolvimento)"
+    },
+    "app_name": {
+      "type": "string",
+      "description": "Nome do aplicativo (cache)"
+    },
+    "installed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o aplicativo est\u00e1 instalado no coletor de dados (controlado pelo gestor no M\u00f3dulo Gerencial)"
+    },
+    "install_date": {
+      "type": "string",
+      "description": "Data da instala\u00e7\u00e3o no coletor (ISO)"
+    },
+    "device_name": {
+      "type": "string",
+      "description": "Coletor/aparelho em que o aplicativo foi instalado (ex: Zebra MC3300, tablet do galp\u00e3o)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "app_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
