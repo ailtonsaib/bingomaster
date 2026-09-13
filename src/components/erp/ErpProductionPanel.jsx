@@ -6,8 +6,9 @@ import ErpProductionFormModal from "./ErpProductionFormModal";
 import ErpProductionCompleteModal from "./ErpProductionCompleteModal";
 import ErpProductionRecostModal from "./ErpProductionRecostModal";
 import ErpProductionApontamentoModal, { minsBetween, fmtDuration, fmtDateTime, lunchMinutes } from "./ErpProductionApontamentoModal";
+import ErpProductionRequisitionModal from "./ErpProductionRequisitionModal";
 import { fmtDate, fmtMoney, PRODUCTION_STATUS } from "@/lib/erpUtils";
-import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition, computeLineEfficiency } from "@/lib/erpProductionStock";
+import { computeLineEfficiency } from "@/lib/erpProductionStock";
 
 export default function ErpProductionPanel({ user }) {
   const [orders, setOrders] = useState([]);
@@ -24,6 +25,7 @@ export default function ErpProductionPanel({ user }) {
   const [completing, setCompleting] = useState(null);
   const [recosting, setRecosting] = useState(null);
   const [apontamento, setApontamento] = useState(null);
+  const [requisitioning, setRequisitioning] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -59,37 +61,10 @@ export default function ErpProductionPanel({ user }) {
     load();
   };
 
-  // Gerar solicitação ao almoxarifado (OP em standby ou OP sem solicitação)
-  const handleGenerateRequisition = async (o) => {
-    const needed = computeNeeded(o.bom_items, o.output_quantity);
-    if (!needed.length) { alert("Esta OP não possui insumos no BOM — nada a solicitar."); return; }
-    const shortages = checkStock(products, needed);
-    let proceed = true;
-    if (shortages.length) {
-      proceed = confirm(`Os seguintes insumos AINDA estão sem estoque suficiente:\n\n${shortagesMessage(shortages)}\n\nDeseja prosseguir? A solicitação ao almoxarifado será gerada mesmo assim.\n\n[OK] = Prosseguir e gerar solicitação\n[Cancelar] = Manter a OP em standby`);
-    }
-    if (!proceed) return;
-    setBusy(o.id);
-    try {
-      // OP de subproduto: referencia a OP de produto acabado de origem
-      const parent = o.parent_order_number ? orders.find(x => x.order_number === o.parent_order_number) : null;
-      const req = await createWarehouseRequisition(user, {
-        production_order_id: o.id,
-        production_order_number: o.order_number,
-        finished_order_number: parent ? parent.order_number : undefined,
-        finished_product_name: parent ? parent.output_product_name : undefined,
-        items: needed,
-      });
-      await base44.entities.ErpProductionOrder.update(o.id, {
-        status: o.status === "standby" ? "rascunho" : o.status,
-        requisition_id: req.id,
-        requisition_number: req.number,
-      });
-      alert(`Solicitação ao almoxarifado gerada: ${req.number}`);
-      load();
-    } catch (e) { alert("Erro ao gerar solicitação: " + e.message); }
-    setBusy(null);
-  };
+  // Gerar solicitação ao almoxarifado (OP em standby ou OP sem solicitação):
+  // abre a janela que abate os insumos em processo (WIP) da linha e solicita
+  // apenas a diferença, com opção de incluir insumos adicionais
+  const handleGenerateRequisition = (o) => setRequisitioning(o);
 
   // Iniciar produção
   const handleStart = async (o) => {
@@ -209,6 +184,10 @@ export default function ErpProductionPanel({ user }) {
 
       {recosting && (
         <ErpProductionRecostModal user={user} order={recosting} products={products} onClose={() => setRecosting(null)} onSaved={() => { setRecosting(null); load(); }} />
+      )}
+
+      {requisitioning && (
+        <ErpProductionRequisitionModal user={user} order={requisitioning} products={products} orders={orders} onClose={() => setRequisitioning(null)} onSaved={() => { setRequisitioning(null); load(); }} />
       )}
 
       {apontamento && (
