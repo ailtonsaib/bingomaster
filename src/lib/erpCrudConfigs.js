@@ -245,8 +245,10 @@ export const ERP_CRUD_CONFIGS = {
     searchKeys: ["name", "code", "description"],
   },
   clientes: {
-    entityName: "ErpCustomer", title: "Cadastro de Clientes", formWide: true,
+    entityName: "ErpCustomer", title: "Cadastro de Clientes / Fornecedores", formWide: true,
     fields: [
+      { key: "is_cliente", label: "Cliente (compra da empresa)", type: "checkbox", requiredIf: form => !form.is_fornecedor },
+      { key: "is_fornecedor", label: "Fornecedor (vende para a empresa)", type: "checkbox", requiredIf: form => !form.is_cliente },
       { key: "name", label: "Nome / Razão Social", required: true, full: true },
       { key: "cpf_cnpj", label: "CPF/CNPJ", mask: "cnpj", lookup: "cnpj" }, { key: "ie", label: "Inscrição Estadual", requiredIf: form => !!form.contribuinte },
       { key: "suframa", label: "Número SUFRAMA" }, { key: "contribuinte", label: "Contribuinte ICMS", type: "checkbox" },
@@ -282,7 +284,7 @@ export const ERP_CRUD_CONFIGS = {
       ] },
       { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
-    columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ", render: it => it.cpf_cnpj ? maskCpfCnpj(it.cpf_cnpj) : "—" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" },
+    columns: [{ key: "name", label: "Nome / Razão Social" }, { key: "cpf_cnpj", label: "CPF/CNPJ", render: it => it.cpf_cnpj ? maskCpfCnpj(it.cpf_cnpj) : "—" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" },
       { key: "visit_frequency", label: "Visita", render: it => {
         const F = { semanal: "Semanal", bissemanal: "Bissemanal", quinzenal: "Quinzenal", mensal: "Mensal" };
         if (!it.visit_frequency) return "—";

@@ -6,6 +6,16 @@
       "type": "string",
       "description": "Email do operador (escopo)"
     },
+    "is_cliente": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o cadastro \u00e9 cliente (compra da empresa)"
+    },
+    "is_fornecedor": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o cadastro \u00e9 fornecedor (vende para a empresa) \u2014 cadastro \u00fanico cliente/fornecedor"
+    },
     "name": {
       "type": "string",
       "description": "Nome / Raz\u00e3o social"

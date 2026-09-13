@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, ClipboardCheck, Monitor, BarChart3, Network, Tags, Briefcase, Share2, Target, CircleDollarSign, Percent, Smartphone } from "lucide-react";
+import { Users, User, Truck, ClipboardCheck, Monitor, BarChart3, Network, Tags, Briefcase, Share2, Target, CircleDollarSign, Percent, Smartphone } from "lucide-react";
 import ErpSalesAppPanel from "@/components/erp/salesapp/ErpSalesAppPanel";
 import { useNavigate } from "react-router-dom";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
@@ -13,7 +13,7 @@ import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const SUBTABS = [
-  { id: "clientes", label: "Clientes", icon: Users },
+  { id: "clientes", label: "Clientes / Fornecedores", icon: Users },
   { id: "equipe", label: "Equipe de Vendas", icon: Network },
   { id: "canais", label: "Canais", icon: Tags },
   { id: "redes", label: "Redes", icon: Share2 },
@@ -27,13 +27,28 @@ const SUBTABS = [
   { id: "relatorios", label: "Relatórios de Vendas", icon: BarChart3 },
 ];
 
+// Coluna "Tipo" do cadastro único — ícones de Cliente e/ou Fornecedor
+const TIPO_CADASTRO_COLUMN = {
+  key: "is_cliente", label: "Tipo",
+  render: it => (
+    <span className="flex items-center gap-1.5">
+      {it.is_cliente !== false && (
+        <span className="flex items-center gap-1 text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full text-[10px] font-medium"><User className="w-3 h-3" /> Cliente</span>
+      )}
+      {it.is_fornecedor && (
+        <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full text-[10px] font-medium"><Truck className="w-3 h-3" /> Fornecedor</span>
+      )}
+    </span>
+  ),
+};
+
 export default function ErpModuleComercial({ user }) {
   const [sub, setSub] = useState("clientes");
   const navigate = useNavigate();
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={SUBTABS} color="emerald" />
-      {sub === "clientes" && <ErpSimpleCrud key="clientes" user={user} {...ERP_CRUD_CONFIGS.clientes} />}
+      {sub === "clientes" && <ErpSimpleCrud key="clientes" user={user} {...ERP_CRUD_CONFIGS.clientes} columns={[TIPO_CADASTRO_COLUMN, ...ERP_CRUD_CONFIGS.clientes.columns]} />}
       {sub === "equipe" && <ErpSalesTeamManager user={user} />}
       {sub === "canais" && <ErpSimpleCrud key="canais" user={user} {...ERP_CRUD_CONFIGS.canais} />}
       {sub === "redes" && <ErpSimpleCrud key="redes" user={user} {...ERP_CRUD_CONFIGS.redes} />}
