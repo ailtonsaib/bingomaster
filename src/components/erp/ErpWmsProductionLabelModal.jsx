@@ -110,7 +110,8 @@ export default function ErpWmsProductionLabelModal({ user, products, configs, on
         };
       });
       const res = await base44.entities.ErpWmsLabel.bulkCreate(payloads);
-      setCreated(Array.isArray(res) && res.length ? res : payloads);
+      const list = Array.isArray(res) && res.length ? res : payloads;
+      setCreated(list.map(l => ({ ...l, _origQty: Number(l.quantity) || 0 })));
       onSaved?.();
     } catch (e) { alert(e.message); }
     setSaving(false);
@@ -132,6 +133,20 @@ export default function ErpWmsProductionLabelModal({ user, products, configs, on
         setCreated(prev => prev.map(l => ({ ...l, print_count: (Number(l.print_count) || 0) + 1 })));
       } catch (e) { console.error(e); }
     };
+
+    // Grava a quantidade ajustada na etiqueta (e no saldo, enquanto não consumida)
+    const persistQty = async (i) => {
+      const l = created[i];
+      if (!l?.id) return;
+      const newQty = Number(l.quantity) || 0;
+      if (newQty === (Number(l._origQty) || 0)) return;
+      try {
+        const data = { quantity: newQty };
+        if (Number(l.remaining) === Number(l._origQty)) data.remaining = newQty;
+        await base44.entities.ErpWmsLabel.update(l.id, data);
+        setCreated(prev => prev.map((x, idx) => idx === i ? { ...x, _origQty: newQty } : x));
+      } catch (e) { console.error(e); }
+    };
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -143,6 +158,20 @@ export default function ErpWmsProductionLabelModal({ user, products, configs, on
             <div className="flex items-center gap-2 no-print">
               <p className="text-xs text-gray-500 flex-1">{created.length} etiqueta(s) — {created.reduce((s, l) => s + (Number(l.quantity) || 0), 0)} {product?.unit || ""} no total.</p>
               <Button size="sm" onClick={handlePrint} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Printer className="w-4 h-4" /> Imprimir</Button>
+            </div>
+            <div className="border rounded-lg divide-y no-print max-h-48 overflow-y-auto">
+              <p className="p-2 text-[11px] text-gray-400">Altere a quantidade antes de imprimir — o valor ajustado fica gravado na etiqueta.</p>
+              {created.map((l, i) => (
+                <div key={l.id || i} className="flex items-center gap-2 p-2 text-sm">
+                  <span className="font-mono text-xs text-gray-500 flex-1 truncate">{l.code}</span>
+                  <span className="text-xs text-gray-500">Qtd.:</span>
+                  <input type="number" min="0" step="0.001" value={l.quantity}
+                    onChange={e => setCreated(prev => prev.map((x, idx) => idx === i ? { ...x, quantity: e.target.value } : x))}
+                    onBlur={() => persistQty(i)}
+                    className="w-24 h-8 rounded-md border border-input px-2 text-sm text-right" />
+                  <span className="text-xs text-gray-400 w-8">{l.unit || ""}</span>
+                </div>
+              ))}
             </div>
             <div id="label-print-area" className="space-y-2">
               {created.map(l => (

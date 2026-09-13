@@ -70,7 +70,7 @@ export default function ErpWmsPurchaseLabelModal({ user, config, onClose, onSave
         }
       }
       const created = await base44.entities.ErpWmsLabel.bulkCreate(labels);
-      setGenerated(created);
+      setGenerated((created || []).map(l => ({ ...l, _origQty: Number(l.quantity) || 0 })));
       onSaved();
       if (printAfter) setTimeout(handlePrint, 300);
     } catch (e) { alert(e.message); }
@@ -86,6 +86,20 @@ export default function ErpWmsPurchaseLabelModal({ user, config, onClose, onSave
       const withId = (generated || []).filter(l => l.id);
       await base44.entities.ErpWmsLabel.bulkUpdate(withId.map(l => ({ id: l.id, print_count: (Number(l.print_count) || 0) + 1 })));
       setGenerated(prev => prev.map(l => ({ ...l, print_count: (Number(l.print_count) || 0) + 1 })));
+    } catch (e) { console.error(e); }
+  };
+
+  // Grava a quantidade ajustada na etiqueta (e no saldo, enquanto não consumida)
+  const persistGenQty = async (i) => {
+    const l = generated[i];
+    if (!l?.id) return;
+    const newQty = Number(l.quantity) || 0;
+    if (newQty === (Number(l._origQty) || 0)) return;
+    try {
+      const data = { quantity: newQty };
+      if (Number(l.remaining) === Number(l._origQty)) data.remaining = newQty;
+      await base44.entities.ErpWmsLabel.update(l.id, data);
+      setGenerated(prev => prev.map((x, idx) => idx === i ? { ...x, _origQty: newQty } : x));
     } catch (e) { console.error(e); }
   };
 
@@ -193,6 +207,20 @@ export default function ErpWmsPurchaseLabelModal({ user, config, onClose, onSave
             <div className="flex items-center justify-between no-print">
               <p className="text-xs font-medium text-emerald-700">{generated.length} etiqueta(s) gerada(s) — NF {nota.nota_number}.</p>
               <Button size="sm" onClick={handlePrint} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Printer className="w-4 h-4" /> Imprimir Todas</Button>
+            </div>
+            <div className="border rounded-lg divide-y no-print max-h-48 overflow-y-auto">
+              <p className="p-2 text-[11px] text-gray-400">Altere a quantidade antes de imprimir — o valor ajustado fica gravado na etiqueta.</p>
+              {generated.map((l, i) => (
+                <div key={l.id || i} className="flex items-center gap-2 p-2 text-sm">
+                  <span className="font-mono text-xs text-gray-500 flex-1 truncate">{l.code}</span>
+                  <span className="text-xs text-gray-500">Qtd.:</span>
+                  <input type="number" min="0" step="0.001" value={l.quantity}
+                    onChange={e => setGenerated(prev => prev.map((x, idx) => idx === i ? { ...x, quantity: e.target.value } : x))}
+                    onBlur={() => persistGenQty(i)}
+                    className="w-24 h-8 rounded-md border border-input px-2 text-sm text-right" />
+                  <span className="text-xs text-gray-400 w-8">{l.unit || ""}</span>
+                </div>
+              ))}
             </div>
             <div id="label-print-area" className="space-y-2">
               {generated.map(l => (
