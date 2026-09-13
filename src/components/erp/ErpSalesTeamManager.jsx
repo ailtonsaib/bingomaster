@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, X, Users, Crown, UserCog, User } from "lucide-react";
+import { Plus, Search, Trash2, X, Users, Crown, UserCog, User, MapPin } from "lucide-react";
 import { maskPhone } from "@/lib/brMasks";
 
 const ROLE_OPTS = [
@@ -103,6 +103,9 @@ function ErpSalesTeamForm({ user, editing, gerentes, supervisores, onClose, onSa
     commission_rate: editing?.commission_rate || 0,
     supervisor_id: editing?.supervisor_id || "",
     gerente_id: editing?.gerente_id || "",
+    start_address: editing?.start_address || "",
+    start_district: editing?.start_district || "",
+    start_city: editing?.start_city || "",
     is_active: editing?.is_active !== false,
     notes: editing?.notes || "",
   });
@@ -114,7 +117,7 @@ function ErpSalesTeamForm({ user, editing, gerentes, supervisores, onClose, onSa
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome."); return; }
     setSaving(true);
-    const payload = { user_email: user.email, team_role: form.team_role, name: form.name, email: form.email || undefined, phone: form.phone || undefined, commission_rate: Number(form.commission_rate) || 0, is_active: !!form.is_active, notes: form.notes || undefined };
+    const payload = { user_email: user.email, team_role: form.team_role, name: form.name, email: form.email || undefined, phone: form.phone || undefined, commission_rate: Number(form.commission_rate) || 0, start_address: form.start_address || undefined, start_district: form.start_district || undefined, start_city: form.start_city || undefined, is_active: !!form.is_active, notes: form.notes || undefined };
     if (form.team_role === "vendedor" && form.supervisor_id) {
       payload.supervisor_id = form.supervisor_id;
       const sup = supervisores.find(s => s.id === form.supervisor_id);
@@ -162,6 +165,18 @@ function ErpSalesTeamForm({ user, editing, gerentes, supervisores, onClose, onSa
             <div><Label>Telefone</Label><Input value={form.phone} onChange={e => set("phone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" /></div>
             <div><Label>Comissão (%)</Label><Input type="number" step="0.01" value={form.commission_rate} onChange={e => set("commission_rate", e.target.value)} /></div>
           </div>
+
+          {form.team_role === "vendedor" && (
+            <div className="border rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-700 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Ponto de Partida da Rota de Visitas</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2"><Label>Endereço de Partida</Label><Input value={form.start_address} onChange={e => set("start_address", e.target.value)} placeholder="Rua, avenida, número..." /></div>
+                <div><Label>Bairro</Label><Input value={form.start_district} onChange={e => set("start_district", e.target.value)} /></div>
+                <div><Label>Município</Label><Input value={form.start_city} onChange={e => set("start_city", e.target.value)} /></div>
+              </div>
+              <p className="text-xs text-gray-400">Base da roteirização: os clientes do município de partida aparecem primeiro na sequência da rota de visitas.</p>
+            </div>
+          )}
 
           {form.team_role === "supervisor" && (
             <div><Label>Atribuir ao Gerente *</Label>

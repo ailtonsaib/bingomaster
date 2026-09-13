@@ -46,6 +46,18 @@
       "type": "string",
       "description": "Nome do gerente (cache)"
     },
+    "start_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do local de partida do vendedor (base da rota de visitas)"
+    },
+    "start_district": {
+      "type": "string",
+      "description": "Bairro do local de partida do vendedor"
+    },
+    "start_city": {
+      "type": "string",
+      "description": "Munic\u00edpio do local de partida do vendedor \u2014 os clientes deste munic\u00edpio v\u00eam primeiro na sequ\u00eancia da rota de visitas"
+    },
     "is_active": {
       "type": "boolean",
       "default": true
