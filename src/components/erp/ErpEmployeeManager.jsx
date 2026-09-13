@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Plus, Trash2, Pencil, Users } from "lucide-react";
 import { maskCpf, maskPhone, maskCep, onlyDigits } from "@/lib/brMasks";
+import { fmtDate } from "@/lib/erpUtils";
 
 const CONTRACT_OPTS = [
   { value: "clt", label: "CLT" },
@@ -62,7 +63,7 @@ export default function ErpEmployeeManager({ user }) {
                     <td className="p-2 font-mono text-xs">{e.cpf || "—"}</td>
                     <td className="p-2">{e.job_title || "—"}</td>
                     <td className="p-2">{e.department_name || "—"}</td>
-                    <td className="p-2 text-xs">{(e.admission_date || "").slice(0, 10)}</td>
+                    <td className="p-2 text-xs">{fmtDate(e.admission_date)}</td>
                     <td className="p-2 text-right">{Number(e.salary_base || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
                     <td className="p-2 text-xs">{(CONTRACT_OPTS.find(c => c.value === e.contract_type) || {}).label || e.contract_type}</td>
                     <td className="p-2 text-right whitespace-nowrap">
