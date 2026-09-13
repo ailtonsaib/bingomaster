@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Truck, Users, Fuel, Wrench, CircleDot, Wallet, BarChart3 } from "lucide-react";
+import { Truck, Users, Fuel, Wrench, CircleDot, Wallet, BarChart3, Boxes } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpFleetReportsPanel from "@/components/erp/ErpFleetReportsPanel";
 import ErpFleetMaintenancePanel from "@/components/erp/ErpFleetMaintenancePanel";
+import ErpLoadAssemblyPanel from "@/components/erp/logistica/ErpLoadAssemblyPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const VEHICLE_STATUS = [
@@ -183,6 +184,7 @@ const CRUD_CONFIGS = {
 };
 
 const TABS = [
+  { id: "carga", label: "Montagem de Carga", icon: Boxes },
   { id: "veiculos", label: "Veículos", icon: Truck },
   { id: "motoristas", label: "Motoristas", icon: Users },
   { id: "abastecimentos", label: "Abastecimentos", icon: Fuel },
@@ -193,11 +195,12 @@ const TABS = [
 ];
 
 export default function ErpModuleLogistica({ user }) {
-  const [sub, setSub] = useState("veiculos");
+  const [sub, setSub] = useState("carga");
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="purple" />
-      {sub === "manutencoes" ? <ErpFleetMaintenancePanel user={user} />
+      {sub === "carga" ? <ErpLoadAssemblyPanel user={user} />
+        : sub === "manutencoes" ? <ErpFleetMaintenancePanel user={user} />
         : sub === "relatorios" ? <ErpFleetReportsPanel user={user} />
         : <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />}
     </div>
