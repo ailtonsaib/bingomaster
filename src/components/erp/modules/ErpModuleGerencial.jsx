@@ -9,6 +9,7 @@ import ErpUserManager from "@/components/erp/ErpUserManager";
 import ErpUserParameterManager from "@/components/erp/ErpUserParameterManager";
 import ErpPartnerManager from "@/components/erp/ErpPartnerManager";
 import ErpOperationManager from "@/components/erp/ErpOperationManager";
+import ErpCompanyManager from "@/components/erp/ErpCompanyManager";
 import { ERP_CRUD_CONFIGS } from "@/lib/erpCrudConfigs";
 import { SubNav } from "./ErpModuleSuprimentos";
 
@@ -61,7 +62,8 @@ export default function ErpModuleGerencial({ user }) {
       {sub === "parceiros" && <ErpPartnerManager user={user} />}
       {sub === "operacoes" && <ErpOperationManager user={user} />}
       {sub === "eventos" && <ErpAccountingEventManager user={user} />}
-      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && sub !== "eventos" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
+      {sub === "empresas" && <ErpCompanyManager user={user} />}
+      {sub !== "dashboard" && sub !== "regras" && sub !== "usuarios" && sub !== "parametros_usuario" && sub !== "parceiros" && sub !== "operacoes" && sub !== "eventos" && sub !== "empresas" && <ErpSimpleCrud key={sub} user={user} {...ERP_CRUD_CONFIGS[sub]} />}
     </div>
   );
 }

@@ -21,7 +21,8 @@ async function lookupCep(cep) {
 
 // field: { key, label, type: text|number|select|checkbox|entity-select, options?, entity?, labelKey?, cacheKey?, required?, full?, placeholder? }
 // column: { key, label, type?: text|badge|money|bool, options?(for badge) }
-export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle, cashJournal }) {
+// rowAction (opcional): { icon, title, onClick(item) } — ação extra por linha
+export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle, cashJournal, rowAction }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -322,6 +323,9 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
                   )}
                   {columns.map(c => <td key={c.key} className="p-2">{renderCell(it, c)}</td>)}
                   <td className="p-2 text-right whitespace-nowrap">
+                    {rowAction && (() => { const RowIcon = rowAction.icon; return (
+                      <button onClick={() => rowAction.onClick(it)} title={rowAction.title || ""} className="p-1 hover:bg-indigo-50 rounded"><RowIcon className="w-4 h-4 text-indigo-600" /></button>
+                    ); })()}
                     <button onClick={() => { setEditing(it); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><Pencil className="w-4 h-4 text-gray-500" /></button>
                     <button onClick={() => handleDelete(it)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                   </td>
