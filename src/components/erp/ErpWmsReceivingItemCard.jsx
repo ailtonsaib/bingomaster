@@ -6,7 +6,7 @@ const r3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
 // Cartão de conferência de um item da NF no recebimento WMS: ordem de compra
 // (com comparação de quantidade/valor), lotes (N por produto) e endereço de
 // armazenagem para produtos endereçados.
-export default function ErpWmsReceivingItemCard({ item, product, factor, poOptions, poId, onPoChange, divergence, lots, onLotsChange, locationId, onLocationChange, locations, occupancy }) {
+export default function ErpWmsReceivingItemCard({ item, product, factor, poOptions, poId, onPoChange, divergence, lots, onLotsChange, locationId, onLocationChange, locations, occupancy, onRegisterProduct }) {
   const lotSum = lots.reduce((s, l) => s + (Number(l.quantity) || 0), 0);
   const lotOk = Math.abs(lotSum - (Number(item.quantity) || 0)) < 0.001;
   const nfQtyConv = r3((Number(item.quantity) || 0) * factor);
@@ -37,7 +37,12 @@ export default function ErpWmsReceivingItemCard({ item, product, factor, poOptio
       </div>
 
       {!product ? (
-        <p className="p-2.5 text-xs text-amber-700 bg-amber-50">Item sem produto cadastrado — o recebimento físico deste item não será registrado. Vincule o produto na entrada fiscal.</p>
+        <div className="p-2.5 text-xs text-amber-700 bg-amber-50 flex items-center justify-between gap-2 flex-wrap">
+          <span>Item sem produto cadastrado — cadastre-o agora para registrar o recebimento físico deste item.</span>
+          {onRegisterProduct && (
+            <button type="button" onClick={onRegisterProduct} className="px-2.5 py-1 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 whitespace-nowrap">Cadastrar produto</button>
+          )}
+        </div>
       ) : (
         <div className="p-3 space-y-3">
           {/* Ordem de compra do produto — comparação quantidade/valor */}

@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, AlertTriangle, ArrowDownCircle, CheckCircle2, FileUp } from "lucide-react";
 import ErpWmsReceivingItemCard from "./ErpWmsReceivingItemCard";
-import { fmtMoney, fmtDate } from "@/lib/erpUtils";
+import ErpProductFormModal from "./ErpProductFormModal";
+import { fmtMoney, fmtDate, UNITS } from "@/lib/erpUtils";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
 
 const onlyDigits = (v) => String(v || "").replace(/\D/g, "");
@@ -31,6 +32,7 @@ export default function ErpWmsReceivingPanel({ user }) {
   const [state, setState] = useState([]);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [registering, setRegistering] = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -147,6 +149,30 @@ export default function ErpWmsReceivingPanel({ user }) {
       setNotFound("Erro ao importar o XML: " + err.message);
     }
     setSearching(false);
+  };
+
+  // Item sem produto cadastrado: abre o cadastro do produto já preenchido com
+  // os dados da nota (nome, NCM, código de barras, unidade)
+  const handleRegisterProduct = (i) => {
+    const it = (entry.items || [])[i];
+    if (!it) return;
+    setRegistering({
+      index: i,
+      prefill: {
+        name: it.product_name || "",
+        code: it.product_code || "",
+        barcode: it.barcode && it.barcode !== "SEM GTIN" ? it.barcode : "",
+        ncm: it.ncm || "",
+        unit: UNITS.includes(it.unit) ? it.unit : "UN",
+      },
+    });
+  };
+
+  // Produto cadastrado: vincula automaticamente ao item da nota
+  const handleProductSaved = (saved) => {
+    setProducts(p => [...p, saved]);
+    setEntry(e => e ? { ...e, items: e.items.map((it, idx) => idx === registering.index ? { ...it, product_id: saved.id } : it) } : e);
+    setRegistering(null);
   };
 
   // Divergência quantidade/valor do item em relação à OC selecionada
@@ -292,6 +318,7 @@ export default function ErpWmsReceivingPanel({ user }) {
                   onLocationChange={v => setState(p => p.map((s, idx) => idx === i ? { ...s, location_id: v } : s))}
                   locations={locations}
                   occupancy={occupancy}
+                  onRegisterProduct={() => handleRegisterProduct(i)}
                 />
               );
             })}
@@ -307,6 +334,15 @@ export default function ErpWmsReceivingPanel({ user }) {
             </div>
           )}
         </>
+      )}
+
+      {registering && (
+        <ErpProductFormModal
+          user={user}
+          product={registering.prefill}
+          onClose={() => setRegistering(null)}
+          onSaved={handleProductSaved}
+        />
       )}
     </div>
   );
