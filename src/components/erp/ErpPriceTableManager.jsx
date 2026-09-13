@@ -6,6 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Trash2, X, CircleDollarSign } from "lucide-react";
 import { fmtDate, fmtMoney } from "@/lib/erpUtils";
 
+const PRODUCT_TYPES = [
+  { value: "", label: "Todos os tipos" },
+  { value: "materia_prima", label: "Matéria-Prima" },
+  { value: "mercadoria", label: "Mercadoria" },
+  { value: "produto_acabado", label: "Produto Acabado" },
+  { value: "produto_em_processo", label: "Produto em Processo" },
+  { value: "insumo", label: "Insumo" },
+  { value: "consumo", label: "Consumo" },
+  { value: "servico", label: "Serviço" },
+];
+
 // Tabelas de preço: cadastro com vigência (início/fim) e preço por produto
 export default function ErpPriceTableManager({ user }) {
   const [items, setItems] = useState([]);
@@ -90,27 +101,47 @@ function ErpPriceTableForm({ user, editing, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  const [filterType, setFilterType] = useState("");
+
   useEffect(() => {
-    base44.entities.ErpProduct.filter({ user_email: user.email, is_active: true }, "name", 500)
-      .then(list => setProducts(list))
-      .catch(() => setProducts([]));
+    const load = async () => {
+      const list = [];
+      try {
+        for (let skip = 0; skip < 5000; skip += 500) {
+          const page = await base44.entities.ErpProduct.filter({ user_email: user.email, is_active: true }, "name", 500, skip);
+          list.push(...page);
+          if (page.length < 500) break;
+        }
+      } catch (e) { console.error(e); }
+      setProducts(list);
+    };
+    load();
   }, [user.email]);
 
   const filteredProducts = products.filter(p =>
-    !items.find(i => i.product_id === p.id) && p.name.toLowerCase().includes(search.toLowerCase())
+    (!filterType || p.product_type === filterType) &&
+    !items.find(i => i.product_id === p.id) &&
+    p.name.toLowerCase().includes(search.toLowerCase())
   );
+  // traz todos os produtos ativos do filtro de tipo para a tabela de preço
+  const addAllFiltered = () => {
+    setItems(prev => [...prev, ...filteredProducts.map(p => ({ product_id: p.id, product_code: p.code || "", product_name: p.name, unit: p.unit || "UN", price: 0 }))]);
+    setSearch("");
+  };
   const addProduct = (p) => {
     setItems(prev => [...prev, { product_id: p.id, product_code: p.code || "", product_name: p.name, unit: p.unit || "UN", price: Number(p.sale_price) || 0 }]);
     setSearch("");
   };
   const setPrice = (idx, v) => setItems(prev => prev.map((it, i) => i === idx ? { ...it, price: Number(v) || 0 } : it));
   const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const missingPrice = items.filter(i => !(Number(i.price) > 0)).length;
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome da tabela."); return; }
     if (!form.start_date) { alert("Informe o início da vigência."); return; }
     if (form.end_date && form.end_date < form.start_date) { alert("O fim da vigência deve ser posterior ao início."); return; }
     if (!items.length) { alert("Adicione ao menos um produto à tabela."); return; }
+    if (missingPrice > 0) { alert("Informe o preço de venda de todos os produtos da tabela antes de salvar."); return; }
     setSaving(true);
     const payload = {
       user_email: user.email,
@@ -143,11 +174,15 @@ function ErpPriceTableForm({ user, editing, onClose, onSaved }) {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <div className="p-2 bg-gray-50 border-b flex items-center gap-2">
-              <div className="relative flex-1">
+            <div className="p-2 bg-gray-50 border-b flex items-center gap-2 flex-wrap">
+              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-8 rounded-md border border-input bg-white px-2 text-sm">
+                {PRODUCT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+              <div className="relative flex-1 min-w-[160px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto p/ adicionar..." className="w-full h-8 rounded-md border border-input bg-white pl-9 pr-3 text-sm" />
               </div>
+              <Button type="button" variant="outline" size="sm" className="h-8" onClick={addAllFiltered} disabled={filteredProducts.length === 0}>Trazer todos ({filteredProducts.length})</Button>
             </div>
             {filteredProducts.length > 0 && (
               <div className="flex flex-wrap gap-1 p-2 border-b max-h-24 overflow-y-auto">
@@ -190,7 +225,8 @@ function ErpPriceTableForm({ user, editing, onClose, onSaved }) {
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Salvando..." : "Salvar Tabela"}</Button>
+          <div className="text-xs text-gray-500 mr-auto">{items.length > 0 ? `${items.length - missingPrice} de ${items.length} produtos com preço informado` : ""}</div>
+          <Button size="sm" onClick={handleSave} disabled={saving || !items.length || missingPrice > 0} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Salvando..." : "Salvar Tabela"}</Button>
         </div>
       </div>
     </div>
