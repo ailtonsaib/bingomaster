@@ -8,11 +8,12 @@ import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 const onlyDigits = (v) => String(v || "").replace(/\D/g, "");
 const r3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
 
-// Recebimento de NF no WMS: digita-se a chave de acesso da nota, o sistema
-// mostra o fornecedor e os produtos, permite registrar N lotes por produto
-// (fabricação/validade/quantidade), sugere o endereço disponível para
-// produtos endereçados e confere a ordem de compra do fornecedor —
-// alertando divergências de quantidade e valor.
+// Recebimento de NF no WMS: digita-se a chave de acesso e os dados são
+// consultados diretamente na SEFAZ (Distribuição de Documentos Fiscais,
+// via certificado A1) — fornecedor e produtos vêm da nota autorizada.
+// Permite registrar N lotes por produto (fabricação/validade/quantidade),
+// sugere o endereço disponível para produtos endereçados e confere a ordem
+// de compra do fornecedor — alertando divergências de quantidade e valor.
 // Obs.: o saldo do produto é atualizado pelo lançamento da nota no módulo
 // Fiscal (com o fator de conversão); aqui são registradas as movimentações
 // físicas de entrada com lote e endereçamento.
@@ -61,36 +62,50 @@ export default function ErpWmsReceivingPanel({ user }) {
 
   const handleSearch = async () => {
     const key = onlyDigits(chave);
-    if (key.length < 20) { setNotFound("Informe a chave de acesso da NF-e (44 dígitos)."); return; }
+    if (key.length !== 44) { setNotFound("Informe a chave de acesso da NF-e (44 dígitos)."); return; }
     setSearching(true); setNotFound(""); setEntry(null); setState([]); setDone(false);
     try {
-      const list = await base44.entities.ErpFiscalEntry.filter({ user_email: user.email }, "-created_date", 500);
-      const found = list.find(e => onlyDigits(e.chave_acesso) === key);
-      if (!found) {
-        setNotFound("Nenhuma nota encontrada com esta chave de acesso — dê entrada na nota no módulo Fiscal antes do recebimento.");
-      } else {
-        // Ordens de compra do fornecedor (mesmo CNPJ ou mesma razão social)
-        const poList = await base44.entities.ErpPurchaseOrder.filter({ user_email: user.email }, "-emission_date", 500);
-        const supPos = poList.filter(po => po.status !== "cancelada" &&
-          (onlyDigits(po.supplier_cnpj) === onlyDigits(found.supplier_cnpj) ||
-            (po.supplier_name || "").trim().toLowerCase() === (found.supplier_name || "").trim().toLowerCase()));
-        setPos(supPos);
-        setEntry(found);
-        // Estado inicial por item: 1 lote com a quantidade total, endereço
-        // disponível sugerido (produto endereçado) e OC do produto selecionada
-        setState((found.items || []).map(it => {
-          const prod = products.find(p => p.id === it.product_id);
-          const cands = supPos.filter(po => (po.items || []).some(pit => pit.product_id === it.product_id));
-          const autoPo = cands.find(po => po.status === "enviada" || po.status === "recebida_parcial") || cands[0];
-          const freeLoc = locations.find(l => !l.capacity || (occupancy.get(l.id) || 0) < l.capacity);
-          return {
-            lots: [{ lot: "", fabricacao: "", validade: "", quantity: Number(it.quantity) || 0 }],
-            location_id: prod?.enderecado ? (freeLoc?.id || "") : "",
-            po_id: autoPo?.id || "",
-          };
-        }));
+      // Consulta a nota diretamente na SEFAZ (Distribuição de Documentos Fiscais)
+      const resp = await base44.functions.invoke("consultarNfeSefaz", { chave: key });
+      const data = resp.data || {};
+      if (!data.success || !data.nota) {
+        setNotFound(data.xMotivo || data.error || "Nota não localizada na SEFAZ.");
+        return;
       }
-    } catch (e) { setNotFound("Erro ao buscar a nota: " + e.message); }
+      const nota = data.nota;
+      // Ordens de compra do fornecedor (mesmo CNPJ ou mesma razão social)
+      const poList = await base44.entities.ErpPurchaseOrder.filter({ user_email: user.email }, "-emission_date", 500);
+      const supPos = poList.filter(po => po.status !== "cancelada" &&
+        (onlyDigits(po.supplier_cnpj) === onlyDigits(nota.supplier_cnpj) ||
+          (po.supplier_name || "").trim().toLowerCase() === (nota.supplier_name || "").trim().toLowerCase()));
+      setPos(supPos);
+      // Vínculo dos produtos: código do produto no fornecedor (vínculo de
+      // fornecedor) → código de barras → código interno do produto
+      const items = (nota.items || []).map(it => {
+        const link = links.find(l => l.supplier_product_code && l.supplier_product_code === it.product_code &&
+          onlyDigits(l.supplier_document) === onlyDigits(nota.supplier_cnpj));
+        const prod = (link && products.find(p => p.id === link.product_id)) ||
+          (it.barcode && it.barcode !== "SEM GTIN" && products.find(p => p.barcode === it.barcode)) ||
+          products.find(p => p.code === it.product_code);
+        return { ...it, product_id: prod?.id || "" };
+      });
+      setEntry({ ...nota, chave_acesso: nota.chave_acesso || key, items });
+      // Estado inicial por item: 1 lote com a quantidade total, endereço
+      // disponível sugerido (produto endereçado) e OC do produto selecionada
+      setState(items.map(it => {
+        const prod = products.find(p => p.id === it.product_id);
+        const cands = supPos.filter(po => (po.items || []).some(pit => pit.product_id === it.product_id));
+        const autoPo = cands.find(po => po.status === "enviada" || po.status === "recebida_parcial") || cands[0];
+        const freeLoc = locations.find(l => !l.capacity || (occupancy.get(l.id) || 0) < l.capacity);
+        return {
+          lots: [{ lot: "", fabricacao: "", validade: "", quantity: Number(it.quantity) || 0 }],
+          location_id: prod?.enderecado ? (freeLoc?.id || "") : "",
+          po_id: autoPo?.id || "",
+        };
+      }));
+    } catch (e) {
+      setNotFound("Erro na consulta à SEFAZ: " + (e?.response?.data?.error || e?.message || e));
+    }
     setSearching(false);
   };
 
@@ -175,7 +190,7 @@ export default function ErpWmsReceivingPanel({ user }) {
   return (
     <div className="space-y-3">
       <h2 className="font-semibold text-base flex items-center gap-2"><ArrowDownCircle className="w-5 h-5 text-emerald-600" /> Recebimento de Nota Fiscal (WMS)</h2>
-      <p className="text-xs text-gray-500 -mt-1">Digite a chave de acesso da NF-e para conferir o fornecedor e os produtos, registrar os lotes (fabricação/validade) e endereçar os produtos — o sistema confere a ordem de compra do fornecedor e alerta divergências de quantidade e valor.</p>
+      <p className="text-xs text-gray-500 -mt-1">Digite a chave de acesso da NF-e — o sistema consulta os dados na SEFAZ e traz o fornecedor e os produtos da nota autorizada. Registre os lotes (fabricação/validade), enderece os produtos e confira a ordem de compra; a entrada de nota (módulo Fiscal) fica apenas para informar a operação e finalizar o processo.</p>
 
       <div className="flex gap-2">
         <input
