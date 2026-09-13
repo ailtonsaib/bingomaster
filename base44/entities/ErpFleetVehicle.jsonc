@@ -1,0 +1,142 @@
+{
+  "name": "ErpFleetVehicle",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo da empresa)"
+    },
+    "plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo (padr\u00e3o Mercosul)"
+    },
+    "vehicle_type": {
+      "type": "string",
+      "enum": [
+        "caminhao",
+        "caminhonete",
+        "van",
+        "carro",
+        "reboque",
+        "empilhadeira",
+        "outro"
+      ],
+      "default": "caminhao",
+      "description": "Tipo do ve\u00edculo da frota"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marca do ve\u00edculo"
+    },
+    "model": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ano de fabrica\u00e7\u00e3o/modelo"
+    },
+    "color": {
+      "type": "string",
+      "description": "Cor do ve\u00edculo"
+    },
+    "renavam": {
+      "type": "string",
+      "description": "RENAVAM"
+    },
+    "fuel": {
+      "type": "string",
+      "enum": [
+        "diesel",
+        "gasolina",
+        "etanol",
+        "gnv",
+        "eletrico"
+      ],
+      "default": "diesel",
+      "description": "Combust\u00edvel do ve\u00edculo"
+    },
+    "capacity_kg": {
+      "type": "number",
+      "default": 0,
+      "description": "Capacidade de carga (kg)"
+    },
+    "current_mileage": {
+      "type": "number",
+      "default": 0,
+      "description": "Quilometragem atual (km)"
+    },
+    "acquisition_date": {
+      "type": "string",
+      "description": "Data de aquisi\u00e7\u00e3o (ISO)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "em_manutencao",
+        "inativo"
+      ],
+      "default": "ativo",
+      "description": "Situa\u00e7\u00e3o do ve\u00edculo: ativo, em_manutencao, inativo"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "plate"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
