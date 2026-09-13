@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Users, ClipboardCheck, Monitor, BarChart3, Network, Tags, Briefcase, Share2, Target, CircleDollarSign, Percent } from "lucide-react";
+import { Users, ClipboardCheck, Monitor, BarChart3, Network, Tags, Briefcase, Share2, Target, CircleDollarSign, Percent, Smartphone } from "lucide-react";
+import ErpSalesAppPanel from "@/components/erp/salesapp/ErpSalesAppPanel";
 import { useNavigate } from "react-router-dom";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpSalesOrderPanel from "@/components/erp/ErpSalesOrderPanel";
@@ -20,6 +21,7 @@ const SUBTABS = [
   { id: "comissoes", label: "Comissão de Vendas", icon: Percent },
   { id: "tabelas", label: "Tabelas de Preço", icon: CircleDollarSign },
   { id: "ramos", label: "Ramos de Atividade", icon: Briefcase },
+  { id: "appVendas", label: "App do Vendedor", icon: Smartphone },
   { id: "pedidos", label: "Pedidos e Faturamento", icon: ClipboardCheck },
   { id: "pdv", label: "PDV", icon: Monitor },
   { id: "relatorios", label: "Relatórios de Vendas", icon: BarChart3 },
@@ -39,6 +41,7 @@ export default function ErpModuleComercial({ user }) {
       {sub === "comissoes" && <ErpCommissionManager user={user} />}
       {sub === "tabelas" && <ErpPriceTableManager user={user} />}
       {sub === "ramos" && <ErpSimpleCrud key="ramos" user={user} {...ERP_CRUD_CONFIGS.ramos} />}
+      {sub === "appVendas" && <ErpSalesAppPanel user={user} />}
       {sub === "pedidos" && <ErpSalesOrderPanel user={user} />}
       {sub === "pdv" && (
         <div className="bg-white rounded-xl border p-8 text-center">

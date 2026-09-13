@@ -1,0 +1,230 @@
+{
+  "name": "ErpSalesAppOrder",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero do pedido (ex: PED 001/2026)"
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "venda",
+        "bonificacao",
+        "troca"
+      ],
+      "description": "Opera\u00e7\u00e3o do pedido: venda, bonificacao ou troca"
+    },
+    "emission_date": {
+      "type": "string",
+      "description": "Data de emiss\u00e3o (ISO)"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor (ErpSalesTeam)"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Vendedor (cache)"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "ID do cliente (ErpCustomer)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Cliente (cache)"
+    },
+    "items": {
+      "type": "array",
+      "default": [],
+      "description": "Itens do pedido \u2014 quantidade, pre\u00e7o (pode ser maior que a tabela), desconto (% ou valor) e totais",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "ID do produto (ErpProduct)"
+          },
+          "product_code": {
+            "type": "string",
+            "description": "C\u00f3digo do produto (cache)"
+          },
+          "barcode": {
+            "type": "string",
+            "description": "C\u00f3digo de barras/GTIN (cache)"
+          },
+          "product_name": {
+            "type": "string",
+            "description": "Nome do produto (cache)"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidade (cache)"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 0,
+            "description": "Quantidade vendida"
+          },
+          "table_price": {
+            "type": "number",
+            "default": 0,
+            "description": "Pre\u00e7o da tabela de pre\u00e7o do cliente no momento do pedido (refer\u00eancia)"
+          },
+          "unit_price": {
+            "type": "number",
+            "default": 0,
+            "description": "Pre\u00e7o unit\u00e1rio praticado (pode ser maior que a tabela)"
+          },
+          "discount_type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "percent",
+              "value"
+            ],
+            "default": "none",
+            "description": "Tipo de desconto do item: none (sem desconto), percent (%) ou value (valor em R$)"
+          },
+          "discount_pct": {
+            "type": "number",
+            "default": 0,
+            "description": "Desconto do item (%)"
+          },
+          "discount_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Desconto do item (valor em R$)"
+          },
+          "discount_total": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor total do desconto do item (R$)"
+          },
+          "total": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor l\u00edquido do item (R$)"
+          }
+        }
+      }
+    },
+    "total_products": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor bruto dos produtos (R$)"
+    },
+    "discount_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total dos descontos (R$)"
+    },
+    "total": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do pedido (R$)"
+    },
+    "has_discount": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o pedido possui desconto \u2014 pedidos com desconto exigem aprova\u00e7\u00e3o comercial antes do faturamento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente_aprovacao",
+        "liberado",
+        "reprovado",
+        "faturado",
+        "cancelado"
+      ],
+      "default": "pendente_aprovacao",
+      "description": "Status: pendente_aprovacao (com desconto \u2014 aguarda aprova\u00e7\u00e3o comercial), liberado (apto a faturar), reprovado, faturado (gerou pedido de venda) ou cancelado"
+    },
+    "approval_obs": {
+      "type": "string",
+      "description": "Observa\u00e7\u00e3o da aprova\u00e7\u00e3o/reprova\u00e7\u00e3o comercial"
+    },
+    "approved_by_name": {
+      "type": "string",
+      "description": "Aprovador comercial (cache)"
+    },
+    "approval_date": {
+      "type": "string",
+      "description": "Data da aprova\u00e7\u00e3o/reprova\u00e7\u00e3o (ISO)"
+    },
+    "sales_order_id": {
+      "type": "string",
+      "description": "ID do pedido de venda gerado no faturamento (ErpSalesOrder)"
+    },
+    "sales_order_number": {
+      "type": "string",
+      "description": "N\u00famero do pedido de venda gerado (cache)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "number",
+    "operation",
+    "customer_name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
