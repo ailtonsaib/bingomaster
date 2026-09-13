@@ -59,7 +59,9 @@ export default function ErpWmsLabelPanel({ user }) {
     load();
   };
 
-  const printableRows = filtered.filter(l => l.status === "ativa");
+  // Etiqueta bipada na produção (em estoque) fica bloqueada — vai para o fim da lista
+  const printableRows = filtered.filter(l => l.status === "ativa" && !l.stocked);
+  const sortedLabels = [...filtered].sort((a, b) => (a.stocked ? 1 : 0) - (b.stocked ? 1 : 0));
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const allSelected = printableRows.length > 0 && printableRows.every(l => selectedIds.includes(l.id));
 
@@ -120,17 +122,17 @@ export default function ErpWmsLabelPanel({ user }) {
                 <tr><td colSpan={11} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={11} className="p-8 text-center text-gray-400">Nenhuma etiqueta — as etiquetas de compra são geradas ao confirmar o recebimento da NF.</td></tr>
-              ) : filtered.map(l => {
+              ) : sortedLabels.map(l => {
                 const t = TYPE_OPTS[l.label_type] || {};
                 const rem = Number(l.remaining ?? l.quantity) || 0;
                 return (
-                  <tr key={l.id} className={`border-t hover:bg-gray-50 ${l.status === "cancelada" ? "opacity-50" : ""}`}>
+                  <tr key={l.id} className={`border-t ${l.stocked ? "bg-emerald-50" : "hover:bg-gray-50"} ${l.status === "cancelada" ? "opacity-50" : ""}`}>
                     <td className="p-2">
-                      {l.status === "ativa" && (
+                      {l.status === "ativa" && !l.stocked && (
                         <input type="checkbox" className="w-4 h-4 accent-indigo-600" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} title="Marcar para impressão" />
                       )}
                     </td>
-                    <td className="p-2 font-mono text-xs">{l.code}{l.status === "cancelada" && <span className="ml-1 text-red-500">(cancelada)</span>}</td>
+                    <td className="p-2 font-mono text-xs">{l.code}{l.stocked && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-sans">Bipada</span>}{l.status === "cancelada" && <span className="ml-1 text-red-500">(cancelada)</span>}</td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${t.color || "bg-gray-100 text-gray-600"}`}>{t.label || l.label_type}</span></td>
                     <td className="p-2">{l.product_name}</td>
                     <td className="p-2 font-mono text-xs">{l.lot || "—"}</td>
@@ -144,8 +146,12 @@ export default function ErpWmsLabelPanel({ user }) {
                     </td>
                     <td className={`p-2 text-right text-xs ${Number(l.print_count) > 0 ? "text-indigo-700 font-semibold" : "text-gray-400"}`}>{Number(l.print_count) || 0}×</td>
                     <td className="p-2 text-right whitespace-nowrap">
-                      <button onClick={() => setPrinting([l])} title="Imprimir etiqueta" className="p-1 hover:bg-indigo-50 rounded"><Printer className="w-4 h-4 text-indigo-600" /></button>
-                      {l.status === "ativa" && <button onClick={() => handleCancel(l)} title="Cancelar etiqueta" className="p-1 hover:bg-red-50 rounded"><Ban className="w-4 h-4 text-red-500" /></button>}
+                      {l.stocked ? (
+                        <span className="text-[10px] text-emerald-700 font-medium">Em estoque — bloqueada</span>
+                      ) : (<>
+                        <button onClick={() => setPrinting([l])} title="Imprimir etiqueta" className="p-1 hover:bg-indigo-50 rounded"><Printer className="w-4 h-4 text-indigo-600" /></button>
+                        {l.status === "ativa" && <button onClick={() => handleCancel(l)} title="Cancelar etiqueta" className="p-1 hover:bg-red-50 rounded"><Ban className="w-4 h-4 text-red-500" /></button>}
+                      </>)}
                     </td>
                   </tr>
                 );
