@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Loader2, Printer, Ban, X, Tag, Settings } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { genOrderNumber, fmtDate } from "@/lib/erpUtils";
+import ErpWmsPurchaseLabelModal from "./ErpWmsPurchaseLabelModal";
 
 const TYPE_OPTS = {
   compra: { label: "Compra", color: "bg-emerald-100 text-emerald-700" },
@@ -154,7 +155,7 @@ export default function ErpWmsLabelPanel({ user }) {
       </div>
 
       {showForm && (
-        <ErpWmsLabelForm user={user} products={products} onClose={() => setShowForm(false)} onSaved={load} />
+        <ErpWmsLabelForm user={user} products={products} configs={configs} onClose={() => setShowForm(false)} onSaved={load} />
       )}
       {showConfig && (
         <ErpWmsLabelConfigModal user={user} configs={configs} onClose={() => setShowConfig(false)} onSaved={load} />
@@ -248,7 +249,7 @@ function ErpWmsLabelConfigModal({ user, configs, onClose, onSaved }) {
   );
 }
 
-function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
+function ErpWmsLabelForm({ user, products, configs, onClose, onSaved }) {
   const [form, setForm] = useState({
     label_type: "producao", product_id: "", quantity: "", lot: "", fabricacao: "", validade: "",
     nota_number: "", supplier_name: "", op_number: "", line_id: "",
@@ -260,6 +261,18 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
       .then(list => setLines(list.filter(l => l.is_active !== false)))
       .catch(() => setLines([]));
   }, [user.email]);
+  // Etiqueta de compra: nasce da nota de entrada — seleciona a NF, define
+  // quantas etiquetas imprimir de cada produto e imprime tudo de uma vez
+  if (form.label_type === "compra") {
+    return (
+      <ErpWmsPurchaseLabelModal
+        user={user}
+        config={{ ...DEFAULT_LABEL_SIZES.compra, ...(configs?.compra || {}) }}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
+    );
+  }
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const product = products.find(p => p.id === form.product_id);
   const line = lines.find(l => l.id === form.line_id);
@@ -309,7 +322,7 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
             <label className="text-xs font-medium text-gray-600">Modelo *</label>
             <select value={form.label_type} onChange={e => set("label_type", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
               <option value="producao">Etiqueta de Produção</option>
-              <option value="compra">Etiqueta de Compra</option>
+              <option value="compra">Etiqueta de Compra (por Nota)</option>
             </select>
           </div>
           <div className="col-span-2">
@@ -340,16 +353,7 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
             <label className="text-xs font-medium text-gray-600">Validade</label>
             <input type="date" value={form.validade} onChange={e => set("validade", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
           </div>
-          {form.label_type === "compra" ? (<>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Nr. NF</label>
-              <input value={form.nota_number} onChange={e => set("nota_number", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Fornecedor</label>
-              <input value={form.supplier_name} onChange={e => set("supplier_name", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-            </div>
-          </>) : (<>
+          <>
             <div>
               <label className="text-xs font-medium text-gray-600">Linha de Produção *</label>
               <select value={form.line_id} onChange={e => set("line_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
@@ -361,7 +365,7 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
               <label className="text-xs font-medium text-gray-600">Nr. da Ordem de Produção</label>
               <input value={form.op_number} onChange={e => set("op_number", e.target.value)} placeholder="ex: OP 001/2026" className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
             </div>
-          </>)}
+          </>
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
