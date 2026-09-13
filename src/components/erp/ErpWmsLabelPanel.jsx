@@ -17,13 +17,21 @@ export const DEFAULT_LABEL_SIZES = {
   producao: { width_mm: 100, height_mm: 50 },
 };
 
+// Lote de produção: ano + número do dia do ano + código da linha (ex: 2026256L01)
+export function genProductionLot(fabricacao, line) {
+  const dt = fabricacao ? new Date(`${fabricacao}T12:00:00`) : new Date();
+  const start = new Date(dt.getFullYear(), 0, 0);
+  const doy = Math.floor((dt - start) / 86400000);
+  return `${dt.getFullYear()}${String(doy).padStart(3, "0")}${(line?.code || "").toUpperCase()}`;
+}
+
 // QR code da etiqueta: produto, NF, fornecedor, quantidade, lote e validade
 export function labelQrPayload(l) {
   return "ETQ|" + JSON.stringify({
     id: l.id, code: l.code || "", tipo: l.label_type,
     prod: l.product_name, cod: l.product_code,
     qtd: l.quantity, un: l.unit || "",
-    lote: l.lot || "", val: l.expiry_date || "",
+    lote: l.lot || "", val: l.expiry_date || "", fab: l.fabricacao_date || "",
     nf: l.nota_number || "", forn: l.supplier_name || "", op: l.op_number || "",
   });
 }
@@ -243,15 +251,25 @@ function ErpWmsLabelConfigModal({ user, configs, onClose, onSaved }) {
 function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
   const [form, setForm] = useState({
     label_type: "producao", product_id: "", quantity: "", lot: "", fabricacao: "", validade: "",
-    nota_number: "", supplier_name: "", op_number: "",
+    nota_number: "", supplier_name: "", op_number: "", line_id: "",
   });
   const [saving, setSaving] = useState(false);
+  const [lines, setLines] = useState([]);
+  useEffect(() => {
+    base44.entities.ErpProductionLine.filter({ user_email: user.email }, "name", 500)
+      .then(list => setLines(list.filter(l => l.is_active !== false)))
+      .catch(() => setLines([]));
+  }, [user.email]);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const product = products.find(p => p.id === form.product_id);
+  const line = lines.find(l => l.id === form.line_id);
+  // Lote de produção automático: ano + nº do dia do ano + linha de produção
+  const autoLot = form.label_type === "producao" ? genProductionLot(form.fabricacao, line) : form.lot;
 
   const handleSave = async () => {
     if (!form.product_id) { alert("Selecione o produto."); return; }
     if (!(Number(form.quantity) > 0)) { alert("Informe a quantidade da etiqueta."); return; }
+    if (form.label_type === "producao" && !form.line_id) { alert("Selecione a linha de produção."); return; }
     setSaving(true);
     try {
       const qty = Number(form.quantity) || 0;
@@ -265,7 +283,7 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
         unit: product.unit || "",
         quantity: qty,
         remaining: qty,
-        lot: form.lot || "",
+        lot: form.label_type === "producao" ? autoLot : form.lot || "",
         fabricacao_date: form.fabricacao || "",
         expiry_date: form.validade || "",
         nota_number: form.nota_number || undefined,
@@ -307,7 +325,12 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Lote</label>
-            <input value={form.lot} onChange={e => set("lot", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
+            {form.label_type === "producao" ? (<>
+              <input readOnly value={autoLot} className="w-full h-9 rounded-md border border-input bg-gray-50 px-3 text-sm font-mono mt-1" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Lote de produção gerado automaticamente: ano + nº do dia do ano + linha.</p>
+            </>) : (
+              <input value={form.lot} onChange={e => set("lot", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
+            )}
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Fabricação</label>
@@ -326,12 +349,19 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
               <label className="text-xs font-medium text-gray-600">Fornecedor</label>
               <input value={form.supplier_name} onChange={e => set("supplier_name", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
             </div>
-          </>) : (
-            <div className="col-span-2">
+          </>) : (<>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Linha de Produção *</label>
+              <select value={form.line_id} onChange={e => set("line_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
+                <option value="">Selecione...</option>
+                {lines.map(l => <option key={l.id} value={l.id}>{l.code ? `${l.code} — ` : ""}{l.name}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="text-xs font-medium text-gray-600">Nr. da Ordem de Produção</label>
               <input value={form.op_number} onChange={e => set("op_number", e.target.value)} placeholder="ex: OP 001/2026" className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
             </div>
-          )}
+          </>)}
         </div>
         <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
@@ -380,9 +410,10 @@ function ErpLabelPrintModal({ label, config, onClose }) {
                   {label.label_type === "compra" ? (<>
                     <p>NF: <b>{label.nota_number || "—"}</b></p>
                     <p>Fornecedor: {label.supplier_name || "—"}</p>
-                  </>) : (
+                  </>) : (<>
                     <p>OP: <b>{label.op_number || "—"}</b></p>
-                  )}
+                    <p>Fabricação: <b>{label.fabricacao_date ? fmtDate(label.fabricacao_date) : "—"}</b></p>
+                  </>)}
                   <p>Lote: <b className="text-xs">{label.lot || "—"}</b></p>
                   <p>Validade: <b className="text-sm">{label.expiry_date ? fmtDate(label.expiry_date) : "—"}</b></p>
                   <p className="font-mono text-[9px] mt-1">{label.code}</p>
