@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Search, Trash2, CheckCircle2 } from "lucide-react";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 
+const ROLE_LABEL = { vendedor: "Vendedor", supervisor: "Supervisor", gerente: "Gerente" };
+
 const fmtPeriod = (p) => {
   if (!p || !/^\d{4}-\d{2}$/.test(p)) return p || "—";
   const [y, m] = p.split("-");
@@ -82,7 +84,8 @@ export default function ErpCommissionPayments({ user, refreshKey }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
-                <th className="p-2 text-left">Vendedor</th>
+                <th className="p-2 text-left">Nome</th>
+                <th className="p-2 text-left">Função</th>
                 <th className="p-2 text-left">Período</th>
                 <th className="p-2 text-left">Regra</th>
                 <th className="p-2 text-right">Base (R$)</th>
@@ -97,12 +100,13 @@ export default function ErpCommissionPayments({ user, refreshKey }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={12} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} className="p-8 text-center text-gray-400">Nenhum pagamento de comissão.</td></tr>
+                <tr><td colSpan={12} className="p-8 text-center text-gray-400">Nenhum pagamento de comissão.</td></tr>
               ) : filtered.map(it => (
                 <tr key={it.id} className="border-t hover:bg-gray-50">
                   <td className="p-2 font-medium">{it.seller_name}</td>
+                  <td className="p-2 text-xs">{ROLE_LABEL[it.seller_role] || it.seller_role || "—"}</td>
                   <td className="p-2">{fmtPeriod(it.period)}</td>
                   <td className="p-2 text-gray-600">{it.rule_name}</td>
                   <td className="p-2 text-right">{fmtMoney(it.basis_value)}</td>

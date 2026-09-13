@@ -86,11 +86,19 @@ export default function ErpCommissionCalc({ user, onGenerated }) {
           });
       }
 
+      const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+      const isVolume = rule.basis === "volume";
+      const basisValueOf = (sid) => rule.basis === "vendas_pagas" ? (paidBySeller.get(sid) || 0) : ((salesBySeller.get(sid) || {}).value || 0);
+      const volumeOf = (sid) => (salesBySeller.get(sid) || {}).volume || 0;
+
+      const actives = team.filter(t => t.is_active !== false);
+      const vendors = actives.filter(t => t.team_role === "vendedor");
       const calcRows = [];
-      for (const s of team.filter(t => t.is_active !== false)) {
+
+      // Vendedor — faixas de comissão por atingimento da meta
+      for (const s of vendors) {
         const sales = salesBySeller.get(s.id) || { value: 0, volume: 0 };
         const paid = paidBySeller.get(s.id) || 0;
-        const isVolume = rule.basis === "volume";
         // meta do vendedor no período: meta do mês ou (anual ÷ 12)
         const wantedType = isVolume ? "volume" : "valor";
         const monthlyGoal = goals.find(g => g.owner_id === s.id && g.level === "vendedor" && g.goal_type === wantedType && g.year === year && g.month === month && g.status !== "cancelada");
@@ -98,22 +106,62 @@ export default function ErpCommissionCalc({ user, onGenerated }) {
         const goalValue = monthlyGoal ? Number(monthlyGoal.target_value) || 0 : (annualGoal ? (Number(annualGoal.target_value) || 0) / 12 : 0);
 
         const basisMeasure = isVolume ? sales.volume : (rule.basis === "vendas_pagas" ? paid : sales.value);
-        const basisValue = rule.basis === "vendas_pagas" ? paid : sales.value; // comissão sempre sobre valor (R$)
+        const basisValue = basisValueOf(s.id); // comissão sempre sobre valor (R$)
         if (!basisMeasure && !basisValue && !goalValue) continue;
 
         const attainment = goalValue > 0 ? (basisMeasure / goalValue) * 100 : 0;
         const tier = pickTier(rule.levels, attainment);
         const commissionPct = tier ? Number(tier.commission_pct) || 0 : 0;
         calcRows.push({
+          seller_role: "vendedor",
           seller_id: s.id, seller_name: s.name,
-          basis_value: Math.round(basisValue * 100) / 100,
-          basis_volume: Math.round(sales.volume * 100) / 100,
-          goal_value: Math.round(goalValue * 100) / 100,
-          attainment_pct: Math.round(attainment * 100) / 100,
+          basis_value: r2(basisValue),
+          basis_volume: r2(sales.volume),
+          goal_value: r2(goalValue),
+          attainment_pct: r2(attainment),
           commission_pct: commissionPct,
           tier_limit_pct: tier ? Number(tier.limit_pct) || 0 : 0,
-          commission_value: Math.round(basisValue * commissionPct / 100 * 100) / 100,
+          commission_value: r2(basisValue * commissionPct / 100),
         });
+      }
+
+      // Supervisor — % sobre as vendas dos vendedores atribuídos a ele
+      const supervisorPct = Number(rule.supervisor_pct) || 0;
+      if (supervisorPct > 0) {
+        for (const sup of actives.filter(t => t.team_role === "supervisor")) {
+          const vendorsOf = vendors.filter(v => v.supervisor_id === sup.id);
+          const basisValue = vendorsOf.reduce((sum, v) => sum + basisValueOf(v.id), 0);
+          if (!(basisValue > 0)) continue;
+          calcRows.push({
+            seller_role: "supervisor",
+            seller_id: sup.id, seller_name: sup.name,
+            basis_value: r2(basisValue),
+            basis_volume: r2(vendorsOf.reduce((sum, v) => sum + volumeOf(v.id), 0)),
+            goal_value: 0, attainment_pct: 0,
+            commission_pct: supervisorPct, tier_limit_pct: 0,
+            commission_value: r2(basisValue * supervisorPct / 100),
+          });
+        }
+      }
+
+      // Gerente — % sobre as vendas dos vendedores dos supervisores atribuídos a ele
+      const gerentePct = Number(rule.gerente_pct) || 0;
+      if (gerentePct > 0) {
+        for (const ger of actives.filter(t => t.team_role === "gerente")) {
+          const supIds = new Set(actives.filter(t => t.team_role === "supervisor" && t.gerente_id === ger.id).map(t => t.id));
+          const vendorsOf = vendors.filter(v => supIds.has(v.supervisor_id));
+          const basisValue = vendorsOf.reduce((sum, v) => sum + basisValueOf(v.id), 0);
+          if (!(basisValue > 0)) continue;
+          calcRows.push({
+            seller_role: "gerente",
+            seller_id: ger.id, seller_name: ger.name,
+            basis_value: r2(basisValue),
+            basis_volume: r2(vendorsOf.reduce((sum, v) => sum + volumeOf(v.id), 0)),
+            goal_value: 0, attainment_pct: 0,
+            commission_pct: gerentePct, tier_limit_pct: 0,
+            commission_value: r2(basisValue * gerentePct / 100),
+          });
+        }
       }
       setRows(calcRows.sort((a, b) => b.commission_value - a.commission_value));
       if (!calcRows.length) setMsg("Nenhum vendedor com vendas ou meta no período.");
@@ -130,7 +178,7 @@ export default function ErpCommissionCalc({ user, onGenerated }) {
       await base44.entities.ErpCommissionPayment.bulkCreate(rows.map(r => ({
         user_email: user.email,
         rule_id: rule.id, rule_name: rule.name,
-        seller_id: r.seller_id, seller_name: r.seller_name,
+        seller_id: r.seller_id, seller_name: r.seller_name, seller_role: r.seller_role,
         period,
         basis_value: r.basis_value, basis_volume: r.basis_volume, goal_value: r.goal_value,
         attainment_pct: r.attainment_pct, commission_pct: r.commission_pct,
@@ -170,7 +218,8 @@ export default function ErpCommissionCalc({ user, onGenerated }) {
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 text-gray-500 text-xs">
                   <tr>
-                    <th className="p-2 text-left">Vendedor</th>
+                    <th className="p-2 text-left">Nome</th>
+                    <th className="p-2 text-left">Função</th>
                     <th className="p-2 text-right">Base (R$)</th>
                     <th className="p-2 text-right">Volume</th>
                     <th className="p-2 text-right">Meta</th>
@@ -182,10 +231,11 @@ export default function ErpCommissionCalc({ user, onGenerated }) {
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
-                    <tr><td colSpan={8} className="p-8 text-center text-gray-400">Nenhum vendedor apurado no período.</td></tr>
+                    <tr><td colSpan={9} className="p-8 text-center text-gray-400">Nenhum membro apurado no período.</td></tr>
                   ) : rows.map(r => (
                     <tr key={r.seller_id} className="border-t hover:bg-gray-50">
                       <td className="p-2 font-medium">{r.seller_name}</td>
+                      <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${r.seller_role === "vendedor" ? "bg-sky-100 text-sky-800" : r.seller_role === "supervisor" ? "bg-indigo-100 text-indigo-800" : "bg-purple-100 text-purple-800"}`}>{r.seller_role}</span></td>
                       <td className="p-2 text-right">{fmtMoney(r.basis_value)}</td>
                       <td className="p-2 text-right">{r.basis_volume ? r.basis_volume.toLocaleString("pt-BR") : "—"}</td>
                       <td className="p-2 text-right">{r.goal_value ? fmtMoney(r.goal_value) : "—"}</td>
@@ -200,7 +250,7 @@ export default function ErpCommissionCalc({ user, onGenerated }) {
                   <tfoot className="border-t bg-gray-50 text-sm">
                     <tr>
                       <td className="p-2 font-semibold">Total</td>
-                      <td colSpan={6}></td>
+                      <td colSpan={7}></td>
                       <td className="p-2 text-right font-bold text-emerald-700">{fmtMoney(totalCommission)}</td>
                     </tr>
                   </tfoot>

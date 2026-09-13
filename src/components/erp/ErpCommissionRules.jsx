@@ -64,6 +64,9 @@ export default function ErpCommissionRules({ user }) {
                   <td className="p-2 text-gray-600 text-xs">
                     {[...(r.levels || [])].sort((a, b) => a.limit_pct - b.limit_pct)
                       .map(l => `até ${l.limit_pct}% → ${l.commission_pct}%`).join("  ·  ")}
+                    {(Number(r.supervisor_pct) > 0 || Number(r.gerente_pct) > 0) && (
+                      <span className="block text-gray-400">Supervisor: {r.supervisor_pct || 0}% · Gerente: {r.gerente_pct || 0}%</span>
+                    )}
                   </td>
                   <td className="p-2">{r.is_active !== false ? "Sim" : "Não"}</td>
                   <td className="p-2 text-right whitespace-nowrap">

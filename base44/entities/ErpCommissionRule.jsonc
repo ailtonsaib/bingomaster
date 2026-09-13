@@ -40,6 +40,16 @@
         }
       }
     },
+    "supervisor_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Comiss\u00e3o do supervisor (%) sobre o valor das vendas dos vendedores atribu\u00eddos a ele"
+    },
+    "gerente_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Comiss\u00e3o do gerente (%) sobre o valor das vendas dos vendedores dos supervisores atribu\u00eddos a ele"
+    },
     "is_active": {
       "type": "boolean",
       "default": true,

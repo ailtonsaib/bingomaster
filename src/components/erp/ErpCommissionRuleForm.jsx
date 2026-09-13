@@ -14,6 +14,8 @@ export default function ErpCommissionRuleForm({ user, rule, onClose, onSaved }) 
   const [form, setForm] = useState({
     name: rule?.name || "",
     basis: rule?.basis || "vendas_periodo",
+    supervisor_pct: rule?.supervisor_pct ?? 0,
+    gerente_pct: rule?.gerente_pct ?? 0,
     notes: rule?.notes || "",
   });
   const [levels, setLevels] = useState(
@@ -33,7 +35,7 @@ export default function ErpCommissionRuleForm({ user, rule, onClose, onSaved }) 
       if (l.commission_pct < 0) { alert("A comissão (%) não pode ser negativa."); return; }
     }
     const sorted = [...levels].sort((a, b) => a.limit_pct - b.limit_pct);
-    const payload = { user_email: user.email, ...form, levels: sorted };
+    const payload = { user_email: user.email, ...form, supervisor_pct: Number(form.supervisor_pct) || 0, gerente_pct: Number(form.gerente_pct) || 0, levels: sorted };
     setSaving(true);
     try {
       if (rule?.id) await base44.entities.ErpCommissionRule.update(rule.id, payload);
@@ -67,9 +69,22 @@ export default function ErpCommissionRuleForm({ user, rule, onClose, onSaved }) 
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600">Comissão do supervisor (%) sobre vendas dos seus vendedores</label>
+              <input type="number" min="0" step="0.01" value={form.supervisor_pct} onChange={e => setForm(p => ({ ...p, supervisor_pct: e.target.value }))}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Comissão do gerente (%) sobre vendas dos vendedores dos seus supervisores</label>
+              <input type="number" min="0" step="0.01" value={form.gerente_pct} onChange={e => setForm(p => ({ ...p, gerente_pct: e.target.value }))}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1" />
+            </div>
+          </div>
+
           <div className="border rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-700">Faixas de comissão por atingimento da meta (até 3 níveis)</p>
+              <p className="text-xs font-semibold text-gray-700">Faixas do vendedor por atingimento da meta (até 3 níveis)</p>
               <Button size="sm" variant="outline" onClick={addLevel} disabled={levels.length >= 3} className="gap-1 h-7 text-xs">
                 <Plus className="w-3.5 h-3.5" /> Faixa
               </Button>
