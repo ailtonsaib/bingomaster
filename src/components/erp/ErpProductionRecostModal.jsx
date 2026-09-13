@@ -51,9 +51,9 @@ export default function ErpProductionRecostModal({ user, order, products, onClos
   const oldUnit = r2(Number(order.output_unit_cost) || 0);
   const changed = r2(newCost) !== oldCost;
 
-  const confirm = async () => {
+  const handleRecalc = async () => {
     if (newCost <= 0) { alert("Não foi possível calcular o custo — os insumos não possuem custo médio no kardex."); return; }
-    if (!confirm(`Recalcular o custo da produção ${order.order_number}?\n\nCusto atual: ${fmtMoney(oldCost)} (unitário ${fmtMoney(oldUnit)})\nNovo custo: ${fmtMoney(newCost)} (unitário ${fmtMoney(newUnit)})`)) return;
+    if (!window.confirm(`Recalcular o custo da produção ${order.order_number}?\n\nCusto atual: ${fmtMoney(oldCost)} (unitário ${fmtMoney(oldUnit)})\nNovo custo: ${fmtMoney(newCost)} (unitário ${fmtMoney(newUnit)})`)) return;
     setSaving(true);
     try {
       await base44.entities.ErpProductionOrder.update(order.id, {
@@ -129,7 +129,7 @@ export default function ErpProductionRecostModal({ user, order, products, onClos
             </div>
             <div className="p-4 border-t flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button size="sm" disabled={saving || !changed || newCost <= 0} onClick={confirm} className="bg-amber-600 hover:bg-amber-700">{saving ? "Recalculando..." : "Recalcular Custo"}</Button>
+              <Button size="sm" disabled={saving || !changed || newCost <= 0} onClick={handleRecalc} className="bg-amber-600 hover:bg-amber-700">{saving ? "Recalculando..." : "Recalcular Custo"}</Button>
             </div>
           </>
         )}
