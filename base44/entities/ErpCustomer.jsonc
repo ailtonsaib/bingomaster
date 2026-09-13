@@ -24,6 +24,10 @@
       "type": "string",
       "description": "Logradouro"
     },
+    "delivery_address": {
+      "type": "string",
+      "description": "Endere\u00e7o de entrega (quando diferente do endere\u00e7o cadastrado)"
+    },
     "district": {
       "type": "string",
       "description": "Bairro (usado na NF-e de sa\u00edda)"

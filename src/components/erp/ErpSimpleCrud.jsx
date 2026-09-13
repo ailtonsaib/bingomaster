@@ -22,7 +22,7 @@ async function lookupCep(cep) {
 // field: { key, label, type: text|number|select|checkbox|entity-select, options?, entity?, labelKey?, cacheKey?, required?, full?, placeholder? }
 // column: { key, label, type?: text|badge|money|bool, options?(for badge) }
 // rowAction (opcional): { icon, title, onClick(item) } — ação extra por linha
-export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle, cashJournal, rowAction }) {
+export default function ErpSimpleCrud({ user, entityName, scopeField = "user_email", title, fields, columns, searchKeys, settle, cashJournal, rowAction, formWide }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -344,6 +344,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
           editing={editing}
           fields={fields}
           entityOptions={entityOptions}
+          formWide={formWide}
           onClose={() => setShowForm(false)}
           onSaved={handleSaved}
         />
@@ -364,7 +365,7 @@ export default function ErpSimpleCrud({ user, entityName, scopeField = "user_ema
   );
 }
 
-function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOptions, onClose, onSaved }) {
+function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOptions, formWide, onClose, onSaved }) {
   const buildInitial = () => {
     const o = {};
     fields.forEach(f => {
@@ -470,7 +471,7 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className={`bg-white rounded-xl shadow-2xl w-full ${formWide ? "max-w-4xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
           <h2 className="font-bold">{editing ? "Editar" : "Novo"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500">✕</button>
