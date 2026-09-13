@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Warehouse, MapPin, ArrowLeftRight, ClipboardList, ArrowDownCircle, Tag, ShieldAlert } from "lucide-react";
+import { Warehouse, MapPin, ArrowLeftRight, ClipboardList, ArrowDownCircle, Tag, ShieldAlert, Factory } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpWmsMovePanel from "@/components/erp/ErpWmsMovePanel";
 import ErpWmsInventoryPanel from "@/components/erp/ErpWmsInventoryPanel";
 import ErpWmsReceivingPanel from "@/components/erp/ErpWmsReceivingPanel";
 import ErpWmsLabelPanel from "@/components/erp/ErpWmsLabelPanel";
 import ErpWmsDeviationPanel from "@/components/erp/ErpWmsDeviationPanel";
+import ErpWmsProductionScanPanel from "@/components/erp/ErpWmsProductionScanPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const CRUD_CONFIGS = {
@@ -60,6 +61,7 @@ const CRUD_CONFIGS = {
 
 const TABS = [
   { id: "recebimento", label: "Recebimento NF", icon: ArrowDownCircle },
+  { id: "bipagem", label: "Bipagem Produção", icon: Factory },
   { id: "etiquetas", label: "Etiquetas", icon: Tag },
   { id: "armazens", label: "Armazéns", icon: Warehouse },
   { id: "enderecos", label: "Endereçamento", icon: MapPin },
@@ -74,6 +76,7 @@ export default function ErpModuleWms({ user }) {
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="indigo" />
       {sub === "recebimento" && <ErpWmsReceivingPanel user={user} />}
+      {sub === "bipagem" && <ErpWmsProductionScanPanel user={user} />}
       {sub === "etiquetas" && <ErpWmsLabelPanel user={user} />}
       {sub === "inconsistencias" && <ErpWmsDeviationPanel user={user} />}
       {sub === "movimentos" && <ErpWmsMovePanel user={user} />}

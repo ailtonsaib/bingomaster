@@ -44,6 +44,11 @@
       "default": 0,
       "description": "Saldo restante da etiqueta \u2014 consumido no atendimento de requisi\u00e7\u00f5es por bipagem"
     },
+    "stocked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a etiqueta de produ\u00e7\u00e3o j\u00e1 deu entrada no estoque pela bipagem de produ\u00e7\u00e3o (evita bipagem dupla)"
+    },
     "lot": {
       "type": "string",
       "description": "Lote do produto"

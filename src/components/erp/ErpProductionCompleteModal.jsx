@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { fmtMoney } from "@/lib/erpUtils";
 import { createWarehouseRequisition } from "@/lib/erpProductionStock";
 import { buildKardexRows, kardexAverageCost } from "@/lib/erpKardex";
@@ -44,6 +44,17 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
   const reqAtendida = req?.status === "atendida";
   const plannedQty = Number(order.output_quantity) || 0;
   const producedQty = Math.max(0, Number(produced) || 0);
+  const outUnit = products.find(p => p.id === order.output_product_id)?.unit || "";
+  // Quantidade bipada no WMS (Bipagem de Produção) que já entrou no estoque
+  const bipedQty = useMemo(() => {
+    if (!kardexData) return 0;
+    const doc = `OP ${order.order_number}`;
+    return r3((kardexData.moves || [])
+      .filter(m => m.move_type === "entrada" && m.document === doc && m.product_id === order.output_product_id)
+      .reduce((s, m) => s + (Number(m.quantity) || 0), 0));
+  }, [kardexData, order.id, order.order_number, order.output_product_id]);
+  // Divergência entre estoque bipado e apontamento de produção impede o encerramento
+  const bipedDivergence = bipedQty > 0 && Math.abs(bipedQty - producedQty) > 0.001;
 
   // Por insumo: consumo teórico p/ qtd real, requisitado, excedente/complemento e custo médio
   const lines = useMemo(() => (order.bom_items || []).filter(b => b.product_id).map(b => {
@@ -86,6 +97,10 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
 
   const confirm = async () => {
     if (producedQty <= 0) return alert("Informe a quantidade real produzida.");
+    if (bipedDivergence) {
+      alert(`DIVERGÊNCIA entre estoque e apontamento de produção:\n\nBipado no WMS: ${bipedQty} ${outUnit}\nApontamento: ${producedQty} ${outUnit}\n\nAjuste a quantidade produzida ou realize a bipagem da produção no WMS (Bipagem Produção) antes de encerrar a ordem de produção.`);
+      return;
+    }
     setSaving(true);
     try {
       // Sem requisição atendida: consome o consumo teórico direto do estoque
@@ -139,8 +154,10 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
       const wipItems = lines.filter(l => l.excess > 0 && l.excMode === "processo" && l.excDevolvida > 0).map(l => ({ product_id: l.product_id, product_name: l.product_name, product_code: l.product_code, unit: l.unit, quantity: l.excDevolvida, value: r2(l.excDevolvida * l.avgCost) }));
       // Produto acabado: entra no estoque valorizado pelo custo dos insumos consumidos
       const outProd = await base44.entities.ErpProduct.get(order.output_product_id);
+      // Estoque já alimentado pela bipagem no WMS — não duplica a entrada do produto acabado
+      const stockUpdate = bipedQty > 0 ? {} : { stock: r3((Number(outProd.stock) || 0) + producedQty) };
       await base44.entities.ErpProduct.update(order.output_product_id, {
-        stock: r3((Number(outProd.stock) || 0) + producedQty),
+        ...stockUpdate,
         ...(unitCost > 0 ? { cost_price: Math.round(unitCost * 10000) / 10000 } : {}),
       });
       await base44.entities.ErpProductionOrder.update(order.id, {
@@ -160,6 +177,7 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
       if (wipItems.length) parts.push(`Insumos deixados em processo (WIP): ${fmtMoney(wipValue)} — fora do custo de produção.`);
       if (returnValue > 0 && reqAtendida) parts.push(`Insumos devolvidos ao estoque: ${fmtMoney(returnValue)}.`);
       if (stopsCost > 0) parts.push(`Custo extra das paradas de produção (apontamento) agregado ao custo: ${fmtMoney(stopsCost)}.`);
+      if (bipedQty > 0) parts.push(`O estoque do produto acabado já foi alimentado pela bipagem no WMS (${bipedQty} ${outUnit}) — o saldo não é duplicado aqui.`);
       alert(parts.join("\n\n"));
       onSaved();
     } catch (e) { alert("Erro ao concluir produção: " + e.message); }
@@ -182,7 +200,14 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
                 <div><span className="text-gray-500">Produto: </span><b>{order.output_product_name}</b></div>
                 <div><span className="text-gray-500">Qtd planejada: </span><b>{order.output_quantity}</b></div>
                 <div className="col-span-2"><span className="text-gray-500">Requisição ao almoxarifado: </span><b>{req ? `${req.number} — ${req.status}` : "—"}</b></div>
+                <div className="col-span-2"><span className="text-gray-500">Bipado no WMS (entrada por etiquetas de produção): </span><b>{bipedQty > 0 ? `${bipedQty} ${outUnit}` : "—"}</b></div>
               </div>
+              {bipedDivergence && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  DIVERGÊNCIA entre estoque bipado no WMS ({bipedQty} {outUnit}) e o apontamento de produção ({producedQty} {outUnit}) — a ordem de produção não pode ser encerrada até as quantidades coincidirem.
+                </div>
+              )}
               <div>
                 <Label className="text-xs font-medium text-gray-600">Quantidade Real Produzida *</Label>
                 <Input type="number" step="0.001" min="0" value={produced} onChange={e => setProduced(e.target.value)} className="mt-1" />
@@ -296,7 +321,7 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
             </div>
             <div className="p-4 border-t flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button size="sm" disabled={saving} onClick={confirm} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Concluindo..." : "Concluir Produção"}</Button>
+              <Button size="sm" disabled={saving || bipedDivergence} onClick={confirm} className="bg-emerald-600 hover:bg-emerald-700">{saving ? "Concluindo..." : "Concluir Produção"}</Button>
             </div>
           </>
         )}
