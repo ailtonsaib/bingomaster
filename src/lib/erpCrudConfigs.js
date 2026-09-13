@@ -249,6 +249,7 @@ export const ERP_CRUD_CONFIGS = {
       { key: "name", label: "Nome / Razão Social", required: true, full: true },
       { key: "cpf_cnpj", label: "CPF/CNPJ", mask: "cnpj", lookup: "cnpj" }, { key: "ie", label: "Inscrição Estadual", requiredIf: form => !!form.contribuinte },
       { key: "suframa", label: "Número SUFRAMA" }, { key: "contribuinte", label: "Contribuinte ICMS", type: "checkbox" },
+      { key: "price_table_id", label: "Tabela de Preço", type: "entity-select", entity: "ErpPriceTable", labelKey: "name", cacheKey: "price_table_name" },
       { key: "email", label: "Email" }, { key: "phone", label: "Telefone", mask: "phone" },
       { key: "address", label: "Endereço", full: true }, { key: "district", label: "Bairro" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "zip", label: "CEP", mask: "cep" }, { key: "ibge_code", label: "Cód. IBGE" },
       { key: "delivery_address", label: "Endereço de Entrega", full: true, placeholder: "Informe quando a entrega for diferente do endereço cadastrado" },
