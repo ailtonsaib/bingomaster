@@ -25,7 +25,7 @@
     "products": {
       "type": "array",
       "default": [],
-      "description": "Produtos produzidos nesta linha com a velocidade nominal de cada um (quantidade produzida por hora) \u2014 o mesmo produto pode ser cadastrado em linhas diferentes; a velocidade nominal \u00e9 a base do c\u00e1lculo de efici\u00eancia de produ\u00e7\u00e3o (capacidade nominal \u00d7 horas \u00d7 efici\u00eancia)",
+      "description": "Produtos produzidos nesta linha com a velocidade nominal de cada um (quantidade por hora na unidade do produto \u2014 CX, KG, FD etc.) \u2014 o mesmo produto pode ser cadastrado em linhas diferentes; a velocidade nominal \u00e9 a base do c\u00e1lculo de efici\u00eancia de produ\u00e7\u00e3o (capacidade nominal \u00d7 horas)",
       "items": {
         "type": "object",
         "properties": {
@@ -41,10 +41,14 @@
             "type": "string",
             "description": "C\u00f3digo do produto (cache)"
           },
+          "unit": {
+            "type": "string",
+            "description": "Unidade de medida do produto (CX, KG, FD, UN etc. \u2014 cache do ErpProduct)"
+          },
           "units_per_hour": {
             "type": "number",
             "default": 0,
-            "description": "Velocidade nominal \u2014 quantidade que a linha produz deste produto por hora"
+            "description": "Velocidade nominal \u2014 quantidade que a linha produz deste produto por hora, na unidade do produto"
           }
         }
       }

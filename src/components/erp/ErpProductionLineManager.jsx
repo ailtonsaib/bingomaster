@@ -74,7 +74,7 @@ export default function ErpProductionLineManager({ user }) {
                   <td className="p-2">{ln.stage_name || "—"}</td>
                   <td className="p-2 text-xs text-gray-600">
                     {(ln.products || []).length
-                      ? (ln.products || []).map(p => `${p.product_name}${Number(p.units_per_hour) > 0 ? ` (${p.units_per_hour}/h)` : ""}`).join(", ")
+                      ? (ln.products || []).map(p => `${p.product_name}${Number(p.units_per_hour) > 0 ? ` (${p.units_per_hour} ${p.unit || "UN"}/h)` : ""}`).join(", ")
                       : <span className="text-gray-400">—</span>}
                   </td>
                   <td className="p-2 text-center">{ln.is_active !== false ? "✅" : "—"}</td>
@@ -112,12 +112,14 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
   const [productId, setProductId] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const productsById = {}; products.forEach(p => { productsById[p.id] = p; });
+  const unitOf = (it) => it.unit || productsById[it.product_id]?.unit || "UN";
 
   const addProduct = () => {
     if (!productId) return;
     if (items.some(i => i.product_id === productId)) { alert("Este produto já está cadastrado nesta linha."); setProductId(""); return; }
     const p = products.find(x => x.id === productId);
-    setItems(prev => [...prev, { product_id: productId, product_name: p?.name || "", product_code: p?.code || "", units_per_hour: 0 }]);
+    setItems(prev => [...prev, { product_id: productId, product_name: p?.name || "", product_code: p?.code || "", unit: p?.unit || "UN", units_per_hour: 0 }]);
     setProductId("");
   };
 
@@ -133,7 +135,7 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
       description: form.description || undefined,
       stage_id: form.stage_id,
       stage_name: stage?.name || "",
-      products: items,
+      products: items.map(it => ({ ...it, unit: unitOf(it) })),
       is_active: form.is_active,
     };
     try {
@@ -171,20 +173,27 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
               <span className="text-sm font-semibold">Produtos produzidos nesta linha</span>
             </div>
             <div className="p-3 space-y-2">
-              {items.length === 0 && <p className="text-center text-gray-400 text-xs py-2">Nenhum produto vinculado à linha.</p>}
+              {items.length === 0 && <p className="text-center text-gray-400 text-xs py-2">Nenhum produto vinculado à linha. Selecione abaixo e clique em Adicionar — você pode adicionar quantos produtos quiser.</p>}
+              {items.length > 0 && (
+                <div className="grid grid-cols-[1fr,190px,28px] gap-2 px-1 text-[11px] font-semibold text-gray-500">
+                  <span>Produto</span>
+                  <span>Velocidade nominal (por hora)</span>
+                  <span />
+                </div>
+              )}
               {items.map((it, i) => (
-                <div key={i} className="flex items-center gap-2 border rounded-md px-2 py-1.5 bg-gray-50/50">
-                  <span className="text-xs flex-1">{it.product_code ? `${it.product_code} — ` : ""}{it.product_name}</span>
+                <div key={i} className="grid grid-cols-[1fr,190px,28px] items-center gap-2 border rounded-md px-2 py-1.5 bg-gray-50/50">
+                  <span className="text-xs font-medium">{it.product_code ? `${it.product_code} — ` : ""}{it.product_name}</span>
                   <div className="flex items-center gap-1">
                     <input
                       type="number" min="0" step="0.01"
                       value={it.units_per_hour ?? 0}
                       onChange={e => setItems(prev => prev.map((x, j) => j === i ? { ...x, units_per_hour: Number(e.target.value) || 0 } : x))}
                       placeholder="0"
-                      title="Velocidade nominal — quantidade produzida por hora"
-                      className="w-24 h-7 rounded-md border border-input bg-white px-2 text-xs text-right"
+                      title="Velocidade nominal — quantidade produzida por hora na unidade do produto"
+                      className="w-24 h-8 rounded-md border border-input bg-white px-2 text-xs text-right"
                     />
-                    <span className="text-[11px] text-gray-500 whitespace-nowrap">un./hora</span>
+                    <span className="text-xs text-gray-600 whitespace-nowrap font-medium">{unitOf(it)}/hora</span>
                   </div>
                   <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                 </div>
