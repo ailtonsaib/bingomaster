@@ -110,17 +110,19 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
   });
   const [items, setItems] = useState(line?.products || []);
   const [productId, setProductId] = useState("");
+  const [newUnits, setNewUnits] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const productsById = {}; products.forEach(p => { productsById[p.id] = p; });
   const unitOf = (it) => it.unit || productsById[it.product_id]?.unit || "UN";
 
   const addProduct = () => {
-    if (!productId) return;
+    if (!productId) { alert("Selecione o produto produzido na linha."); return; }
     if (items.some(i => i.product_id === productId)) { alert("Este produto já está cadastrado nesta linha."); setProductId(""); return; }
     const p = products.find(x => x.id === productId);
-    setItems(prev => [...prev, { product_id: productId, product_name: p?.name || "", product_code: p?.code || "", unit: p?.unit || "UN", units_per_hour: 0 }]);
+    setItems(prev => [...prev, { product_id: productId, product_name: p?.name || "", product_code: p?.code || "", unit: p?.unit || "UN", units_per_hour: Number(newUnits) || 0 }]);
     setProductId("");
+    setNewUnits("");
   };
 
   const save = async () => {
@@ -173,7 +175,7 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
               <span className="text-sm font-semibold">Produtos produzidos nesta linha</span>
             </div>
             <div className="p-3 space-y-2">
-              {items.length === 0 && <p className="text-center text-gray-400 text-xs py-2">Nenhum produto vinculado à linha. Selecione abaixo e clique em Adicionar — você pode adicionar quantos produtos quiser.</p>}
+              {items.length === 0 && <p className="text-center text-gray-400 text-xs py-2">Nenhum produto vinculado à linha. Selecione o produto, informe a velocidade nominal e clique em Incluir (+) — repita para quantos produtos quiser.</p>}
               {items.length > 0 && (
                 <div className="grid grid-cols-[1fr,190px,28px] gap-2 px-1 text-[11px] font-semibold text-gray-500">
                   <span>Produto</span>
@@ -198,14 +200,27 @@ function LineModal({ user, line, stages, products, onClose, onSaved }) {
                   <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                 </div>
               ))}
-              <div className="flex gap-2">
-                <select value={productId} onChange={e => setProductId(e.target.value)} className="flex-1 h-8 rounded-md border border-input bg-transparent px-2 text-sm">
+              <div className="flex items-center gap-2 border-t pt-2">
+                <select value={productId} onChange={e => setProductId(e.target.value)} className="flex-1 min-w-0 h-9 rounded-md border border-input bg-transparent px-2 text-sm">
                   <option value="">Selecione o produto produzido na linha...</option>
                   {products.filter(p => p.product_type !== "servico").map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
                 </select>
-                <Button size="sm" variant="outline" onClick={addProduct} className="gap-1.5 h-8"><Plus className="w-3.5 h-3.5" /> Adicionar</Button>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={newUnits}
+                    onChange={e => setNewUnits(e.target.value)}
+                    placeholder="0"
+                    title="Velocidade nominal — quantidade produzida por hora na unidade do produto"
+                    className="w-20 h-9 rounded-md border border-input bg-white px-2 text-sm text-right"
+                  />
+                  <span className="text-xs text-gray-600 whitespace-nowrap font-medium">{(productId && productsById[productId]?.unit) || "UN"}/hora</span>
+                </div>
+                <Button size="sm" onClick={addProduct} className="gap-1.5 h-9 px-3 bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4" /> Incluir
+                </Button>
               </div>
-              <p className="text-[11px] text-gray-500">O mesmo produto pode ser cadastrado em linhas diferentes — ele apenas não pode repetir dentro da mesma linha. A velocidade nominal (un./hora) é a capacidade de cada produto na linha e serve de base para o cálculo da eficiência de produção: em uma produção de 8 horas, uma linha de 1.000 un./hora deveria produzir 8.000 unidades.</p>
+              <p className="text-[11px] text-gray-500">O mesmo produto pode ser cadastrado em linhas diferentes — ele apenas não pode repetir dentro da mesma linha. A velocidade nominal (na unidade do produto: CX, KG, FD etc. por hora) serve de base para o cálculo da eficiência de produção: em 8 horas, uma linha de 1.000 CX/hora deveria produzir 8.000 caixas.</p>
             </div>
           </div>
 
