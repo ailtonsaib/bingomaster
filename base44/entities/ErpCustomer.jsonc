@@ -41,6 +41,38 @@
       "type": "string",
       "description": "C\u00f3digo IBGE do munic\u00edpio (usado na NF-e de sa\u00edda)"
     },
+    "vendedor_id": {
+      "type": "string",
+      "description": "ID do vendedor respons\u00e1vel (ErpSalesTeam)"
+    },
+    "vendedor_name": {
+      "type": "string",
+      "description": "Vendedor respons\u00e1vel (cache)"
+    },
+    "channel_id": {
+      "type": "string",
+      "description": "ID do canal de vendas (ErpChannel)"
+    },
+    "channel_name": {
+      "type": "string",
+      "description": "Canal de vendas (cache)"
+    },
+    "activity_sector_id": {
+      "type": "string",
+      "description": "ID do ramo de atividade (ErpActivitySector)"
+    },
+    "activity_sector_name": {
+      "type": "string",
+      "description": "Ramo de atividade (cache)"
+    },
+    "network_id": {
+      "type": "string",
+      "description": "ID da rede (ErpNetwork)"
+    },
+    "network_name": {
+      "type": "string",
+      "description": "Rede (cache)"
+    },
     "is_active": {
       "type": "boolean",
       "default": true

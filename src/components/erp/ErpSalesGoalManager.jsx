@@ -15,6 +15,7 @@ const LEVELS = [
   { value: "gerente", label: "Gerente", color: "text-amber-700 bg-amber-100" },
   { value: "supervisor", label: "Supervisor", color: "text-indigo-700 bg-indigo-100" },
   { value: "vendedor", label: "Vendedor", color: "text-emerald-700 bg-emerald-100" },
+  { value: "produto", label: "Produto", color: "text-purple-700 bg-purple-100" },
 ];
 const GOAL_TYPES = [
   { value: "valor", label: "Valor (R$)", color: "text-emerald-700 bg-emerald-100" },
@@ -28,6 +29,7 @@ export default function ErpSalesGoalManager({ user }) {
   const [items, setItems] = useState([]);
   const [team, setTeam] = useState([]);
   const [products, setProducts] = useState([]);
+  const [subgroups, setSubgroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -36,12 +38,13 @@ export default function ErpSalesGoalManager({ user }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [g, t, p] = await Promise.all([
+      const [g, t, p, sg] = await Promise.all([
         base44.entities.ErpSalesGoal.filter({ user_email: user.email }, "-year,-month,-created_date", 500),
         base44.entities.ErpSalesTeam.filter({ user_email: user.email }, "name", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email, is_active: true }, "name", 500),
+        base44.entities.ErpStockSubgroup.filter({ user_email: user.email }, "name", 500),
       ]);
-      setItems(g); setTeam(t); setProducts(p);
+      setItems(g); setTeam(t); setProducts(p); setSubgroups(sg);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -109,13 +112,13 @@ export default function ErpSalesGoalManager({ user }) {
       </div>
 
       {showForm && (
-        <ErpSalesGoalForm user={user} editing={editing} team={team} products={products} onClose={() => setShowForm(false)} onSaved={load} />
+        <ErpSalesGoalForm user={user} editing={editing} team={team} products={products} subgroups={subgroups} onClose={() => setShowForm(false)} onSaved={load} />
       )}
     </div>
   );
 }
 
-function ErpSalesGoalForm({ user, editing, team, products, onClose, onSaved }) {
+function ErpSalesGoalForm({ user, editing, team, products, subgroups, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: editing?.name || "",
     year: editing?.year || new Date().getFullYear(),
@@ -130,11 +133,13 @@ function ErpSalesGoalForm({ user, editing, team, products, onClose, onSaved }) {
     notes: editing?.notes || "",
   });
   const [distributions, setDistributions] = useState((editing?.distributions || []).map(d => ({ ...d, percent: Number(d.percent) || 0, target_value: Number(d.target_value) || 0, volume: Number(d.volume) || 0 })));
-  const [prodSearch, setProdSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const owners = team.filter(t => t.team_role === form.level);
+  // responsáveis: gerente/supervisor/vendedor (ErpSalesTeam) ou produto (ErpProduct)
+  const owners = form.level === "produto"
+    ? products.map(p => ({ id: p.id, name: p.name, unit: p.unit }))
+    : team.filter(t => t.team_role === form.level);
 
   const mergeRows = (cands) => {
     setDistributions(prev => {
@@ -143,12 +148,15 @@ function ErpSalesGoalForm({ user, editing, team, products, onClose, onSaved }) {
     });
   };
 
-  // Auto-gera linhas para nível gerente (supervisores) e supervisor (vendedores do supervisor)
+  // Auto-gera linhas: gerente → supervisores, supervisor → vendedores,
+  // vendedor → subgrupos de estoque
   useEffect(() => {
     if (form.level === "gerente") {
       mergeRows(team.filter(t => t.team_role === "supervisor").map(s => ({ target_type: "supervisor", target_id: s.id, target_name: s.name })));
     } else if (form.level === "supervisor") {
       mergeRows(team.filter(t => t.team_role === "vendedor" && t.supervisor_id === form.owner_id).map(v => ({ target_type: "vendedor", target_id: v.id, target_name: v.name })));
+    } else if (form.level === "vendedor") {
+      mergeRows(subgroups.map(s => ({ target_type: "subgrupo", target_id: s.id, target_name: s.name })));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.level, form.owner_id]);
@@ -170,14 +178,10 @@ function ErpSalesGoalForm({ user, editing, team, products, onClose, onSaved }) {
 
   const sumPct = distributions.reduce((a, r) => a + (Number(r.percent) || 0), 0);
 
-  const addProduct = (p) => {
-    if (distributions.find(d => d.target_id === p.id)) return;
-    setDistributions(prev => [...prev, { target_type: "produto", target_id: p.id, target_name: p.name, percent: 0, target_value: 0, volume: 0 }]);
+  const onOwner = (id) => {
+    const o = owners.find(o => o.id === id);
+    setForm(p => ({ ...p, owner_id: id, owner_name: o?.name || "", ...(form.level === "produto" && o?.unit ? { target_unit: o.unit } : {}) }));
   };
-
-  const onOwner = (id) => { const o = owners.find(o => o.id === id); setForm(p => ({ ...p, owner_id: id, owner_name: o?.name || "" })); };
-
-  const filteredProducts = products.filter(p => p.name.toLowerCase().includes(prodSearch.toLowerCase()) && !distributions.find(d => d.target_id === p.id));
 
   const handleSave = async () => {
     if (!form.name.trim()) { alert("Informe o nome do objetivo."); return; }
@@ -201,7 +205,7 @@ function ErpSalesGoalForm({ user, editing, team, products, onClose, onSaved }) {
     setSaving(false);
   };
 
-  const distLabel = form.level === "gerente" ? "Distribuição entre Supervisores" : form.level === "supervisor" ? "Distribuição entre Vendedores" : "Distribuição entre Produtos";
+  const distLabel = form.level === "gerente" ? "Distribuição entre Supervisores" : form.level === "supervisor" ? "Distribuição entre Vendedores" : "Distribuição entre Subgrupos de Produtos";
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -246,37 +250,23 @@ function ErpSalesGoalForm({ user, editing, team, products, onClose, onSaved }) {
             </div>
           </div>
 
-          {form.owner_id && (
+          {form.owner_id && form.level !== "produto" && (
             <div className="border rounded-lg p-3 bg-gray-50">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold">{distLabel}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${Math.abs(sumPct - 100) <= 0.5 ? "text-emerald-700 bg-emerald-100" : "text-amber-700 bg-amber-100"}`}>Total: {sumPct.toFixed(1)}%</span>
               </div>
 
-              {form.level === "vendedor" && (
-                <div className="mb-2 flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input value={prodSearch} onChange={e => setProdSearch(e.target.value)} placeholder="Buscar produto p/ adicionar..." className="w-full h-9 rounded-md border border-input bg-white pl-9 pr-3 text-sm" />
-                  </div>
-                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-                    {filteredProducts.slice(0, 30).map(p => (
-                      <button key={p.id} type="button" onClick={() => addProduct(p)} className="text-xs px-2 py-1 rounded-full border border-gray-200 hover:bg-gray-100">+ {p.name}</button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {distributions.length === 0 ? (
                 <p className="text-xs text-gray-400 text-center py-4">
-                  {form.level === "vendedor" ? "Adicione produtos acima para distribuir a meta." : "Nenhum item para distribuir. Verifique o cadastro da equipe."}
+                  Nenhum item para distribuir. Verifique o cadastro da equipe ou dos subgrupos de estoque.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="text-gray-500 text-xs">
                       <tr>
-                        <th className="p-1.5 text-left">{form.level === "vendedor" ? "Produto" : form.level === "gerente" ? "Supervisor" : "Vendedor"}</th>
+                        <th className="p-1.5 text-left">{form.level === "vendedor" ? "Subgrupo" : form.level === "gerente" ? "Supervisor" : "Vendedor"}</th>
                         <th className="p-1.5 text-right w-24">% da Meta</th>
                         <th className="p-1.5 text-right w-40">{isValor ? "Meta (R$)" : "Meta (vol.)"}</th>
                         {form.level === "vendedor" && <th className="p-1.5 w-10"></th>}

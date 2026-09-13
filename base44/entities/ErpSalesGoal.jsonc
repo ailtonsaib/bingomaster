@@ -43,13 +43,14 @@
       "enum": [
         "gerente",
         "supervisor",
-        "vendedor"
+        "vendedor",
+        "produto"
       ],
-      "description": "N\u00edvel do objetivo: gerente, supervisor ou vendedor"
+      "description": "N\u00edvel do objetivo: gerente, supervisor, vendedor ou produto"
     },
     "owner_id": {
       "type": "string",
-      "description": "ID do respons\u00e1vel no n\u00edvel (ErpSalesTeam)"
+      "description": "ID do respons\u00e1vel no n\u00edvel (ErpSalesTeam ou ErpProduct quando n\u00edvel produto)"
     },
     "owner_name": {
       "type": "string",
@@ -62,7 +63,7 @@
         "properties": {
           "target_type": {
             "type": "string",
-            "description": "supervisor, vendedor ou produto"
+            "description": "supervisor, vendedor ou subgrupo"
           },
           "target_id": {
             "type": "string"
@@ -87,7 +88,7 @@
         }
       },
       "default": [],
-      "description": "Distribui\u00e7\u00e3o da meta: % por supervisor (n\u00edvel gerente), % por vendedor (n\u00edvel supervisor) ou % por produto (n\u00edvel vendedor)"
+      "description": "Distribui\u00e7\u00e3o da meta: % por supervisor (n\u00edvel gerente), % por vendedor (n\u00edvel supervisor) ou % por subgrupo de produtos (n\u00edvel vendedor). No n\u00edvel produto a meta \u00e9 direta do produto, sem distribui\u00e7\u00e3o"
     },
     "status": {
       "type": "string",

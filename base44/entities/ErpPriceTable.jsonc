@@ -1,0 +1,111 @@
+{
+  "name": "ErpPriceTable",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome da tabela de pre\u00e7o"
+    },
+    "start_date": {
+      "type": "string",
+      "description": "In\u00edcio da vig\u00eancia (ISO)"
+    },
+    "end_date": {
+      "type": "string",
+      "description": "Fim da vig\u00eancia (ISO) \u2014 vazio = vig\u00eancia aberta"
+    },
+    "items": {
+      "type": "array",
+      "default": [],
+      "description": "Produtos da tabela com o pre\u00e7o praticado na vig\u00eancia",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "ID do produto (ErpProduct)"
+          },
+          "product_code": {
+            "type": "string",
+            "description": "C\u00f3digo do produto (cache)"
+          },
+          "product_name": {
+            "type": "string",
+            "description": "Nome do produto (cache)"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidade (cache)"
+          },
+          "price": {
+            "type": "number",
+            "default": 0,
+            "description": "Pre\u00e7o de venda na tabela (R$)"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
