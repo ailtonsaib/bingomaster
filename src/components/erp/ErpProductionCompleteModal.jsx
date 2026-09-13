@@ -12,13 +12,10 @@ const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
 const r3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-// O que fazer com os insumos excedentes (produção menor que a programada,
-// requisitados ao almoxarifado e não consumidos)
-const EXCESS_MODES = [
-  { value: "devolver", label: "Devolver os insumos ao estoque", desc: "Os insumos excedentes voltam ao saldo do produto com movimentação de entrada." },
-  { value: "processo", label: "Deixar em processo (WIP)", desc: "Os insumos excedentes saíram do estoque pela requisição e permanecem em processo — registrados na OP, fora do custo de produção." },
-  { value: "perda", label: "Considerar perda de insumos", desc: "Os insumos excedentes são registrados como perda e o valor entra no custo de produção." },
-];
+// Quebra x devolvida dos insumos excedentes: o usuário informa uma das duas
+// quantidades e a outra recebe automaticamente o saldo restante
+// (requisitado − consumo teórico). A parte devolvida pode voltar ao estoque
+// ou permanecer em processo (WIP).
 
 // Conclusão da ordem de produção: quantidade real produzida, consumo teórico x
 // requisitado, requisição complementar (produziu mais), destino dos insumos
@@ -27,7 +24,7 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
   const [produced, setProduced] = useState(String(order.output_quantity || 0));
   const [req, setReq] = useState(undefined); // undefined = carregando | null = sem requisição
   const [kardexData, setKardexData] = useState(null);
-  const [excessMode, setExcessMode] = useState("devolver");
+  const [excessInputs, setExcessInputs] = useState({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -58,23 +55,32 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
     const theoretical = r3(perUnit * producedQty);
     const reqItem = (req?.items || []).find(it => it.product_id === b.product_id);
     const requisitioned = reqAtendida ? (Number(reqItem?.quantity) || 0) : 0;
+    const excess = reqAtendida ? Math.max(0, r3(requisitioned - theoretical)) : 0;
+    // Quebra x devolvida: a quantidade informada completa a outra com o saldo restante
+    const st = excessInputs[b.product_id] || {};
+    const qTyped = st.quebra !== undefined && st.quebra !== null ? Number(st.quebra) || 0 : null;
+    const dTyped = st.devolvida !== undefined && st.devolvida !== null ? Number(st.devolvida) || 0 : null;
+    let excQuebra = 0, excDevolvida = excess;
+    if (qTyped !== null) { excQuebra = Math.min(qTyped, excess); excDevolvida = r3(excess - excQuebra); }
+    else if (dTyped !== null) { excDevolvida = Math.min(dTyped, excess); excQuebra = r3(excess - excDevolvida); }
     return {
-      ...b, avgCost, perUnit, theoretical, requisitioned,
-      excess: reqAtendida ? Math.max(0, r3(requisitioned - theoretical)) : 0,
+      ...b, avgCost, perUnit, theoretical, requisitioned, excess,
+      excQuebra, excDevolvida, excMode: st.mode || "devolver",
       complement: reqAtendida ? Math.max(0, r3(theoretical - requisitioned)) : 0,
       theoreticalValue: r2(theoretical * avgCost),
-      excessValue: r2(Math.max(0, requisitioned - theoretical) * avgCost),
       complementValue: r2(Math.max(0, theoretical - requisitioned) * avgCost),
     };
-  }), [order, products, kardexData, req, reqAtendida, producedQty]);
+  }), [order, products, kardexData, req, reqAtendida, producedQty, excessInputs]);
 
   const hasExcess = lines.some(l => l.excess > 0);
   const hasComplement = lines.some(l => l.complement > 0);
   const consumedValue = r2(lines.reduce((s, l) => s + l.theoreticalValue, 0));
-  const excessValue = r2(lines.reduce((s, l) => s + l.excessValue, 0));
+  const lossValue = r2(lines.reduce((s, l) => s + l.excQuebra * l.avgCost, 0));
+  const wipValue = r2(lines.reduce((s, l) => s + (l.excMode === "processo" ? l.excDevolvida * l.avgCost : 0), 0));
+  const returnValue = r2(lines.reduce((s, l) => s + (l.excMode === "devolver" ? l.excDevolvida * l.avgCost : 0), 0));
   // Custo extra das paradas do apontamento (mecânicas/elétricas/operacionais)
   const stopsCost = r2(Number(order.extra_cost_total) || 0);
-  const totalCost = r2(consumedValue + (hasExcess && excessMode === "perda" ? excessValue : 0) + stopsCost);
+  const totalCost = r2(consumedValue + lossValue + stopsCost);
   const unitCost = producedQty > 0 ? r2(totalCost / producedQty) : 0;
   const loading = req === undefined || !kardexData;
 
@@ -98,9 +104,6 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
         }
       }
       let compReq = null;
-      const extraItems = reqAtendida
-        ? lines.filter(l => l.excess > 0).map(l => ({ product_id: l.product_id, product_name: l.product_name, product_code: l.product_code, unit: l.unit, quantity: l.excess, value: l.excessValue }))
-        : [];
       if (reqAtendida) {
         // Produziu mais que o planejado: requisição complementar dos insumos adicionais
         if (hasComplement) {
@@ -112,28 +115,28 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
             })),
           });
         }
-        // Produziu menos e o usuário optou por devolver: insumos excedentes voltam ao estoque
-        if (hasExcess && excessMode === "devolver") {
-          for (const l of lines.filter(l => l.excess > 0)) {
-            const p = await base44.entities.ErpProduct.get(l.product_id);
-            await base44.entities.ErpProduct.update(l.product_id, { stock: r3((Number(p.stock) || 0) + l.excess) });
-            await base44.entities.ErpWmsMove.create({
-              user_email: user.email,
-              move_type: "entrada",
-              product_id: l.product_id,
-              product_code: l.product_code || "",
-              product_name: l.product_name || "",
-              unit: l.unit || "",
-              quantity: l.excess,
-              document: `OP ${order.order_number}`,
-              move_date: todayISO(),
-              notes: "Devolução de insumos ao estoque — produção menor que a programada",
-            });
-          }
+        // Parte devolvida marcada para voltar ao estoque (saldo não consumido que não foi quebra nem WIP)
+        for (const l of lines) {
+          if (l.excess <= 0 || l.excMode !== "devolver" || l.excDevolvida <= 0) continue;
+          const p = await base44.entities.ErpProduct.get(l.product_id);
+          await base44.entities.ErpProduct.update(l.product_id, { stock: r3((Number(p.stock) || 0) + l.excDevolvida) });
+          await base44.entities.ErpWmsMove.create({
+            user_email: user.email,
+            move_type: "entrada",
+            product_id: l.product_id,
+            product_code: l.product_code || "",
+            product_name: l.product_name || "",
+            unit: l.unit || "",
+            quantity: l.excDevolvida,
+            document: `OP ${order.order_number}`,
+            move_date: todayISO(),
+            notes: "Devolução de insumos ao estoque — produção menor que a programada",
+          });
         }
       }
-      const lossItems = hasExcess && excessMode === "perda" ? extraItems : [];
-      const wipItems = hasExcess && excessMode === "processo" ? extraItems : [];
+      // Quebra informada = perda (entra no custo); devolvida marcada como processo = WIP (fora do custo)
+      const lossItems = lines.filter(l => l.excess > 0 && l.excQuebra > 0).map(l => ({ product_id: l.product_id, product_name: l.product_name, product_code: l.product_code, unit: l.unit, quantity: l.excQuebra, value: r2(l.excQuebra * l.avgCost) }));
+      const wipItems = lines.filter(l => l.excess > 0 && l.excMode === "processo" && l.excDevolvida > 0).map(l => ({ product_id: l.product_id, product_name: l.product_name, product_code: l.product_code, unit: l.unit, quantity: l.excDevolvida, value: r2(l.excDevolvida * l.avgCost) }));
       // Produto acabado: entra no estoque valorizado pelo custo dos insumos consumidos
       const outProd = await base44.entities.ErpProduct.get(order.output_product_id);
       await base44.entities.ErpProduct.update(order.output_product_id, {
@@ -153,9 +156,9 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
       });
       const parts = [`Produção concluída: ${producedQty} un. de "${order.output_product_name}".\nCusto dos insumos consumidos: ${fmtMoney(totalCost)} — custo unitário produzido: ${fmtMoney(unitCost)}.`];
       if (compReq) parts.push(`Requisição complementar ${compReq.number} gerada — o estoque dos insumos adicionais será baixado quando o almoxarifado atendê-la.`);
-      if (lossItems.length) parts.push(`Insumos excedentes registrados como perda: ${fmtMoney(excessValue)} (incluídos no custo de produção).`);
-      if (wipItems.length) parts.push(`Insumos excedentes deixados em processo: ${fmtMoney(excessValue)} (fora do custo de produção).`);
-      if (reqAtendida && hasExcess && excessMode === "devolver") parts.push(`Insumos excedentes devolvidos ao estoque: ${fmtMoney(excessValue)}.`);
+      if (lossItems.length) parts.push(`Quebra/perda de insumos: ${lossItems.map(i => `${i.quantity} ${i.unit || ""} de ${i.product_name}`).join(", ")} — ${fmtMoney(lossValue)} incluídos no custo de produção.`);
+      if (wipItems.length) parts.push(`Insumos deixados em processo (WIP): ${fmtMoney(wipValue)} — fora do custo de produção.`);
+      if (returnValue > 0 && reqAtendida) parts.push(`Insumos devolvidos ao estoque: ${fmtMoney(returnValue)}.`);
       if (stopsCost > 0) parts.push(`Custo extra das paradas de produção (apontamento) agregado ao custo: ${fmtMoney(stopsCost)}.`);
       alert(parts.join("\n\n"));
       onSaved();
@@ -233,21 +236,58 @@ export default function ErpProductionCompleteModal({ user, order, products, onCl
               {hasExcess && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                   <p className="text-sm font-medium text-amber-800">
-                    Insumos excedentes não consumidos: {fmtMoney(excessValue)} — o que fazer com eles?
+                    Insumos excedentes (requisitado − consumo teórico): informe a quebra/perda <b>ou</b> a quantidade devolvida — o sistema completa a outra com o saldo restante.
                   </p>
-                  {EXCESS_MODES.map(m => (
-                    <label key={m.value} className="flex items-start gap-2 text-xs text-amber-900 cursor-pointer">
-                      <input type="radio" name="excess-mode" checked={excessMode === m.value} onChange={() => setExcessMode(m.value)} className="mt-0.5" />
-                      <span><b>{m.label}</b> — {m.desc}</span>
-                    </label>
-                  ))}
+                  <div className="border border-amber-200 rounded-md overflow-hidden bg-white">
+                    <table className="w-full text-xs">
+                      <thead className="bg-amber-100 text-amber-800">
+                        <tr>
+                          <th className="p-2 text-left">Insumo</th>
+                          <th className="p-2 text-right">Saldo</th>
+                          <th className="p-2 text-right">Quebra (perda)</th>
+                          <th className="p-2 text-right">Devolvida</th>
+                          <th className="p-2 text-left">Destino da devolvida</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lines.filter(l => l.excess > 0).map(l => (
+                          <tr key={l.product_id} className="border-t">
+                            <td className="p-2">{l.product_name}</td>
+                            <td className="p-2 text-right font-medium text-amber-700">{l.excess} {l.unit || ""}</td>
+                            <td className="p-2 text-right">
+                              <input type="number" step="0.001" min="0" value={l.excQuebra}
+                                onChange={e => setExcessInputs(prev => ({ ...prev, [l.product_id]: { ...(prev[l.product_id] || {}), quebra: e.target.value, devolvida: null } }))}
+                                className="w-20 h-7 rounded border border-input px-1 text-right" />
+                            </td>
+                            <td className="p-2 text-right">
+                              <input type="number" step="0.001" min="0" value={l.excDevolvida}
+                                onChange={e => setExcessInputs(prev => ({ ...prev, [l.product_id]: { ...(prev[l.product_id] || {}), devolvida: e.target.value, quebra: null } }))}
+                                className="w-20 h-7 rounded border border-input px-1 text-right" />
+                            </td>
+                            <td className="p-2 whitespace-nowrap">
+                              <label className="inline-flex items-center gap-1 mr-2 cursor-pointer">
+                                <input type="radio" name={`exc-mode-${l.product_id}`} checked={l.excMode === "devolver"}
+                                  onChange={() => setExcessInputs(prev => ({ ...prev, [l.product_id]: { ...(prev[l.product_id] || {}), mode: "devolver" } }))} />
+                                Devolver ao estoque
+                              </label>
+                              <label className="inline-flex items-center gap-1 cursor-pointer">
+                                <input type="radio" name={`exc-mode-${l.product_id}`} checked={l.excMode === "processo"}
+                                  onChange={() => setExcessInputs(prev => ({ ...prev, [l.product_id]: { ...(prev[l.product_id] || {}), mode: "processo" } }))} />
+                                Em processo (WIP)
+                              </label>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
               <div className="rounded-lg border bg-gray-50 p-3 space-y-1">
                 <div className="flex justify-between text-xs"><span>Custo dos insumos consumidos (produção real)</span><b>{fmtMoney(consumedValue)}</b></div>
-                {hasExcess && excessMode === "perda" && <div className="flex justify-between text-xs text-red-600"><span>Perda de insumos excedentes (incluída no custo)</span><b>{fmtMoney(excessValue)}</b></div>}
-                {hasExcess && excessMode === "processo" && <div className="flex justify-between text-xs text-amber-600"><span>Insumos excedentes em processo — WIP (fora do custo)</span><b>{fmtMoney(excessValue)}</b></div>}
-                {hasExcess && excessMode === "devolver" && <div className="flex justify-between text-xs text-emerald-600"><span>Insumos excedentes devolvidos ao estoque (fora do custo)</span><b>{fmtMoney(excessValue)}</b></div>}
+                {lossValue > 0 && <div className="flex justify-between text-xs text-red-600"><span>Quebra/perda de insumos (incluída no custo)</span><b>{fmtMoney(lossValue)}</b></div>}
+                {wipValue > 0 && <div className="flex justify-between text-xs text-amber-600"><span>Insumos em processo — WIP (fora do custo)</span><b>{fmtMoney(wipValue)}</b></div>}
+                {returnValue > 0 && <div className="flex justify-between text-xs text-emerald-600"><span>Insumos devolvidos ao estoque (fora do custo)</span><b>{fmtMoney(returnValue)}</b></div>}
                 {stopsCost > 0 && <div className="flex justify-between text-xs text-red-600"><span>Custo extra de paradas de produção (apontamento)</span><b>{fmtMoney(stopsCost)}</b></div>}
                 <div className="flex justify-between text-xs border-t pt-1"><span>Custo total de produção</span><b>{fmtMoney(totalCost)}</b></div>
                 <div className="flex justify-between text-sm"><span>Custo unitário do produto produzido</span><b className="text-indigo-700">{fmtMoney(unitCost)}</b></div>
