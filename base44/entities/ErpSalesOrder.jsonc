@@ -30,8 +30,24 @@
           "product_id": {
             "type": "string"
           },
+          "product_code": {
+            "type": "string",
+            "description": "C\u00f3digo do produto (cache \u2014 usado na NF-e)"
+          },
+          "barcode": {
+            "type": "string",
+            "description": "C\u00f3digo de barras/GTIN (cache \u2014 usado na NF-e)"
+          },
           "product_name": {
             "type": "string"
+          },
+          "ncm": {
+            "type": "string",
+            "description": "NCM do item (preenchido no faturamento)"
+          },
+          "cfop": {
+            "type": "string",
+            "description": "CFOP do item (preenchido no faturamento)"
           },
           "unit": {
             "type": "string"
@@ -44,6 +60,63 @@
           },
           "total": {
             "type": "number"
+          },
+          "cst_icms": {
+            "type": "string",
+            "description": "CST do ICMS do item (regra fiscal aplicada no faturamento)"
+          },
+          "base_icms": {
+            "type": "number",
+            "default": 0,
+            "description": "Base de c\u00e1lculo do ICMS do item"
+          },
+          "icms_rate": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do ICMS do item (%)"
+          },
+          "icms_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do ICMS do item"
+          },
+          "cst_pis": {
+            "type": "string",
+            "description": "CST do PIS do item"
+          },
+          "pis_rate": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do PIS do item (%)"
+          },
+          "pis_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do PIS do item"
+          },
+          "cst_cofins": {
+            "type": "string",
+            "description": "CST do COFINS do item"
+          },
+          "cofins_rate": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do COFINS do item (%)"
+          },
+          "cofins_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do COFINS do item"
+          },
+          "ipi_rate": {
+            "type": "number",
+            "default": 0,
+            "description": "Al\u00edquota do IPI do item (%)"
+          },
+          "ipi_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do IPI do item"
           }
         }
       },
@@ -61,6 +134,91 @@
       "type": "number",
       "default": 0
     },
+    "operation_id": {
+      "type": "string",
+      "description": "ID da opera\u00e7\u00e3o de sa\u00edda vinculada (ErpOperation) \u2014 informada no faturamento"
+    },
+    "operation_name": {
+      "type": "string",
+      "description": "Nome da opera\u00e7\u00e3o de sa\u00edda (cache)"
+    },
+    "nature_operation": {
+      "type": "string",
+      "description": "Natureza da opera\u00e7\u00e3o (usada na NF-e)"
+    },
+    "cfop": {
+      "type": "string",
+      "description": "CFOP da opera\u00e7\u00e3o dentro/fora do estado (capa \u2014 usado na NF-e)"
+    },
+    "installments": {
+      "type": "array",
+      "default": [],
+      "description": "Parcelas de recebimento do faturamento \u2014 cada parcela gera uma conta a receber no financeiro com seu vencimento e valor",
+      "items": {
+        "type": "object",
+        "properties": {
+          "due_date": {
+            "type": "string",
+            "description": "Vencimento da parcela (ISO)"
+          },
+          "amount": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor da parcela"
+          }
+        }
+      }
+    },
+    "total_products": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total dos produtos (faturamento)"
+    },
+    "total_icms": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do ICMS (faturamento)"
+    },
+    "total_ipi": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do IPI (faturamento)"
+    },
+    "total_pis": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do PIS (faturamento)"
+    },
+    "total_cofins": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do COFINS (faturamento)"
+    },
+    "total_fcp": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do FCP (faturamento)"
+    },
+    "total_st": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do ICMS-ST a recolher (faturamento)"
+    },
+    "total_difal": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total do DIFAL (faturamento)"
+    },
+    "total_nota": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total da nota fiscal (produtos + IPI)"
+    },
+    "financeiro_gerado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se as contas a receber das parcelas j\u00e1 foram geradas no faturamento"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -75,6 +233,30 @@
     },
     "notes": {
       "type": "string"
+    },
+    "nfe_model": {
+      "type": "string",
+      "description": "Modelo da NF-e emitida (55)"
+    },
+    "nfe_number": {
+      "type": "string",
+      "description": "N\u00famero da NF-e emitida"
+    },
+    "nfe_series": {
+      "type": "string",
+      "description": "S\u00e9rie da NF-e emitida"
+    },
+    "nfe_key": {
+      "type": "string",
+      "description": "Chave de acesso da NF-e emitida"
+    },
+    "nfe_xml": {
+      "type": "string",
+      "description": "XML da NF-e gerado/assinado (transmiss\u00e3o \u00e0 SEFAZ)"
+    },
+    "nfe_issue_date": {
+      "type": "string",
+      "description": "Data de emiss\u00e3o da NF-e (ISO)"
     }
   },
   "required": [

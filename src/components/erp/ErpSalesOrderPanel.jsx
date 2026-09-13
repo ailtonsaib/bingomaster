@@ -3,8 +3,9 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, ShoppingCart, CheckCircle2, X } from "lucide-react";
+import { Plus, Search, Trash2, ShoppingCart, CheckCircle2, X, FileText } from "lucide-react";
 import { genOrderNumber, fmtMoney, fmtDate } from "@/lib/erpUtils";
+import ErpSalesInvoiceModal from "@/components/erp/ErpSalesInvoiceModal";
 
 const STATUS = {
   aberto: { label: "Aberto", color: "text-amber-700 bg-amber-100" },
@@ -22,6 +23,7 @@ export default function ErpSalesOrderPanel({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [invoicing, setInvoicing] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -45,24 +47,20 @@ export default function ErpSalesOrderPanel({ user }) {
 
   const handleDelete = async (o) => { if (!confirm(`Excluir pedido "${o.number}"?`)) return; await base44.entities.ErpSalesOrder.delete(o.id); load(); };
 
-  // Faturar pedido: baixa estoque e marca faturado
-  const handleInvoice = async (o) => {
-    if (!confirm(`Faturar pedido "${o.number}"? O estoque dos itens será baixado.`)) return;
+  // Faturar pedido: abre o modal de faturamento — operação de saída (CFOP),
+  // impostos pela regra fiscal, parcelas no contas a receber e baixa de estoque
+  const handleInvoice = (o) => setInvoicing(o);
+
+  // Emitir NF-e do pedido faturado (ERP): gera e assina o XML da nota
+  const handleEmitNfe = async (o) => {
+    if (!confirm(`Emitir NF-e do pedido "${o.number}"?`)) return;
     setBusy(o.id);
     try {
-      for (const it of (o.items || [])) {
-        if (!it.product_id) continue;
-        const p = await base44.entities.ErpProduct.get(it.product_id);
-        if ((Number(p.stock) || 0) < Number(it.quantity)) { alert(`Estoque insuficiente de "${p.name}".`); setBusy(null); return; }
-      }
-      for (const it of (o.items || [])) {
-        if (!it.product_id) continue;
-        const p = await base44.entities.ErpProduct.get(it.product_id);
-        await base44.entities.ErpProduct.update(it.product_id, { stock: (Number(p.stock) || 0) - Number(it.quantity) });
-      }
-      await base44.entities.ErpSalesOrder.update(o.id, { status: "faturado" });
+      const res = await base44.functions.invoke("gerarNfeSaida", { order_id: o.id, source: "erp", modelo: "55" });
+      if (!res?.data?.success) alert(res?.data?.error || "Erro ao emitir NF-e.");
+      else alert(`NF-e ${res.data.nfe_number} (série ${res.data.nfe_series}) gerada.\nChave de acesso: ${res.data.nfe_key}`);
       load();
-    } catch (e) { alert("Erro ao faturar: " + e.message); }
+    } catch (e) { alert("Erro ao emitir NF-e: " + e.message); }
     setBusy(null);
   };
 
@@ -87,13 +85,13 @@ export default function ErpSalesOrderPanel({ user }) {
               <tr>
                 <th className="p-2 text-left">Pedido</th><th className="p-2 text-left">Cliente</th>
                 <th className="p-2 text-left">Emissão</th><th className="p-2 text-right">Itens</th>
-                <th className="p-2 text-right">Total</th><th className="p-2 text-left">Status</th>
+                <th className="p-2 text-right">Total</th><th className="p-2 text-left">NF-e</th><th className="p-2 text-left">Status</th>
                 <th className="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? <tr><td colSpan={7} className="p-6 text-center text-gray-400">Carregando...</td></tr>
-              : filtered.length === 0 ? <tr><td colSpan={7} className="p-8 text-center text-gray-400"><ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhum pedido de venda.</td></tr>
+              {loading ? <tr><td colSpan={8} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+              : filtered.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-gray-400"><ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" /> Nenhum pedido de venda.</td></tr>
               : filtered.map(o => {
                 const st = STATUS[o.status] || { label: o.status, color: "text-gray-700 bg-gray-100" };
                 return (
@@ -103,11 +101,21 @@ export default function ErpSalesOrderPanel({ user }) {
                     <td className="p-2 text-gray-600">{fmtDate(o.emission_date)}</td>
                     <td className="p-2 text-right">{o.items?.length || 0}</td>
                     <td className="p-2 text-right font-medium">{fmtMoney(o.total)}</td>
+                    <td className="p-2 text-xs">
+                      {o.nfe_key
+                        ? <span className="text-emerald-700 font-medium" title={`Chave: ${o.nfe_key}`}>NF-e {o.nfe_number}</span>
+                        : (o.status === "faturado" ? <span className="text-amber-600">Pendente</span> : "—")}
+                    </td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></td>
                     <td className="p-2 text-right whitespace-nowrap">
                       {o.status === "aberto" && (
-                        <button onClick={() => handleInvoice(o)} disabled={busy === o.id} title="Faturar e baixar estoque" className="p-1 hover:bg-emerald-50 rounded">
+                        <button onClick={() => handleInvoice(o)} disabled={busy === o.id} title="Faturar — operação, impostos, parcelas e estoque" className="p-1 hover:bg-emerald-50 rounded">
                           <CheckCircle2 className={`w-4 h-4 text-emerald-600 ${busy === o.id ? "animate-spin" : ""}`} />
+                        </button>
+                      )}
+                      {o.status === "faturado" && !o.nfe_key && (
+                        <button onClick={() => handleEmitNfe(o)} disabled={busy === o.id} title="Emitir NF-e" className="p-1 hover:bg-blue-50 rounded">
+                          <FileText className={`w-4 h-4 text-blue-600 ${busy === o.id ? "animate-pulse" : ""}`} />
                         </button>
                       )}
                       <button onClick={() => { setEditing(o); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><span className="text-xs">✏️</span></button>
@@ -122,6 +130,7 @@ export default function ErpSalesOrderPanel({ user }) {
       </div>
 
       {showForm && <ErpSalesForm user={user} order={editing} products={products} customers={customers} onClose={() => setShowForm(false)} onSaved={load} />}
+      {invoicing && <ErpSalesInvoiceModal user={user} order={invoicing} products={products} customers={customers} onClose={() => setInvoicing(null)} onSaved={load} />}
     </div>
   );
 }

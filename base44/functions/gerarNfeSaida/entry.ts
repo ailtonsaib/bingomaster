@@ -8,36 +8,114 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ success: false, error: 'Usuário não autenticado.' });
 
     const body = await req.json();
-    const { order_id, modelo } = body;
+    const { order_id, modelo, source } = body;
 
     if (!order_id) {
       return Response.json({ success: false, error: 'ID do pedido não informado.' });
     }
 
-    // Load the exit order
-    const order = await base44.entities.PDVExitOrder.get(order_id);
-    if (!order) {
-      return Response.json({ success: false, error: 'Pedido não encontrado.' });
-    }
-    // Security: verify the order belongs to the authenticated user's company
-    if (order.user_email && order.user_email !== user.email) {
-      return Response.json({ success: false, error: 'Acesso negado: pedido não pertence à sua empresa.' });
-    }
-    if (order.status === 'emitida') {
-      return Response.json({ success: false, error: 'NF-e já emitida para este pedido.' });
-    }
-    if (!order.items || order.items.length === 0) {
-      return Response.json({ success: false, error: 'Pedido sem itens.' });
-    }
+    // Origem do pedido:
+    // - PDV (padrão): pedido de saída do PDV (PDVExitOrder) + configuração do PDV
+    // - ERP: pedido de venda do módulo Comercial (ErpSalesOrder) + empresa do ERP
+    // Ambos são normalizados para o mesmo formato usado na geração do XML.
+    let order: any;
+    let company: any;
+    let persistNfe: (data: any) => Promise<any>;
+    let advanceNumber: () => Promise<any>;
 
-    // Load company config
-    const configs = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
-    const company = configs[0];
-    if (!company) {
-      return Response.json({ success: false, error: 'Configure os dados da empresa antes de emitir NF-e.' });
-    }
-    if (!company.cnpj || !company.ie || !company.uf || !company.ibge_code) {
-      return Response.json({ success: false, error: 'Dados da empresa incompletos. Preencha CNPJ, IE, UF e código IBGE.' });
+    if (source === 'erp') {
+      const erpOrder = await base44.entities.ErpSalesOrder.get(order_id);
+      if (!erpOrder) {
+        return Response.json({ success: false, error: 'Pedido não encontrado.' });
+      }
+      if (erpOrder.user_email && erpOrder.user_email !== user.email) {
+        return Response.json({ success: false, error: 'Acesso negado: pedido não pertence à sua empresa.' });
+      }
+      if (erpOrder.nfe_key) {
+        return Response.json({ success: false, error: 'NF-e já emitida para este pedido.' });
+      }
+      if (erpOrder.status !== 'faturado') {
+        return Response.json({ success: false, error: 'Fature o pedido no módulo Comercial antes de emitir a NF-e.' });
+      }
+      if (!erpOrder.items || erpOrder.items.length === 0) {
+        return Response.json({ success: false, error: 'Pedido sem itens.' });
+      }
+
+      const companies = await base44.entities.ErpCompany.filter({ user_email: user.email });
+      const comp = companies.find((c: any) => c.is_main) || companies[0];
+      if (!comp) {
+        return Response.json({ success: false, error: 'Cadastre a empresa no ERP (Cadastros Gerais → Empresas) antes de emitir NF-e.' });
+      }
+      if (!comp.cnpj || !comp.ie || !comp.uf || !comp.ibge_code) {
+        return Response.json({ success: false, error: 'Dados da empresa incompletos. Preencha CNPJ, IE, UF e código IBGE.' });
+      }
+
+      const customer = erpOrder.customer_id
+        ? await base44.entities.ErpCustomer.get(erpOrder.customer_id).catch(() => null)
+        : null;
+      order = {
+        nature_operation: erpOrder.nature_operation || 'Venda de mercadoria',
+        cfop: erpOrder.cfop || '',
+        payment_method: erpOrder.payment_method || '',
+        total_products: erpOrder.total_products || erpOrder.subtotal || 0,
+        total_icms: erpOrder.total_icms || 0,
+        total_ipi: erpOrder.total_ipi || 0,
+        total_pis: erpOrder.total_pis || 0,
+        total_cofins: erpOrder.total_cofins || 0,
+        total_nota: erpOrder.total_nota || erpOrder.total || 0,
+        customer_name: erpOrder.customer_name || '',
+        customer_cpf_cnpj: customer?.cpf_cnpj || '',
+        customer_uf: customer?.uf || '',
+        customer_address: customer?.address || 'Nao informado',
+        customer_number: 'S/N',
+        customer_district: customer?.district || customer?.city || 'Centro',
+        customer_city: customer?.city || 'Nao informado',
+        customer_ibge_code: customer?.ibge_code || '9999999',
+        customer_cep: customer?.zip || '',
+        items: erpOrder.items,
+      };
+      company = {
+        cnpj: comp.cnpj, ie: comp.ie, uf: comp.uf, ibge_code: comp.ibge_code,
+        cep: comp.cep, address: comp.address, number: comp.number, district: comp.district, city: comp.city,
+        razao_social: comp.razao_social, nome_fantasia: comp.nome_fantasia,
+        crt: comp.regime === 'simples_nacional' ? 1 : 3,
+        nfe_series: comp.nfe_series || 1,
+        nfe_number_next: comp.nfe_number_next || 1,
+        nfe_environment: comp.nfe_environment || '2',
+      };
+      persistNfe = (data: any) => base44.entities.ErpSalesOrder.update(order_id, data);
+      advanceNumber = () => base44.entities.ErpCompany.update(comp.id, {
+        nfe_number_next: (comp.nfe_number_next || 1) + 1,
+      });
+    } else {
+      order = await base44.entities.PDVExitOrder.get(order_id);
+      if (!order) {
+        return Response.json({ success: false, error: 'Pedido não encontrado.' });
+      }
+      // Security: verify the order belongs to the authenticated user's company
+      if (order.user_email && order.user_email !== user.email) {
+        return Response.json({ success: false, error: 'Acesso negado: pedido não pertence à sua empresa.' });
+      }
+      if (order.status === 'emitida') {
+        return Response.json({ success: false, error: 'NF-e já emitida para este pedido.' });
+      }
+      if (!order.items || order.items.length === 0) {
+        return Response.json({ success: false, error: 'Pedido sem itens.' });
+      }
+
+      // Load company config
+      const configs = await base44.entities.PDVCompanyConfig.filter({ user_email: user.email });
+      company = configs[0];
+      if (!company) {
+        return Response.json({ success: false, error: 'Configure os dados da empresa antes de emitir NF-e.' });
+      }
+      if (!company.cnpj || !company.ie || !company.uf || !company.ibge_code) {
+        return Response.json({ success: false, error: 'Dados da empresa incompletos. Preencha CNPJ, IE, UF e código IBGE.' });
+      }
+      persistNfe = (data: any) => base44.entities.PDVExitOrder.update(order_id, data);
+      advanceNumber = () => base44.entities.PDVCompanyConfig.update(company.id, {
+        nfe_number_next: (company.nfe_number_next || 1) + 1,
+      });
     }
 
     // UF codes (SEFAZ cUF)
@@ -320,9 +398,9 @@ Deno.serve(async (req) => {
       console.log('Falha ao assinar NF-e:', signErr.message);
     }
 
-    // Update the order with NF-e data
-    await base44.entities.PDVExitOrder.update(order_id, {
-      status: 'emitida',
+    // Persist the NF-e data on the order (PDV or ERP) and increment the number
+    await persistNfe({
+      ...(source === 'erp' ? {} : { status: 'emitida' }),
       nfe_model: mod,
       nfe_number: nNF,
       nfe_series: serie,
@@ -332,9 +410,7 @@ Deno.serve(async (req) => {
     });
 
     // Increment the NF-e number in company config
-    await base44.entities.PDVCompanyConfig.update(company.id, {
-      nfe_number_next: (company.nfe_number_next || 1) + 1,
-    });
+    await advanceNumber();
 
     return Response.json({
       success: true,

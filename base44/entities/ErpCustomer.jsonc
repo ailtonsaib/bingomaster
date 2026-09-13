@@ -21,7 +21,12 @@
       "type": "string"
     },
     "address": {
-      "type": "string"
+      "type": "string",
+      "description": "Logradouro"
+    },
+    "district": {
+      "type": "string",
+      "description": "Bairro (usado na NF-e de sa\u00edda)"
     },
     "city": {
       "type": "string"
@@ -31,6 +36,10 @@
     },
     "zip": {
       "type": "string"
+    },
+    "ibge_code": {
+      "type": "string",
+      "description": "C\u00f3digo IBGE do munic\u00edpio (usado na NF-e de sa\u00edda)"
     },
     "is_active": {
       "type": "boolean",

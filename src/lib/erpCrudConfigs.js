@@ -85,6 +85,11 @@ export const ERP_CRUD_CONFIGS = {
       { key: "nome_fantasia", label: "Nome Fantasia", full: true },
       { key: "cnpj", label: "CNPJ", mask: "cnpj", lookup: "cnpj" }, { key: "ie", label: "Inscrição Estadual" }, { key: "im", label: "Inscrição Municipal" },
       { key: "regime", label: "Regime Tributário", type: "select", options: REGIME_OPTS },
+      { key: "nfe_series", label: "Série NF-e", type: "number" },
+      { key: "nfe_number_next", label: "Próximo Número NF-e", type: "number" },
+      { key: "nfe_environment", label: "Ambiente NF-e", type: "select", options: [
+        { value: "2", label: "Homologação" }, { value: "1", label: "Produção" },
+      ] },
       { key: "cnae", label: "CNAE", full: true },
       { key: "natureza_juridica", label: "Natureza Jurídica", full: true },
       { key: "phone", label: "Telefone", mask: "phone" },
@@ -243,7 +248,7 @@ export const ERP_CRUD_CONFIGS = {
     fields: [
       { key: "name", label: "Nome / Razão Social", required: true, full: true },
       { key: "cpf_cnpj", label: "CPF/CNPJ" }, { key: "email", label: "Email" }, { key: "phone", label: "Telefone" },
-      { key: "address", label: "Endereço", full: true }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "zip", label: "CEP" },
+      { key: "address", label: "Endereço", full: true }, { key: "district", label: "Bairro" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "zip", label: "CEP" }, { key: "ibge_code", label: "Cód. IBGE" },
       { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
     columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "is_active", label: "Ativo", type: "bool" }],
