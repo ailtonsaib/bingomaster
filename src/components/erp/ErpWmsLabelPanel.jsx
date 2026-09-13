@@ -1,48 +1,21 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Loader2, Printer, Ban, X, Tag, Settings } from "lucide-react";
+import { Plus, Search, Loader2, Printer, Ban, X, Tag, Settings, Factory, Package } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-import { genOrderNumber, fmtDate } from "@/lib/erpUtils";
+import { fmtDate } from "@/lib/erpUtils";
 import ErpWmsPurchaseLabelModal from "./ErpWmsPurchaseLabelModal";
+import ErpWmsProductionLabelModal from "./ErpWmsProductionLabelModal";
+import { DEFAULT_LABEL_SIZES, labelQrPayload } from "@/lib/erpWmsLabels";
+export { DEFAULT_LABEL_SIZES, genProductionLot, labelQrPayload, parseLabelScan } from "@/lib/erpWmsLabels";
 
 const TYPE_OPTS = {
   compra: { label: "Compra", color: "bg-emerald-100 text-emerald-700" },
   producao: { label: "Produção", color: "bg-indigo-100 text-indigo-700" },
 };
 
-// Tamanhos pré-definidos por modelo de etiqueta (mm) — cada tipo (compra/produção)
-// pode ter sua própria configuração de largura e altura
-export const DEFAULT_LABEL_SIZES = {
-  compra: { width_mm: 100, height_mm: 60 },
-  producao: { width_mm: 100, height_mm: 50 },
-};
-
-// Lote de produção: ano + número do dia do ano + código da linha (ex: 2026256L01)
-export function genProductionLot(fabricacao, line) {
-  const dt = fabricacao ? new Date(`${fabricacao}T12:00:00`) : new Date();
-  const start = new Date(dt.getFullYear(), 0, 0);
-  const doy = Math.floor((dt - start) / 86400000);
-  return `${dt.getFullYear()}${String(doy).padStart(3, "0")}${(line?.code || "").toUpperCase()}`;
-}
-
-// QR code da etiqueta: produto, NF, fornecedor, quantidade, lote e validade
-export function labelQrPayload(l) {
-  return "ETQ|" + JSON.stringify({
-    id: l.id, code: l.code || "", tipo: l.label_type,
-    prod: l.product_name, cod: l.product_code,
-    qtd: l.quantity, un: l.unit || "",
-    lote: l.lot || "", val: l.expiry_date || "", fab: l.fabricacao_date || "",
-    nf: l.nota_number || "", forn: l.supplier_name || "", op: l.op_number || "",
-  });
-}
-
-// Interpreta a bipagem: QR "ETQ|{json}", código da etiqueta ou id
-export function parseLabelScan(text) {
-  const t = String(text || "").trim();
-  if (t.startsWith("ETQ|")) { try { return JSON.parse(t.slice(4)); } catch (e) { return null; } }
-  return { id: t, code: t };
-}
+// Utilitários das etiquetas (tamanhos, lote de produção, QR code e bipagem)
+// centralizados em @/lib/erpWmsLabels e reexportados abaixo para compatibilidade
 
 export default function ErpWmsLabelPanel({ user }) {
   const [labels, setLabels] = useState([]);
@@ -249,21 +222,10 @@ function ErpWmsLabelConfigModal({ user, configs, onClose, onSaved }) {
   );
 }
 
+// Nova etiqueta — o modelo define o fluxo: produção (por OP) ou compra (por NF)
 function ErpWmsLabelForm({ user, products, configs, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    label_type: "producao", product_id: "", quantity: "", lot: "", fabricacao: "", validade: "",
-    nota_number: "", supplier_name: "", op_number: "", line_id: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [lines, setLines] = useState([]);
-  useEffect(() => {
-    base44.entities.ErpProductionLine.filter({ user_email: user.email }, "name", 500)
-      .then(list => setLines(list.filter(l => l.is_active !== false)))
-      .catch(() => setLines([]));
-  }, [user.email]);
-  // Etiqueta de compra: nasce da nota de entrada — seleciona a NF, define
-  // quantas etiquetas imprimir de cada produto e imprime tudo de uma vez
-  if (form.label_type === "compra") {
+  const [model, setModel] = useState("");
+  if (model === "compra") {
     return (
       <ErpWmsPurchaseLabelModal
         user={user}
@@ -273,103 +235,33 @@ function ErpWmsLabelForm({ user, products, configs, onClose, onSaved }) {
       />
     );
   }
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-  const product = products.find(p => p.id === form.product_id);
-  const line = lines.find(l => l.id === form.line_id);
-  // Lote de produção automático: ano + nº do dia do ano + linha de produção
-  const autoLot = form.label_type === "producao" ? genProductionLot(form.fabricacao, line) : form.lot;
-
-  const handleSave = async () => {
-    if (!form.product_id) { alert("Selecione o produto."); return; }
-    if (!(Number(form.quantity) > 0)) { alert("Informe a quantidade da etiqueta."); return; }
-    if (form.label_type === "producao" && !form.line_id) { alert("Selecione a linha de produção."); return; }
-    setSaving(true);
-    try {
-      const qty = Number(form.quantity) || 0;
-      await base44.entities.ErpWmsLabel.create({
-        user_email: user.email,
-        code: genOrderNumber("ETQ"),
-        label_type: form.label_type,
-        product_id: product.id,
-        product_code: product.code || "",
-        product_name: product.name,
-        unit: product.unit || "",
-        quantity: qty,
-        remaining: qty,
-        lot: form.label_type === "producao" ? autoLot : form.lot || "",
-        fabricacao_date: form.fabricacao || "",
-        expiry_date: form.validade || "",
-        nota_number: form.nota_number || undefined,
-        supplier_name: form.supplier_name || undefined,
-        op_number: form.op_number || undefined,
-        status: "ativa",
-      });
-      onSaved();
-      onClose();
-    } catch (e) { alert(e.message); }
-    setSaving(false);
-  };
-
+  if (model === "producao") {
+    return (
+      <ErpWmsProductionLabelModal
+        user={user}
+        products={products}
+        configs={configs}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
+    );
+  }
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
           <h2 className="font-bold">Nova Etiqueta</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500"><X className="w-4 h-4" /></button>
         </div>
-        <div className="p-4 grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="text-xs font-medium text-gray-600">Modelo *</label>
-            <select value={form.label_type} onChange={e => set("label_type", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
-              <option value="producao">Etiqueta de Produção</option>
-              <option value="compra">Etiqueta de Compra (por Nota)</option>
-            </select>
-          </div>
-          <div className="col-span-2">
-            <label className="text-xs font-medium text-gray-600">Produto *</label>
-            <select value={form.product_id} onChange={e => set("product_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
-              <option value="">Selecione...</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} — ` : ""}{p.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600">Quantidade *</label>
-            <input type="number" min="0" step="0.001" value={form.quantity} onChange={e => set("quantity", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600">Lote</label>
-            {form.label_type === "producao" ? (<>
-              <input readOnly value={autoLot} className="w-full h-9 rounded-md border border-input bg-gray-50 px-3 text-sm font-mono mt-1" />
-              <p className="text-[10px] text-gray-400 mt-0.5">Lote de produção gerado automaticamente: ano + nº do dia do ano + linha.</p>
-            </>) : (
-              <input value={form.lot} onChange={e => set("lot", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-            )}
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600">Fabricação</label>
-            <input type="date" value={form.fabricacao} onChange={e => set("fabricacao", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600">Validade</label>
-            <input type="date" value={form.validade} onChange={e => set("validade", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-          </div>
-          <>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Linha de Produção *</label>
-              <select value={form.line_id} onChange={e => set("line_id", e.target.value)} className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1">
-                <option value="">Selecione...</option>
-                {lines.map(l => <option key={l.id} value={l.id}>{l.code ? `${l.code} — ` : ""}{l.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Nr. da Ordem de Produção</label>
-              <input value={form.op_number} onChange={e => set("op_number", e.target.value)} placeholder="ex: OP 001/2026" className="w-full h-9 rounded-md border border-input bg-white px-3 text-sm mt-1" />
-            </div>
-          </>
-        </div>
-        <div className="p-4 border-t flex gap-2 justify-end sticky bottom-0 bg-white">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Etiqueta"}</Button>
+        <div className="p-4 space-y-3">
+          <button onClick={() => setModel("producao")} className="w-full text-left border rounded-lg p-3 hover:border-indigo-400 hover:bg-indigo-50">
+            <p className="font-semibold text-sm flex items-center gap-2"><Factory className="w-4 h-4 text-indigo-600" /> Etiqueta de Produção (por OP)</p>
+            <p className="text-xs text-gray-500 mt-0.5">Informe a ordem de produção — etiquetas geradas conforme o fator pallet, com quantidades ajustáveis.</p>
+          </button>
+          <button onClick={() => setModel("compra")} className="w-full text-left border rounded-lg p-3 hover:border-emerald-400 hover:bg-emerald-50">
+            <p className="font-semibold text-sm flex items-center gap-2"><Package className="w-4 h-4 text-emerald-600" /> Etiqueta de Compra (por Nota)</p>
+            <p className="text-xs text-gray-500 mt-0.5">Selecione a NF de entrada e imprima as etiquetas dos produtos recebidos.</p>
+          </button>
         </div>
       </div>
     </div>
