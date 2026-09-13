@@ -11,7 +11,7 @@ export default function ErpProductSupplierLinks({ user, product }) {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ supplier_id: "", supplier_product_code: "", supplier_product_name: "", unit: product?.unit || "UN", last_unit_cost: 0 });
+  const [draft, setDraft] = useState({ supplier_id: "", supplier_product_code: "", supplier_product_name: "", unit: product?.unit || "UN", last_unit_cost: 0, conversion_factor: 1 });
 
   const load = async () => {
     setLoading(true);
@@ -45,10 +45,11 @@ export default function ErpProductSupplierLinks({ user, product }) {
         supplier_product_name: draft.supplier_product_name.trim(),
         unit: draft.unit,
         last_unit_cost: Number(draft.last_unit_cost) || 0,
+        conversion_factor: Number(draft.conversion_factor) > 0 ? Number(draft.conversion_factor) : 1,
         last_purchased_date: new Date().toISOString(),
       });
       setLinks(p => [created, ...p]);
-      setDraft({ supplier_id: "", supplier_product_code: "", supplier_product_name: "", unit: product?.unit || "UN", last_unit_cost: 0 });
+      setDraft({ supplier_id: "", supplier_product_code: "", supplier_product_name: "", unit: product?.unit || "UN", last_unit_cost: 0, conversion_factor: 1 });
       setAdding(false);
     } catch (e) { alert(e.message); }
   };
@@ -59,8 +60,8 @@ export default function ErpProductSupplierLinks({ user, product }) {
     setLinks(p => p.filter(x => x.id !== l.id));
   };
 
-  const updateCost = async (l, v) => {
-    const updated = await base44.entities.ErpProductSupplier.update(l.id, { last_unit_cost: Number(v) || 0 });
+  const updateLink = async (l, patch) => {
+    const updated = await base44.entities.ErpProductSupplier.update(l.id, patch);
     setLinks(p => p.map(x => x.id === l.id ? updated : x));
   };
 
@@ -96,6 +97,19 @@ export default function ErpProductSupplierLinks({ user, product }) {
               <input type="number" step="0.01" value={draft.last_unit_cost} onChange={e => setDraft(p => ({ ...p, last_unit_cost: e.target.value }))} className="w-full h-8 rounded border border-input px-2 text-right text-xs" />
             </div>
           </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
+            <div>
+              <label className="text-[11px] font-medium text-gray-600">Unidade do fornecedor</label>
+              <input value={draft.unit} onChange={e => setDraft(p => ({ ...p, unit: e.target.value.toUpperCase().slice(0, 6) }))} placeholder="SC, KG, UN..." className="w-full h-8 rounded border border-input px-2 text-xs" />
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-gray-600">Fator de conversão</label>
+              <input type="number" step="0.0001" value={draft.conversion_factor} onChange={e => setDraft(p => ({ ...p, conversion_factor: e.target.value }))} className="w-full h-8 rounded border border-input px-2 text-right text-xs" />
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] text-gray-500">1 {draft.unit || "?"} do fornecedor = {Number(draft.conversion_factor) > 0 ? Number(draft.conversion_factor) : 1} {product?.unit || "UN"} (unidade de consumo) — na entrada da NF a quantidade é digitada na unidade da nota e o estoque é convertido automaticamente.</p>
+            </div>
+          </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</Button>
             <Button type="button" size="sm" onClick={addLink} className="gap-1 bg-indigo-600 hover:bg-indigo-700"><Save className="w-3.5 h-3.5" /> Salvar Vínculo</Button>
@@ -104,18 +118,25 @@ export default function ErpProductSupplierLinks({ user, product }) {
       )}
 
       <table className="w-full text-xs">
-        <thead className="bg-gray-50 border-b"><tr><th className="p-2 text-left">Fornecedor</th><th className="p-2 text-left">Cód. Fornecedor</th><th className="p-2 text-left">Descrição do fornecedor</th><th className="p-2 text-right w-28">Último custo</th><th className="p-2 text-left w-24">Últ. compra</th><th className="p-2 w-10"></th></tr></thead>
+        <thead className="bg-gray-50 border-b"><tr><th className="p-2 text-left">Fornecedor</th><th className="p-2 text-left">Cód. Fornecedor</th><th className="p-2 text-left">Descrição do fornecedor</th><th className="p-2 text-center w-16">Unid.</th><th className="p-2 text-left w-44">Conversão</th><th className="p-2 text-right w-28">Último custo</th><th className="p-2 text-left w-24">Últ. compra</th><th className="p-2 w-10"></th></tr></thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={6} className="p-3 text-center text-gray-400">Carregando...</td></tr>
+            <tr><td colSpan={8} className="p-3 text-center text-gray-400">Carregando...</td></tr>
           ) : links.length === 0 && !adding ? (
-            <tr><td colSpan={6} className="p-3 text-center text-gray-400">Nenhum vínculo. Ao entrar uma NF deste fornecedor, o sistema vinculará automaticamente pelo cProd.</td></tr>
+            <tr><td colSpan={8} className="p-3 text-center text-gray-400">Nenhum vínculo. Ao entrar uma NF deste fornecedor, o sistema vinculará automaticamente pelo cProd.</td></tr>
           ) : links.map(l => (
             <tr key={l.id} className="border-b">
               <td className="p-2">{l.supplier_name}</td>
               <td className="p-2 font-mono">{l.supplier_product_code}</td>
               <td className="p-2 text-gray-600">{l.supplier_product_name || "—"}</td>
-              <td className="p-2 text-right"><input type="number" step="0.01" defaultValue={l.last_unit_cost} onBlur={e => updateCost(l, e.target.value)} className="w-24 h-7 rounded border border-input px-1 text-right text-xs" /></td>
+              <td className="p-2 text-center">{l.unit || "—"}</td>
+              <td className="p-2">
+                <div className="flex items-center gap-1">
+                  <input type="number" step="0.0001" defaultValue={l.conversion_factor || 1} onBlur={e => updateLink(l, { conversion_factor: Number(e.target.value) > 0 ? Number(e.target.value) : 1 })} className="w-16 h-7 rounded border border-input px-1 text-right text-xs" />
+                  <span className="text-[10px] text-gray-500">= {product?.unit || "UN"}</span>
+                </div>
+              </td>
+              <td className="p-2 text-right"><input type="number" step="0.01" defaultValue={l.last_unit_cost} onBlur={e => updateLink(l, { last_unit_cost: Number(e.target.value) || 0 })} className="w-24 h-7 rounded border border-input px-1 text-right text-xs" /></td>
               <td className="p-2 text-gray-500">{fmtDate(l.last_purchased_date)}</td>
               <td className="p-2 text-center"><button onClick={() => removeLink(l)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button></td>
             </tr>

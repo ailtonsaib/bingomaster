@@ -7,6 +7,26 @@ async function loadOperation(user, operation_id) {
   try { return await base44.entities.ErpOperation.get(operation_id); } catch (e) { return null; }
 }
 
+const onlyDigits = (v) => String(v || "").replace(/\D/g, "");
+
+// Vínculos do fornecedor da nota (ErpProductSupplier) — base do fator de conversão
+async function loadSupplierLinks(user, supplierCnpj) {
+  const doc = onlyDigits(supplierCnpj);
+  if (!doc) return [];
+  try {
+    const links = await base44.entities.ErpProductSupplier.filter({ user_email: user.email }, "-created_date", 500);
+    return links.filter(l => onlyDigits(l.supplier_document) === doc);
+  } catch (e) { return []; }
+}
+
+// Fator de conversão do produto: quantas unidades de consumo (unidade do produto)
+// equivalem a 1 unidade da nota do fornecedor (ex.: consumo em KG, nota em SC de
+// 25 kg → fator 25). Sem vínculo/fator, equivale a 1 (mesma unidade).
+const conversionFactorOf = (links, productId) => {
+  const f = Number(links.find(l => l.product_id === productId)?.conversion_factor) || 0;
+  return f > 0 ? f : 1;
+};
+
 // Gera o lançamento contábil de uma despesa (ErpFiscalEntry entry_kind=despesa).
 // Requer: entry.apportionments, entry.retentions, accounts (ErpChartAccount analíticas), param (ErpExpenseParameter).
 // Se a operação tiver a flag Contábil desligada, não gera lançamento — apenas marca a despesa como lançada.
@@ -150,10 +170,12 @@ export async function reabrirEntradaNF(user, entry) {
   // 3. Estorna a quantidade em estoque entrada pelos itens (o custo é recalculado no novo lançamento)
   const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
   const byId = new Map(products.map(p => [p.id, p]));
+  const convLinks = await loadSupplierLinks(user, entry.supplier_cnpj);
   for (const it of entry.items || []) {
     const prod = (it.product_id && byId.get(it.product_id)) || products.find(p => (p.code && p.code === it.product_code) || (p.name && p.name.toLowerCase() === (it.product_name || "").toLowerCase()));
     if (!prod || prod.controla_estoque === false) continue;
-    const qty = Number(it.quantity) || 0;
+    // Estorno na unidade de consumo — mesmo fator de conversão usado na entrada
+    const qty = (Number(it.quantity) || 0) * conversionFactorOf(convLinks, prod.id);
     if (qty > 0) await base44.entities.ErpProduct.update(prod.id, { stock: r2(Math.max(0, (prod.stock || 0) - qty)) });
   }
 
@@ -201,6 +223,8 @@ export async function lancarEntradaNF(user, entry, accounts) {
   // Atualiza estoque dos itens (prefere vínculo product_id, depois código/barras/nome)
   const products = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
   const byId = new Map(products.map(p => [p.id, p]));
+  // Fator de conversão do fornecedor (unidade da nota → unidade de consumo)
+  const convLinks = await loadSupplierLinks(user, entry.supplier_cnpj);
   // Frete: valor líquido (deduzidos os créditos) rateado no custo pelo valor dos itens
   const fr = entry.freight;
   const freightNet = fr ? (Number(fr.value) || 0) - (Number(fr.icms_value) || 0) - (Number(fr.pis_value) || 0) - (Number(fr.cofins_value) || 0) : 0;
@@ -215,9 +239,13 @@ export async function lancarEntradaNF(user, entry, accounts) {
       const gross = Number(it.total) || qty * (Number(it.unit_price) || 0);
       const freteShare = freightNet > 0 && itemsGrossTotal > 0 ? freightNet * (gross / itemsGrossTotal) : 0;
       const netCost = qty > 0 ? (Number(it.unit_price) || 0) - credited / qty + freteShare / qty : Number(it.unit_price) || 0;
+      // Conversão de unidade: a nota entra na unidade do fornecedor e o estoque
+      // é convertido para a unidade de consumo (fator do vínculo: ex. 1 SC = 25 KG)
+      const factor = conversionFactorOf(convLinks, prod.id);
+      const unitCostConsumo = netCost / factor;
       await base44.entities.ErpProduct.update(prod.id, {
-        stock: (prod.stock || 0) + qty,
-        cost_price: netCost > 0 ? netCost : (prod.cost_price || 0),
+        stock: (prod.stock || 0) + qty * factor,
+        cost_price: unitCostConsumo > 0 ? unitCostConsumo : (prod.cost_price || 0),
       });
     }
   }

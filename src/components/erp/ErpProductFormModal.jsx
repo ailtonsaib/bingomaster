@@ -13,6 +13,8 @@ const empty = {
   category: "", ncm: "", unit: "UN", stock: 0, min_stock: 0,
   net_weight: 0, gross_weight: 0,
   is_active: true, controla_estoque: true, notes: "",
+  controla_lote: false, enderecado: false,
+  fator_pallet: 0, volumes_por_camada: 0, quantidade_camadas: 0,
   subgroup_id: "", subgroup_name: "",
   account_estoque_id: "", account_estoque_name: "",
   stock_sector_id: "", stock_sector_name: "",
@@ -65,6 +67,11 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
       gross_weight: Number(form.gross_weight) || 0,
       is_active: form.is_active,
       controla_estoque: form.controla_estoque !== false,
+      controla_lote: form.controla_lote || false,
+      enderecado: form.enderecado || false,
+      fator_pallet: Number(form.fator_pallet) || 0,
+      volumes_por_camada: Number(form.volumes_por_camada) || 0,
+      quantidade_camadas: Number(form.quantidade_camadas) || 0,
       subgroup_id: form.subgroup_id || undefined,
       subgroup_name: form.subgroup_name || undefined,
       account_estoque_id: form.account_estoque_id || undefined,
@@ -194,6 +201,25 @@ export default function ErpProductFormModal({ user, product, onClose, onSaved })
               <span className="block text-xs text-gray-500">Desmarcado (ex.: serviços): não alimenta o módulo de estoque e não aparece na relação de produtos.</span>
             </span>
           </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.controla_lote || false} onChange={e => set("controla_lote", e.target.checked)} className="w-4 h-4" /> Controla lote
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.enderecado || false} onChange={e => set("enderecado", e.target.checked)} className="w-4 h-4" /> Produto será endereçado (WMS)
+            </label>
+          </div>
+          <div className="border rounded-lg p-3 space-y-2">
+            <p className="text-sm font-semibold">Armazenagem — Paletização</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div><Label className="text-xs">Fator pallet (volumes por pallet)</Label><Input type="number" step="0.001" value={form.fator_pallet || ""} onChange={e => set("fator_pallet", e.target.value)} /></div>
+              <div><Label className="text-xs">Volumes por camada</Label><Input type="number" step="0.001" value={form.volumes_por_camada || ""} onChange={e => set("volumes_por_camada", e.target.value)} /></div>
+              <div><Label className="text-xs">Quantidade de camadas</Label><Input type="number" step="0.001" value={form.quantidade_camadas || ""} onChange={e => set("quantidade_camadas", e.target.value)} /></div>
+            </div>
+            {(Number(form.volumes_por_camada) > 0 && Number(form.quantidade_camadas) > 0) && (
+              <p className="text-xs text-indigo-600">Total por pallet conforme camadas: {(Number(form.volumes_por_camada) || 0) * (Number(form.quantidade_camadas) || 0)} volumes.</p>
+            )}
+          </div>
           {product?.id && <ErpProductSupplierLinks user={user} product={{ ...product, ...form }} />}
         </div>
         <div className="p-4 border-t flex gap-2 justify-end">

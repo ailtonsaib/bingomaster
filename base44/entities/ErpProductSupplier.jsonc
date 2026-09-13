@@ -40,7 +40,12 @@
     },
     "unit": {
       "type": "string",
-      "description": "Unidade comercial do fornecedor"
+      "description": "Unidade comercial do fornecedor (unidade que vem na nota \u2014 ex.: SC, KG, UN)"
+    },
+    "conversion_factor": {
+      "type": "number",
+      "default": 1,
+      "description": "Fator de convers\u00e3o \u2014 quantas unidades de consumo (unidade do produto) equivalem a 1 unidade do fornecedor (ex.: consumo em KG, fornecedor vende saco de 25 kg \u2192 fator 25). Na entrada da NF a quantidade \u00e9 dada na unidade da nota e o sistema converte o estoque automaticamente para a unidade de consumo"
     },
     "last_unit_cost": {
       "type": "number",
