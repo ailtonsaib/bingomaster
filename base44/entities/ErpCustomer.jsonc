@@ -90,23 +90,7 @@
     },
     "payment_term": {
       "type": "string",
-      "enum": [
-        "a_vista",
-        "7 dias",
-        "14 dias",
-        "21 dias",
-        "28 dias",
-        "30 dias",
-        "45 dias",
-        "60 dias",
-        "15/30 dias",
-        "15/30/45 dias",
-        "21/28/35/42 dias",
-        "30/60 dias",
-        "30/60/90 dias",
-        "30/45/60/75/90 dias"
-      ],
-      "description": "Condi\u00e7\u00e3o de pagamento padr\u00e3o do cliente"
+      "description": "Condi\u00e7\u00e3o de pagamento padr\u00e3o do cliente (texto livre \u2014 ex.: \u00c0 vista, 30/60/90 dias ou uma condi\u00e7\u00e3o personalizada)"
     },
     "is_active": {
       "type": "boolean",

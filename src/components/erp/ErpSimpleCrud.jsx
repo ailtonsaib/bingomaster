@@ -495,8 +495,11 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
                   ))}
                 </select>
               ) : (
+                <>
                 <input
                   type={f.type === "number" ? "number" : f.inputType || "text"}
+                  list={f.datalistId || undefined}
+                  placeholder={f.placeholder || ""}
                   value={form[f.key]}
                   onChange={e => {
                     let v = e.target.value;
@@ -510,6 +513,12 @@ function ErpSimpleForm({ user, scopeField, entityName, editing, fields, entityOp
                   onBlur={f.lookup === "cnpj" ? () => onCnpjLookup() : f.mask === "cep" ? () => onCepLookup() : undefined}
                   className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm mt-1"
                 />
+                {f.datalistId && (
+                  <datalist id={f.datalistId}>
+                    {(f.datalistOptions || []).map(o => <option key={o} value={o} />)}
+                  </datalist>
+                )}
+                </>
               )}
             </div>
           ))}

@@ -259,14 +259,10 @@ export const ERP_CRUD_CONFIGS = {
         { value: "cartao_debito", label: "Cartão de Débito" }, { value: "pix", label: "Pix" },
         { value: "transferencia", label: "Transferência" }, { value: "outros", label: "Outros" },
       ] },
-      { key: "payment_term", label: "Condição de Pagamento", type: "select", options: [
-        { value: "a_vista", label: "À vista" }, { value: "7 dias", label: "7 dias" }, { value: "14 dias", label: "14 dias" },
-        { value: "21 dias", label: "21 dias" }, { value: "28 dias", label: "28 dias" }, { value: "30 dias", label: "30 dias" },
-        { value: "45 dias", label: "45 dias" }, { value: "60 dias", label: "60 dias" },
-        { value: "15/30 dias", label: "15/30 dias" }, { value: "15/30/45 dias", label: "15/30/45 dias" },
-        { value: "21/28/35/42 dias", label: "21/28/35/42 dias" }, { value: "30/60 dias", label: "30/60 dias" },
-        { value: "30/60/90 dias", label: "30/60/90 dias" }, { value: "30/45/60/75/90 dias", label: "30/45/60/75/90 dias" },
-      ] },
+      { key: "payment_term", label: "Condição de Pagamento", type: "text", datalistId: "erp-payment-terms", datalistOptions: [
+        "À vista", "7 dias", "14 dias", "21 dias", "28 dias", "30 dias", "45 dias", "60 dias",
+        "15/30 dias", "15/30/45 dias", "21/28/35/42 dias", "30/60 dias", "30/60/90 dias", "30/45/60/75/90 dias",
+      ], placeholder: "Selecione uma condição ou digite uma nova" },
       { key: "is_active", label: "Ativo", type: "checkbox" },
     ],
     columns: [{ key: "name", label: "Cliente" }, { key: "cpf_cnpj", label: "CPF/CNPJ" }, { key: "city", label: "Município" }, { key: "uf", label: "UF" }, { key: "vendedor_name", label: "Vendedor" }, { key: "channel_name", label: "Canal" }, { key: "is_active", label: "Ativo", type: "bool" }],
