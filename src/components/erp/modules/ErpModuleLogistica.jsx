@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Truck, Users, Fuel, Wrench, CircleDot, Wallet, BarChart3 } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpFleetReportsPanel from "@/components/erp/ErpFleetReportsPanel";
+import ErpFleetMaintenancePanel from "@/components/erp/ErpFleetMaintenancePanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const VEHICLE_STATUS = [
@@ -34,16 +35,6 @@ const DRIVER_STATUS = [
 ];
 
 const CNH_CATEGORIES = ["A", "B", "AB", "C", "AC", "D", "AD", "E", "AE"].map(v => ({ value: v, label: v }));
-
-const MAINT_TYPES = [
-  { value: "preventiva", label: "Preventiva", color: "bg-blue-100 text-blue-700" },
-  { value: "corretiva", label: "Corretiva", color: "bg-red-100 text-red-700" },
-];
-
-const MAINT_STATUS = [
-  { value: "planejada", label: "Planejada", color: "bg-amber-100 text-amber-700" },
-  { value: "realizada", label: "Realizada", color: "bg-emerald-100 text-emerald-700" },
-];
 
 const TIRE_STATUS = [
   { value: "novo", label: "Novo", color: "bg-blue-100 text-blue-700" },
@@ -143,33 +134,6 @@ const CRUD_CONFIGS = {
     ],
     searchKeys: ["vehicle_plate", "driver_name", "gas_station"],
   },
-  manutencoes: {
-    entityName: "ErpFleetMaintenance",
-    title: "Cadastro de Manutenção de Veículos",
-    fields: [
-      { key: "vehicle_id", label: "Veículo", type: "entity-select", entity: "ErpFleetVehicle", labelKey: "plate", cacheKey: "vehicle_plate", required: true },
-      { key: "maintenance_type", label: "Tipo", type: "select", options: MAINT_TYPES, required: true },
-      { key: "status", label: "Situação", type: "select", options: MAINT_STATUS, required: true },
-      { key: "service_date", label: "Data do Serviço", inputType: "date", required: true },
-      { key: "odometer", label: "Odômetro no Serviço (km)", type: "number" },
-      { key: "description", label: "Descrição do Serviço", required: true, full: true },
-      { key: "cost", label: "Custo (R$)", type: "number" },
-      { key: "supplier_name", label: "Oficina/Fornecedor" },
-      { key: "next_service_date", label: "Próxima Manutenção (data)", inputType: "date" },
-      { key: "next_odometer", label: "Próxima por Km", type: "number" },
-      { key: "notes", label: "Observações", full: true },
-    ],
-    columns: [
-      { key: "service_date", label: "Data" },
-      { key: "vehicle_plate", label: "Veículo" },
-      { key: "maintenance_type", label: "Tipo", type: "badge", options: MAINT_TYPES },
-      { key: "description", label: "Serviço" },
-      { key: "status", label: "Situação", type: "badge", options: MAINT_STATUS },
-      { key: "cost", label: "Custo", type: "money" },
-      { key: "next_service_date", label: "Próxima" },
-    ],
-    searchKeys: ["vehicle_plate", "description", "supplier_name"],
-  },
   pneus: {
     entityName: "ErpFleetTire",
     title: "Controle de Pneus",
@@ -233,8 +197,8 @@ export default function ErpModuleLogistica({ user }) {
   return (
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="purple" />
-      {sub === "relatorios"
-        ? <ErpFleetReportsPanel user={user} />
+      {sub === "manutencoes" ? <ErpFleetMaintenancePanel user={user} />
+        : sub === "relatorios" ? <ErpFleetReportsPanel user={user} />
         : <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />}
     </div>
   );

@@ -63,7 +63,7 @@ export default function ErpFleetReportsPanel({ user }) {
     const liters = r2(vfuel.reduce((s, f) => s + (Number(f.liters) || 0), 0));
     const fuelCost = r2(vfuel.reduce((s, f) => s + (Number(f.total_value) || 0), 0));
     const maintCost = r2(maint.filter(m => m.vehicle_id === v.id && inPeriod(m.service_date) && (m.status || "realizada") === "realizada")
-      .reduce((s, m) => s + (Number(m.cost) || 0), 0));
+      .reduce((s, m) => s + (Number(m.cost) || 0) + (Number(m.items_total) || 0), 0));
     const tireCost = r2(tires.filter(t => t.vehicle_id === v.id && inPeriod(t.purchase_date))
       .reduce((s, t) => s + (Number(t.purchase_cost) || 0), 0));
     const expCost = r2(expenses.filter(e => e.vehicle_id === v.id && inPeriod(e.expense_date))

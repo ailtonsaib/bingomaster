@@ -48,11 +48,45 @@
     "cost": {
       "type": "number",
       "default": 0,
-      "description": "Custo do servi\u00e7o (R$)"
+      "description": "Custo do servi\u00e7o/m\u00e3o de obra (R$)"
     },
     "supplier_name": {
       "type": "string",
       "description": "Oficina/fornecedor"
+    },
+    "items": {
+      "type": "array",
+      "default": [],
+      "description": "Itens comprados na manuten\u00e7\u00e3o \u2014 pe\u00e7as, pneus, lubrificantes etc. com quantidade e valor unit\u00e1rio",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o do item (ex.: Pneu 295/80R22.5, Pastilha de freio)"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 0,
+            "description": "Quantidade comprada"
+          },
+          "unit_value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor unit\u00e1rio (R$)"
+          },
+          "value": {
+            "type": "number",
+            "default": 0,
+            "description": "Valor do item (quantidade \u00d7 valor unit\u00e1rio)"
+          }
+        }
+      }
+    },
+    "items_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total dos itens comprados (R$)"
     },
     "next_service_date": {
       "type": "string",
