@@ -120,8 +120,9 @@ export default function ErpProductionFormModal({ user, order, products, technica
         const status = proceed ? "rascunho" : "standby";
 
         // Cria a OP principal e, recursivamente, as OPs dos subprodutos (multi-nível)
+        // rootOp guarda a OP de produto acabado de origem para vincular às requisições
         const createdOps = [];
-        const createOp = async (node, parentId, parentNumber, isRoot) => {
+        const createOp = async (node, parentId, parentNumber, isRoot, rootOp) => {
           const p = products.find(x => x.id === node.product_id);
           const qty = isRoot ? outQty : node.qty;
           const items = (isRoot ? directBom : node.bom).map(b => ({ ...b, total_consumed: round3((Number(b.quantity_per_unit) || 0) * qty) }));
@@ -139,8 +140,9 @@ export default function ErpProductionFormModal({ user, order, products, technica
             parent_order_id: parentId || undefined,
             parent_order_number: parentNumber || undefined,
           });
-          createdOps.push({ op, needed: computeNeeded(items, qty) });
-          for (const ch of (node.children || [])) await createOp(ch, op.id, op.order_number, false);
+          const root = rootOp || { number: op.order_number, product: outProd?.name || "" };
+          createdOps.push({ op, needed: computeNeeded(items, qty), root });
+          for (const ch of (node.children || [])) await createOp(ch, op.id, op.order_number, false, root);
         };
         await createOp(tree, null, null, true);
         const mainOp = createdOps[0].op;
@@ -157,11 +159,14 @@ export default function ErpProductionFormModal({ user, order, products, technica
             await base44.entities.ErpProductionOrder.update(mainOp.id, { requisition_id: req.id, requisition_number: req.number });
             reqs = 1;
           } else {
-            for (const { op, needed } of createdOps) {
+            for (const { op, needed, root } of createdOps) {
               if (!needed.length) continue;
               const req = await createWarehouseRequisition(user, {
                 production_order_id: op.id,
                 production_order_number: op.order_number,
+                // OPs de subproduto indicam a OP do produto acabado de origem
+                finished_order_number: root.number !== op.order_number ? root.number : undefined,
+                finished_product_name: root.number !== op.order_number ? root.product : undefined,
                 items: needed,
               });
               await base44.entities.ErpProductionOrder.update(op.id, { requisition_id: req.id, requisition_number: req.number });

@@ -13,7 +13,7 @@ const REQ_STATUS = {
 export default function RequisitionsTable({ reqs, loading, search, onOpen }) {
   const s = (search || "").toLowerCase();
   const filtered = reqs.filter(r =>
-    (r.number + " " + (r.production_order_number || "") + " " + (r.items || []).map(i => i.product_name).join(" ")).toLowerCase().includes(s)
+    (r.number + " " + (r.production_order_number || "") + " " + (r.finished_order_number || "") + " " + (r.items || []).map(i => i.product_name).join(" ")).toLowerCase().includes(s)
   );
   return (
     <div className="bg-white rounded-xl border overflow-hidden">
@@ -41,7 +41,12 @@ export default function RequisitionsTable({ reqs, loading, search, onOpen }) {
               return (
                 <tr key={r.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => onOpen(r)}>
                   <td className="p-2 font-mono text-xs">{r.number}</td>
-                  <td className="p-2 font-medium">{r.production_order_number || "—"}</td>
+                  <td className="p-2 font-medium">
+                    {r.production_order_number || "—"}
+                    {r.finished_order_number && r.finished_order_number !== r.production_order_number && (
+                      <span className="block text-[10px] text-gray-400">Produto acabado: {r.finished_order_number}{r.finished_product_name ? ` — ${r.finished_product_name}` : ""}</span>
+                    )}
+                  </td>
                   <td className="p-2 text-gray-600">{fmtDate(r.request_date)}</td>
                   <td className="p-2 text-right">{(r.items || []).length}</td>
                   <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></td>
@@ -146,6 +151,9 @@ export function RequisitionDetailModal({ req, onClose, onSaved }) {
         <div className="p-4 space-y-3 text-sm">
           <div className="grid grid-cols-2 gap-2">
             <div><span className="text-gray-500">OP vinculada: </span><b>{req.production_order_number || "—"}</b></div>
+            {req.finished_order_number && req.finished_order_number !== req.production_order_number && (
+              <div><span className="text-gray-500">OP produto acabado: </span><b>{req.finished_order_number}{req.finished_product_name ? ` — ${req.finished_product_name}` : ""}</b></div>
+            )}
             <div><span className="text-gray-500">Data: </span><b>{fmtDate(req.request_date)}</b></div>
             <div><span className="text-gray-500">Status: </span><span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span></div>
           </div>

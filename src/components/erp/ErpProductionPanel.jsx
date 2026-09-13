@@ -69,9 +69,13 @@ export default function ErpProductionPanel({ user }) {
     if (!proceed) return;
     setBusy(o.id);
     try {
+      // OP de subproduto: referencia a OP de produto acabado de origem
+      const parent = o.parent_order_number ? orders.find(x => x.order_number === o.parent_order_number) : null;
       const req = await createWarehouseRequisition(user, {
         production_order_id: o.id,
         production_order_number: o.order_number,
+        finished_order_number: parent ? parent.order_number : undefined,
+        finished_product_name: parent ? parent.output_product_name : undefined,
         items: needed,
       });
       await base44.entities.ErpProductionOrder.update(o.id, {

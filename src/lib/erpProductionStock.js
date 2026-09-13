@@ -32,12 +32,14 @@ export function shortagesMessage(shortages) {
 }
 
 // Gera a solicitação ao almoxarifado vinculada à ordem de produção
-export async function createWarehouseRequisition(user, { production_order_id, production_order_number, items }) {
+export async function createWarehouseRequisition(user, { production_order_id, production_order_number, finished_order_number, finished_product_name, items }) {
   return base44.entities.ErpWarehouseRequisition.create({
     user_email: user.email,
     number: genOrderNumber("REQ"),
     production_order_id,
     production_order_number,
+    finished_order_number: finished_order_number || undefined,
+    finished_product_name: finished_product_name || undefined,
     items: items.map(i => ({ ...i, stock_at_request: i.stock || 0 })),
     status: "pendente",
     request_date: new Date().toISOString(),
