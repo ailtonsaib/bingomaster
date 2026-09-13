@@ -1,13 +1,20 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Loader2, Printer, Ban, X, Tag } from "lucide-react";
+import { Plus, Search, Loader2, Printer, Ban, X, Tag, Settings } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { genOrderNumber, fmtDate } from "@/lib/erpUtils";
 
 const TYPE_OPTS = {
   compra: { label: "Compra", color: "bg-emerald-100 text-emerald-700" },
   producao: { label: "Produção", color: "bg-indigo-100 text-indigo-700" },
+};
+
+// Tamanhos pré-definidos por modelo de etiqueta (mm) — cada tipo (compra/produção)
+// pode ter sua própria configuração de largura e altura
+export const DEFAULT_LABEL_SIZES = {
+  compra: { width_mm: 100, height_mm: 60 },
+  producao: { width_mm: 100, height_mm: 50 },
 };
 
 // QR code da etiqueta: produto, NF, fornecedor, quantidade, lote e validade
@@ -36,16 +43,22 @@ export default function ErpWmsLabelPanel({ user }) {
   const [typeFilter, setTypeFilter] = useState("");
   const [printing, setPrinting] = useState(null); // etiqueta selecionada para impressão
   const [showForm, setShowForm] = useState(false);
+  const [configs, setConfigs] = useState({}); // configuração de tamanho por modelo
+  const [showConfig, setShowConfig] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [ls, ps] = await Promise.all([
+      const [ls, ps, cfgs] = await Promise.all([
         base44.entities.ErpWmsLabel.filter({ user_email: user.email }, "-created_date", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "code", 500),
+        base44.entities.ErpWmsLabelConfig.filter({ user_email: user.email }, "-created_date", 100),
       ]);
       setLabels(ls);
       setProducts(ps);
+      const cfgMap = {};
+      (cfgs || []).forEach(c => { cfgMap[c.label_type] = c; });
+      setConfigs(cfgMap);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -78,6 +91,7 @@ export default function ErpWmsLabelPanel({ user }) {
           <option value="compra">Compra</option>
           <option value="producao">Produção</option>
         </select>
+        <Button size="sm" variant="outline" onClick={() => setShowConfig(true)} className="gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50"><Settings className="w-4 h-4" /> Configurar Tamanhos</Button>
         <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Plus className="w-4 h-4" /> Nova Etiqueta</Button>
       </div>
 
@@ -134,9 +148,94 @@ export default function ErpWmsLabelPanel({ user }) {
       {showForm && (
         <ErpWmsLabelForm user={user} products={products} onClose={() => setShowForm(false)} onSaved={load} />
       )}
-      {printing && (
-        <ErpLabelPrintModal label={printing} onClose={() => setPrinting(null)} />
+      {showConfig && (
+        <ErpWmsLabelConfigModal user={user} configs={configs} onClose={() => setShowConfig(false)} onSaved={load} />
       )}
+      {printing && (
+        <ErpLabelPrintModal
+          label={printing}
+          config={{ ...DEFAULT_LABEL_SIZES[printing.label_type], ...(configs[printing.label_type] || {}) }}
+          onClose={() => setPrinting(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Configuração de largura/altura (mm) de cada modelo de etiqueta — usada na
+// impressão em tamanho real para colar na etiqueta física correspondente
+function ErpWmsLabelConfigModal({ user, configs, onClose, onSaved }) {
+  const [form, setForm] = useState(() => ({
+    compra: {
+      width_mm: configs.compra?.width_mm ?? DEFAULT_LABEL_SIZES.compra.width_mm,
+      height_mm: configs.compra?.height_mm ?? DEFAULT_LABEL_SIZES.compra.height_mm,
+    },
+    producao: {
+      width_mm: configs.producao?.width_mm ?? DEFAULT_LABEL_SIZES.producao.width_mm,
+      height_mm: configs.producao?.height_mm ?? DEFAULT_LABEL_SIZES.producao.height_mm,
+    },
+  }));
+  const [saving, setSaving] = useState(false);
+  const set = (t, k, v) => setForm(p => ({ ...p, [t]: { ...p[t], [k]: v } }));
+
+  const handleSave = async () => {
+    for (const t of ["compra", "producao"]) {
+      if (!(Number(form[t].width_mm) > 0) || !(Number(form[t].height_mm) > 0)) {
+        alert(`Informe largura e altura válidas (mm) para a etiqueta de ${t === "compra" ? "compra" : "produção"}.`);
+        return;
+      }
+    }
+    setSaving(true);
+    try {
+      for (const t of ["compra", "producao"]) {
+        const data = {
+          user_email: user.email,
+          label_type: t,
+          width_mm: Number(form[t].width_mm) || 0,
+          height_mm: Number(form[t].height_mm) || 0,
+        };
+        if (configs[t]?.id) await base44.entities.ErpWmsLabelConfig.update(configs[t].id, data);
+        else await base44.entities.ErpWmsLabelConfig.create(data);
+      }
+      onSaved();
+      onClose();
+    } catch (e) { alert(e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="font-bold">Tamanho das Etiquetas</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-4 space-y-4">
+          {["compra", "producao"].map(t => {
+            const type = TYPE_OPTS[t];
+            return (
+              <div key={t} className="border rounded-lg p-3">
+                <p className={`text-xs px-2 py-0.5 rounded-full w-fit mb-2 ${type.color}`}>Etiqueta de {type.label}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Largura (mm)</label>
+                    <input type="number" min="30" max="250" value={form[t].width_mm} onChange={e => set(t, "width_mm", e.target.value)} className="w-full h-9 rounded-md border border-input px-2 text-sm mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Altura (mm)</label>
+                    <input type="number" min="20" max="200" value={form[t].height_mm} onChange={e => set(t, "height_mm", e.target.value)} className="w-full h-9 rounded-md border border-input px-2 text-sm mt-1" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-xs text-gray-400">Cada modelo de etiqueta tem sua própria configuração — a impressão usa estas medidas em tamanho real (mm) para colar na etiqueta física correspondente.</p>
+        </div>
+        <div className="p-4 border-t flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Configurações"}</Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -243,9 +342,13 @@ function ErpWmsLabelForm({ user, products, onClose, onSaved }) {
   );
 }
 
-// Impressão da etiqueta — quantas cópias precisar para colar nos produtos
-function ErpLabelPrintModal({ label, onClose }) {
+// Impressão da etiqueta — quantas cópias precisar para colar nos produtos,
+// no tamanho pré-definido do modelo (largura/altura em mm, impressão em tamanho real)
+function ErpLabelPrintModal({ label, config, onClose }) {
   const [copies, setCopies] = useState(1);
+  const w = Number(config?.width_mm) || DEFAULT_LABEL_SIZES[label.label_type]?.width_mm || 100;
+  const h = Number(config?.height_mm) || DEFAULT_LABEL_SIZES[label.label_type]?.height_mm || 50;
+  const qrSize = Math.max(48, Math.round(Math.min(w, h) * 3.78 * 0.62));
 
   const handlePrint = () => {
     document.body.classList.add("printing-label");
@@ -266,9 +369,10 @@ function ErpLabelPrintModal({ label, onClose }) {
             <input type="number" min="1" max="200" value={copies} onChange={e => setCopies(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-20 h-9 rounded-md border border-input px-2 text-sm" />
             <Button size="sm" onClick={handlePrint} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Printer className="w-4 h-4" /> Imprimir</Button>
           </div>
+          <p className="text-[11px] text-gray-400 no-print">Tamanho pré-definido deste modelo: {w} × {h} mm (impressão em tamanho real).</p>
           <div id="label-print-area" className="space-y-2">
             {Array.from({ length: copies }).map((_, i) => (
-              <div key={i} className="wms-label border-2 border-black rounded-lg p-3 flex gap-3 bg-white" style={{ width: "384px" }}>
+              <div key={i} className="wms-label border-2 border-black rounded-lg p-2 flex gap-2 items-center bg-white overflow-hidden" style={{ width: `${w}mm`, height: `${h}mm`, boxSizing: "border-box" }}>
                 <div className="flex-1 text-[10px] leading-snug">
                   <p className="font-bold text-sm leading-tight">{label.product_name}</p>
                   <p>Cód.: {label.product_code || "—"}</p>
@@ -283,7 +387,7 @@ function ErpLabelPrintModal({ label, onClose }) {
                   <p>Validade: <b className="text-sm">{label.expiry_date ? fmtDate(label.expiry_date) : "—"}</b></p>
                   <p className="font-mono text-[9px] mt-1">{label.code}</p>
                 </div>
-                <QRCodeCanvas value={labelQrPayload(label)} size={96} level="M" />
+                <QRCodeCanvas value={labelQrPayload(label)} size={qrSize} level="M" />
               </div>
             ))}
           </div>

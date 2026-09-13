@@ -1,0 +1,84 @@
+{
+  "name": "ErpWmsLabelConfig",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do operador (escopo)"
+    },
+    "label_type": {
+      "type": "string",
+      "enum": [
+        "compra",
+        "producao"
+      ],
+      "description": "Modelo da etiqueta: compra ou producao \u2014 cada modelo possui sua pr\u00f3pria configura\u00e7\u00e3o de tamanho"
+    },
+    "width_mm": {
+      "type": "number",
+      "default": 100,
+      "description": "Largura pr\u00e9-definida da etiqueta (mm) \u2014 usada na impress\u00e3o em tamanho real"
+    },
+    "height_mm": {
+      "type": "number",
+      "default": 60,
+      "description": "Altura pr\u00e9-definida da etiqueta (mm) \u2014 usada na impress\u00e3o em tamanho real"
+    }
+  },
+  "required": [
+    "user_email",
+    "label_type",
+    "width_mm",
+    "height_mm"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
