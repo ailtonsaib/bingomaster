@@ -65,6 +65,20 @@ export default function ErpWmsLabelPanel({ user }) {
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const allSelected = printableRows.length > 0 && printableRows.every(l => selectedIds.includes(l.id));
 
+  // Altera a quantidade da etiqueta direto na lista — grava a quantidade e o
+  // saldo (enquanto a etiqueta ainda não foi consumida pela bipagem)
+  const handleQtyChange = async (l, v) => {
+    const newQty = Number(v) || 0;
+    if (newQty === (Number(l.quantity) || 0)) return;
+    if (!(newQty > 0)) { alert("Informe uma quantidade maior que zero."); load(); return; }
+    try {
+      const data = { quantity: newQty };
+      if (Number(l.remaining) === Number(l.quantity)) data.remaining = newQty;
+      await base44.entities.ErpWmsLabel.update(l.id, data);
+      load();
+    } catch (e) { alert(e.message); load(); }
+  };
+
   // Contador de impressões — soma as cópias impressas de cada etiqueta (única ou lote)
   const handlePrinted = async (printedLabels, copies) => {
     try {
@@ -137,7 +151,19 @@ export default function ErpWmsLabelPanel({ user }) {
                     <td className="p-2">{l.product_name}</td>
                     <td className="p-2 font-mono text-xs">{l.lot || "—"}</td>
                     <td className="p-2">{l.expiry_date ? fmtDate(l.expiry_date) : "—"}</td>
-                    <td className="p-2 text-right">{l.quantity} {l.unit || ""}</td>
+                    <td className="p-2 text-right whitespace-nowrap">
+                      {l.stocked || l.status === "cancelada" ? (
+                        <span className="text-gray-400">{l.quantity}</span>
+                      ) : (
+                        <input
+                          type="number" min="0" step="0.001" defaultValue={l.quantity}
+                          onBlur={e => handleQtyChange(l, e.target.value)}
+                          title="Alterar quantidade da etiqueta"
+                          className="w-20 h-7 rounded-md border border-input px-2 text-sm text-right"
+                        />
+                      )}
+                      {" "}{l.unit || ""}
+                    </td>
                     <td className={`p-2 text-right font-medium ${rem <= 0 ? "text-gray-400" : "text-emerald-700"}`}>{rem}</td>
                     <td className="p-2 text-xs text-gray-500">
                       {l.label_type === "compra"
