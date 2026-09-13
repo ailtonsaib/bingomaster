@@ -121,10 +121,16 @@ export default function ErpWmsProductionLabelModal({ user, products, configs, on
     const w = Number(configs?.producao?.width_mm) || DEFAULT_LABEL_SIZES.producao.width_mm;
     const h = Number(configs?.producao?.height_mm) || DEFAULT_LABEL_SIZES.producao.height_mm;
     const qrSize = Math.max(48, Math.round(Math.min(w, h) * 3.78 * 0.62));
-    const handlePrint = () => {
+    // Cada impressão soma 1 ao contador de impressões das etiquetas geradas
+    const handlePrint = async () => {
       document.body.classList.add("printing-label");
       window.print();
       setTimeout(() => document.body.classList.remove("printing-label"), 500);
+      try {
+        const withId = (created || []).filter(l => l.id);
+        await base44.entities.ErpWmsLabel.bulkUpdate(withId.map(l => ({ id: l.id, print_count: (Number(l.print_count) || 0) + 1 })));
+        setCreated(prev => prev.map(l => ({ ...l, print_count: (Number(l.print_count) || 0) + 1 })));
+      } catch (e) { console.error(e); }
     };
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

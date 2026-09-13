@@ -77,10 +77,16 @@ export default function ErpWmsPurchaseLabelModal({ user, config, onClose, onSave
     setBusy(false);
   };
 
-  const handlePrint = () => {
+  // Cada impressão soma 1 ao contador de impressões das etiquetas geradas
+  const handlePrint = async () => {
     document.body.classList.add("printing-label");
     window.print();
     setTimeout(() => document.body.classList.remove("printing-label"), 500);
+    try {
+      const withId = (generated || []).filter(l => l.id);
+      await base44.entities.ErpWmsLabel.bulkUpdate(withId.map(l => ({ id: l.id, print_count: (Number(l.print_count) || 0) + 1 })));
+      setGenerated(prev => prev.map(l => ({ ...l, print_count: (Number(l.print_count) || 0) + 1 })));
+    } catch (e) { console.error(e); }
   };
 
   return (

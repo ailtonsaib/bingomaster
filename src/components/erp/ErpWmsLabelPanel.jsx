@@ -23,7 +23,8 @@ export default function ErpWmsLabelPanel({ user }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  const [printing, setPrinting] = useState(null); // etiqueta selecionada para impressão
+  const [printing, setPrinting] = useState(null); // etiqueta(s) selecionada(s) para impressão
+  const [selectedIds, setSelectedIds] = useState([]); // etiquetas marcadas para impressão em lote
   const [showForm, setShowForm] = useState(false);
   const [configs, setConfigs] = useState({}); // configuração de tamanho por modelo
   const [showConfig, setShowConfig] = useState(false);
@@ -58,6 +59,21 @@ export default function ErpWmsLabelPanel({ user }) {
     load();
   };
 
+  const printableRows = filtered.filter(l => l.status === "ativa");
+  const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const allSelected = printableRows.length > 0 && printableRows.every(l => selectedIds.includes(l.id));
+
+  // Contador de impressões — soma as cópias impressas de cada etiqueta (única ou lote)
+  const handlePrinted = async (printedLabels, copies) => {
+    try {
+      await base44.entities.ErpWmsLabel.bulkUpdate(printedLabels.map(l => ({
+        id: l.id,
+        print_count: (Number(l.print_count) || 0) + copies,
+      })));
+      load();
+    } catch (e) { console.error(e); }
+  };
+
   return (
     <div className="space-y-3">
       <h2 className="font-semibold text-base flex items-center gap-2"><Tag className="w-5 h-5 text-indigo-600" /> Etiquetas de Produtos (WMS)</h2>
@@ -74,6 +90,7 @@ export default function ErpWmsLabelPanel({ user }) {
           <option value="producao">Produção</option>
         </select>
         <Button size="sm" variant="outline" onClick={() => setShowConfig(true)} className="gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50"><Settings className="w-4 h-4" /> Configurar Tamanhos</Button>
+        <Button size="sm" variant="outline" disabled={selectedIds.length === 0} onClick={() => setPrinting(printableRows.filter(l => selectedIds.includes(l.id)))} className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><Printer className="w-4 h-4" /> Imprimir Selecionadas{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}</Button>
         <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Plus className="w-4 h-4" /> Nova Etiqueta</Button>
       </div>
 
@@ -82,6 +99,10 @@ export default function ErpWmsLabelPanel({ user }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-500 text-xs">
               <tr>
+                <th className="p-2 w-8">
+                  <input type="checkbox" className="w-4 h-4 accent-indigo-600" checked={allSelected} title="Selecionar todas"
+                    onChange={e => setSelectedIds(e.target.checked ? printableRows.map(l => l.id) : [])} />
+                </th>
                 <th className="p-2 text-left">Etiqueta</th>
                 <th className="p-2 text-left">Modelo</th>
                 <th className="p-2 text-left">Produto</th>
@@ -90,19 +111,25 @@ export default function ErpWmsLabelPanel({ user }) {
                 <th className="p-2 text-right">Qtd.</th>
                 <th className="p-2 text-right">Saldo</th>
                 <th className="p-2 text-left">Origem</th>
+                <th className="p-2 text-right">Impressões</th>
                 <th className="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="p-6 text-center text-gray-400">Carregando...</td></tr>
+                <tr><td colSpan={11} className="p-6 text-center text-gray-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-gray-400">Nenhuma etiqueta — as etiquetas de compra são geradas ao confirmar o recebimento da NF.</td></tr>
+                <tr><td colSpan={11} className="p-8 text-center text-gray-400">Nenhuma etiqueta — as etiquetas de compra são geradas ao confirmar o recebimento da NF.</td></tr>
               ) : filtered.map(l => {
                 const t = TYPE_OPTS[l.label_type] || {};
                 const rem = Number(l.remaining ?? l.quantity) || 0;
                 return (
                   <tr key={l.id} className={`border-t hover:bg-gray-50 ${l.status === "cancelada" ? "opacity-50" : ""}`}>
+                    <td className="p-2">
+                      {l.status === "ativa" && (
+                        <input type="checkbox" className="w-4 h-4 accent-indigo-600" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} title="Marcar para impressão" />
+                      )}
+                    </td>
                     <td className="p-2 font-mono text-xs">{l.code}{l.status === "cancelada" && <span className="ml-1 text-red-500">(cancelada)</span>}</td>
                     <td className="p-2"><span className={`text-xs px-2 py-0.5 rounded-full ${t.color || "bg-gray-100 text-gray-600"}`}>{t.label || l.label_type}</span></td>
                     <td className="p-2">{l.product_name}</td>
@@ -115,8 +142,9 @@ export default function ErpWmsLabelPanel({ user }) {
                         ? <>NF {l.nota_number || "—"}{l.supplier_name ? ` — ${l.supplier_name}` : ""}</>
                         : (l.op_number ? `OP ${l.op_number}` : "—")}
                     </td>
+                    <td className={`p-2 text-right text-xs ${Number(l.print_count) > 0 ? "text-indigo-700 font-semibold" : "text-gray-400"}`}>{Number(l.print_count) || 0}×</td>
                     <td className="p-2 text-right whitespace-nowrap">
-                      <button onClick={() => setPrinting(l)} title="Imprimir etiqueta" className="p-1 hover:bg-indigo-50 rounded"><Printer className="w-4 h-4 text-indigo-600" /></button>
+                      <button onClick={() => setPrinting([l])} title="Imprimir etiqueta" className="p-1 hover:bg-indigo-50 rounded"><Printer className="w-4 h-4 text-indigo-600" /></button>
                       {l.status === "ativa" && <button onClick={() => handleCancel(l)} title="Cancelar etiqueta" className="p-1 hover:bg-red-50 rounded"><Ban className="w-4 h-4 text-red-500" /></button>}
                     </td>
                   </tr>
@@ -135,9 +163,10 @@ export default function ErpWmsLabelPanel({ user }) {
       )}
       {printing && (
         <ErpLabelPrintModal
-          label={printing}
-          config={{ ...DEFAULT_LABEL_SIZES[printing.label_type], ...(configs[printing.label_type] || {}) }}
+          labels={printing}
+          configs={configs}
           onClose={() => setPrinting(null)}
+          onPrinted={handlePrinted}
         />
       )}
     </div>
@@ -270,53 +299,63 @@ function ErpWmsLabelForm({ user, products, configs, onClose, onSaved }) {
 
 // Impressão da etiqueta — quantas cópias precisar para colar nos produtos,
 // no tamanho pré-definido do modelo (largura/altura em mm, impressão em tamanho real)
-function ErpLabelPrintModal({ label, config, onClose }) {
+// Impressão de uma ou várias etiquetas — cada etiqueta usa o tamanho do seu
+// modelo (compra/produção) e o contador de impressões soma as cópias impressas
+function ErpLabelPrintModal({ labels, configs, onClose, onPrinted }) {
   const [copies, setCopies] = useState(1);
-  const w = Number(config?.width_mm) || DEFAULT_LABEL_SIZES[label.label_type]?.width_mm || 100;
-  const h = Number(config?.height_mm) || DEFAULT_LABEL_SIZES[label.label_type]?.height_mm || 50;
-  const qrSize = Math.max(48, Math.round(Math.min(w, h) * 3.78 * 0.62));
+  const cfgFor = (t) => ({ ...DEFAULT_LABEL_SIZES[t], ...(configs?.[t] || {}) });
+  const title = labels.length === 1 ? `Imprimir Etiqueta ${labels[0].code}` : `Imprimir ${labels.length} Etiquetas`;
 
   const handlePrint = () => {
     document.body.classList.add("printing-label");
     window.print();
-    setTimeout(() => document.body.classList.remove("printing-label"), 500);
+    setTimeout(() => {
+      document.body.classList.remove("printing-label");
+      onPrinted?.(labels, copies);
+    }, 500);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 no-print">
-          <h2 className="font-bold">Imprimir Etiqueta {label.code}</h2>
+          <h2 className="font-bold">{title}</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2 no-print">
-            <label className="text-xs font-medium text-gray-600 whitespace-nowrap">Cópias:</label>
+            <label className="text-xs font-medium text-gray-600 whitespace-nowrap">Cópias (por etiqueta):</label>
             <input type="number" min="1" max="200" value={copies} onChange={e => setCopies(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-20 h-9 rounded-md border border-input px-2 text-sm" />
             <Button size="sm" onClick={handlePrint} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Printer className="w-4 h-4" /> Imprimir</Button>
           </div>
-          <p className="text-[11px] text-gray-400 no-print">Tamanho pré-definido deste modelo: {w} × {h} mm (impressão em tamanho real).</p>
+          <p className="text-[11px] text-gray-400 no-print">Tamanho pré-definido por modelo (compra/produção) — impressão em tamanho real (mm).</p>
           <div id="label-print-area" className="space-y-2">
-            {Array.from({ length: copies }).map((_, i) => (
-              <div key={i} className="wms-label border-2 border-black rounded-lg p-2 flex gap-2 items-center bg-white overflow-hidden" style={{ width: `${w}mm`, height: `${h}mm`, boxSizing: "border-box" }}>
-                <div className="flex-1 text-[10px] leading-snug">
-                  <p className="font-bold text-sm leading-tight">{label.product_name}</p>
-                  <p>Cód.: {label.product_code || "—"}</p>
-                  <p>Qtd.: <b className="text-sm">{label.quantity} {label.unit || ""}</b></p>
-                  {label.label_type === "compra" ? (<>
-                    <p>NF: <b>{label.nota_number || "—"}</b></p>
-                    <p>Fornecedor: {label.supplier_name || "—"}</p>
-                  </>) : (<>
-                    <p>OP: <b>{label.op_number || "—"}</b></p>
-                    <p>Fabricação: <b>{label.fabricacao_date ? fmtDate(label.fabricacao_date) : "—"}</b></p>
-                  </>)}
-                  <p>Lote: <b className="text-xs">{label.lot || "—"}</b></p>
-                  <p>Validade: <b className="text-sm">{label.expiry_date ? fmtDate(label.expiry_date) : "—"}</b></p>
-                  <p className="font-mono text-[9px] mt-1">{label.code}</p>
+            {labels.map(label => {
+              const cfg = cfgFor(label.label_type);
+              const w = Number(cfg.width_mm) || 100;
+              const h = Number(cfg.height_mm) || 50;
+              const qrSize = Math.max(48, Math.round(Math.min(w, h) * 3.78 * 0.62));
+              return Array.from({ length: copies }).map((_, i) => (
+                <div key={`${label.id}-${i}`} className="wms-label border-2 border-black rounded-lg p-2 flex gap-2 items-center bg-white overflow-hidden" style={{ width: `${w}mm`, height: `${h}mm`, boxSizing: "border-box" }}>
+                  <div className="flex-1 text-[10px] leading-snug">
+                    <p className="font-bold text-sm leading-tight">{label.product_name}</p>
+                    <p>Cód.: {label.product_code || "—"}</p>
+                    <p>Qtd.: <b className="text-sm">{label.quantity} {label.unit || ""}</b></p>
+                    {label.label_type === "compra" ? (<>
+                      <p>NF: <b>{label.nota_number || "—"}</b></p>
+                      <p>Fornecedor: {label.supplier_name || "—"}</p>
+                    </>) : (<>
+                      <p>OP: <b>{label.op_number || "—"}</b></p>
+                      <p>Fabricação: <b>{label.fabricacao_date ? fmtDate(label.fabricacao_date) : "—"}</b></p>
+                    </>)}
+                    <p>Lote: <b className="text-xs">{label.lot || "—"}</b></p>
+                    <p>Validade: <b className="text-sm">{label.expiry_date ? fmtDate(label.expiry_date) : "—"}</b></p>
+                    <p className="font-mono text-[9px] mt-1">{label.code}</p>
+                  </div>
+                  <QRCodeCanvas value={labelQrPayload(label)} size={qrSize} level="M" />
                 </div>
-                <QRCodeCanvas value={labelQrPayload(label)} size={qrSize} level="M" />
-              </div>
-            ))}
+              ));
+            })}
           </div>
         </div>
       </div>

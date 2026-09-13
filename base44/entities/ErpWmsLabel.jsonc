@@ -49,6 +49,11 @@
       "default": false,
       "description": "Se a etiqueta de produ\u00e7\u00e3o j\u00e1 deu entrada no estoque pela bipagem de produ\u00e7\u00e3o (evita bipagem dupla)"
     },
+    "print_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Contador de impress\u00f5es \u2014 total de c\u00f3pias j\u00e1 impressas da etiqueta (impress\u00e3o \u00fanica, em lote ou na gera\u00e7\u00e3o)"
+    },
     "lot": {
       "type": "string",
       "description": "Lote do produto"
