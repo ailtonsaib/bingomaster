@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, FileStack, ChevronRight, ArrowLeft, Layers } from "lucide-react";
 import { fmtMoney } from "@/lib/erpUtils";
+import { buildKardexRows, kardexAverageCost } from "@/lib/erpKardex";
 
 export default function ErpTechnicalSheetManager({ user }) {
   const [sheets, setSheets] = useState([]);
@@ -11,15 +12,23 @@ export default function ErpTechnicalSheetManager({ user }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null); // ficha em edição
   const [crumb, setCrumb] = useState([]); // pilha de fichas pai (para navegação de subprodutos)
+  const [kardexData, setKardexData] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [s, p] = await Promise.all([
+      const [s, p, entries, sales, productions, moves, inventories, requisitions] = await Promise.all([
         base44.entities.ErpTechnicalSheet.filter({ user_email: user.email }, "code", 500),
         base44.entities.ErpProduct.filter({ user_email: user.email }, "name", 1000),
+        base44.entities.ErpFiscalEntry.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpSalesOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpWarehouseRequisition.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
       ]);
       setSheets(s); setProducts(p);
+      setKardexData({ entries, sales, productions, moves, inventories, requisitions });
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -29,6 +38,17 @@ export default function ErpTechnicalSheetManager({ user }) {
   products.forEach(p => { productsById[p.id] = p; });
   const sheetsByProduct = {};
   sheets.forEach(s => { sheetsByProduct[s.product_id] = s; });
+
+  // Custo médio (média móvel do kardex) por produto — insumos sem custo
+  // cadastrado mas com movimentação (NF, inventário, produção) são valorados
+  const costMap = useMemo(() => {
+    const map = {};
+    if (kardexData) products.forEach(p => {
+      map[p.id] = kardexAverageCost(buildKardexRows(kardexData, p), p);
+    });
+    return map;
+  }, [kardexData, products]);
+  const costOf = (productId) => costMap[productId] ?? (Number(productsById[productId]?.cost_price) || 0);
 
   // Custo recursivo de uma ficha (lote) — lida com subprodutos
   const sheetLotCost = (sheetId, visited = new Set()) => {
@@ -45,12 +65,10 @@ export default function ErpTechnicalSheetManager({ user }) {
           const subLotCost = sheetLotCost(sub.id, new Set(visited));
           total += (Number(it.quantity) || 0) * (subLotCost / subYield);
         } else {
-          const p = productsById[it.product_id];
-          total += (Number(it.quantity) || 0) * (Number(p?.cost_price) || 0);
+          total += (Number(it.quantity) || 0) * costOf(it.product_id);
         }
       } else {
-        const p = productsById[it.product_id];
-        total += (Number(it.quantity) || 0) * (Number(p?.cost_price) || 0);
+        total += (Number(it.quantity) || 0) * costOf(it.product_id);
       }
     }
     return total;
@@ -93,6 +111,7 @@ export default function ErpTechnicalSheetManager({ user }) {
         productsById={productsById}
         sheetsByProduct={sheetsByProduct}
         sheetLotCost={sheetLotCost}
+        costOf={costOf}
         user={user}
         onSaved={load}
         onBack={goBack}
@@ -161,7 +180,7 @@ export default function ErpTechnicalSheetManager({ user }) {
   );
 }
 
-function SheetEditor({ sheet, sheets, products, productsById, sheetsByProduct, sheetLotCost, user, onSaved, onBack, onOpenSub, crumb }) {
+function SheetEditor({ sheet, sheets, products, productsById, sheetsByProduct, sheetLotCost, costOf, user, onSaved, onBack, onOpenSub, crumb }) {
   const isNew = !sheet || sheet.__new;
   const [code, setCode] = useState(sheet?.code || "");
   const [productId, setProductId] = useState(sheet?.product_id || "");
@@ -181,7 +200,7 @@ function SheetEditor({ sheet, sheets, products, productsById, sheetsByProduct, s
         unitCost = sheetLotCost(sub.id) / subYield;
       }
     } else if (it.product_id) {
-      unitCost = Number(productsById[it.product_id]?.cost_price) || 0;
+      unitCost = costOf(it.product_id);
     }
     const total = (Number(it.quantity) || 0) * unitCost;
     return { ...it, unit_cost: unitCost, total };
