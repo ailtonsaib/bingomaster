@@ -25,7 +25,8 @@ export default function ErpWmsFifoAttendant({ req, onClose, onSaved }) {
 
   useEffect(() => {
     base44.entities.ErpWmsLabel.filter({ user_email: req.user_email }, "-created_date", 500)
-      .then(list => setLabels(list.filter(l => l.status === "ativa")))
+      // Atendimento por bipagem usa somente os dados das etiquetas de produção
+      .then(list => setLabels(list.filter(l => l.status === "ativa" && l.label_type === "producao")))
       .catch(() => setLabels([]))
       .finally(() => setLoading(false));
   }, [req.user_email]);

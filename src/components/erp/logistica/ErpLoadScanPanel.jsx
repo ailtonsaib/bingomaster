@@ -31,7 +31,8 @@ export default function ErpLoadScanPanel({ user }) {
         base44.entities.ErpWmsLabel.filter({ user_email: user.email }, "-created_date", 500),
       ]);
       setCargas(cs.filter(c => c.status === "montada"));
-      setLabels(ls.filter(l => l.status === "ativa"));
+      // Separação usa somente os dados das etiquetas de produção
+      setLabels(ls.filter(l => l.status === "ativa" && l.label_type === "producao"));
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -182,7 +183,7 @@ export default function ErpLoadScanPanel({ user }) {
   return (
     <div className="space-y-3">
       <h2 className="font-semibold text-base flex items-center gap-2"><Truck className="w-5 h-5 text-purple-600" /> Bipagem de Separação (Carregamento)</h2>
-      <p className="text-xs text-gray-500 -mt-1">Bipe as etiquetas dos produtos da carga para separar o carregamento respeitando o FIFO — ao bipar um lote fora da ordem de validade, o sistema pergunta se deseja continuar: se sim, segue normalmente; se não, zera a bipagem para bipar novamente.</p>
+      <p className="text-xs text-gray-500 -mt-1">Bipe as etiquetas de produção dos produtos da carga (etiquetas de compra não são aceitas na separação) respeitando o FIFO — ao bipar um lote fora da ordem de validade, o sistema pergunta se deseja continuar: se sim, segue normalmente; se não, zera a bipagem para bipar novamente.</p>
 
       {loading ? (
         <div className="p-6 text-center text-gray-400 flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Carregando...</div>
