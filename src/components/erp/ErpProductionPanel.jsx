@@ -292,7 +292,7 @@ export default function ErpProductionPanel({ user }) {
                           <tbody>
                             {(detail.stops || []).map((st, i) => (
                               <tr key={i} className="border-t">
-                                <td className="p-1.5">{(st.type === "mecanica" && "Mecânica") || (st.type === "eletrica" && "Elétrica") || "Operacional"}{st.replaced_part ? " — substituiu peça" : ""}{st.notes ? ` (${st.notes})` : ""}</td>
+                                <td className="p-1.5">{(st.type === "mecanica" && "Mecânica") || (st.type === "eletrica" && "Elétrica") || "Operacional"}{st.replaced_part ? " — substituiu peça" : ""}{st.notes ? ` (${st.notes})` : ""}{(st.parts || []).length > 0 && <span className="block text-[10px] text-gray-500">{st.parts.map(p => `${p.quantity}x ${p.product_name}`).join(", ")}</span>}</td>
                                 <td className="p-1.5">{st.equipment_name || "—"}</td>
                                 <td className="p-1.5 text-right">{fmtDuration(minsBetween(st.start_time, st.end_time))}</td>
                                 <td className="p-1.5 text-right">{st.people_count || "—"}</td>

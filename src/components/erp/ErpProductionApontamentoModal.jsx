@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Timer } from "lucide-react";
+import ErpStopPartsModal from "./ErpStopPartsModal";
 import { fmtMoney } from "@/lib/erpUtils";
 
 const STOP_TYPES = { mecanica: "Parada Mecânica", eletrica: "Parada Elétrica", operacional: "Parada Operacional" };
@@ -33,10 +34,25 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
   });
   const [stops, setStops] = useState(order.stops || []);
   const [equipment, setEquipment] = useState([]);
-  const [newStop, setNewStop] = useState({ type: "operacional", equipment_id: "", start_time: "", end_time: "", people_count: 1, replaced_part: false, extra_cost: "", notes: "" });
+  const [newStop, setNewStop] = useState({ type: "operacional", equipment_id: "", start_time: "", end_time: "", people_count: 1, replaced_part: false, extra_cost: "", notes: "", parts: [] });
+  const [partsModal, setPartsModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const setNS = (k, v) => setNewStop(prev => ({ ...prev, [k]: v }));
+
+  // Peças substituídas: produto do cadastro (material de consumo) + quantidade,
+  // custo da peça e custo extra do serviço — o total alimenta o custo extra da parada
+  const applyParts = ({ parts, serviceExtraCost }) => {
+    const total = Math.round((parts.reduce((s, p) => s + (Number(p.value) || 0), 0) + serviceExtraCost) * 100) / 100;
+    setNS("parts", parts);
+    setNS("extra_cost", String(total));
+    setPartsModal(false);
+  };
+  const toggleReplacedPart = (checked) => {
+    setNS("replaced_part", checked);
+    if (checked) setPartsModal(true);
+    else setNS("parts", []);
+  };
 
   useEffect(() => {
     base44.entities.ErpEquipment.filter({ user_email: user.email }, "name", 500)
@@ -70,10 +86,11 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
       end_time: newStop.end_time,
       people_count: Number(newStop.people_count) || 0,
       replaced_part: isEqStop && !!newStop.replaced_part,
+      parts: isEqStop && newStop.replaced_part ? (newStop.parts || []) : [],
       extra_cost: Number(newStop.extra_cost) || 0,
       notes: newStop.notes || "",
     }]);
-    setNewStop({ type: "operacional", equipment_id: "", start_time: "", end_time: "", people_count: 1, replaced_part: false, extra_cost: "", notes: "" });
+    setNewStop({ type: "operacional", equipment_id: "", start_time: "", end_time: "", people_count: 1, replaced_part: false, extra_cost: "", notes: "", parts: [] });
   };
 
   const handleSave = async () => {
@@ -155,6 +172,7 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
                       <td className="p-2"><span className={`px-2 py-0.5 rounded-full ${STOP_COLORS[st.type] || STOP_COLORS.operacional}`}>{STOP_TYPES[st.type] || st.type}</span>
                         {st.replaced_part && <span className="block text-[10px] text-amber-700 mt-0.5">Substituiu peça</span>}
                         {st.notes && <span className="block text-[10px] text-gray-500 mt-0.5 max-w-[220px]">{st.notes}</span>}
+                        {(st.parts || []).length > 0 && <span className="block text-[10px] text-gray-500 mt-0.5">Peças: {st.parts.map(p => `${p.quantity}x ${p.product_name} (${fmtMoney(p.value)})`).join(", ")}</span>}
                       </td>
                       <td className="p-2">{st.equipment_name || "—"}</td>
                       <td className="p-2">{fmtDateTime(st.start_time)}</td>
@@ -196,11 +214,19 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
               <div><Label className="text-[10px]">Pessoas envolvidas</Label><Input type="number" min="0" value={newStop.people_count} onChange={e => setNS("people_count", e.target.value)} className="h-8 text-xs" /></div>
               <div><Label className="text-[10px]">Custo extra (R$)</Label><Input type="number" step="0.01" min="0" value={newStop.extra_cost} onChange={e => setNS("extra_cost", e.target.value)} className="h-8 text-xs" placeholder="Peça, mão de obra..." /></div>
               {(newStop.type === "mecanica" || newStop.type === "eletrica") && (
-                <label className="flex items-end gap-1.5 text-xs pb-1.5">
-                  <input type="checkbox" checked={newStop.replaced_part} onChange={e => setNS("replaced_part", e.target.checked)} className="w-4 h-4 mb-0.5" /> Substituiu peça
-                </label>
+                <div className="flex items-end gap-2 pb-1.5 text-xs">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={newStop.replaced_part} onChange={e => toggleReplacedPart(e.target.checked)} className="w-4 h-4" /> Substituiu peça
+                  </label>
+                  {newStop.replaced_part && (
+                    <button type="button" onClick={() => setPartsModal(true)} className="text-indigo-600 underline text-[11px]">Peças ({(newStop.parts || []).length})</button>
+                  )}
+                </div>
               )}
             </div>
+            {newStop.replaced_part && (newStop.parts || []).length > 0 && (
+              <p className="text-[11px] text-gray-600">Peças substituídas: {newStop.parts.map(p => `${p.quantity}x ${p.product_name} (${fmtMoney(p.value)})`).join(", ")}</p>
+            )}
             <div>
               <Label className="text-[10px]">Observações — motivo da parada, peça substituída, etc.</Label>
               <Input value={newStop.notes} onChange={e => setNS("notes", e.target.value)} className="h-8 text-xs" />
@@ -213,6 +239,10 @@ export default function ErpProductionApontamentoModal({ user, order, onClose, on
           <Button size="sm" disabled={saving} onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700">{saving ? "Salvando..." : "Salvar Apontamento"}</Button>
         </div>
       </div>
+
+      {partsModal && (
+        <ErpStopPartsModal user={user} parts={newStop.parts || []} onClose={() => setPartsModal(false)} onConfirm={applyParts} />
+      )}
     </div>
   );
 }

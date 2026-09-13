@@ -135,10 +135,45 @@
             "default": false,
             "description": "Se foi necess\u00e1rio substituir pe\u00e7a"
           },
+          "parts": {
+            "type": "array",
+            "default": [],
+            "description": "Pe\u00e7as/material de consumo substitu\u00eddo na parada \u2014 produto do cadastro (ErpProduct), quantidade e custo unit\u00e1rio; o valor comp\u00f5e o custo extra da parada",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "type": "string"
+                },
+                "product_name": {
+                  "type": "string"
+                },
+                "product_code": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number",
+                  "default": 0
+                },
+                "unit_cost": {
+                  "type": "number",
+                  "default": 0
+                },
+                "value": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Valor da pe\u00e7a (quantidade \u00d7 custo unit\u00e1rio)"
+                }
+              }
+            }
+          },
           "extra_cost": {
             "type": "number",
             "default": 0,
-            "description": "Custo extra da parada (pe\u00e7a/m\u00e3o de obra) a agregar ao custo do produto produzido"
+            "description": "Custo extra da parada (pe\u00e7as substitu\u00eddas + custo extra do servi\u00e7o) a agregar ao custo do produto produzido"
           },
           "notes": {
             "type": "string",
