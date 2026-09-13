@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Loader2, FileText, CheckCircle2, AlertTriangle, ArrowDownToLine, Keyboard, Plus, Trash2, Link2, UserPlus, Package, Truck } from "lucide-react";
 import { parseFiscalXml } from "@/lib/erpXmlParse";
+import { parsedFromDraft } from "@/lib/erpFiscalDraft";
 import { fmtMoney, fmtDate } from "@/lib/erpUtils";
 import { maskCpfCnpj } from "@/lib/brMasks";
 import { lookupCnpj } from "@/lib/cnpjLookup";
@@ -35,7 +36,7 @@ const defaultRetDueDate = (day, isoDate) => {
 // XML: cadastra o fornecedor automaticamente se não existir, e vincula cada item
 // ao produto meu através do código do fornecedor (cProd). Se não houver vínculo
 // e o usuário não informar um produto destino, cria o produto e o vínculo.
-export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToProducts }) {
+export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToProducts, draft = null }) {
   const [mode, setMode] = useState("xml");
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState(null);
@@ -189,6 +190,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     ]).then(([o, op, s, p, l, d, acc, tr, sec]) => { setOrders(o); setOperations(op); setSuppliers(s); setProducts(p); setLinks(l); setDepartments(d); setAccounts(acc); setTaxRules(tr); setSectors(sec); }).catch(() => {});
   }, [user.email]);
 
+  // Nota pré-cadastrada (Recebimento WMS): abre o modal já com os dados da nota
+  useEffect(() => {
+    if (!draft) return;
+    setMode("xml");
+    setParsed(parsedFromDraft(draft));
+  }, [draft]);
+
   // UF da empresa — base do CFOP do frete (mesma UF → 1xxx, fora → 2xxx)
   useEffect(() => {
     base44.entities.ErpCompany.filter({ user_email: user.email }, "-created_date", 20)
@@ -248,7 +256,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     const docLinks = links.filter(l => digits(l.supplier_document) === doc);
     setItemChoices(parsed.items.map(it => {
       const lk = docLinks.find(l => l.supplier_product_code === it.product_code);
-      return lk?.product_id || "new";
+      return lk?.product_id || it.product_id || "new";
     }));
   }, [parsed, mode, suppliers, links]);
 
@@ -825,7 +833,11 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
       payload.retentions = savedRets;
       payload.net_value = r2((Number(payload.total_nota) || 0) - savedRets.reduce((s, r) => s + r.value, 0));
 
-      const entry = await base44.entities.ErpFiscalEntry.create(payload);
+      // Nota pré-cadastrada (Recebimento WMS): atualiza o próprio registro em
+      // vez de criar outro — concluída, alimenta estoque/contábil/financeiro
+      const entry = draft?.id
+        ? await base44.entities.ErpFiscalEntry.update(draft.id, { ...payload, awaiting_completion: false })
+        : await base44.entities.ErpFiscalEntry.create(payload);
       // Lançamento automático (movimento contábil + estoque + financeiro) quando a
       // entrada já vem aprovada (sem OC ou valores conferem). Caso contrário segue
       // aguardando aprovação do admin no painel.
@@ -852,7 +864,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
-          <h3 className="font-bold flex items-center gap-2"><Upload className="w-5 h-5 text-indigo-600" /> Entrada de Documento Fiscal</h3>
+          <h3 className="font-bold flex items-center gap-2"><Upload className="w-5 h-5 text-indigo-600" /> {draft ? "Concluir Entrada de NF (Recebimento WMS)" : "Entrada de Documento Fiscal"}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
         </div>
 
@@ -920,6 +932,13 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           )}
 
           {error && <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"><AlertTriangle className="w-4 h-4" /> {error}</div>}
+
+          {draft && (
+            <div className="flex items-start gap-2 rounded-lg border border-purple-200 bg-purple-50 p-2.5 text-xs text-purple-800">
+              <Package className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>Nota pré-cadastrada pelo Recebimento WMS — os dados do recebimento físico já estão aqui. Informe a operação de entrada e os demais dados: os módulos (estoque, contábil e financeiro) serão alimentados somente após concluir a entrada.</span>
+            </div>
+          )}
 
           {/* === MODO XML === */}
           {opId && mode === "xml" && !parsed && (
@@ -1217,7 +1236,7 @@ export default function ErpFiscalEntryImport({ user, onClose, onSaved, onGoToPro
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {opId && (mode === "xml" ? parsed : true) && (
             <Button onClick={handleSave} disabled={saving || (selectedOp?.exige_ordem_compra && !poId)} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />} Dar Entrada
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />} {draft ? "Concluir Entrada" : "Dar Entrada"}
             </Button>
           )}
         </div>

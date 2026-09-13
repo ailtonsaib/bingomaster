@@ -247,8 +247,57 @@ export default function ErpWmsReceivingPanel({ user }) {
       }));
       const fresh = await base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500);
       setMoves(fresh);
+      // Pré-cadastra a nota no módulo Fiscal (Entrada de NF): a entrada fica
+      // aberta aguardando o usuário informar a operação e os demais dados —
+      // somente após concluída alimenta estoque, contábil e financeiro
+      let draftMsg = "a nota foi pré-cadastrada no módulo Fiscal (Entrada de NF), aguardando a operação de entrada e os demais dados";
+      try {
+        const key = onlyDigits(entry.chave_acesso);
+        const existing = await base44.entities.ErpFiscalEntry.filter({ user_email: user.email }, "-created_date", 500);
+        const dup = existing.find(e => (key && onlyDigits(e.chave_acesso) === key) ||
+          (String(e.nota_number) === String(entry.nota_number) && onlyDigits(e.supplier_cnpj) === onlyDigits(entry.supplier_cnpj) && onlyDigits(entry.supplier_cnpj).length >= 11));
+        if (dup) {
+          draftMsg = "já existe entrada registrada para esta nota no módulo Fiscal — nada foi duplicado";
+        } else {
+          const r2v = (v) => Math.round((Number(v) || 0) * 100) / 100;
+          await base44.entities.ErpFiscalEntry.create({
+            user_email: user.email,
+            nota_model: entry.nota_model || "55",
+            nota_number: String(entry.nota_number || ""),
+            nota_series: entry.nota_series || "",
+            chave_acesso: key,
+            issue_date: entry.issue_date ? new Date(entry.issue_date).toISOString() : new Date().toISOString(),
+            entry_date: new Date().toISOString(),
+            supplier_name: entry.supplier_name || "",
+            supplier_cnpj: entry.supplier_cnpj || "",
+            supplier_uf: entry.supplier_uf || "",
+            nature_operation: entry.nature_operation || "",
+            cfop: entry.cfop || "",
+            total_products: r2v(items.reduce((s, it) => s + (Number(it.total) || 0), 0)),
+            total_nota: r2v(entry.total_nota),
+            items: items.map(it => ({
+              product_id: it.product_id || undefined,
+              product_code: it.product_code || "",
+              barcode: it.barcode || "",
+              product_name: it.product_name || "",
+              ncm: it.ncm || "",
+              cfop: it.cfop || "",
+              unit: it.unit || "",
+              quantity: Number(it.quantity) || 0,
+              unit_price: Number(it.unit_price) || 0,
+              total: Number(it.total) || 0,
+            })),
+            status: "pendente",
+            approval_status: "nao_aplica",
+            awaiting_completion: true,
+            notes: "Pré-cadastro gerado pelo Recebimento WMS — informe a operação de entrada e os demais dados no módulo Fiscal (Entrada de NF).",
+          });
+        }
+      } catch (e) {
+        draftMsg = `não foi possível pré-cadastrar a nota no módulo Fiscal (${e.message})`;
+      }
       setDone(true);
-      alert(`Recebimento confirmado: ${toCreate.length} movimentação(ões) de entrada registradas com lote e endereçamento.\n\nO saldo do produto é atualizado pelo lançamento da nota no módulo Fiscal.`);
+      alert(`Recebimento confirmado: ${toCreate.length} movimentação(ões) de entrada registradas com lote e endereçamento.\n\nPré-cadastro Fiscal: ${draftMsg}.`);
     } catch (e) { alert("Erro ao confirmar recebimento: " + e.message); }
     setSaving(false);
   };
@@ -256,7 +305,7 @@ export default function ErpWmsReceivingPanel({ user }) {
   return (
     <div className="space-y-3">
       <h2 className="font-semibold text-base flex items-center gap-2"><ArrowDownCircle className="w-5 h-5 text-emerald-600" /> Recebimento de Nota Fiscal (WMS)</h2>
-      <p className="text-xs text-gray-500 -mt-1">Busque a nota pela chave de acesso (consulta direta na SEFAZ via certificado A1) ou importe o XML da NF-e enviado pelo fornecedor — o sistema traz o fornecedor e os produtos da nota. Registre os lotes (fabricação/validade), enderece os produtos e confira a ordem de compra; a entrada de nota (módulo Fiscal) fica apenas para informar a operação e finalizar o processo.</p>
+      <p className="text-xs text-gray-500 -mt-1">Busque a nota pela chave de acesso (consulta direta na SEFAZ via certificado A1) ou importe o XML da NF-e enviado pelo fornecedor — o sistema traz o fornecedor e os produtos da nota. Registre os lotes (fabricação/validade), enderece os produtos e confira a ordem de compra. Ao confirmar, a nota é pré-cadastrada no módulo Fiscal (Entrada de NF), aberta para você informar a operação e os demais dados — somente após concluída ela alimenta os módulos (estoque, contábil e financeiro).</p>
 
       <div className="flex gap-2">
         <input
@@ -325,7 +374,7 @@ export default function ErpWmsReceivingPanel({ user }) {
           </div>
 
           {done ? (
-            <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-3"><CheckCircle2 className="w-4 h-4" /> Recebimento confirmado — movimentações de entrada registradas na aba Movimentações.</div>
+            <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-3"><CheckCircle2 className="w-4 h-4" /> Recebimento confirmado — movimentações de entrada registradas na aba Movimentações. A nota está aberta no módulo Fiscal (Entrada de NF) aguardando a operação de entrada e os demais dados.</div>
           ) : (
             <div className="flex justify-end">
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">

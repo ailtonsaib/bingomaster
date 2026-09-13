@@ -22,6 +22,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [showImport, setShowImport] = useState(false);
+  const [importDraft, setImportDraft] = useState(null);
   const [showEdit, setShowEdit] = useState(null);
   const [busy, setBusy] = useState(null);
 
@@ -84,7 +85,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
           <option value="all">Todos</option>
           {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Plus className="w-4 h-4" /> Nova Entrada</Button>
+        <Button size="sm" onClick={() => { setImportDraft(null); setShowImport(true); }} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"><Plus className="w-4 h-4" /> Nova Entrada</Button>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
@@ -126,7 +127,11 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
                       ) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
+                      {i.awaiting_completion ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Aguardando Operação</span>
+                      ) : (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
+                      )}
                       {i.journal_entry_number && <div className="text-[10px] text-gray-400 mt-0.5">LCT: {i.journal_entry_number}</div>}
                     </td>
                     <td className="p-2 text-right whitespace-nowrap">
@@ -140,7 +145,12 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
                           </button>
                         </>
                       )}
-                      {i.status === "pendente" && <span className="text-[10px] text-amber-600" title="Aguardando aprovação do admin">aguarda aprovação</span>}
+                      {i.awaiting_completion && (
+                        <button onClick={() => { setImportDraft(i); setShowImport(true); }} title="Completar Entrada de NF — informar operação e demais dados" className="p-1 hover:bg-purple-50 rounded">
+                          <ArrowDownToLine className="w-4 h-4 text-purple-600" />
+                        </button>
+                      )}
+                      {i.status === "pendente" && !i.awaiting_completion && <span className="text-[10px] text-amber-600" title="Aguardando aprovação do admin">aguarda aprovação</span>}
                       {i.status === "nao_aprovada" && <XCircle className="w-4 h-4 text-red-500 inline" />}
                       {i.status === "lancada" && (
                         <>
@@ -162,7 +172,7 @@ export default function ErpFiscalEntryPanel({ user, onGoToProducts }) {
 
       <ErpCteSection user={user} />
 
-      {showImport && <ErpFiscalEntryImport user={user} onClose={() => setShowImport(false)} onSaved={load} onGoToProducts={onGoToProducts} />}
+      {showImport && <ErpFiscalEntryImport user={user} draft={importDraft} onClose={() => setShowImport(false)} onSaved={load} onGoToProducts={onGoToProducts} />}
       {showEdit && <ErpFiscalEntryEditModal user={user} entry={showEdit} onClose={() => setShowEdit(null)} onSaved={load} />}
     </div>
   );

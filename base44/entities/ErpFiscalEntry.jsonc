@@ -411,13 +411,13 @@
             "default": 0,
             "description": "Pauta do COFINS do item (R$ por unidade \u2014 usada no lugar da al\u00edquota)"
           },
-          "ipi_value": {
-            "type": "number"
-          },
           "pis_value": {
             "type": "number"
           },
           "cofins_value": {
+            "type": "number"
+          },
+          "ipi_value": {
             "type": "number"
           },
           "cst_cbs": {
@@ -625,6 +625,11 @@
       ],
       "default": "pendente",
       "description": "Status da entrada: pendente, aprovada, nao_aprovada, lancada (lan\u00e7amento cont\u00e1bil gerado)"
+    },
+    "awaiting_completion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Entrada pr\u00e9-cadastrada pelo Recebimento WMS \u2014 aberta no m\u00f3dulo Fiscal (Entrada de NF) para o usu\u00e1rio informar a opera\u00e7\u00e3o de entrada e os demais dados; somente ap\u00f3s conclu\u00edda alimenta os m\u00f3dulos (estoque, cont\u00e1bil e financeiro)"
     },
     "approval_status": {
       "type": "string",
