@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Truck, Users, Fuel, Wrench, CircleDot, Wallet, BarChart3, Boxes } from "lucide-react";
+import { Truck, Users, Fuel, Wrench, CircleDot, Wallet, BarChart3, Boxes, ScanLine } from "lucide-react";
 import ErpSimpleCrud from "@/components/erp/ErpSimpleCrud";
 import ErpFleetReportsPanel from "@/components/erp/ErpFleetReportsPanel";
 import ErpFleetMaintenancePanel from "@/components/erp/ErpFleetMaintenancePanel";
 import ErpLoadAssemblyPanel from "@/components/erp/logistica/ErpLoadAssemblyPanel";
+import ErpLoadScanPanel from "@/components/erp/logistica/ErpLoadScanPanel";
 import { SubNav } from "./ErpModuleSuprimentos";
 
 const VEHICLE_STATUS = [
@@ -187,6 +188,7 @@ const CRUD_CONFIGS = {
 
 const TABS = [
   { id: "carga", label: "Montagem de Carga", icon: Boxes },
+  { id: "separacao", label: "Bipagem Separação", icon: ScanLine },
   { id: "veiculos", label: "Veículos", icon: Truck },
   { id: "motoristas", label: "Motoristas", icon: Users },
   { id: "abastecimentos", label: "Abastecimentos", icon: Fuel },
@@ -202,6 +204,7 @@ export default function ErpModuleLogistica({ user }) {
     <div className="space-y-3">
       <SubNav sub={sub} setSub={setSub} tabs={TABS} color="purple" />
       {sub === "carga" ? <ErpLoadAssemblyPanel user={user} />
+        : sub === "separacao" ? <ErpLoadScanPanel user={user} />
         : sub === "manutencoes" ? <ErpFleetMaintenancePanel user={user} />
         : sub === "relatorios" ? <ErpFleetReportsPanel user={user} />
         : <ErpSimpleCrud key={sub} user={user} {...CRUD_CONFIGS[sub]} />}

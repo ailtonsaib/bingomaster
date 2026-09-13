@@ -24,10 +24,9 @@ export const COLLECTOR_APPS = [
     desc: "Bipagem das etiquetas de produção no chão de fábrica: entrada do produto acabado no estoque com lote e validade.",
   },
   {
-    id: "logistica", name: "App de Logística", icon: Truck,
-    module: "Em desenvolvimento",
-    desc: "Bipagem de montagem de carga, conferência e entrega — aplicativo a ser desenvolvido posteriormente.",
-    available: false,
+    id: "logistica", name: "App de Logística (Bipagem)", icon: Truck,
+    module: "Logística → Bipagem Separação",
+    desc: "Bipagem da separação de produtos para carregamento respeitando o FIFO: lote fora da ordem de validade pergunta se deseja continuar ou zerar a bipagem.",
   },
 ];
 
