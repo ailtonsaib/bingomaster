@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Pencil, Trash2, Package } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Package, RefreshCw, Loader2 } from "lucide-react";
 import ErpProductFormModal from "./ErpProductFormModal";
 import { fmtMoney, typeLabel, typeColor } from "@/lib/erpUtils";
+import { buildKardexRows, kardexAverageCost } from "@/lib/erpKardex";
 
 export default function ErpProductManager({ user }) {
   const [items, setItems] = useState([]);
@@ -14,16 +15,51 @@ export default function ErpProductManager({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showNoStock, setShowNoStock] = useState(false);
+  const [kardexData, setKardexData] = useState(null);
+  const [syncing, setSyncing] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500);
+      const [list, entries, sales, productions, moves, inventories, requisitions] = await Promise.all([
+        base44.entities.ErpProduct.filter({ user_email: user.email }, "-created_date", 500),
+        base44.entities.ErpFiscalEntry.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpSalesOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpProductionOrder.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpWmsMove.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpWmsInventory.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+        base44.entities.ErpWarehouseRequisition.filter({ user_email: user.email }, "-created_date", 500).catch(() => []),
+      ]);
       setItems(list);
+      setKardexData({ entries, sales, productions, moves, inventories, requisitions });
     } catch (e) { console.error(e); }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user.email]);
+
+  // Custo médio (média móvel do kardex) por produto — usado para exibir/gravar
+  // custo quando o custo cadastrado está zerado mas há movimentação valuada
+  const costMap = useMemo(() => {
+    const map = {};
+    if (kardexData) items.forEach(p => { map[p.id] = kardexAverageCost(buildKardexRows(kardexData, p), p); });
+    return map;
+  }, [kardexData, items]);
+
+  // Grava o custo médio do kardex no cadastro dos produtos com custo zerado
+  const handleSyncCosts = async () => {
+    const updates = items
+      .filter(p => !(Number(p.cost_price) > 0) && (Number(costMap[p.id]) || 0) > 0)
+      .map(p => ({ id: p.id, cost_price: Math.round((Number(costMap[p.id]) || 0) * 10000) / 10000 }));
+    if (!updates.length) { alert("Nenhum produto com custo zerado que possua custo médio no kardex."); return; }
+    if (!window.confirm(`Atualizar o custo cadastrado de ${updates.length} produto(s) pelo custo médio do kardex?`)) return;
+    setSyncing(true);
+    try {
+      await base44.entities.ErpProduct.bulkUpdate(updates);
+      alert(`Custo atualizado para ${updates.length} produto(s).`);
+      load();
+    } catch (e) { alert("Erro ao atualizar custos: " + e.message); }
+    setSyncing(false);
+  };
 
   const filtered = items.filter(p => {
     const okType = typeFilter === "all" || p.product_type === typeFilter;
@@ -64,6 +100,9 @@ export default function ErpProductManager({ user }) {
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
           <Plus className="w-4 h-4" /> Novo Produto
         </Button>
+        <Button size="sm" variant="outline" onClick={handleSyncCosts} disabled={syncing || !kardexData} className="gap-1.5">
+          {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Atualizar custos (kardex)
+        </Button>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
@@ -103,7 +142,11 @@ export default function ErpProductManager({ user }) {
                       {p.stock} {p.unit}
                     </span>
                   </td>
-                  <td className="p-2 text-right text-gray-600">{fmtMoney(p.cost_price)}</td>
+                  <td className="p-2 text-right text-gray-600">
+                    {Number(p.cost_price) > 0 ? fmtMoney(p.cost_price) : (Number(costMap[p.id]) > 0
+                      ? <span className="text-indigo-600" title="Custo médio do kardex — o custo cadastrado está zerado">{fmtMoney(costMap[p.id])} *</span>
+                      : fmtMoney(0))}
+                  </td>
                   <td className="p-2 text-right font-medium">{fmtMoney(p.sale_price)}</td>
                   <td className="p-2 text-right">
                     <button onClick={() => { setEditing(p); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><Pencil className="w-4 h-4 text-gray-500" /></button>
@@ -115,6 +158,9 @@ export default function ErpProductManager({ user }) {
           </table>
         </div>
       </div>
+      <p className="text-[11px] text-gray-400">
+        * Custo médio do kardex (custo cadastrado zerado) — use "Atualizar custos (kardex)" para gravá-lo no cadastro.
+      </p>
 
       {showForm && (
         <ErpProductFormModal user={user} product={editing} onClose={() => setShowForm(false)} onSaved={load} />
