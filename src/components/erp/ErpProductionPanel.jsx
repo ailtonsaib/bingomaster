@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus } from "lucide-react";
+import { Plus, Search, Trash2, Factory, Play, CheckCircle2, PackagePlus, Calculator } from "lucide-react";
 import ErpProductionFormModal from "./ErpProductionFormModal";
 import ErpProductionCompleteModal from "./ErpProductionCompleteModal";
+import ErpProductionRecostModal from "./ErpProductionRecostModal";
 import { fmtDate, fmtMoney, PRODUCTION_STATUS } from "@/lib/erpUtils";
 import { computeNeeded, checkStock, shortagesMessage, createWarehouseRequisition } from "@/lib/erpProductionStock";
 
@@ -20,6 +21,7 @@ export default function ErpProductionPanel({ user }) {
   const [detail, setDetail] = useState(null);
   const [detailReq, setDetailReq] = useState(null);
   const [completing, setCompleting] = useState(null);
+  const [recosting, setRecosting] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -159,6 +161,11 @@ export default function ErpProductionPanel({ user }) {
                           <CheckCircle2 className={`w-4 h-4 text-emerald-600 ${busy === o.id ? "animate-spin" : ""}`} />
                         </button>
                       )}
+                      {o.status === "concluida" && (
+                        <button onClick={() => setRecosting(o)} title="Recalcular custo da produção" className="p-1 hover:bg-amber-50 rounded">
+                          <Calculator className="w-4 h-4 text-amber-600" />
+                        </button>
+                      )}
                       <button onClick={() => { setEditing(o); setShowForm(true); }} className="p-1 hover:bg-gray-100 rounded"><span className="text-xs">✏️</span></button>
                       <button onClick={() => handleDelete(o)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </td>
@@ -176,6 +183,10 @@ export default function ErpProductionPanel({ user }) {
 
       {completing && (
         <ErpProductionCompleteModal user={user} order={completing} products={products} onClose={() => setCompleting(null)} onSaved={() => { setCompleting(null); load(); }} />
+      )}
+
+      {recosting && (
+        <ErpProductionRecostModal user={user} order={recosting} products={products} onClose={() => setRecosting(null)} onSaved={() => { setRecosting(null); load(); }} />
       )}
 
       {detail && (
