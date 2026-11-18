@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Factory, LogOut, Boxes, ShoppingCart, Landmark, Settings, Wrench, Warehouse, Truck } from "lucide-react";
+import { Factory, LogOut, Boxes, ShoppingCart, Landmark, Settings, Wrench, Warehouse, Truck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { maskCpfCnpj } from "@/lib/brMasks";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
@@ -47,7 +47,6 @@ export default function Erp() {
     <div className="h-screen flex flex-col bg-gray-50">
       <header className="bg-white border-b px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/portal")} className="p-1 hover:bg-gray-100 rounded"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
           <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center"><Factory className="w-5 h-5 text-emerald-600" /></div>
           <div>
             <h1 className="font-bold text-lg leading-tight">

@@ -8,9 +8,8 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import HideBase44Widget from './components/HideBase44Widget';
 import Home from '@/pages/Home';
-import CategorySelect from '@/pages/CategorySelect';
+import EntryRedirect from '@/components/EntryRedirect';
 import Landing from '@/pages/Landing';
-import Portal from '@/pages/Portal';
 import BingoLogin from '@/pages/BingoLogin';
 import ValidadorLogin from '@/pages/ValidadorLogin';
 import NewGame from '@/pages/NewGame';
@@ -126,10 +125,10 @@ const AuthenticatedApp = () => {
       {/* Campo Minado — jogo de estratégia público */}
       <Route path="/campo-minado" element={<MineSweeper />} />
       <Route path="/portal-login" element={<PortalLogin />} />
-      {/* Portal principal (admin) — exige login do portal */}
-      <Route path="/portal" element={<Portal />} />
-      {/* Menu inicial de categorias — separa Jogos de Empresas */}
-      <Route path="/" element={<CategorySelect />} />
+      {/* Portal — sem menu principal: leva ao aplicativo do usuário */}
+      <Route path="/portal" element={<Navigate to="/" replace />} />
+      {/* Endereço principal — entra direto no aplicativo do usuário */}
+      <Route path="/" element={<EntryRedirect />} />
       {/* Landing filtrada por categoria */}
       <Route path="/jogos" element={<Landing category="jogos" />} />
       <Route path="/empresas" element={<Landing category="empresas" />} />

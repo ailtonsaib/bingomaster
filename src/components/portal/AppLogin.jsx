@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { APPS, CONTACT } from "@/lib/appRegistry";
@@ -10,7 +9,7 @@ import ForgotPasswordFlow from "@/components/portal/ForgotPasswordFlow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Loader2, AlertCircle, ArrowLeft, Phone, MessageCircle, ShieldCheck, Info } from "lucide-react";
+import { Mail, Lock, Loader2, AlertCircle, Phone, MessageCircle, ShieldCheck, Info } from "lucide-react";
 
 const iconMap = {
   Grid3x3: (props) => <svg width={props.width || 24} height={props.height || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>,
@@ -22,7 +21,6 @@ const iconMap = {
 };
 
 export default function AppLogin({ appId }) {
-  const navigate = useNavigate();
   const app = APPS.find((a) => a.id === appId);
   const [email, setEmail] = useState("teste@softpremier.com.br");
   const [password, setPassword] = useState("teste123");
@@ -60,7 +58,7 @@ export default function AppLogin({ appId }) {
           setLoading(false);
           return;
         }
-        setPortalUser(user);
+        setPortalUser({ ...user, current_app: app.id });
         // Mecânico → redireciona para o painel do mecânico
         if (user.is_mechanic) {
           const mechSession = {
@@ -105,14 +103,6 @@ export default function AppLogin({ appId }) {
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,#FFFFFF_0%,#F5F5F5_70%)] pointer-events-none" />
-
-      {/* Back to landing */}
-      <button
-        onClick={() => navigate("/")}
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm text-[#71717A] hover:text-[#1B1C21] transition-colors z-10"
-      >
-        <ArrowLeft className="w-4 h-4" /> Voltar
-      </button>
 
       <div className="max-w-sm w-full relative z-10">
         {/* App icon + title */}

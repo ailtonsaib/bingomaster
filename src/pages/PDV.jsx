@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, ShoppingCart, Package, Receipt, Radio, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet, CalendarClock, Ticket } from "lucide-react";
+import { ShoppingCart, Package, Receipt, Radio, LogOut, Users, FileInput, Percent, FileOutput, FileCheck, Scale, FileBarChart, Settings, Bell, Wallet, CalendarClock, Ticket } from "lucide-react";
 import { getPortalUser, clearPortalUser } from "@/lib/portalSession";
 import ProductGrid from "@/components/pdv/ProductGrid";
 import CartPanel from "@/components/pdv/CartPanel";
@@ -218,9 +218,6 @@ export default function PDV() {
       {/* Header */}
       <header className="bg-white border-b px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/portal")} className="p-1 hover:bg-gray-100 rounded">
-            <ArrowLeft className="w-5 h-5 text-gray-500" />
-          </button>
           {companyConfig?.logo_url ? (
             <div className="h-10 flex items-center">
               <img src={companyConfig.logo_url} alt="Logo" className="max-h-10 max-w-[160px] object-contain" />
