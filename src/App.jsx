@@ -200,6 +200,7 @@ const AuthenticatedApp = () => {
         <Route path="/licitacoes/:bidId" element={<PublicBidDetail />} />
       </Route>
       {/* ERP — Indústria & Comércio */}
+      <Route path="/app/erp" element={<Navigate to="/erp-painel" replace />} />
       <Route path="/erp" element={<ErpLogin />} />
       <Route element={<PortalGuard permission="can_access_erp" />}>
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
